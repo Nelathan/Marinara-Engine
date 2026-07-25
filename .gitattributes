@@ -1,0 +1,3 @@
+# Hashes in manifest.json are computed over the working-tree bytes and must
+# match the LF blobs raw.githubusercontent.com serves. Never check out CRLF.
+* text eol=lf
