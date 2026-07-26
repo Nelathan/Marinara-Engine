@@ -12,7 +12,7 @@ Los presets no necesitan una API key (clave de API) ni una cuenta. Solo describe
 
 ## Abrir el Preset Editor
 
-Los presets de prompt viven en el panel **Presets** (Presets), en el lado izquierdo de la app.
+Los presets de prompt viven en la sección **Prompts** del panel **Presets**, en el lado izquierdo de la app. Las otras secciones de este panel son **Regexes** y **Functions**.
 
 El panel tiene tres botones en la parte superior:
 
