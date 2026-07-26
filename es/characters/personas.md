@@ -135,10 +135,13 @@ Cada vez que guardas un cambio en los campos de tarjeta de una persona, Marinara
 Para cada versión guardada puedes:
 
 1. Hacer clic en su título para abrir una vista de comparación contra la persona actual.
-2. Hacer clic en **Restore this version** (Restaurar esta versión) para sobrescribir la persona actual con esa versión guardada. Un cuadro de diálogo de confirmación te pide que confirmes.
-3. Hacer clic en **Delete this saved version** (Eliminar esta versión guardada) para quitar esa entrada del historial. Esto no cambia la persona actual.
+2. Hacer clic en **Rename this saved version** (Cambiar el nombre de esta versión guardada; icono de lápiz) para corregir la etiqueta de versión de la tarjeta sin restaurarla.
+3. Hacer clic en **Restore this version** (Restaurar esta versión) para sobrescribir la persona actual con esa versión guardada. Un cuadro de diálogo de confirmación te pide que confirmes.
+4. Hacer clic en **Delete this saved version** (Eliminar esta versión guardada) para quitar esa entrada del historial. Esto no cambia la persona actual.
 
 Antes de tu primera edición, el panel dice "Previous persona states will appear here after the next edit." (Los estados anteriores de la persona aparecerán aquí después de la próxima edición.).
+
+Usa **Reset** (Restablecer) en el encabezado del panel para eliminar todas las instantáneas guardadas de la persona y establecer la versión de la tarjeta actual en `0.0`. Marinara pide confirmación porque el historial eliminado no se puede recuperar.
 
 ## Duplicar una persona
 

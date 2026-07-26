@@ -138,7 +138,9 @@ Para volver a una versión anterior:
 1. Abre la ventana **Compare** para la versión que quieres, o haz clic en su icono de restaurar en la lista.
 2. Haz clic en **Restore this version** (Restaurar esta versión), y luego confirma.
 
-Restaurar reemplaza tu tarjeta actual por esa instantánea. No añade una nueva entrada al historial. También puedes eliminar una instantánea guardada de la lista. Eliminar una instantánea no cambia tu tarjeta actual.
+Restaurar reemplaza tu tarjeta actual por esa instantánea. No añade una nueva entrada al historial. Usa el icono de lápiz para corregir la etiqueta de versión de una instantánea guardada sin restaurarla. También puedes eliminar una instantánea guardada de la lista; eliminarla no cambia tu tarjeta actual.
+
+Usa **Reset** (Restablecer) en el encabezado de **Version history** cuando quieras reiniciar el versionado de la tarjeta. Después de confirmar, Marinara elimina todas las instantáneas guardadas y establece la versión de la tarjeta actual en `0.0`. Esta acción no se puede deshacer.
 
 ## Revisar las actualizaciones de tarjeta propuestas por un agente
 
