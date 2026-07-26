@@ -42,7 +42,7 @@ La app rellena estos valores predeterminados por **Source**:
 | PocketTTS         | http://localhost:49112    | pocket-tts             | alba                            |
 | xAI Voice         | https://api.x.ai/v1       | grok-tts               | eve                             |
 
-Para **ElevenLabs**, el campo **Model** ofrece un menú desplegable de modelos de voz. Elige un modelo de voz normal. Los IDs de modelo que contienen `ttv` son modelos de diseño de voz, no modelos de voz, y no pueden leer texto en voz alta. Si eliges uno por error, la reproducción falla con un error que te indica que uses un modelo de voz en su lugar.
+Para **ElevenLabs**, el campo **Model** carga los modelos capaces de sintetizar voz disponibles mediante tu conexión y siempre mantiene visible la lista completa cuando lo abres. Elige un modelo de voz normal. Los IDs de modelo que contienen `ttv` son modelos de diseño de voz, no modelos de voz, y no pueden leer texto en voz alta. Si eliges uno por error, la reproducción falla con un error que te indica que uses un modelo de voz en su lugar.
 
 ### PocketTTS es un programa aparte
 
@@ -61,9 +61,9 @@ El ajuste **Voice Option** (Opción de voz) decide cómo se asignan las voces:
 
 Elige la voz en el campo **All Characters Voice**. PocketTTS muestra en un menú desplegable las voces que devuelve tu servidor y mantiene a su lado un campo de texto para un ID de voz, una URL o una ruta personalizados.
 
-Para cargar la lista de voces real de tu proveedor, primero guarda la tarjeta con TTS activado. Luego haz clic en el botón **Refresh voices** (el icono de flecha circular). Antes de conectarte, la app muestra una breve lista de reserva integrada para que el campo no esté vacío. Esa lista de reserva puede estar desactualizada, así que actualiza para obtener las voces actuales de tu proveedor.
+Para cargar la lista de voces real de tu proveedor, introduce los datos de conexión y haz clic en el botón **Refresh voices** (el icono de flecha circular). Puedes hacerlo antes de activar la reproducción. Al actualizar, primero se guarda la tarjeta actual, por lo que una clave API recién introducida se usa de inmediato. Antes de conectarte, la app muestra una breve lista de reserva integrada para que el campo no esté vacío. Si el proveedor devuelve un error, la app lo muestra en vez de presentar silenciosamente esa lista de reserva como si la actualización hubiera funcionado.
 
-Para **ElevenLabs**, debes elegir una voz. El menú desplegable empieza en "Select an ElevenLabs voice", y la reproducción se bloquea hasta que elijas una voz real.
+Para **ElevenLabs**, debes elegir una voz. Marinara carga la biblioteca paginada de la cuenta, incluidas las voces personales, del espacio de trabajo, guardadas y predeterminadas. El selector tiene un campo de búsqueda y una barra de desplazamiento siempre visible cuando la biblioteca es más larga que el panel. También indica cuántas voces se han cargado. El selector empieza en "Select an ElevenLabs voice", y la reproducción se bloquea hasta que elijas una voz real.
 
 ### Selected per character
 
@@ -73,7 +73,7 @@ Para **ElevenLabs**, debes elegir una voz. El menú desplegable empieza en "Sele
 4. Elige un personaje en el menú desplegable de la izquierda y una voz en el de la derecha.
 5. Repite para cada personaje al que quieras dar una voz personalizada.
 
-Primero debes crear tus personajes. Si aún no tienes ninguno, la app te indica que añadas personajes en la pestaña **Characters** antes de asignar voces. Los personajes sin una voz personal recurren a la voz global. Consulta [Crear y editar personajes](../characters/creating-and-editing-characters.md).
+El botón **Refresh** del cuadro **Character Voices** vuelve a cargar la misma biblioteca del proveedor sin cambiar al modo de una sola voz. Primero debes crear tus personajes. Si aún no tienes ninguno, la app te indica que añadas personajes en la pestaña **Characters** antes de asignar voces. Los personajes sin una voz personal recurren a la voz global. Consulta [Crear y editar personajes](../characters/creating-and-editing-characters.md).
 
 ## Narrator Voice
 

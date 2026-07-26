@@ -1,6 +1,6 @@
 {
   "language": "es",
-  "sourceCommit": "b8435fb7a",
+  "sourceCommit": "bd382c69238e9cd6d801657f74a2f696e96a60e5",
   "files": [
     {
       "path": "CONFIGURATION.md",
@@ -174,8 +174,8 @@
     },
     {
       "path": "chats/messages.md",
-      "sha256": "828ac031da44a28b07c02fcc650e47913c85bfd3180f90285503733865e8bf44",
-      "bytes": 10536
+      "sha256": "485a0f29f317ed689c8a479e8baa287363077bb6434d1d1eaf88574d55ebd6b1",
+      "bytes": 10912
     },
     {
       "path": "chats/peek-prompt.md",
@@ -194,8 +194,8 @@
     },
     {
       "path": "chats/slash-commands.md",
-      "sha256": "4dceed3a5009c16539870b9b86b3afb4e84cd4abe010bb8ea3a5414d3735858e",
-      "bytes": 8040
+      "sha256": "8b0d5ab2cca54a43364021bb4b8783a0b359683f6d1343c6675a5571bcd79489",
+      "bytes": 8234
     },
     {
       "path": "connections/connecting-to-a-provider.md",
@@ -539,8 +539,8 @@
     },
     {
       "path": "media/tts-setup.md",
-      "sha256": "7afec1e388b4f103fc18f1451bb90259f19f116fd4a93c66ce4c856c5ee1bd9d",
-      "bytes": 15134
+      "sha256": "08b6003498dac6ef91d780a701f5bda5e98353bcd397e03de471a93043071754",
+      "bytes": 15870
     },
     {
       "path": "noodle/overview.md",
@@ -559,8 +559,8 @@
     },
     {
       "path": "prompts/generation-parameters.md",
-      "sha256": "c880c302edaaafed68caf2f9893896dd6f4b293265d014e5214a35c5bc3c830d",
-      "bytes": 13723
+      "sha256": "b62b3e26472fcf25f512bc8cd05b88ba30363b1693f63b8c56c7e0b0eb88f3f2",
+      "bytes": 14374
     },
     {
       "path": "prompts/macros.md",
