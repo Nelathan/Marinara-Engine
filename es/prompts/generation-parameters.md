@@ -42,6 +42,8 @@ Juntas, **Frequency** y **Presence** son las penalizaciones por repetición.
 
 **Reasoning Effort** le dice a un modelo con capacidad de razonamiento cuánto razonar antes de responder. Un modelo con capacidad de razonamiento es uno que resuelve un problema primero en pasos ocultos. Las opciones son **None**, **Low**, **Medium**, **High**, **Xhigh** y **Maximum**. Si el modelo no admite el nivel que eliges, Marinara lo baja al nivel más fuerte que ese modelo permite.
 
+Cuando el interruptor del parámetro está activado, **None** pide explícitamente al proveedor que desactive el razonamiento, en vez de limitarse a omitir el ajuste de esfuerzo. Marinara solo envía el control de desactivación específico del proveedor a los modelos que sabe que lo admiten. Algunos modelos de razonamiento obligatorio no permiten desactivarlo y pueden seguir devolviendo razonamiento; elige un modelo sin razonamiento cuando sea imprescindible que no lo haya. Desactivar el propio interruptor del parámetro es distinto: no envía ninguna preferencia de razonamiento y deja intacto el comportamiento predeterminado del proveedor.
+
 **Verbosity** controla cuán largas y detalladas deben ser las respuestas. Las opciones son **None**, **Low**, **Medium** y **High**. **Low** mantiene las respuestas cortas. **High** fomenta respuestas más largas y descriptivas. Solo algunos modelos usan este ajuste.
 
 ## El interruptor de envío

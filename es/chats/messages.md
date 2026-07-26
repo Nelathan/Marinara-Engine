@@ -71,6 +71,8 @@ Estas tres acciones se parecen pero hacen cosas distintas. Elige la que correspo
 
 El comando **/continue** extiende el mismo mensaje. Escribe `/continue` (o su forma corta `/cont`) en la caja de entrada y envíalo. La IA retoma donde se detuvo su última respuesta y añade más texto a ese mismo mensaje, en lugar de hacer un nuevo swipe.
 
+De forma predeterminada, Marinara inserta una línea en blanco antes del texto añadido. Para adjuntar la continuación directamente al último carácter de la respuesta anterior, desactiva **Settings → General → Responses → Add a new line before /continue text**. Marinara indicará entonces al modelo que continúe exactamente desde el punto de corte, sin separador.
+
 ```
 /continue
 ```
