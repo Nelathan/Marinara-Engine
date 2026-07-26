@@ -26,9 +26,15 @@ Ciclo de vida y almacenamiento de paquetes:
 - **Persistence (Persistencia):** Los paquetes viven bajo `DATA_DIR/capability-packages`. Los volúmenes de Docker, los directorios de datos personalizados, las copias de seguridad y las actualizaciones normales los conservan.
 - **Offline resilience (Resiliencia sin conexión):** Los paquetes existentes siguen funcionando en su versión instalada cuando el acceso saliente HTTPS a GitHub no está disponible, se rechaza una actualización o una actualización falla la verificación.
 
+### Importaciones de agentes personalizados
+
+Los archivos, las carpetas y los repositorios personalizados de agentes externos están bloqueados de forma predeterminada. Para permitirlos, abre **Settings → Advanced → Danger Zone** y activa **Allow custom Agent imports**. A diferencia de las extensiones externas, esta protección controlada por el usuario no requiere una variable de entorno. Los controles de importación permanecen atenuados hasta que se activa.
+
+Cada importación muestra las capacidades solicitadas por el agente antes de guardarlo. Los permisos deben aprobarse de forma explícita, no se importan las funciones incluidas ni las selecciones de herramientas, se sanea el CSS generado y se comprueban las acciones de resultado con el conjunto de capacidades aprobado. Desactivar de nuevo la opción impide que se ejecuten los agentes importados externamente. Los agentes personalizados creados en Marinara y los paquetes oficiales instalados mediante **Download Agents** siguen pudiendo ejecutarse y no dependen de esta protección.
+
 ### Repositorios de agentes personalizados
 
-Los repositorios personalizados están desactivados de forma predeterminada porque sus prompts y selecciones de herramientas son contenido de terceros sin verificar. Configura `ENABLE_CUSTOM_AGENT_REPOS=true`, luego abre **Agents → Download Agents → Custom Sources** (Fuentes personalizadas) para previsualizar un repositorio público de GitHub. Añadir una fuente y aplicar cualquier cambio de contenido posterior requieren ambos una confirmación explícita. La sincronización es manual; Marinara no clona repositorios ni los sondea en segundo plano.
+Los repositorios personalizados están desactivados de forma predeterminada porque sus prompts y selecciones de herramientas son contenido de terceros sin verificar. Configura `ENABLE_CUSTOM_AGENT_REPOS=true`, activa **Allow custom Agent imports** en la Danger Zone y luego abre **Agents → Download Agents → Custom Sources** (Fuentes personalizadas) para previsualizar un repositorio público de GitHub. Añadir una fuente y aplicar cualquier cambio de contenido posterior requieren ambos una confirmación explícita. La sincronización es manual; Marinara no clona repositorios ni los sondea en segundo plano.
 
 La raíz del repositorio debe contener un array `agents.json` con el mismo formato de definición de agente que los paquetes de agentes descargables. Un archivo mínimo se ve así:
 

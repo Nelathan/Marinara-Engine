@@ -55,15 +55,20 @@ Los agentes personalizados de Post-Processing también obtienen una sección **T
 
 ## Custom Agent Abilities
 
-Las **Custom Agent Abilities** son poderes que se activan de forma opcional. Un poder permanece bloqueado hasta que activas su interruptor. Esto mantiene un agente personalizado seguro de forma predeterminada. Hay ocho interruptores:
+Las **Custom Agent Abilities** son poderes que se activan de forma opcional. Un poder permanece bloqueado hasta que activas su interruptor. Esto mantiene un agente personalizado seguro de forma predeterminada. Las habilidades disponibles son:
 
 | Habilidad | Lo que permite hacer al agente |
 |---|---|
 | **Create lorebooks** | Crear un nuevo lorebook (libro de trasfondo) hecho por el agente cuando su salida de lore no tiene destino. |
 | **Edit lorebooks** | Escribir entradas de lorebook o generar resultados de actualización de lorebook. |
-| **Edit messages** | Reemplazar el texto del mensaje generado por texto reescrito. |
+| **Edit messages** | Reemplazar el texto del mensaje generado por texto reescrito o añadirle opciones de continuación. |
 | **Edit trackers** | Actualizar el estado del tracker (agente de seguimiento) del juego, del personaje, de la persona o personalizado. |
 | **Frontend styling** | Aplicar un efecto de estilo visual temporal durante la generación. |
+| **Change chat backgrounds** | Cambiar y conservar el fondo seleccionado para un chat. |
+| **Change character sprites** | Cambiar las expresiones de personajes y Personas que se muestran en el chat. |
+| **Control media playback** | Controlar la reproducción de Spotify, YouTube o música local. |
+| **Control haptic devices** | Enviar comandos limitados a un dispositivo háptico conectado. |
+| **Edit About Me details** | Cambiar el texto About Me específico del chat. Los cambios de tarjetas públicas siguen necesitando una aprobación aparte. |
 | **Image generation** | Activar el generador de imágenes con un prompt de imagen. |
 | **Vectors/embeddings** | Usar contexto de vectores o embeddings (representaciones numéricas del texto). Los vectores son una forma de buscar texto por su significado. |
 | **Main prompt edits** | Editar el prompt enviado al modelo de IA principal. |
@@ -88,6 +93,14 @@ El **Result Type** le dice a Marinara cómo leer la salida de tu agente. La mayo
 | **Image Prompt** | Pide al generador de imágenes que dibuje una escena. | Image generation |
 | **Prompt Patch** | Añade, antepone o reemplaza secciones del prompt. | Main prompt edits |
 | **Frontend Style** | Aplica un efecto de estilo temporal. | Frontend styling |
+| **Background Change** | Selecciona y conserva un fondo de chat disponible. | Change chat backgrounds |
+| **Sprite Change** | Cambia las expresiones de personajes y Personas que se muestran en el chat. | Change character sprites |
+| **Spotify Control** | Controla la reproducción de Spotify. | Control media playback |
+| **YouTube Control** | Controla la reproducción de YouTube. | Control media playback |
+| **Local Music Control** | Controla la reproducción de tu colección de música local. | Control media playback |
+| **Haptic Command** | Envía un comando limitado a un dispositivo háptico conectado. | Control haptic devices |
+| **About Me Update** | Actualiza el texto About Me específico del chat y propone ediciones públicas. | Edit About Me details |
+| **Interactive Choices** | Añade opciones de continuación al mensaje generado. | Edit messages |
 
 **Context Injection** es el punto de partida más amigable. No necesita ningún interruptor de habilidad ni un formato de salida estricto. Úsalo cuando solo quieras que el agente añada una nota corta al prompt o registre un resumen.
 
@@ -182,7 +195,11 @@ Para exportar desde el editor, haz clic en el botón **Export agent** (el icono 
 
 Para exportar varios agentes a la vez, usa **Select agents** en el panel **Agents**, elige los agentes que quieras y exporta el grupo.
 
-Para importar, abre el panel **Agents** y haz clic en **Import agents** para un solo archivo, o en **Import agent folder** para elegir una carpeta entera. Cada archivo importado se convierte en un nuevo agente personalizado, por lo que no puede reemplazar a un agente curado con el mismo tipo interno. Por seguridad, Marinara también ignora las funciones incluidas y borra las selecciones de herramientas de los ajustes del agente importado. Importa funciones de confianza por separado desde **Function Calls**, revísalas y adjúntalas al agente de forma explícita después.
+Las importaciones de agentes externos están bloqueadas de forma predeterminada. Abre **Settings → Advanced → Danger Zone** y activa primero **Allow custom Agent imports**. Esta opción no necesita un cambio en `.env`. Solo afecta a los agentes proporcionados mediante archivos, carpetas o repositorios personalizados: los agentes que creas en Marinara y los agentes oficiales instalados mediante **Download Agents** siguen disponibles normalmente.
+
+Para importar, abre el panel **Agents** y haz clic en **Import agents** para un solo archivo, o en **Import agent folder** para elegir una carpeta entera. Marinara muestra una revisión de permisos antes de guardar nada. Aprueba solo las capacidades que necesita el agente; las capacidades sin marcar permanecen bloqueadas. Cada archivo importado recibe una nueva identidad personalizada, por lo que no puede reemplazar a un agente curado con el mismo tipo interno.
+
+Por seguridad, Marinara ignora las funciones incluidas, borra las selecciones de herramientas de los ajustes importados, sanea el CSS temporal antes de aplicarlo y comprueba las capacidades aprobadas antes de que un agente importado pueda cambiar mensajes, trackers, lorebooks, fondos, sprites, contenido multimedia, dispositivos hápticos, datos About Me, prompts o imágenes generadas. Importa funciones de confianza por separado desde **Function Calls**, revísalas y adjúntalas al agente de forma explícita después. Desactivar de nuevo la opción de la Danger Zone impide que se ejecuten los agentes importados externamente; no afecta a los agentes creados localmente ni a los oficiales.
 
 ## Guías relacionadas
 

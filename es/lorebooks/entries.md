@@ -86,9 +86,13 @@ Por ejemplo, toma una entrada **Selective** con la palabra clave principal `king
 
 Estos controles deciden dónde cae en el prompt una entrada activada. Se ubican en la fila compacta en una pantalla ancha. En una pantalla estrecha, toca el botón de controles rápidos de la fila para llegar a ellos.
 
-- **Position** (Posición): elige **Before chat**, **After chat** o **@ Depth**. Before chat y After chat colocan la entrada alrededor del historial del chat. **@ Depth** inyecta la entrada dentro del historial del chat. En una pantalla ancha, la fila las muestra como las etiquetas cortas **↑Char**, **↓Char** y **@Depth**.
+- **Position** (Posición): elige **Before chat**, **After chat**, **@ Depth** u **Outlet**. Before chat y After chat colocan la entrada alrededor del historial del chat. **@ Depth** inyecta la entrada dentro del historial del chat. **Outlet** no inyecta la entrada automáticamente; pone el contenido activado a disposición de una macro `{{outlet::name}}` con nombre. En una pantalla ancha, la fila muestra las tres primeras posiciones como las etiquetas cortas **↑Char**, **↓Char** y **@Depth**.
 - **Depth** (Profundidad): aparece solo cuando **Position** es **@ Depth**. Establece cuántos mensajes hacia atrás desde el último mensaje se inserta la entrada. El predeterminado es 4.
 - **Order** (Orden): el orden de inserción cuando varias entradas se activan a la vez. Un número más bajo va antes en el prompt. El predeterminado es 100.
+
+Cuando eliges **Outlet**, aparece un campo **Outlet name**. Escribe un nombre exacto que distingue mayúsculas y minúsculas, como `character_rules`, y después pon `{{outlet::character_rules}}` en una sección del prompt. Cada entrada asignada a ese Outlet sigue sus reglas normales de palabras clave, modo Constant, probabilidad, filtros, tiempos, límite de entradas y presupuesto de tokens. Solo se recopilan las entradas activadas para la generación actual. Las entradas que comparten el mismo nombre de Outlet se unen según su Order, separadas por saltos de línea.
+
+Una macro Outlet que no tenga entradas coincidentes activas se resuelve como texto vacío. El contenido de un Outlet no puede llamar a otra macro Outlet, lo que evita bucles recursivos. Las macros Outlet funcionan en secciones de prompt de los modos Conversation, Roleplay y Game.
 
 ## Probabilidad de disparo
 

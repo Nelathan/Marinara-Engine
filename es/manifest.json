@@ -1,11 +1,11 @@
 {
   "language": "es",
-  "sourceCommit": "bd382c69238e9cd6d801657f74a2f696e96a60e5",
+  "sourceCommit": "6f91d90b46fefba741446e49a7efb2ab54029b00",
   "files": [
     {
       "path": "CONFIGURATION.md",
-      "sha256": "ffa80c75d71e651471479df1df28ab185b449333ba5972b03a3982136f96a0a6",
-      "bytes": 44923
+      "sha256": "f62fd3b68f31f89f58a8bca0e9aac141fe63d471b2e05fad183aa58b6cb83033",
+      "bytes": 46038
     },
     {
       "path": "FAQ.md",
@@ -34,8 +34,8 @@
     },
     {
       "path": "agents/agents-overview.md",
-      "sha256": "f96e0bd279988a2d781d00bc74fad3e1b10d99a693f34bb426462dcc0fe80dd5",
-      "bytes": 10378
+      "sha256": "c73541bd0b3108fd59d9a3a7e8f320ab9061fedb63645898a6eff4201895d7f8",
+      "bytes": 10621
     },
     {
       "path": "agents/approvals-and-agent-suite.md",
@@ -49,8 +49,8 @@
     },
     {
       "path": "agents/custom-agents.md",
-      "sha256": "946075b56991ef1a0b76aaaf1c7917e5aed3f62134c9f0b60f9807da492653ea",
-      "bytes": 13842
+      "sha256": "67bc3879b6a697011d23917ec26d7d13cc7564ae40a216be57556239873376c3",
+      "bytes": 16349
     },
     {
       "path": "agents/hierarchical-maps.md",
@@ -469,8 +469,8 @@
     },
     {
       "path": "lorebooks/entries.md",
-      "sha256": "9b94f9bb92d50f654d18b17554d93fd206bd13fa503cf54d43f9d74550606af1",
-      "bytes": 13558
+      "sha256": "9b1200a6c9890396037e7e02c7ed0fe2e402a576bfed522e83a9af77d207e457",
+      "bytes": 14589
     },
     {
       "path": "lorebooks/import-export.md",
@@ -564,8 +564,8 @@
     },
     {
       "path": "prompts/macros.md",
-      "sha256": "06fd70d87cdd0bc09773ea0a2b629aa0c594edda44661d819e770211af028ade",
-      "bytes": 16925
+      "sha256": "e7b184f4c8b3dd67e3e5c5dc1333fdd63d0068e3a446a1bb76f4c065781e4f1c",
+      "bytes": 18162
     },
     {
       "path": "prompts/preset-variables.md",
