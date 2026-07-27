@@ -115,6 +115,14 @@ El valor de `{{lastGenerationType}}` es una etiqueta simple. Los valores de ejem
 
 La macro `{{agent::TYPE}}` inserta la salida guardada de un agente (un ayudante en segundo plano que rellena cosas como un tracker de escena, es decir, un agente de seguimiento). La forma más fácil de añadirla es dentro del **Preset Editor**: haz clic en **Add Section**, abre el grupo **Agent Sections** y elige un agente. Marinara crea una sección que ya contiene la etiqueta `{{agent::TYPE}}` correcta. Esta macro se resuelve al final, así que el texto del agente no puede inyectar más macros en tu prompt.
 
+## Macros Outlet de lorebooks
+
+`{{outlet::name}}` inserta contenido de las entradas de lorebook cuya **Position** es **Outlet** y cuyo **Outlet name** coincide exactamente con `name`. Los nombres de Outlet distinguen mayúsculas y minúsculas. Por ejemplo, `{{outlet::character_rules}}` no coincide con un Outlet llamado `Character_Rules`.
+
+Las entradas Outlet siguen usando la activación normal de los lorebooks. Las palabras clave, el modo Constant, la probabilidad, los filtros, los tiempos, los límites de entradas y los presupuestos de tokens deciden si una entrada está activa para la generación actual. Las entradas activas con el mismo nombre de Outlet se unen según su **Order**, separadas por saltos de línea. Solo se insertan en la macro; no se añaden también en una posición normal del lorebook.
+
+Usa las macros Outlet en secciones de prompt de los modos Conversation, Roleplay o Game. La macro funciona aunque aparezca antes del marcador de lorebook del preset, y un preset no necesita un marcador de lorebook si solo utiliza entradas Outlet. Un Outlet desconocido o inactivo se resuelve como texto vacío. Una entrada Outlet no puede expandir otra macro Outlet, por lo que los Outlets anidados no son recursivos.
+
 ## Macros de tiempo
 
 Todas las macros de tiempo leen un mismo momento compartido por resolución, así que siempre coinciden entre sí. La zona horaria proviene de tu navegador.
