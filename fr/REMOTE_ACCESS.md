@@ -1,0 +1,245 @@
+# Accès à distance : Basic Auth et liste d'autorisation d'IP
+
+Ce guide explique comment ouvrir Marinara Engine depuis un autre appareil : un téléphone, un ordinateur portable ou un conteneur Docker. Au programme, les deux options principales : Basic Auth et la liste d'autorisation d'IP. Le contournement pour réseau privé, le HTTPS, la section **Admin Access** (accès administrateur) et le message CSRF "save blocked" sont aussi expliqués. Presque tous les réglages décrits ici se trouvent dans le fichier `.env` du serveur, pas dans l'application.
+
+Un petit lexique utilisé tout au long de ce guide :
+
+- Le fichier `.env` : un fichier de réglages en texte brut, placé dans le dossier de Marinara Engine, à côté du fichier `package.json`.
+- Loopback : la machine qui exécute réellement le serveur. Son adresse est `127.0.0.1` ou `localhost`.
+- L'accès à distance : ouvrir Marinara depuis n'importe quel appareil AUTRE que la machine qui exécute le serveur.
+
+## Ce que Marinara bloque par défaut
+
+Pour protéger tes données, une installation neuve de Marinara refuse les connexions venant d'autres appareils tant que tu n'as pas mis en place un contrôle d'accès. Par défaut, seuls trois types de clients sont considérés comme fiables :
+
+1. Loopback (`127.0.0.1` ou `::1`), c'est-à-dire la machine qui exécute le serveur elle-même.
+2. Les appareils Tailscale de ton tailnet. Tailscale est un outil de réseau privé, et ses adresses utilisent la plage `100.64.0.0/10`.
+3. Les clients Docker sur le même hôte. Marinara reconnaît la plage de pont habituelle `172.16.0.0/12` ainsi que la passerelle par défaut exacte du conteneur, ce qui couvre aussi Docker Desktop et les pools d'adresses personnalisés.
+
+Tout le reste est bloqué tant que tu n'as pas choisi une option ci-dessous : ton téléphone sur le même Wi-Fi, un client venant d'Internet, etc. Un appareil bloqué qui ouvre Marinara dans un navigateur tombe sur une page de configuration sombre. Son titre indique **This Marinara Engine install needs access control before remote devices can connect.** La page affiche l'IP de ton appareil ainsi que deux extraits de `.env` prêts à copier-coller.
+
+Si tu ne fais rien et ne définis jamais de mot de passe, Marinara reste verrouillé sur ces trois sources fiables. C'est le comportement par défaut, et il est sûr.
+
+## Où se trouve le fichier .env
+
+Tous les réglages d'accès se trouvent dans le fichier `.env`, à la racine du projet, à côté du fichier `package.json`. Si tu n'en as pas encore, copie l'exemple :
+
+```bash
+cp .env.example .env
+```
+
+Ouvre le fichier `.env` avec n'importe quel éditeur de texte. La plupart des réglages d'accès prennent effet en une poignée de secondes, sans redémarrage : Basic Auth, la liste d'autorisation d'IP, le secret administrateur et les origines CSRF. Quelques réglages de bas niveau demandent encore un redémarrage, dont la variable `PORT`, la variable `HOST` et les chemins des certificats HTTPS.
+
+Il arrive que les autres appareils n'atteignent pas du tout le serveur : la connexion expire au lieu de renvoyer une erreur 403. Dans ce cas, le serveur n'écoute sans doute que sur la machine locale. Demande-lui d'écouter sur toutes les interfaces réseau :
+
+```env
+HOST=0.0.0.0
+```
+
+Les lanceurs (`start.bat`, `start.sh`) définissent `HOST=0.0.0.0` à ta place. Lancer directement la commande `pnpm start` ne le fait pas.
+
+## Quelle option choisir
+
+Lis les cas suivants dans l'ordre et arrête-toi au premier qui te correspond.
+
+1. Tu te connectes uniquement via Tailscale, ou uniquement depuis des conteneurs Docker sur le même hôte. Tu n'as rien à faire, ça fonctionne déjà.
+2. Tu veux ouvrir Marinara depuis un téléphone, une tablette ou un ordinateur portable, sur le Wi-Fi de la maison. Utilise Basic Auth (option 1 ci-dessous).
+3. Tu exposes Marinara sur Internet. Utilise Basic Auth avec le HTTPS.
+4. Tes appareils clients ont des adresses IP fixes et tu préfères ne pas saisir de mot de passe. Utilise la liste d'autorisation d'IP (option 2 ci-dessous).
+5. Tout ton réseau est de confiance et tu ne veux jamais de mot de passe. Utilise le contournement pour réseau privé (option 3 ci-dessous). Lis d'abord l'avertissement qui s'y trouve.
+
+Basic Auth reste le choix le plus souple. Cette option fonctionne depuis n'importe quelle IP, ne demande aucune configuration sur chaque appareil, et le navigateur retient l'identifiant.
+
+## Option 1 : Basic Auth (recommandé)
+
+Avec Basic Auth, le navigateur demande un nom d'utilisateur et un mot de passe avant de te laisser entrer. Pour activer cette option, ajoute deux lignes au fichier `.env` :
+
+```env
+BASIC_AUTH_USER=alice
+BASIC_AUTH_PASS=correct-horse-battery-staple
+```
+
+Choisis un mot de passe solide et unique. Basic Auth transmet l'identifiant à chaque requête : traite-le comme le mot de passe de n'importe quel autre compte. Pour en générer un au hasard :
+
+```bash
+openssl rand -base64 24
+```
+
+Enregistre le fichier `.env`. La modification prend effet en une poignée de secondes, sans redémarrage. Ensuite, procède ainsi depuis l'appareil distant.
+
+1. Ouvre Marinara dans le navigateur avec l'adresse du serveur, par exemple `http://192.168.1.50:7860`.
+2. Saisis le nom d'utilisateur et le mot de passe que tu as définis, quand le navigateur te les demande.
+3. L'application doit se charger. Le navigateur retient l'identifiant pour le reste de la session.
+
+Par défaut, la fenêtre du navigateur affiche **Marinara Engine**. Ce texte se change avec la variable `BASIC_AUTH_REALM`.
+
+Certains clients passent outre le mot de passe, même quand Basic Auth est activé :
+
+- Loopback (`127.0.0.1`, `::1`) : tu n'as donc jamais besoin de mot de passe sur la machine hôte elle-même.
+- Toute adresse présente dans `IP_ALLOWLIST`. Attention : définir une liste d'autorisation bloque aussi toutes les adresses absentes de cette liste (voir l'option 2).
+- Tailscale (`100.64.0.0/10`) et le trafic Docker du même hôte, pont ou passerelle, sauf si tu désactives leur contournement.
+- L'adresse `/api/health`, pour que les outils de surveillance continuent de fonctionner.
+
+Important : Basic Auth se contente d'encoder le mot de passe, il ne le chiffre pas. N'importe qui surveillant une connexion non chiffrée peut le lire. Si tu exposes Marinara sur Internet, associe Basic Auth au HTTPS (voir plus bas).
+
+## Option 2 : liste d'autorisation d'IP
+
+La liste d'autorisation d'IP laisse entrer certaines adresses sans mot de passe. Elle convient bien quand tes appareils ont des adresses IP stables. Indique une liste d'adresses ou de plages, séparées par des virgules :
+
+```env
+IP_ALLOWLIST=192.168.1.0/24,203.0.113.42
+```
+
+Le `/24` de l'exemple, c'est de la notation CIDR. Le CIDR est une façon courte d'écrire toute une plage d'adresses en une seule entrée. Par exemple, `192.168.1.0/24` couvre toutes les adresses de `192.168.1.0` à `192.168.1.255`. Une adresse seule, sans barre oblique, comme `203.0.113.42`, ne correspond qu'à cet appareil-là.
+
+Comment se comporte la liste d'autorisation d'IP :
+
+- Toute adresse absente de la liste est rejetée avec une erreur **403 Forbidden**.
+- Loopback est toujours autorisé : impossible de te couper toi-même l'accès local.
+- Le trafic Tailscale et le trafic Docker du même hôte, pont ou passerelle, contournent aussi la liste, sauf si tu désactives leur contournement (voir plus bas).
+- Les entrées invalides sont ignorées et consignées dans les logs. Elles ne font pas planter le serveur.
+- La liste reste stricte même quand Basic Auth est activé. Les adresses listées évitent la demande de mot de passe. Toutes les autres restent bloquées avec une erreur **403 Forbidden**, sans jamais voir de fenêtre d'identification.
+
+La liste d'autorisation ne permet pas un montage mixte, où les appareils listés éviteraient le mot de passe pendant que tous les autres s'identifient. Si tu veux que les autres appareils s'identifient avec un mot de passe, laisse la variable `IP_ALLOWLIST` vide et utilise Basic Auth seul.
+
+L'application de la liste se désactive un moment, sans supprimer la liste elle-même. C'est pratique quand tu cherches un problème depuis une nouvelle IP. Mets l'indicateur d'activation à false :
+
+```env
+IP_ALLOWLIST_ENABLED=false
+```
+
+## Option 3 : contournement pour réseau privé (sans mot de passe)
+
+Ton réseau entier est peut-être de confiance, par exemple un LAN domestique (réseau local) sans redirection de ports. Dans ce cas, tu peux lever le verrouillage sans définir de mot de passe :
+
+```env
+ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK=true
+```
+
+Ce réglage rétablit l'ancien comportement "ouvert sur le LAN, bloqué depuis Internet". Il ne s'applique qu'aux plages standards de réseau privé, par exemple `10.0.0.0/8`, `172.16.0.0/12` et `192.168.0.0/16`. La plage CGNAT `100.64.0.0/10` compte également. Le CGNAT est un système d'adresses partagées utilisé par certains fournisseurs d'accès, et Tailscale emploie la même plage. Les adresses publiques d'Internet restent bloquées avec une erreur 403.
+
+Avertissement : n'importe qui sur le même réseau atteint alors Marinara sans mot de passe. C'est acceptable sur un réseau que tu maîtrises. Ça ne l'est pas sur le Wi-Fi partagé d'un café, d'un aéroport ou d'une résidence étudiante. Dans le doute, utilise plutôt Basic Auth.
+
+Il existe aussi un indicateur plus large, `ALLOW_UNAUTHENTICATED_REMOTE=true`, qui autorise l'accès sans mot de passe depuis N'IMPORTE QUELLE adresse, Internet compris. Ne l'active pas. Si tu as vraiment besoin d'un accès public, utilise Basic Auth avec le HTTPS, ou place devant un reverse proxy qui gère l'identification.
+
+## Contournement Tailscale et Docker
+
+Deux indicateurs permettent au trafic Tailscale et Docker de contourner à la fois la liste d'autorisation d'IP et Basic Auth, exactement comme le fait loopback. Les deux sont activés par défaut. C'est pour ça qu'une installation neuve est déjà accessible via Tailscale ou depuis tes conteneurs Docker, sans rien configurer :
+
+```env
+BYPASS_AUTH_TAILSCALE=true
+BYPASS_AUTH_DOCKER=true
+```
+
+Ces valeurs par défaut sont sûres. Un pair Tailscale s'est déjà identifié sur ton compte Tailscale pour rejoindre le réseau. Les adresses du pont Docker et la passerelle exacte détectée depuis l'intérieur du conteneur désignent le même hôte Docker. Même avec Basic Auth activé, tes clients Tailscale et Docker évitent la demande de mot de passe. Le reste du réseau doit s'identifier.
+
+Mets un indicateur à false si tu veux exiger un mot de passe de ces clients aussi. Il y a deux raisons, plus rares, d'en désactiver un.
+
+Ton fournisseur d'accès utilise peut-être le CGNAT sur la plage `100.64.0.0/10`, celle-là même qu'emploie Tailscale. Dans ce cas, désactive le contournement Tailscale :
+
+```env
+BYPASS_AUTH_TAILSCALE=false
+```
+
+Ton LAN habituel utilise peut-être des adresses `172.16.x.x`. Dans ce cas, désactive le contournement Docker et ajoute tes conteneurs précis à la variable `IP_ALLOWLIST` :
+
+```env
+BYPASS_AUTH_DOCKER=false
+```
+
+Marinara peut aussi se trouver derrière un conteneur reverse proxy, sur le pont Docker ou sur la passerelle détectée. Pour que les contrôles d'accès de Marinara s'appliquent aux clients transmis par le proxy, définis :
+
+```env
+REQUIRE_AUTH_FOR_DOCKER_PROXY=true
+```
+
+Le serveur écrit un avertissement `[auth-bypass]` dans les logs la première fois qu'un de ces contournements laisse passer une requête. Cet avertissement confirme que le contournement est actif.
+
+## Servir Marinara en HTTPS
+
+Le HTTPS chiffre la connexion grâce au TLS. Le TLS est le chiffrement qui transforme une adresse `http` ordinaire en adresse `https` sécurisée. Utilise toujours le HTTPS pour une installation joignable en dehors d'un réseau privé entièrement de confiance, surtout avec Basic Auth.
+
+Deux façons de le mettre en place.
+
+1. Le TLS intégré. Indique au serveur un fichier de certificat et un fichier de clé privée :
+
+```env
+SSL_CERT=/path/to/cert.pem
+SSL_KEY=/path/to/key.pem
+```
+
+2. Le reverse proxy. Place Marinara derrière nginx, Caddy, Traefik ou un Cloudflare Tunnel. Le proxy s'occupe de la partie HTTPS et transmet à Marinara en HTTP simple, sur la même machine.
+
+Il te faut un certificat et une clé avant de définir les variables `SSL_CERT` et `SSL_KEY`. Un outil comme `mkcert` en crée un pour un usage local, `certbot` pour un domaine public. Si les fichiers manquent ou sont illisibles, le serveur s'arrête au démarrage et indique les chemins exacts qu'il a essayés.
+
+## Admin Access et actions privilégiées
+
+Certaines actions sont particulièrement sensibles : effacer les données, créer ou télécharger des sauvegardes, importer et exporter des profils, installer des thèmes et installer le runtime Local Model. Elles exigent un secret partagé à part, appelé le secret administrateur, en plus de l'option d'accès que tu as choisie plus haut.
+
+Sur la machine loopback, ces actions fonctionnent en général sans secret administrateur. Depuis un appareil distant, il faut d'abord le configurer. Procède ainsi.
+
+1. Dans le fichier `.env`, définis une valeur aléatoire solide, puis enregistre. Elle prend effet en une poignée de secondes, sans redémarrage.
+
+```env
+ADMIN_SECRET=some-long-random-string
+```
+
+2. Sur l'appareil distant, ouvre Marinara et va dans **Settings** (Paramètres), puis l'onglet **Advanced**, puis la section **Admin Access**.
+3. Colle la même valeur dans le champ (son texte indicatif affiche **ADMIN_SECRET**), puis clique sur **Save**.
+4. Le message **Admin secret saved for this browser** doit apparaître.
+
+Quelques points à savoir sur le secret administrateur :
+
+- Il est stocké dans ce navigateur uniquement. Il ne se synchronise pas entre les appareils. Chaque navigateur qui a besoin des actions privilégiées doit le recevoir séparément.
+- Cliquer sur **Save** avec le champ vide efface le secret et affiche **Admin secret cleared**.
+- Si l'opérateur du serveur définit `MARINARA_REQUIRE_ADMIN_SECRET_ON_LOOPBACK=true`, même la machine loopback a besoin du secret.
+- C'est indépendant de Basic Auth, et les deux se combinent. Basic Auth protège toute l'application, le secret administrateur protège les actions dangereuses.
+
+Si une action privilégiée échoue sur un appareil distant, Marinara affiche un message d'erreur avec deux solutions. La première : ouvrir l'application via localhost. La seconde : définir `ADMIN_SECRET` dans le fichier `.env` du serveur, puis coller la même valeur dans **Settings** > **Advanced** > **Admin Access**.
+
+## Pourquoi mon enregistrement est-il bloqué (CSRF)
+
+CSRF veut dire cross-site request forgery, la falsification de requête entre sites. Cette protection empêche un autre site ouvert dans ton navigateur de modifier discrètement des choses dans Marinara sans ta permission. Elle fonctionne toute seule. Aucun réglage ne sert à l'activer.
+
+Il arrive que la protection CSRF bloque tes propres enregistrements. En général, c'est parce que tu atteins Marinara via un nom de domaine public ou un port inhabituel auquel le serveur ne fait pas encore confiance. Deux signes te préviennent quand ça arrive.
+
+- Un bandeau rouge en haut de l'application avertit que **Saves will silently fail**, parce que cette origine n'est pas de confiance. Le bandeau affiche la ligne exacte à ajouter au fichier `.env` et propose un bouton **Copy**.
+- Si un enregistrement est réellement rejeté, une petite fenêtre apparaît. Son titre est **Save blocked: missing CSRF header**, **Save blocked: cross-site request rejected** ou **Save blocked: origin not trusted**.
+
+Pour corriger ça, ajoute ton adresse à la liste de confiance dans le fichier `.env` :
+
+```env
+CSRF_TRUSTED_ORIGINS=https://chat.example.com,http://203.0.113.10:7831
+```
+
+Avec un domaine public ou un domaine de reverse proxy, autorise aussi le nom d'hôte :
+
+```env
+TRUSTED_HOSTS=chat.example.com
+```
+
+Les adresses LAN directes, Tailscale, IPv4 et IPv6 n'ont pas besoin de la variable `TRUSTED_HOSTS`. Les noms locaux en `.local`/`.home.arpa` et les noms de machine en un seul mot sont acceptés automatiquement. Un nom d'hôte exact déjà présent dans `CSRF_TRUSTED_ORIGINS` est accepté lui aussi.
+
+Les origines loopback, les adresses LAN classiques, Tailscale (`100.64.0.0/10`) et le pont Docker (`172.16.0.0/12`) sont de confiance automatiquement. Tu n'as à lister que les adresses IP publiques et les noms de domaine. La modification prend effet en une poignée de secondes, sans redémarrage.
+
+## Une note sur les fournisseurs locaux bloqués
+
+Imagine que tu connectes Marinara à un fournisseur d'IA local, par exemple un fournisseur qui tourne sur ta propre machine. La requête peut être refusée avec un message parlant de "private, loopback, metadata, or reserved IP range". Il s'agit d'un autre contrôle de sécurité, la protection SSRF. SSRF veut dire server-side request forgery, la falsification de requête côté serveur. Elle empêche le serveur d'appeler des adresses privées, sauf si tu l'y autorises. L'erreur nomme la variable `.env` exacte à définir, par exemple `PROVIDER_LOCAL_URLS_ENABLED`. La [référence de configuration du serveur](CONFIGURATION.md) en donne la liste complète.
+
+## Accès depuis un téléphone ou une tablette
+
+Pour ouvrir Marinara depuis un téléphone ou une tablette sur le même réseau :
+
+1. Vérifie que le serveur écoute sur toutes les interfaces, avec `HOST=0.0.0.0` dans le fichier `.env`.
+2. Choisis une option d'accès parmi celles ci-dessus. Basic Auth est la plus simple pour un téléphone sur le Wi-Fi de la maison.
+3. Trouve l'adresse IP locale de la machine qui exécute le serveur (par exemple `192.168.1.50`).
+4. Sur le téléphone, ouvre `http://192.168.1.50:7860` dans un navigateur. Le port par défaut est `7860`.
+5. Si tu as activé Basic Auth, saisis le nom d'utilisateur et le mot de passe quand ils te sont demandés.
+
+Si la page ne se charge pas du tout, le serveur n'est sans doute pas joignable. Vérifie `HOST=0.0.0.0` et la valeur de la variable `PORT`. Si tu obtiens plutôt une erreur 403, ton appareil joint bien le serveur mais n'est pas encore autorisé. Reprends l'option que tu as choisie plus haut.
+
+## Guides associés
+
+- La [référence de configuration du serveur](CONFIGURATION.md) donne la liste complète des réglages du fichier `.env` et les cas particuliers.
+- La [Résoudre les problèmes de Marinara Engine](TROUBLESHOOTING.md) couvre les erreurs de connexion, l'accès mobile et bien d'autres cas.
+- La [foire aux questions](FAQ.md) explique rapidement comment atteindre Marinara depuis un autre appareil.
