@@ -30,6 +30,22 @@ export interface CombatStatus {
   stat?: "attack" | "defense" | "speed" | "hp";
 }
 
+export interface CombatReinforcement {
+  id?: string;
+  name: string;
+  hp: number;
+  maxHp: number;
+  mp?: number;
+  maxMp?: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  level?: number;
+  side?: "player" | "enemy";
+  element?: string;
+  isBoss?: boolean;
+}
+
 /** A player inventory item interpreted for this specific encounter. */
 export interface CombatItemEffect {
   name: string;
@@ -74,10 +90,38 @@ export interface CombatMechanic {
   interval?: number;
   hpThreshold?: number;
   counterplay?: string;
-  effectType?: "damage_all" | "damage_one" | "buff_self" | "debuff_party" | "status_party" | "status_enemy";
+  effectType?:
+    | "damage_all"
+    | "damage_one"
+    | "buff_self"
+    | "debuff_party"
+    | "status_party"
+    | "status_enemy"
+    | "summon_reinforcements";
   power?: number;
   element?: string;
   status?: CombatStatus;
+  reinforcements?: CombatReinforcement[];
+}
+
+/** An encounter goal generated alongside the combat blueprint. */
+export interface CombatEncounterObjective {
+  id: string;
+  kind:
+    | "eliminate"
+    | "survive_rounds"
+    | "escape"
+    | "defend"
+    | "escort"
+    | "capture"
+    | "interrupt"
+    | "conditional_eliminate";
+  label: string;
+  /** Combatant names from the blueprint; converted to stable ids when combat starts. */
+  targetNames?: string[];
+  requiredProgress?: number;
+  failAtRound?: number;
+  condition?: string;
 }
 
 /** Optional image generation request for special encounters. */
@@ -135,6 +179,7 @@ export interface CombatInitState {
   environment: string;
   styleNotes: CombatStyleNotes;
   itemEffects?: CombatItemEffect[];
+  objectives?: CombatEncounterObjective[];
   dialogueCues?: CombatDialogueCue[];
   mechanics?: CombatMechanic[];
   visuals?: CombatVisualRequest;

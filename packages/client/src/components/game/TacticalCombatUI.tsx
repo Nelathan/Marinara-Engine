@@ -17,7 +17,16 @@
 // through while the grid stays readable. Terrain palettes are themed by the
 // authoritative `state.environment` so restored snapshots keep their look.
 // ──────────────────────────────────────────────
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+} from "react";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import {
   Sword,
@@ -43,10 +52,11 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "../../lib/utils";
+import { cn, generateClientId } from "../../lib/utils";
+import { ApiError } from "../../lib/api-client";
 import { audioManager } from "../../lib/game-audio";
 import { useGameAssetManifest } from "../../hooks/use-game-assets";
-import { useTacticalCombatStart, useTacticalCombatAction } from "../../hooks/use-game";
+import { useActiveCombatSession, useTacticalCombatStart, useTacticalCombatAction } from "../../hooks/use-game";
 import { useUpdateChatMetadata } from "../../hooks/use-chats";
 import {
   TERRAIN_DATA,
@@ -54,10 +64,14 @@ import {
   getMovementRange,
   getTargetsInRange,
   forecastAttack,
+  forecastSkill,
+  hasLineOfSight,
   buildTacticalSummary,
   type Combatant,
   type CombatSummary,
   type CombatSkill,
+  type CombatItemEffect,
+  type CombatObjectiveState,
   type TacticalCombatState,
   type TacticalUnit,
   type TacticalAction,
@@ -88,6 +102,12 @@ interface TacticalCombatUIProps {
   formation?: string | null;
   /** Restore an in-progress battle after a refresh (from chat metadata snapshot). */
   initialState?: TacticalCombatState | null;
+  inventoryItems?: Array<{ name: string; quantity: number }>;
+  combatItemEffects?: CombatItemEffect[];
+  combatObjectives?: CombatObjectiveState[];
+  combatMechanics?: import("@marinara-engine/shared").CombatMechanic[];
+  onInventoryItemUsed?: (itemName: string) => void | Promise<void>;
+  onInventoryChange?: (items: Array<{ name: string; quantity: number }>) => void;
   /** The party combatant that is the player's own persona (gets the crown marker). */
   playerCombatantId?: string | null;
   /** Called when combat ends. Same contract as classic GameCombatUI → drives GM narration. */
@@ -430,9 +450,23 @@ type UiMode =
   | { kind: "idle" }
   | { kind: "unit"; unitId: string }
   | { kind: "skills"; unitId: string }
+  | { kind: "items"; unitId: string }
+  | { kind: "maneuver"; unitId: string }
   | { kind: "target"; unitId: string; action: "attack" | "skill" | "item"; skill?: CombatSkill; itemName?: string };
 
-const DEFAULT_ITEM_NAME = "Potion";
+const GAMEPAD_AXIS_THRESHOLD = 0.55;
+const GAMEPAD_REPEAT_DELAY_MS = 260;
+const GAMEPAD_REPEAT_INTERVAL_MS = 90;
+
+function isTextEntryFocused(): boolean {
+  const activeElement = document.activeElement as HTMLElement | null;
+  return (
+    activeElement?.tagName === "INPUT" ||
+    activeElement?.tagName === "TEXTAREA" ||
+    activeElement?.tagName === "SELECT" ||
+    activeElement?.isContentEditable === true
+  );
+}
 
 export function TacticalCombatUI({
   chatId,
@@ -441,22 +475,38 @@ export function TacticalCombatUI({
   environment,
   formation,
   initialState,
+  inventoryItems = [],
+  combatItemEffects = [],
+  combatObjectives: initialObjectives = [],
+  combatMechanics = [],
+  onInventoryItemUsed,
+  onInventoryChange,
   playerCombatantId,
   onCombatEnd,
+  onCustomInstruction,
 }: TacticalCombatUIProps) {
   const { t: localizeUi } = useUiTranslation();
   const { data: manifest } = useGameAssetManifest();
   const assets = manifest?.assets ?? null;
   const startMut = useTacticalCombatStart();
   const actionMut = useTacticalCombatAction();
-  const updateMeta = useUpdateChatMetadata();
+  const { mutate: updateMetadata } = useUpdateChatMetadata();
 
   const [state, setState] = useState<TacticalCombatState | null>(initialState ?? null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+  const [objectives, setObjectives] = useState<CombatObjectiveState[]>(initialObjectives);
+  const activeSessionQuery = useActiveCombatSession(chatId, "tactical", !sessionId);
   const [starting, setStarting] = useState(!initialState);
   const [startError, setStartError] = useState<string | null>(null);
+  const launchRequestedForChatRef = useRef<string | null>(null);
+  const hydratedSessionRevisionRef = useRef<string | null>(null);
 
   const [ui, setUi] = useState<UiMode>({ kind: "idle" });
   const [stagedMove, setStagedMove] = useState<TacticalCoord | null>(null);
+  const [maneuverText, setManeuverText] = useState("");
+  const [maneuverTargetId, setManeuverTargetId] = useState<string | null>(null);
+  const [maneuverObjectiveId, setManeuverObjectiveId] = useState<string | null>(null);
   // Optimistic move: keeps the mover's token at its committed destination through
   // network flight + event playback (sendAction clears stagedMove immediately, and
   // playEvents' baseline is the pre-action state — without this the token snaps
@@ -469,6 +519,9 @@ export function TacticalCombatUI({
   const [logOpen, setLogOpen] = useState(false);
   const [fleeConfirm, setFleeConfirm] = useState(false);
   const [restartConfirm, setRestartConfirm] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 4 : 1,
+  );
 
   // Root element — the drag constraints boundary for the draggable inspect card.
   const rootRef = useRef<HTMLDivElement>(null);
@@ -488,6 +541,7 @@ export function TacticalCombatUI({
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const popupIdRef = useRef(0);
   const endedRef = useRef(false);
+  const terminalSummaryRef = useRef<CombatSummary | null>(null);
 
   const playSfx = useCallback((tag: string) => audioManager.playSfx(tag, assets), [assets]);
 
@@ -503,16 +557,38 @@ export function TacticalCombatUI({
   // ── Persist snapshot to chat metadata after every authoritative state change ──
   const persistSnapshot = useCallback(
     (snap: TacticalCombatState | null) => {
-      updateMeta.mutate({ id: chatId, gameTacticalCombatSnapshot: snap });
+      updateMetadata({ id: chatId, gameTacticalCombatSnapshot: snap });
     },
-    [chatId, updateMeta],
+    [chatId, updateMetadata],
   );
+
+  useEffect(() => {
+    const session = activeSessionQuery.data?.session;
+    if (!session || session.style !== "tactical") return;
+    const hydrationKey = `${session.sessionId}:${session.revision}`;
+    if (hydratedSessionRevisionRef.current === hydrationKey) return;
+    hydratedSessionRevisionRef.current = hydrationKey;
+    const playerId = playerCombatantId ?? party[0]?.id ?? null;
+    const canonicalState: TacticalCombatState = {
+      ...session.canonicalState,
+      units: session.canonicalState.units.map((unit) =>
+        unit.side === "party" && playerId ? { ...unit, isPlayer: unit.id === playerId } : unit,
+      ),
+    };
+    setSessionId(session.sessionId);
+    setRevision(session.revision);
+    setObjectives(session.objectives);
+    if (session.result) terminalSummaryRef.current = session.result;
+    setState(canonicalState);
+    setStarting(false);
+    persistSnapshot(canonicalState);
+  }, [activeSessionQuery.data?.session, party, persistSnapshot, playerCombatantId]);
 
   // ── Launch a fresh battle (payload build + player marking + setState/persist/SFX) ──
   // Shared by the mount effect and the restart flow. `isCancelled` lets the mount
   // effect drop a stale response after unmount; restart passes nothing.
   const launchBattle = useCallback(
-    (isCancelled?: () => boolean) => {
+    (isCancelled?: () => boolean, objectiveOverride: CombatObjectiveState[] = objectives) => {
       setStarting(true);
       setStartError(null);
       // Typed intermediate (not a fresh literal) so environment/formation reach the
@@ -523,7 +599,19 @@ export function TacticalCombatUI({
         enemies: Combatant[];
         environment?: string;
         formation?: string;
-      } = { chatId, party, enemies };
+        inventory?: Array<{ name: string; quantity: number }>;
+        itemEffects?: CombatItemEffect[];
+        mechanics?: import("@marinara-engine/shared").CombatMechanic[];
+        objectives?: CombatObjectiveState[];
+      } = {
+        chatId,
+        party,
+        enemies,
+        inventory: inventoryItems,
+        itemEffects: combatItemEffects,
+        objectives: objectiveOverride,
+      };
+      if (combatMechanics.length > 0) startPayload.mechanics = combatMechanics;
       if (environment) startPayload.environment = environment;
       if (formation) startPayload.formation = formation;
       startMut
@@ -538,6 +626,9 @@ export function TacticalCombatUI({
               u.side === "party" && (playerId ? u.id === playerId : false) ? { ...u, isPlayer: true } : u,
             ),
           };
+          setSessionId(res.sessionId);
+          setRevision(res.revision);
+          setObjectives(res.objectives);
           setState(marked);
           setStarting(false);
           persistSnapshot(marked);
@@ -549,22 +640,66 @@ export function TacticalCombatUI({
           setStartError(err instanceof Error ? err.message : "Failed to start the tactical battle.");
         });
     },
-    [chatId, party, enemies, environment, formation, playerCombatantId, startMut, persistSnapshot, playSfx],
+    [
+      chatId,
+      party,
+      enemies,
+      environment,
+      formation,
+      inventoryItems,
+      combatItemEffects,
+      objectives,
+      combatMechanics,
+      playerCombatantId,
+      startMut,
+      persistSnapshot,
+      playSfx,
+    ],
   );
 
   // ── Start a fresh battle (unless restoring) ──
   useEffect(() => {
     if (initialState) return; // restored — do not re-create
+    if (
+      sessionId ||
+      activeSessionQuery.isPending ||
+      activeSessionQuery.isFetching ||
+      activeSessionQuery.data?.session ||
+      launchRequestedForChatRef.current === chatId
+    ) {
+      return;
+    }
+    launchRequestedForChatRef.current = chatId;
     let cancelled = false;
     launchBattle(() => cancelled);
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatId]);
+  }, [
+    activeSessionQuery.data?.session,
+    activeSessionQuery.isFetching,
+    activeSessionQuery.isPending,
+    chatId,
+    initialState,
+    launchBattle,
+    sessionId,
+  ]);
 
   // ── Derived: units currently rendered (anim positions during playback) ──
   const liveState = state;
+  const availableItems = useMemo(
+    () => (liveState?.inventory ?? inventoryItems).filter((item) => item.quantity > 0),
+    [liveState?.inventory, inventoryItems],
+  );
+  const itemEffectFor = useCallback(
+    (itemName: string | undefined) =>
+      itemName
+        ? (liveState?.itemEffects ?? combatItemEffects).find(
+            (effect) => effect.name.trim().toLowerCase() === itemName.trim().toLowerCase(),
+          )
+        : undefined,
+    [liveState?.itemEffects, combatItemEffects],
+  );
 
   // Authoritative environment → terrain palette (restored snapshots keep theme).
   const activeEnvironment = useMemo(
@@ -601,14 +736,20 @@ export function TacticalCombatUI({
     for (const e of liveState.units) {
       if (e.side !== "enemy" || e.hp <= 0) continue;
       const reach = [{ x: e.x, y: e.y }, ...getMovementRange(liveState, e.id)];
+      const hasAttackSkill = e.skills.some(
+        (skill) => skill.type === "attack" && (e.skillCooldowns[skill.name] ?? 0) <= 0 && e.mp >= skill.mpCost,
+      );
+      const threatMin = hasAttackSkill ? 1 : e.attackRange.min;
+      const threatMax = hasAttackSkill ? Math.max(2, e.attackRange.max) : e.attackRange.max;
       for (const tile of reach) {
-        for (let dy = -e.attackRange.max; dy <= e.attackRange.max; dy++) {
-          for (let dx = -e.attackRange.max; dx <= e.attackRange.max; dx++) {
+        for (let dy = -threatMax; dy <= threatMax; dy++) {
+          for (let dx = -threatMax; dx <= threatMax; dx++) {
             const d = Math.abs(dx) + Math.abs(dy);
-            if (d < e.attackRange.min || d > e.attackRange.max) continue;
+            if (d < threatMin || d > threatMax) continue;
             const tx = tile.x + dx;
             const ty = tile.y + dy;
             if (tx < 0 || ty < 0 || tx >= liveState.grid.width || ty >= liveState.grid.height) continue;
+            if (d > 1 && !hasLineOfSight(liveState.grid, tile, { x: tx, y: ty })) continue;
             keys.add(`${tx},${ty}`);
           }
         }
@@ -656,17 +797,21 @@ export function TacticalCombatUI({
       return new Set(ids);
     }
     if (ui.action === "item") {
+      const effect = itemEffectFor(ui.itemName);
       // Item (heal) → allies within range 2.
       const ids: string[] = [];
       for (const u of stagedState.units) {
-        if (u.hp <= 0 || u.side !== selectedUnit.side) continue;
+        if (u.hp <= 0) continue;
+        if (effect?.target === "self" && u.id !== selectedUnit.id) continue;
+        if (effect?.target === "ally" && u.side !== selectedUnit.side) continue;
+        if (effect?.target === "enemy" && u.side === selectedUnit.side) continue;
         const d = Math.abs(u.x - from.x) + Math.abs(u.y - from.y);
         if (d <= 2) ids.push(u.id);
       }
       return new Set(ids);
     }
     return new Set<string>();
-  }, [stagedState, ui, selectedUnit, stagedMove]);
+  }, [stagedState, ui, selectedUnit, stagedMove, itemEffectFor]);
 
   // Forecast for a hovered/selected target (attack + attack-skills only).
   const [forecastTargetId, setForecastTargetId] = useState<string | null>(null);
@@ -675,6 +820,9 @@ export function TacticalCombatUI({
     if (ui.kind !== "target") return null;
     if (ui.action === "item") return null;
     if (ui.action === "skill" && ui.skill && ui.skill.type !== "attack") return null;
+    if (ui.action === "skill" && ui.skill) {
+      return forecastSkill(stagedState, selectedUnit.id, forecastTargetId, ui.skill.name);
+    }
     return forecastAttack(stagedState, selectedUnit.id, forecastTargetId);
   }, [stagedState, selectedUnit, forecastTargetId, ui]);
 
@@ -694,8 +842,9 @@ export function TacticalCombatUI({
     (ev: TacticalEvent, working: Map<string, RenderUnit>) => {
       switch (ev.kind) {
         case "move": {
-          if (ev.actorId && ev.to) {
-            const u = working.get(ev.actorId);
+          const movedUnitId = ev.targetId ?? ev.actorId;
+          if (movedUnitId && ev.to) {
+            const u = working.get(movedUnitId);
             if (u) {
               u.x = ev.to.x;
               u.y = ev.to.y;
@@ -775,7 +924,7 @@ export function TacticalCombatUI({
   // ── End-of-battle handoff ──
   const maybeEnd = useCallback(
     (s: TacticalCombatState) => {
-      if (!s.outcome || endedRef.current) return;
+      if (!s.outcome || endedRef.current || (!sessionId && !activeSessionQuery.isFetched)) return;
       endedRef.current = true;
       // Terminal snapshots stay persisted (not cleared here) so a refresh mid-flight
       // restores the outcome screen instead of soft-locking or re-launching a fresh
@@ -784,30 +933,27 @@ export function TacticalCombatUI({
       // Defeat: do NOT auto-hand off. The defeat outcome screen offers Retry / Continue
       // so the player can restart the fight instead of being dropped back to the story.
       if (s.outcome === "defeat") return;
-      const summary = buildTacticalSummary(s);
+      const summary = terminalSummaryRef.current ?? {
+        ...buildTacticalSummary(s),
+        ...(sessionId ? { sessionId } : {}),
+        objectives,
+        inventory: (s.inventory ?? []).map((item) => ({ ...item })),
+      };
       // buildTacticalSummary already maps to classic outcome values ("victory"|"defeat"|"flee").
       const t = setTimeout(() => {
-        persistSnapshot(null);
         onCombatEnd(summary.outcome, summary);
       }, 1400);
       timersRef.current.push(t);
     },
-    [onCombatEnd, persistSnapshot],
+    [activeSessionQuery.isFetched, objectives, onCombatEnd, sessionId],
   );
 
   // ── Restored-terminal-mount handoff ──
-  // A snapshot restored with an outcome already set (victory/fled/defeat) never
-  // went through playEvents' maybeEnd call on this mount. Without this, a
-  // restored victory/fled battle would soft-lock (outcome screen shows, but
-  // onCombatEnd/handoff never fires); a restored defeat just needs endedRef set
-  // so its Retry / Continue buttons work normally. Runs once per mount.
-  const restoredEndCheckedRef = useRef(false);
+  // Canonical restoration can arrive after mount, so terminal handoff follows
+  // live authoritative state instead of only the metadata snapshot prop.
   useEffect(() => {
-    if (restoredEndCheckedRef.current) return;
-    if (!initialState?.outcome) return;
-    restoredEndCheckedRef.current = true;
-    maybeEnd(initialState);
-  }, [initialState, maybeEnd]);
+    if (state?.outcome) maybeEnd(state);
+  }, [maybeEnd, state]);
 
   // ── Event animation player ──
   // Plays the server-returned events sequentially over a working copy of the
@@ -819,7 +965,7 @@ export function TacticalCombatUI({
       events: TacticalEvent[],
       finalState: TacticalCombatState,
       preState: TacticalCombatState,
-      onSettled?: (final: TacticalCombatState) => void,
+      onSettled?: (final: TacticalCombatState, events: TacticalEvent[]) => void,
     ) => {
       clearTimers();
       if (events.length === 0) {
@@ -831,7 +977,7 @@ export function TacticalCombatUI({
         setState(finalState);
         persistSnapshot(finalState);
         maybeEnd(finalState);
-        onSettled?.(finalState);
+        onSettled?.(finalState, events);
         return;
       }
       // Already locked by sendAction; keep it set through the animation + finalize.
@@ -853,7 +999,7 @@ export function TacticalCombatUI({
 
       let elapsed = 0;
       events.forEach((ev, i) => {
-        elapsed += i === 0 ? 0 : (EVENT_DELAY[events[i - 1].kind] ?? 500);
+        elapsed += i === 0 ? 0 : (EVENT_DELAY[events[i - 1].kind] ?? 500) / animationSpeed;
         const t = setTimeout(() => {
           applyEventVisual(ev, working);
           setAnimUnits(new Map(working));
@@ -862,7 +1008,7 @@ export function TacticalCombatUI({
       });
 
       // Finalize after the last event's dwell time.
-      const finishAt = elapsed + (EVENT_DELAY[events[events.length - 1].kind] ?? 500);
+      const finishAt = elapsed + (EVENT_DELAY[events[events.length - 1].kind] ?? 500) / animationSpeed;
       const done = setTimeout(() => {
         animatingRef.current = false;
         setAnimating(false);
@@ -873,11 +1019,11 @@ export function TacticalCombatUI({
         setState(finalState);
         persistSnapshot(finalState);
         maybeEnd(finalState);
-        onSettled?.(finalState);
+        onSettled?.(finalState, events);
       }, finishAt);
       timersRef.current.push(done);
     },
-    [clearTimers, persistSnapshot, applyEventVisual, maybeEnd],
+    [clearTimers, persistSnapshot, applyEventVisual, maybeEnd, animationSpeed],
   );
 
   // ── Reset transient UI selection ──
@@ -885,6 +1031,9 @@ export function TacticalCombatUI({
     setUi({ kind: "idle" });
     setStagedMove(null);
     setForecastTargetId(null);
+    setManeuverText("");
+    setManeuverTargetId(null);
+    setManeuverObjectiveId(null);
   }, []);
 
   // ── Restart the whole battle (fresh seed/terrain from the server) ──
@@ -892,6 +1041,11 @@ export function TacticalCombatUI({
   // battle, then re-launches with the same props. Works for snapshot-restored
   // battles too (it drives launchBattle directly, independent of `initialState`).
   const restartBattle = useCallback(() => {
+    const resetObjectives = initialObjectives.map((objective) => ({
+      ...objective,
+      progress: 0,
+      status: "active" as const,
+    }));
     clearTimers();
     animatingRef.current = false;
     setAnimating(false);
@@ -907,13 +1061,17 @@ export function TacticalCombatUI({
     actionMenuX.set(0);
     actionMenuY.set(0);
     endedRef.current = false;
+    terminalSummaryRef.current = null;
+    setSessionId(null);
+    setRevision(0);
+    setObjectives(resetObjectives);
     setState(null);
-    launchBattle();
-  }, [clearTimers, resetSelection, launchBattle, actionMenuX, actionMenuY]);
+    launchBattle(undefined, resetObjectives);
+  }, [clearTimers, resetSelection, initialObjectives, launchBattle, actionMenuX, actionMenuY]);
 
   // ── Send one action to the server ──
   const sendAction = useCallback(
-    (action: TacticalAction, onSettled?: (final: TacticalCombatState) => void) => {
+    (action: TacticalAction, onSettled?: (final: TacticalCombatState, events: TacticalEvent[]) => void) => {
       if (!liveState || animatingRef.current) return;
       const preState = liveState;
       // Lock SYNCHRONOUSLY — before the request leaves — so the network-flight
@@ -933,9 +1091,29 @@ export function TacticalCombatUI({
       optimisticMoveRef.current = opt;
       setOptimisticMove(opt);
       resetSelection();
+      const actionId = generateClientId();
       actionMut
-        .mutateAsync({ chatId, state: preState, action })
+        .mutateAsync({
+          chatId,
+          state: preState,
+          ...(sessionId ? { sessionId } : {}),
+          expectedRevision: revision,
+          actionId,
+          action,
+        })
         .then((res) => {
+          setSessionId(res.sessionId);
+          setRevision(res.revision);
+          setObjectives(res.objectives);
+          terminalSummaryRef.current = res.summary ?? null;
+          if (res.inventory) {
+            onInventoryChange?.(res.inventory);
+          } else if (action.type === "item") {
+            const effect = combatItemEffects.find(
+              (candidate) => candidate.name.trim().toLowerCase() === action.itemName.trim().toLowerCase(),
+            );
+            if (effect?.consumes !== false) void onInventoryItemUsed?.(action.itemName);
+          }
           playEvents(res.events, res.state, preState, onSettled);
         })
         .catch((err: unknown) => {
@@ -945,11 +1123,40 @@ export function TacticalCombatUI({
           setAnimating(false);
           optimisticMoveRef.current = null;
           setOptimisticMove(null);
+          if (err instanceof ApiError && err.payload && typeof err.payload === "object") {
+            const payload = err.payload as {
+              code?: string;
+              currentRevision?: number;
+              state?: {
+                revision?: number;
+                canonicalState?: TacticalCombatState;
+                objectives?: CombatObjectiveState[];
+              };
+            };
+            if (payload.code === "STALE_REVISION" && payload.state?.canonicalState) {
+              setRevision(payload.currentRevision ?? payload.state.revision ?? revision);
+              setState(payload.state.canonicalState);
+              setObjectives(payload.state.objectives ?? []);
+              persistSnapshot(payload.state.canonicalState);
+            }
+          }
           const msg = err instanceof Error ? err.message : "That action was rejected.";
           toast.error(msg);
         });
     },
-    [liveState, chatId, actionMut, playEvents, resetSelection],
+    [
+      liveState,
+      chatId,
+      sessionId,
+      revision,
+      combatItemEffects,
+      onInventoryItemUsed,
+      onInventoryChange,
+      actionMut,
+      playEvents,
+      persistSnapshot,
+      resetSelection,
+    ],
   );
 
   // ── Interaction handlers ──
@@ -988,6 +1195,11 @@ export function TacticalCombatUI({
         return;
       }
 
+      if (ui.kind === "maneuver") {
+        setManeuverTargetId(unit.id);
+        return;
+      }
+
       // Select a controllable party unit (alive, un-acted).
       if (unit.side === "party" && unit.hp > 0 && !unit.hasActed && liveState.phase === "player") {
         playSfx(SFX.select);
@@ -1018,7 +1230,7 @@ export function TacticalCombatUI({
   }, [selectedUnit, stagedMove, playSfx, sendAction]);
 
   const chooseAction = useCallback(
-    (actionId: "attack" | "skills" | "item" | "defend" | "wait") => {
+    (actionId: "attack" | "skills" | "item" | "maneuver" | "defend" | "overwatch" | "wait") => {
       if (!selectedUnit || !liveState) return;
       playSfx(SFX.select);
       const to = stagedMove ?? undefined;
@@ -1031,19 +1243,74 @@ export function TacticalCombatUI({
           setUi({ kind: "skills", unitId: selectedUnit.id });
           break;
         case "item":
-          setUi({ kind: "target", unitId: selectedUnit.id, action: "item", itemName: DEFAULT_ITEM_NAME });
-          setForecastTargetId(null);
+          if (availableItems.length === 0) return;
+          setUi({ kind: "items", unitId: selectedUnit.id });
+          break;
+        case "maneuver":
+          setManeuverTargetId(null);
+          setManeuverObjectiveId(null);
+          setManeuverText("");
+          setUi({ kind: "maneuver", unitId: selectedUnit.id });
           break;
         case "defend":
           sendAction({ type: "defend", unitId: selectedUnit.id, to });
+          break;
+        case "overwatch":
+          sendAction({ type: "overwatch", unitId: selectedUnit.id, to });
           break;
         case "wait":
           sendAction({ type: "wait", unitId: selectedUnit.id, to });
           break;
       }
     },
-    [selectedUnit, liveState, stagedMove, playSfx, sendAction],
+    [selectedUnit, liveState, stagedMove, availableItems.length, playSfx, sendAction],
   );
+
+  const chooseItem = useCallback(
+    (itemName: string) => {
+      if (!selectedUnit || !availableItems.some((item) => item.name === itemName)) return;
+      playSfx(SFX.select);
+      setUi({ kind: "target", unitId: selectedUnit.id, action: "item", itemName });
+      setForecastTargetId(null);
+    },
+    [selectedUnit, availableItems, playSfx],
+  );
+
+  const submitManeuver = useCallback(() => {
+    if (!selectedUnit || ui.kind !== "maneuver" || maneuverText.trim().length < 3) return;
+    const instruction = maneuverText.trim();
+    const targetId = maneuverTargetId ?? undefined;
+    const tile = inspectTile ?? undefined;
+    sendAction(
+      {
+        type: "maneuver",
+        unitId: selectedUnit.id,
+        instruction,
+        ...(targetId ? { targetId } : {}),
+        ...(tile ? { tile } : {}),
+        ...(maneuverObjectiveId ? { objectiveId: maneuverObjectiveId } : {}),
+        ...(stagedMove ? { to: stagedMove } : {}),
+      },
+      (final, events) => {
+        if (final.outcome) return;
+        const maneuverResult = events
+          .filter((event) => event.kind === "maneuver" || event.actorId === selectedUnit.id)
+          .map((event) => event.text)
+          .join(" ");
+        onCustomInstruction?.(`Tactical maneuver resolved: ${maneuverResult || instruction}`);
+      },
+    );
+  }, [
+    selectedUnit,
+    ui,
+    maneuverText,
+    maneuverTargetId,
+    maneuverObjectiveId,
+    inspectTile,
+    stagedMove,
+    sendAction,
+    onCustomInstruction,
+  ]);
 
   const chooseSkill = useCallback(
     (skill: CombatSkill) => {
@@ -1062,11 +1329,11 @@ export function TacticalCombatUI({
       sendAction({ type: "attack", unitId: selectedUnit.id, targetId: forecastTargetId, to });
     } else if (ui.action === "skill" && ui.skill) {
       sendAction({ type: "skill", unitId: selectedUnit.id, skillName: ui.skill.name, targetId: forecastTargetId, to });
-    } else if (ui.action === "item") {
+    } else if (ui.action === "item" && ui.itemName) {
       sendAction({
         type: "item",
         unitId: selectedUnit.id,
-        itemName: ui.itemName ?? DEFAULT_ITEM_NAME,
+        itemName: ui.itemName,
         targetId: forecastTargetId,
         to,
       });
@@ -1080,8 +1347,8 @@ export function TacticalCombatUI({
       const to = stagedMove ?? undefined;
       if (ui.action === "skill" && ui.skill) {
         sendAction({ type: "skill", unitId: selectedUnit.id, skillName: ui.skill.name, targetId, to });
-      } else if (ui.action === "item") {
-        sendAction({ type: "item", unitId: selectedUnit.id, itemName: ui.itemName ?? DEFAULT_ITEM_NAME, targetId, to });
+      } else if (ui.action === "item" && ui.itemName) {
+        sendAction({ type: "item", unitId: selectedUnit.id, itemName: ui.itemName, targetId, to });
       }
     },
     [selectedUnit, ui, stagedMove, sendAction],
@@ -1097,6 +1364,191 @@ export function TacticalCombatUI({
     resetSelection();
     sendAction({ type: "flee" });
   }, [resetSelection, sendAction]);
+
+  const handleCombatKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if (event.key === "Escape") {
+        resetSelection();
+        return;
+      }
+      if (!selectedUnit || ui.kind !== "unit" || animating) return;
+      const shortcut = event.key.toLowerCase();
+      if (shortcut === "a") chooseAction("attack");
+      else if (shortcut === "s") chooseAction("skills");
+      else if (shortcut === "i") chooseAction("item");
+      else if (shortcut === "m") chooseAction("maneuver");
+      else if (shortcut === "d") chooseAction("defend");
+      else if (shortcut === "o") chooseAction("overwatch");
+      else if (shortcut === "w") chooseAction("wait");
+      else return;
+      event.preventDefault();
+    },
+    [resetSelection, selectedUnit, ui.kind, animating, chooseAction],
+  );
+
+  const moveControllerCursor = useCallback(
+    (deltaX: number, deltaY: number) => {
+      if (!liveState || liveState.outcome || animating) return;
+      setInspectTile((current) => {
+        const fallbackUnit = selectedUnit ?? liveState.units.find((unit) => unit.side === "party" && unit.hp > 0);
+        const origin =
+          current ?? stagedMove ?? (fallbackUnit ? { x: fallbackUnit.x, y: fallbackUnit.y } : { x: 0, y: 0 });
+        return {
+          x: Math.max(0, Math.min(liveState.grid.width - 1, origin.x + deltaX)),
+          y: Math.max(0, Math.min(liveState.grid.height - 1, origin.y + deltaY)),
+        };
+      });
+    },
+    [liveState, selectedUnit, stagedMove, animating],
+  );
+
+  const confirmControllerSelection = useCallback(() => {
+    if (!liveState || liveState.outcome || liveState.phase !== "player" || animating) return;
+    if (fleeConfirm || restartConfirm || logOpen) return;
+
+    const fallbackUnit = selectedUnit ?? liveState.units.find((unit) => unit.side === "party" && unit.hp > 0);
+    const cursor = inspectTile ?? stagedMove ?? (fallbackUnit ? { x: fallbackUnit.x, y: fallbackUnit.y } : null);
+    if (!cursor) return;
+    setInspectTile(cursor);
+
+    if (ui.kind === "unit" && stagedMove?.x === cursor.x && stagedMove?.y === cursor.y && !selectedUnit?.hasMoved) {
+      commitMove();
+      return;
+    }
+
+    const unitAtCursor = liveState.units.find((unit) => unit.hp > 0 && unit.x === cursor.x && unit.y === cursor.y);
+    if (ui.kind === "target") {
+      if (!unitAtCursor || !targetIds.has(unitAtCursor.id)) return;
+      const isSupport = ui.action === "item" || (ui.action === "skill" && ui.skill?.type !== "attack");
+      if (isSupport) {
+        onSupportTarget(unitAtCursor.id);
+      } else if (forecastTargetId === unitAtCursor.id && forecast) {
+        confirmTarget();
+      } else {
+        onTokenClick(unitAtCursor);
+      }
+      return;
+    }
+
+    if (unitAtCursor) onTokenClick(unitAtCursor);
+    else onTileClick(cursor.x, cursor.y);
+  }, [
+    liveState,
+    animating,
+    fleeConfirm,
+    restartConfirm,
+    logOpen,
+    selectedUnit,
+    inspectTile,
+    stagedMove,
+    ui,
+    commitMove,
+    targetIds,
+    onSupportTarget,
+    forecastTargetId,
+    forecast,
+    confirmTarget,
+    onTokenClick,
+    onTileClick,
+  ]);
+
+  const cancelControllerSelection = useCallback(() => {
+    if (fleeConfirm) {
+      setFleeConfirm(false);
+      return;
+    }
+    if (restartConfirm) {
+      setRestartConfirm(false);
+      return;
+    }
+    if (logOpen) {
+      setLogOpen(false);
+      return;
+    }
+    if (ui.kind === "target") setForecastTargetId(null);
+    if (ui.kind === "maneuver") setManeuverTargetId(null);
+    if (ui.kind === "maneuver") setManeuverObjectiveId(null);
+    if (ui.kind === "unit") {
+      resetSelection();
+      return;
+    }
+    if (ui.kind !== "idle" && selectedUnit) {
+      setUi({ kind: "unit", unitId: selectedUnit.id });
+      return;
+    }
+    setInspectTile(null);
+  }, [fleeConfirm, restartConfirm, logOpen, ui.kind, selectedUnit, resetSelection]);
+
+  const controllerHandlersRef = useRef({
+    move: moveControllerCursor,
+    confirm: confirmControllerSelection,
+    cancel: cancelControllerSelection,
+  });
+
+  useEffect(() => {
+    controllerHandlersRef.current = {
+      move: moveControllerCursor,
+      confirm: confirmControllerSelection,
+      cancel: cancelControllerSelection,
+    };
+  }, [moveControllerCursor, confirmControllerSelection, cancelControllerSelection]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return;
+
+    let animationFrame = 0;
+    let previousConfirm = false;
+    let previousCancel = false;
+    let heldDirection: "up" | "down" | "left" | "right" | null = null;
+    let nextDirectionRepeatAt = 0;
+
+    const pollGamepad = (now: number) => {
+      const gamepad = Array.from(navigator.getGamepads()).find((candidate) => candidate?.connected) ?? null;
+      if (!gamepad || document.hidden || isTextEntryFocused()) {
+        previousConfirm = gamepad?.buttons[0]?.pressed ?? false;
+        previousCancel = gamepad?.buttons[1]?.pressed ?? false;
+        heldDirection = null;
+        animationFrame = requestAnimationFrame(pollGamepad);
+        return;
+      }
+
+      const horizontalAxis = gamepad.axes[0] ?? 0;
+      const verticalAxis = gamepad.axes[1] ?? 0;
+      let direction: typeof heldDirection = null;
+      if (gamepad.buttons[12]?.pressed || verticalAxis <= -GAMEPAD_AXIS_THRESHOLD) direction = "up";
+      else if (gamepad.buttons[13]?.pressed || verticalAxis >= GAMEPAD_AXIS_THRESHOLD) direction = "down";
+      else if (gamepad.buttons[14]?.pressed || horizontalAxis <= -GAMEPAD_AXIS_THRESHOLD) direction = "left";
+      else if (gamepad.buttons[15]?.pressed || horizontalAxis >= GAMEPAD_AXIS_THRESHOLD) direction = "right";
+
+      if (direction && (direction !== heldDirection || now >= nextDirectionRepeatAt)) {
+        const delta =
+          direction === "up"
+            ? { x: 0, y: -1 }
+            : direction === "down"
+              ? { x: 0, y: 1 }
+              : direction === "left"
+                ? { x: -1, y: 0 }
+                : { x: 1, y: 0 };
+        controllerHandlersRef.current.move(delta.x, delta.y);
+        nextDirectionRepeatAt =
+          now + (direction === heldDirection ? GAMEPAD_REPEAT_INTERVAL_MS : GAMEPAD_REPEAT_DELAY_MS);
+      }
+      heldDirection = direction;
+
+      const confirmPressed = gamepad.buttons[0]?.pressed ?? false;
+      const cancelPressed = gamepad.buttons[1]?.pressed ?? false;
+      if (confirmPressed && !previousConfirm) controllerHandlersRef.current.confirm();
+      if (cancelPressed && !previousCancel) controllerHandlersRef.current.cancel();
+      previousConfirm = confirmPressed;
+      previousCancel = cancelPressed;
+      animationFrame = requestAnimationFrame(pollGamepad);
+    };
+
+    animationFrame = requestAnimationFrame(pollGamepad);
+    return () => cancelAnimationFrame(animationFrame);
+  }, []);
 
   // ── Render helpers ──
 
@@ -1161,7 +1613,6 @@ export function TacticalCombatUI({
           onClick={() => {
             // Clear any stale snapshot (e.g. the old terminal state after a failed
             // restart) so the next battle can't restore — and auto-hand-off — it.
-            persistSnapshot(null);
             onCombatEnd("flee", { outcome: "flee", rounds: 0, party: [], enemies: [] });
           }}
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
@@ -1182,6 +1633,9 @@ export function TacticalCombatUI({
   return (
     <div
       ref={rootRef}
+      tabIndex={0}
+      onKeyDown={handleCombatKeyDown}
+      aria-label={localizeUi("ui.game.tacticalcombatui.tacticalCombat")}
       className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-950/60 text-white select-none"
     >
       {/* One-off keyframes for shimmer / range pulse / ready glow (self-contained).
@@ -1225,6 +1679,11 @@ export function TacticalCombatUI({
           <span className="hidden text-[0.65rem] font-medium uppercase tracking-wider text-white/40 sm:inline">
             {liveState.difficulty}
           </span>
+          {objectives[0] && (
+            <span className="hidden max-w-56 truncate rounded-md border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[0.65rem] text-amber-100 md:inline">
+              {objectives[0].label}: {objectives[0].status}
+            </span>
+          )}
           {animating && (
             <span className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 text-[0.65rem] font-semibold text-white/70">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-300 shadow-[0_0_6px_1px_rgba(252,211,77,0.7)]" />
@@ -1233,6 +1692,14 @@ export function TacticalCombatUI({
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setAnimationSpeed((speed) => (speed >= 4 ? 1 : speed * 2))}
+            className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-semibold text-white/70 hover:bg-white/10"
+            title={localizeUi("ui.game.tacticalcombatui.animationSpeed")}
+          >
+            {animationSpeed}×
+          </button>
           <button
             type="button"
             onClick={() => setShowThreat((v) => !v)}
@@ -1329,6 +1796,7 @@ export function TacticalCombatUI({
                 // reads as "came from here, not committed yet".
                 const isMoveOrigin = !!stagedMove && !!selectedUnit && selectedUnit.x === x && selectedUnit.y === y;
                 const isInspected = inspectTile?.x === x && inspectTile?.y === y;
+                const hazard = liveState.hazards?.find((candidate) => candidate.x === x && candidate.y === y);
                 const icon = resolveTerrainIcon(activeEnvironment, terrain);
                 return (
                   <button
@@ -1374,6 +1842,14 @@ export function TacticalCombatUI({
                     {icon && (
                       <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[0.7em] opacity-45">
                         {icon}
+                      </span>
+                    )}
+                    {hazard && (
+                      <span
+                        className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center animate-pulse text-[0.8em]"
+                        title={hazard.name}
+                      >
+                        {hazard.element === "poison" ? "☠" : hazard.element === "lightning" ? "⚡" : "🔥"}
                       </span>
                     )}
                     {inMove && !isStaged && (
@@ -1553,11 +2029,20 @@ export function TacticalCombatUI({
                       disabled={animating}
                     />
                   )}
+                  {availableItems.length > 0 && (
+                    <ActionButton
+                      icon={Backpack}
+                      label={localizeUi("ui.game.tacticalcombatui.item")}
+                      color="text-emerald-300"
+                      onClick={() => chooseAction("item")}
+                      disabled={animating}
+                    />
+                  )}
                   <ActionButton
-                    icon={Backpack}
-                    label={localizeUi("ui.game.tacticalcombatui.item")}
-                    color="text-emerald-300"
-                    onClick={() => chooseAction("item")}
+                    icon={Sparkles}
+                    label={localizeUi("ui.game.tacticalcombatui.maneuver")}
+                    color="text-fuchsia-300"
+                    onClick={() => chooseAction("maneuver")}
                     disabled={animating}
                   />
                   <ActionButton
@@ -1567,6 +2052,15 @@ export function TacticalCombatUI({
                     onClick={() => chooseAction("defend")}
                     disabled={animating}
                   />
+                  {selectedUnit.attackRange.max > 1 && (
+                    <ActionButton
+                      icon={Crosshair}
+                      label={localizeUi("ui.game.tacticalcombatui.overwatch")}
+                      color="text-cyan-300"
+                      onClick={() => chooseAction("overwatch")}
+                      disabled={animating}
+                    />
+                  )}
                   <ActionButton
                     icon={Hourglass}
                     label={localizeUi("ui.game.tacticalcombatui.wait")}
@@ -1633,6 +2127,103 @@ export function TacticalCombatUI({
               </div>
             )}
 
+            {ui.kind === "maneuver" && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-white/65">{localizeUi("ui.game.tacticalcombatui.maneuverHelp")}</p>
+                <textarea
+                  value={maneuverText}
+                  onChange={(event) => setManeuverText(event.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder={localizeUi("ui.game.tacticalcombatui.maneuverPlaceholder")}
+                  className="resize-none rounded-lg border border-white/15 bg-black/25 px-2.5 py-2 text-xs text-white outline-none placeholder:text-white/35 focus:border-fuchsia-300/50"
+                />
+                {maneuverTargetId && (
+                  <p className="text-[0.7rem] text-fuchsia-200">
+                    {localizeUi("ui.game.tacticalcombatui.maneuverTarget")}:{" "}
+                    {liveState.units.find((unit) => unit.id === maneuverTargetId)?.name}
+                  </p>
+                )}
+                {objectives.some((objective) => objective.status === "active") && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[0.65rem] font-semibold uppercase text-white/45">
+                      {localizeUi("ui.game.tacticalcombatui.objective")}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {objectives
+                        .filter((objective) => objective.status === "active")
+                        .map((objective) => (
+                          <button
+                            key={objective.id}
+                            type="button"
+                            onClick={() =>
+                              setManeuverObjectiveId((current) => (current === objective.id ? null : objective.id))
+                            }
+                            className={cn(
+                              "rounded border px-2 py-1 text-[0.65rem] transition-colors",
+                              maneuverObjectiveId === objective.id
+                                ? "border-amber-300/50 bg-amber-400/20 text-amber-100"
+                                : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
+                            )}
+                          >
+                            {objective.label}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={submitManeuver}
+                    disabled={maneuverText.trim().length < 3 || animating}
+                    className="flex-1 rounded-lg border border-fuchsia-300/35 bg-fuchsia-500/15 px-3 py-2 text-xs font-bold text-fuchsia-100 hover:bg-fuchsia-500/25 disabled:opacity-40"
+                  >
+                    {localizeUi("ui.game.tacticalcombatui.resolveManeuver")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUi({ kind: "unit", unitId: selectedUnit.id })}
+                    className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/65 hover:bg-white/10"
+                  >
+                    {localizeUi("ui.game.tacticalcombatui.back")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {ui.kind === "items" && (
+              <div className="flex flex-col gap-1.5">
+                {availableItems.map((item) => {
+                  const effect = itemEffectFor(item.name);
+                  return (
+                    <button
+                      type="button"
+                      key={item.name}
+                      disabled={!effect || animating}
+                      onClick={() => chooseItem(item.name)}
+                      className={cn(
+                        "flex items-center justify-between rounded-lg border px-2.5 py-2 text-left text-xs transition-colors",
+                        effect
+                          ? "border-emerald-300/30 bg-emerald-500/10 text-white hover:bg-emerald-500/20"
+                          : "border-white/10 bg-white/5 text-white/40",
+                      )}
+                    >
+                      <span className="font-semibold">{item.name}</span>
+                      <span className="text-[0.65rem] text-white/60">×{item.quantity}</span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setUi({ kind: "unit", unitId: selectedUnit.id })}
+                  className="mt-1 text-center text-xs text-white/50 hover:text-white"
+                >
+                  {localizeUi("ui.game.tacticalcombatui.back")}
+                </button>
+              </div>
+            )}
+
             {/* Target / forecast */}
             {ui.kind === "target" && (
               <div className="flex flex-col gap-2">
@@ -1640,7 +2231,9 @@ export function TacticalCombatUI({
                   {ui.action === "attack"
                     ? localizeUi("ui.game.tacticalcombatui.selectATarget")
                     : ui.action === "item"
-                      ? localizeUi("ui.game.tacticalcombatui.selectAnAlly")
+                      ? itemEffectFor(ui.itemName)?.target === "enemy"
+                        ? localizeUi("ui.game.tacticalcombatui.selectAnEnemy")
+                        : localizeUi("ui.game.tacticalcombatui.selectAnAlly")
                       : ui.skill?.type === "attack"
                         ? localizeUi("ui.game.tacticalcombatui.selectATarget")
                         : ui.skill?.type === "debuff"
@@ -1832,8 +2425,12 @@ export function TacticalCombatUI({
               <button
                 type="button"
                 onClick={() => {
-                  const summary = buildTacticalSummary(liveState);
-                  persistSnapshot(null);
+                  const summary = terminalSummaryRef.current ?? {
+                    ...buildTacticalSummary(liveState),
+                    ...(sessionId ? { sessionId } : {}),
+                    objectives,
+                    inventory: (liveState.inventory ?? []).map((item) => ({ ...item })),
+                  };
                   onCombatEnd(summary.outcome, summary);
                 }}
                 className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10"

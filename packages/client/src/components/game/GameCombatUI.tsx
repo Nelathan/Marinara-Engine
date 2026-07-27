@@ -20,14 +20,15 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
-import { cn } from "../../lib/utils";
+import { cn, generateClientId } from "../../lib/utils";
 import { useRenderTimer } from "../../lib/perf-diagnostics";
 import { audioManager } from "../../lib/game-audio";
 import { getOrCreateCachedTTSAudioBlob } from "../../lib/tts-audio-cache";
 import { normalizeTTSCharacterName, resolveTTSVoiceForSpeaker, splitTTSChunks } from "../../lib/tts-dialogue";
 import { ttsService } from "../../lib/tts-service";
 import { useGameAssetManifest } from "../../hooks/use-game-assets";
-import { useCombatRound } from "../../hooks/use-game";
+import { useActiveCombatSession, useCombatRound } from "../../hooks/use-game";
+import { ApiError } from "../../lib/api-client";
 import { useTTSConfig } from "../../hooks/use-tts";
 import { AnimatedText } from "./AnimatedText";
 import type {
@@ -39,6 +40,7 @@ import type {
   CombatDialogueCue,
   CombatItemEffect,
   CombatMechanic,
+  CombatObjectiveState,
   CombatSkill,
   CombatStatus,
   PartyDialogueLine,
@@ -299,7 +301,8 @@ function sanitizeCombatMechanics(mechanics: unknown): CombatMechanic[] | undefin
       mechanic.effectType === "buff_self" ||
       mechanic.effectType === "debuff_party" ||
       mechanic.effectType === "status_party" ||
-      mechanic.effectType === "status_enemy"
+      mechanic.effectType === "status_enemy" ||
+      mechanic.effectType === "summon_reinforcements"
     ) {
       next.effectType = mechanic.effectType;
     }
@@ -308,6 +311,31 @@ function sanitizeCombatMechanics(mechanics: unknown): CombatMechanic[] | undefin
     if (element) next.element = element;
     const status = sanitizeCombatItemEffect({ name, target: "any", type: "status", status: mechanic.status })?.status;
     if (status) next.status = status;
+    if (Array.isArray(mechanic.reinforcements)) {
+      next.reinforcements = mechanic.reinforcements.slice(0, 8).flatMap((entry) => {
+        if (!entry || typeof entry !== "object") return [];
+        const reinforcement = entry as Record<string, unknown>;
+        const reinforcementName = stringFromUnknown(reinforcement.name);
+        if (!reinforcementName) return [];
+        return [
+          {
+            ...(stringFromUnknown(reinforcement.id) ? { id: stringFromUnknown(reinforcement.id) } : {}),
+            name: reinforcementName,
+            hp: Math.max(1, numberFromUnknown(reinforcement.hp, 1)),
+            maxHp: Math.max(1, numberFromUnknown(reinforcement.maxHp, 1)),
+            mp: Math.max(0, numberFromUnknown(reinforcement.mp, 0)),
+            maxMp: Math.max(0, numberFromUnknown(reinforcement.maxMp, 0)),
+            attack: Math.max(1, numberFromUnknown(reinforcement.attack, 1)),
+            defense: Math.max(0, numberFromUnknown(reinforcement.defense, 0)),
+            speed: Math.max(0, numberFromUnknown(reinforcement.speed, 0)),
+            level: Math.max(1, numberFromUnknown(reinforcement.level, 1)),
+            side: reinforcement.side === "player" ? ("player" as const) : ("enemy" as const),
+            ...(stringFromUnknown(reinforcement.element) ? { element: stringFromUnknown(reinforcement.element) } : {}),
+            ...(reinforcement.isBoss === true ? { isBoss: true } : {}),
+          },
+        ];
+      });
+    }
     sanitized.push(next);
   }
   return sanitized.length > 0 ? sanitized : undefined;
@@ -327,6 +355,14 @@ function sanitizeCombatantForRound(combatant: Combatant): Omit<Combatant, "sprit
     level: Math.max(1, numberFromUnknown(combatant.level, 1)),
     side: combatant.side,
     skills: sanitizeCombatSkills(combatant.skills),
+    skillCooldowns: combatant.skillCooldowns
+      ? Object.fromEntries(
+          Object.entries(combatant.skillCooldowns).map(([skillId, remaining]) => [
+            skillId,
+            Math.max(0, Math.floor(numberFromUnknown(remaining, 0))),
+          ]),
+        )
+      : undefined,
     statusEffects: sanitizeCombatStatusEffects(combatant.statusEffects),
     element: stringFromUnknown(combatant.element),
     elementAura: sanitizeElementAura(combatant.elementAura),
@@ -433,9 +469,10 @@ interface GameCombatUIProps {
   /** Player inventory items available during combat. */
   inventoryItems?: Array<{ name: string; quantity: number }>;
   /** Called when combat ends (victory, defeat, or flee). Receives a summary for GM narration. */
-  onCombatEnd: (outcome: "victory" | "defeat" | "flee", summary: CombatSummary) => void;
+  onCombatEnd: (outcome: "victory" | "defeat" | "flee", summary: CombatSummary) => void | Promise<void>;
   /** Called after a combat item successfully resolves so the used item can be consumed. */
   onInventoryItemUsed?: (itemName: string) => void | Promise<void>;
+  onInventoryChange?: (items: Array<{ name: string; quantity: number }>) => void;
   /** Mirrors internal combatant HP/status changes back to the game surface. */
   onCombatantsChange?: (party: Combatant[], enemies: Combatant[]) => void;
   /** Opens the full inventory panel for inspection/management. */
@@ -450,6 +487,7 @@ interface GameCombatUIProps {
   combatDialogueCues?: CombatDialogueCue[];
   /** GM interpretation of the player's inventory for this encounter. */
   combatItemEffects?: CombatItemEffect[];
+  combatObjectives?: CombatObjectiveState[];
   /** GM-authored special encounter rules, usually for bosses. */
   combatMechanics?: CombatMechanic[];
   /** Speaker names eligible for combat voice-over. Unnamed enemies are intentionally omitted by the caller. */
@@ -462,6 +500,7 @@ interface GameCombatUIProps {
   onSpriteSuggestionChange?: (suggestion: { name: string; pose: string } | null) => void;
   /** Whether we're waiting for a GM response. */
   isStreaming?: boolean;
+  restoreSession?: boolean;
 }
 
 // ── Constants ──
@@ -660,6 +699,7 @@ export function GameCombatUI({
   inventoryItems = [],
   onCombatEnd,
   onInventoryItemUsed,
+  onInventoryChange,
   onCombatantsChange,
   onOpenInventory,
   onCustomInstruction,
@@ -667,6 +707,7 @@ export function GameCombatUI({
   combatDialogue = [],
   combatDialogueCues = [],
   combatItemEffects = [],
+  combatObjectives: initialObjectives = [],
   combatMechanics = [],
   voicedCombatSpeakerNames = [],
   gameVoiceVolume = 1,
@@ -678,9 +719,61 @@ export function GameCombatUI({
   useRenderTimer("game-combat"); // [#3104 diagnostic]
   // Combat state
   const [phase, setPhase] = useState<CombatPhase>("intro");
+  const [aftermathPending, setAftermathPending] = useState(false);
   const [round, setRound] = useState(1);
+  const [combatSessionId, setCombatSessionId] = useState<string | null>(null);
+  const [combatRevision, setCombatRevision] = useState(0);
+  const [objectives, setObjectives] = useState<CombatObjectiveState[]>(initialObjectives);
+  const terminalSummaryRef = useRef<CombatSummary | null>(null);
+  const activeSessionQuery = useActiveCombatSession(chatId, "classic", !combatSessionId);
+  const [animationSpeed, setAnimationSpeed] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 4 : 1,
+  );
   const [party, setParty] = useState<Combatant[]>(initialParty);
   const [enemies, setEnemies] = useState<Combatant[]>(initialEnemies);
+
+  useEffect(() => {
+    const session = activeSessionQuery.data?.session;
+    if (!session || session.style !== "classic") return;
+    setCombatSessionId(session.sessionId);
+    setCombatRevision(session.revision);
+    setObjectives(session.objectives);
+    setParty(session.canonicalState.party);
+    setEnemies(session.canonicalState.enemies);
+    onCombatantsChange?.(session.canonicalState.party, session.canonicalState.enemies);
+    onInventoryChange?.(session.canonicalState.inventory ?? []);
+    setRound(session.canonicalState.round ?? 1);
+    const outcome = session.canonicalState.outcome;
+    if (outcome) {
+      const summary: CombatSummary = session.result ?? {
+        sessionId: session.sessionId,
+        outcome,
+        rounds: session.canonicalState.round ?? 1,
+        party: session.canonicalState.party.map((unit) => ({
+          id: unit.id,
+          name: unit.name,
+          hp: unit.hp,
+          maxHp: unit.maxHp,
+          mp: unit.mp,
+          maxMp: unit.maxMp,
+          ko: unit.hp <= 0,
+          statusEffects: (unit.statusEffects ?? []).map((effect) => effect.name),
+        })),
+        enemies: session.canonicalState.enemies.map((unit) => ({
+          id: unit.id,
+          name: unit.name,
+          defeated: unit.hp <= 0,
+          hp: unit.hp,
+          maxHp: unit.maxHp,
+        })),
+        objectives: session.objectives,
+        inventory: session.canonicalState.inventory?.map((item) => ({ ...item })) ?? [],
+      };
+      terminalSummaryRef.current = summary;
+      if (outcome === "flee") onCombatEnd("flee", summary);
+      else setPhase(outcome);
+    }
+  }, [activeSessionQuery.data?.session, onCombatEnd, onCombatantsChange, onInventoryChange]);
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
@@ -1195,9 +1288,9 @@ export function GameCombatUI({
   useEffect(() => {
     introTimer.current = setTimeout(() => {
       setPhase("player-turn");
-    }, INTRO_DURATION_MS);
+    }, INTRO_DURATION_MS / animationSpeed);
     return () => clearTimeout(introTimer.current);
-  }, []);
+  }, [animationSpeed]);
 
   // ── All combatants merged for server requests ──
   const allCombatants = useMemo(
@@ -1212,24 +1305,41 @@ export function GameCombatUI({
   const buildSummary = useCallback(
     (outcome: "victory" | "defeat" | "flee"): CombatSummary => {
       return {
+        ...(combatSessionId ? { sessionId: combatSessionId } : {}),
         outcome,
         rounds: round,
         party: party.map((c) => ({
+          id: c.id,
           name: c.name,
           hp: c.hp,
           maxHp: c.maxHp,
+          mp: c.mp,
+          maxMp: c.maxMp,
           ko: c.hp <= 0,
           statusEffects: (c.statusEffects ?? []).map((e) => e.name),
         })),
         enemies: enemies.map((c) => ({
+          id: c.id,
           name: c.name,
           defeated: c.hp <= 0,
           hp: c.hp,
           maxHp: c.maxHp,
         })),
+        objectives,
+        inventory: inventoryItems.map((item) => ({ ...item })),
       };
     },
-    [party, enemies, round],
+    [combatSessionId, enemies, inventoryItems, objectives, party, round],
+  );
+  const handoffCombatEnd = useCallback(
+    (outcome: "victory" | "defeat") => {
+      if (aftermathPending) return;
+      setAftermathPending(true);
+      void Promise.resolve(onCombatEnd(outcome, terminalSummaryRef.current ?? buildSummary(outcome))).finally(() => {
+        setAftermathPending(false);
+      });
+    },
+    [aftermathPending, buildSummary, onCombatEnd],
   );
 
   // ── Active player ──
@@ -1356,35 +1466,22 @@ export function GameCombatUI({
 
   // ── Apply round end — check victory/defeat ──
   const applyRoundEnd = useCallback(
-    (updatedCombatants: Combatant[]) => {
-      const updatedParty = party.map((p) => {
-        const u = updatedCombatants.find((c) => c.id === p.id);
-        return u
-          ? {
-              ...p,
-              hp: u.hp,
-              mp: u.mp ?? p.mp,
-              maxMp: u.maxMp ?? p.maxMp,
-              statusEffects: u.statusEffects,
-              elementAura: u.elementAura,
-              element: u.element,
-            }
-          : p;
-      });
-      const updatedEnemies = enemies.map((e) => {
-        const u = updatedCombatants.find((c) => c.id === e.id);
-        return u
-          ? {
-              ...e,
-              hp: u.hp,
-              mp: u.mp ?? e.mp,
-              maxMp: u.maxMp ?? e.maxMp,
-              statusEffects: u.statusEffects,
-              elementAura: u.elementAura,
-              element: u.element,
-            }
-          : e;
-      });
+    (updatedCombatants: Combatant[], authoritativeOutcome?: "victory" | "defeat" | "flee") => {
+      const mergeCombatants = (side: "player" | "enemy") =>
+        updatedCombatants
+          .filter((combatant) => combatant.side === side)
+          .map((combatant) => {
+            const previous = [...party, ...enemies].find((entry) => entry.id === combatant.id);
+            return {
+              ...previous,
+              ...combatant,
+              sprite: combatant.sprite ?? previous?.sprite,
+              mp: combatant.mp ?? previous?.mp,
+              maxMp: combatant.maxMp ?? previous?.maxMp,
+            };
+          });
+      const updatedParty = mergeCombatants("player");
+      const updatedEnemies = mergeCombatants("enemy");
 
       setParty(updatedParty);
       setEnemies(updatedEnemies);
@@ -1394,13 +1491,13 @@ export function GameCombatUI({
       const partyAlive = updatedParty.some((c) => c.hp > 0);
       const enemiesAlive = updatedEnemies.some((c) => c.hp > 0);
 
-      if (!enemiesAlive) {
+      if (authoritativeOutcome === "victory" || (!authoritativeOutcome && !enemiesAlive)) {
         playSfx(COMBAT_SFX.victory);
         setPhase("victory");
         return;
       }
 
-      if (!partyAlive) {
+      if (authoritativeOutcome === "defeat" || (!authoritativeOutcome && !partyAlive)) {
         playSfx(COMBAT_SFX.defeat);
         setPhase("defeat");
         return;
@@ -1418,7 +1515,11 @@ export function GameCombatUI({
 
   // ── Animate round results one action at a time ──
   const animateRoundResults = useCallback(
-    (result: CombatRoundResult, updatedCombatants: Combatant[]) => {
+    (
+      result: CombatRoundResult,
+      updatedCombatants: Combatant[],
+      authoritativeOutcome?: "victory" | "defeat" | "flee",
+    ) => {
       setPhase("animating");
       let actionIdx = 0;
       const combatantsForLog = allCombatants;
@@ -1435,7 +1536,7 @@ export function GameCombatUI({
             );
           }
           appendCombatLog(`Round ${result.round} ends.`, "system");
-          applyRoundEnd(updatedCombatants);
+          applyRoundEnd(updatedCombatants, authoritativeOutcome);
           return;
         }
 
@@ -1471,12 +1572,15 @@ export function GameCombatUI({
         if (!action.isMiss) updateCombatantHp(action.defenderId, action.remainingHp);
 
         actionIdx++;
-        setTimeout(playNextAction, action.reaction ? COMBAT_REACTION_DELAY_MS : COMBAT_ACTION_DELAY_MS);
+        setTimeout(
+          playNextAction,
+          (action.reaction ? COMBAT_REACTION_DELAY_MS : COMBAT_ACTION_DELAY_MS) / animationSpeed,
+        );
       };
 
-      setTimeout(playNextAction, COMBAT_ACTION_START_DELAY_MS);
+      setTimeout(playNextAction, COMBAT_ACTION_START_DELAY_MS / animationSpeed);
     },
-    [allCombatants, appendCombatLog, playSfx, spawnDamage, applyRoundEnd, updateCombatantHp],
+    [allCombatants, appendCombatLog, playSfx, spawnDamage, applyRoundEnd, updateCombatantHp, animationSpeed],
   );
 
   // ── Resolve a combat round on the server ──
@@ -1489,6 +1593,12 @@ export function GameCombatUI({
           chatId,
           combatants: allCombatants.filter((c) => c.hp > 0).map((c) => sanitizeCombatantForRound(c)),
           round,
+          ...(combatSessionId ? { sessionId: combatSessionId } : {}),
+          expectedRevision: combatRevision,
+          actionId: generateClientId(),
+          inventory: inventoryItems,
+          itemEffects: combatItemEffects,
+          objectives,
           playerAction:
             playerAction.type === "item"
               ? { ...playerAction, itemEffect: sanitizeCombatItemEffect(playerAction.itemEffect) }
@@ -1497,20 +1607,89 @@ export function GameCombatUI({
         },
         {
           onSuccess: (data) => {
+            setCombatSessionId(data.sessionId);
+            setCombatRevision(data.revision);
+            setObjectives(data.objectives);
+            if (data.summary) terminalSummaryRef.current = data.summary;
             const result = data.result as CombatRoundResult;
             const updatedCombatants = data.combatants as Combatant[];
-            if (usedItemName) {
+            if (data.inventory) {
+              onInventoryChange?.(data.inventory);
+            } else if (usedItemName) {
               void onInventoryItemUsed?.(usedItemName);
+            }
+            if (playerAction.type === "flee") {
+              onCombatEnd("flee", data.summary ?? buildSummary("flee"));
+              return;
+            }
+            if (playerAction.type === "maneuver" && !data.outcome) {
+              const authoritativeResult = data.events
+                .filter((event) => event.kind === "maneuver" || event.actionId === data.events[0]?.actionId)
+                .map((event) => event.text)
+                .join(" ");
+              onCustomInstruction?.(
+                `Combat maneuver resolved by the engine: ${authoritativeResult || playerAction.instruction}`,
+              );
+            }
+            for (const event of data.events.filter((entry) =>
+              ["phase", "phase-interrupted", "reinforcement", "objective"].includes(entry.kind),
+            )) {
+              appendCombatLog(event.text, event.kind === "objective" ? "status" : "system");
             }
             setRoundResult(result);
             setTurnOrder(result.initiative.map((e) => ({ id: e.id, name: e.name })));
-            animateRoundResults(result, updatedCombatants);
+            animateRoundResults(result, updatedCombatants, data.outcome);
           },
-          onError: () => setPhase("player-turn"),
+          onError: (error) => {
+            if (error instanceof ApiError && error.payload && typeof error.payload === "object") {
+              const payload = error.payload as {
+                code?: string;
+                currentRevision?: number;
+                state?: {
+                  revision?: number;
+                  canonicalState?: { party?: Combatant[]; enemies?: Combatant[]; round?: number };
+                  objectives?: CombatObjectiveState[];
+                };
+              };
+              if (payload.code === "STALE_REVISION" && payload.state?.canonicalState) {
+                const canonical = payload.state.canonicalState;
+                setCombatRevision(payload.currentRevision ?? payload.state.revision ?? combatRevision);
+                setParty(canonical.party ?? []);
+                setEnemies(canonical.enemies ?? []);
+                setObjectives(payload.state.objectives ?? []);
+                setRound(canonical.round ?? round);
+                onCombatantsChange?.(canonical.party ?? [], canonical.enemies ?? []);
+              }
+            }
+            if (playerAction.type === "maneuver") {
+              setCustomInstructionPending(false);
+              setCustomInstructionSawStreaming(false);
+            }
+            setPhase("player-turn");
+          },
         },
       );
     },
-    [chatId, allCombatants, round, combatRound, combatMechanics, onInventoryItemUsed, animateRoundResults],
+    [
+      chatId,
+      allCombatants,
+      round,
+      combatSessionId,
+      combatRevision,
+      combatRound,
+      combatMechanics,
+      onInventoryItemUsed,
+      onInventoryChange,
+      onCombatEnd,
+      buildSummary,
+      onCustomInstruction,
+      inventoryItems,
+      objectives,
+      combatItemEffects,
+      appendCombatLog,
+      onCombatantsChange,
+      animateRoundResults,
+    ],
   );
 
   // ── Handle action selection ──
@@ -1519,7 +1698,7 @@ export function GameCombatUI({
       playSfx(COMBAT_SFX.menuSelect);
 
       if (actionId === "flee") {
-        onCombatEnd("flee", buildSummary("flee"));
+        resolveRound({ type: "flee" });
         return;
       }
       if (actionId === "defend") {
@@ -1558,7 +1737,7 @@ export function GameCombatUI({
         return;
       }
     },
-    [activePlayer?.name, appendCombatLog, playSfx, onCombatEnd, resolveRound, buildSummary],
+    [activePlayer?.name, appendCombatLog, playSfx, resolveRound],
   );
 
   const submitCustomInstruction = useCallback(() => {
@@ -1570,8 +1749,8 @@ export function GameCombatUI({
     setCustomInstructionPending(true);
     setCustomInstructionSawStreaming(false);
     setPhase("resolving");
-    onCustomInstruction(instruction);
-  }, [customInstruction, onCustomInstruction, playSfx]);
+    resolveRound({ type: "maneuver", instruction });
+  }, [customInstruction, onCustomInstruction, playSfx, resolveRound]);
 
   useEffect(() => {
     if (!customInstructionPending) return;
@@ -1764,7 +1943,8 @@ export function GameCombatUI({
               <Trophy className="h-12 w-12 text-amber-400" />
               <AnimatedText html="{bounce:Victory!}" className="text-2xl font-bold text-amber-200" />
               <button
-                onClick={() => onCombatEnd("victory", buildSummary("victory"))}
+                onClick={() => handoffCombatEnd("victory")}
+                disabled={aftermathPending}
                 className="rounded-lg bg-amber-500/20 px-6 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-400/30 transition-colors hover:bg-amber-500/30"
               >
                 {localizeUi("ui.noodle.wizardfooter.continue")}
@@ -1777,7 +1957,8 @@ export function GameCombatUI({
               <AnimatedText html="{shake:Defeat...}" className="text-2xl font-bold text-red-200" />
               <AnimatedText html="{pulse:Your party has fallen.}" className="text-xs text-white/55" />
               <button
-                onClick={() => onCombatEnd("defeat", buildSummary("defeat"))}
+                onClick={() => handoffCombatEnd("defeat")}
+                disabled={aftermathPending}
                 className="rounded-lg bg-red-500/20 px-6 py-2.5 text-sm font-semibold text-red-200 ring-1 ring-red-400/30 transition-colors hover:bg-red-500/30"
               >
                 {localizeUi("ui.noodle.wizardfooter.continue")}
@@ -1923,6 +2104,18 @@ export function GameCombatUI({
                   <span className="min-w-[4.25rem] rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wide text-white/45">
                     {localizeUi("ui.game.gamecombatui.round")} {round}
                   </span>
+                  {objectives[0] && (
+                    <span className="hidden max-w-48 truncate rounded border border-amber-300/20 bg-amber-400/10 px-1.5 py-0.5 text-[0.5rem] text-amber-100 sm:inline">
+                      {objectives[0].label}: {objectives[0].status}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAnimationSpeed((speed) => (speed >= 4 ? 1 : speed * 2))}
+                    className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.5rem] text-white/55"
+                  >
+                    {animationSpeed}×
+                  </button>
                   <span className="min-w-[4.25rem] rounded bg-amber-500/20 px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-amber-200">
                     {localizeUi("ui.game.gamecombatui.yourTurn")}
                   </span>
@@ -1967,11 +2160,13 @@ export function GameCombatUI({
                   <div className="grid grid-cols-1 gap-1.5">
                     {activePlayer.skills.map((skill) => {
                       const insufficientMp = (activePlayer.mp ?? 0) < skill.mpCost;
+                      const cooldown = activePlayer.skillCooldowns?.[skill.id] ?? 0;
+                      const unavailable = insufficientMp || cooldown > 0;
                       return (
                         <button
                           key={skill.id}
                           type="button"
-                          disabled={insufficientMp}
+                          disabled={unavailable}
                           onClick={() => {
                             setSelectedAction("skill");
                             setSelectedSkillId(skill.id);
@@ -1980,15 +2175,17 @@ export function GameCombatUI({
                           }}
                           className={cn(
                             "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all",
-                            insufficientMp
+                            unavailable
                               ? "cursor-not-allowed border-white/10 bg-white/5 text-white/30"
                               : "border-blue-400/20 bg-blue-500/10 text-white/85 hover:border-blue-400/40 hover:bg-blue-500/15",
                           )}
                         >
                           <span className="min-w-0 truncate font-semibold text-white/90">{skill.name}</span>
                           <span className="shrink-0 text-[0.6rem] tabular-nums text-white/45">
-                            {localizeUi(combatSkillTypeLabelKey(skill.type))} · {skill.mpCost}{" "}
-                            {localizeUi("ui.game.gamecombatui.mp")}
+                            {skill.type === "heal"
+                              ? localizeUi("ui.game.gamecombatui.heal")
+                              : localizeUi("ui.game.gamecombatui.atk")}{" "}
+                            · {skill.mpCost} {localizeUi("ui.game.gamecombatui.mp")}
                           </span>
                         </button>
                       );
@@ -2415,6 +2612,13 @@ export function GameCombatUI({
                 {localizeUi("ui.game.gamecombatui.round")}
               </div>
               <div className="text-lg font-bold leading-none tabular-nums text-white">{round}</div>
+              <button
+                type="button"
+                onClick={() => setAnimationSpeed((speed) => (speed >= 4 ? 1 : speed * 2))}
+                className="mt-0.5 text-[0.5rem] text-white/45 hover:text-white"
+              >
+                {animationSpeed}×
+              </button>
             </div>
           )}
         </div>
@@ -2534,11 +2738,13 @@ export function GameCombatUI({
               <div className="flex flex-wrap gap-2">
                 {activePlayer.skills.map((skill) => {
                   const insufficientMp = (activePlayer.mp ?? 0) < skill.mpCost;
+                  const cooldown = activePlayer.skillCooldowns?.[skill.id] ?? 0;
+                  const unavailable = insufficientMp || cooldown > 0;
                   return (
                     <button
                       key={skill.id}
                       type="button"
-                      disabled={insufficientMp}
+                      disabled={unavailable}
                       onClick={() => {
                         setSelectedAction("skill");
                         setSelectedSkillId(skill.id);
@@ -2547,16 +2753,17 @@ export function GameCombatUI({
                       }}
                       className={cn(
                         "rounded-lg border px-3 py-2 text-left text-xs transition-all",
-                        insufficientMp
+                        unavailable
                           ? "cursor-not-allowed border-white/10 bg-white/5 text-white/30"
                           : "border-blue-400/20 bg-blue-500/10 text-white/80 hover:border-blue-400/40 hover:bg-blue-500/15",
                       )}
                     >
                       <div className="font-semibold text-white/90">{skill.name}</div>
                       <div className="mt-0.5 text-[0.65rem] text-white/45">
-                        {localizeUi(combatSkillTypeLabelKey(skill.type))} ·{" "}
-                        {skill.description || localizeUi(combatSkillDescriptionKey(skill.type))} • {skill.mpCost}{" "}
-                        {localizeUi("ui.game.gamecombatui.mp")}
+                        {skill.type === "heal"
+                          ? localizeUi("ui.game.gamecombatui.restoresHp")
+                          : localizeUi("ui.game.gamecombatui.specialAttack")}{" "}
+                        • {skill.mpCost} {localizeUi("ui.game.gamecombatui.mp")}
                       </div>
                     </button>
                   );
@@ -2811,7 +3018,8 @@ export function GameCombatUI({
             <Trophy className="h-8 w-8 text-amber-400" />
             <AnimatedText html="{bounce:Victory!}" className="text-lg font-bold text-amber-200" />
             <button
-              onClick={() => onCombatEnd("victory", buildSummary("victory"))}
+              onClick={() => handoffCombatEnd("victory")}
+              disabled={aftermathPending}
               className="mt-2 rounded-lg bg-amber-500/20 px-6 py-2 text-sm font-semibold text-amber-200 ring-1 ring-amber-400/30 transition-colors hover:bg-amber-500/30"
             >
               {localizeUi("ui.noodle.wizardfooter.continue")}
@@ -2826,7 +3034,8 @@ export function GameCombatUI({
             <AnimatedText html="{shake:Defeat...}" className="text-lg font-bold text-red-200" />
             <AnimatedText html="{pulse:Your party has fallen.}" className="text-xs text-white/50" />
             <button
-              onClick={() => onCombatEnd("defeat", buildSummary("defeat"))}
+              onClick={() => handoffCombatEnd("defeat")}
+              disabled={aftermathPending}
               className="mt-2 rounded-lg bg-red-500/20 px-6 py-2 text-sm font-semibold text-red-200 ring-1 ring-red-400/30 transition-colors hover:bg-red-500/30"
             >
               {localizeUi("ui.noodle.wizardfooter.continue")}
