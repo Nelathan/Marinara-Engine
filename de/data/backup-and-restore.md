@@ -40,14 +40,16 @@ Die **.zip** enthält außerdem eine reine Textdatei namens `RESTORE.txt`. Sie e
 ## Automatische Backups
 
 Der Abschnitt **Backup & Export** kann außerdem ein rotierendes automatisches Vollbackup auf dem Gerät anlegen, das Marinara ausführt.
-Aktiviere **Automatic Backups** (automatische Backups) und wähle dann **Daily**, **Weekly** oder **Monthly**. Marinara legt das erste Backup
-kurz nach dem Aktivieren an und ersetzt dieses automatische Archiv nach jedem erfolgreichen Lauf. So wächst der Backup-Ordner
-nicht unbegrenzt.
+Aktiviere **Automatic Backups** (automatische Backups), wähle **Daily**, **Weekly** oder **Monthly** und stelle **Automatic backups kept**
+auf einen Wert von 1 bis 9999. Marinara legt das erste Backup kurz nach dem Aktivieren an. Nach jedem erfolgreichen Lauf behält es
+die festgelegte Anzahl der neuesten automatischen Archive und löscht das älteste überzählige automatische Archiv. Diese
+Aufbewahrungsgrenze löscht niemals manuelle Backups oder Backups, die mit **Download Backup** gespeichert wurden.
 
-Automatische Backups liegen als `backups/marinara-automatic-backup.zip` im Datenordner von Marinara. Sie nutzen dasselbe
-wiederherstellbare, gestreamte Archivformat wie **Download Backup** – inklusive hochgeladener Medien und der Datei mit dem
-Verschlüsselungs-Key, sofern eine existiert. Halte eine separate Kopie außerhalb des Marinara-Datenordners bereit, wenn du dich gegen einen
-Festplattenausfall, gelöschten App-Speicher oder ein zurückgesetztes Gerät absichern willst.
+Automatische Backups liegen im Ordner `backups/` im Datenordner von Marinara. Das neueste Archiv heißt
+`marinara-automatic-backup.zip`; ältere aufbewahrte automatische Archive verwenden Dateinamen mit Zeitstempel. Sie nutzen
+dasselbe wiederherstellbare, gestreamte Archivformat wie **Download Backup** – inklusive hochgeladener Medien und der Datei mit
+dem Verschlüsselungs-Key, sofern eine existiert. Halte eine separate Kopie außerhalb des Marinara-Datenordners bereit, wenn du dich
+gegen einen Festplattenausfall, gelöschten App-Speicher oder ein zurückgesetztes Gerät absichern willst.
 
 ## Export Profile
 
@@ -118,7 +120,7 @@ Bereits gesetzte Keys löscht der Import nicht. Importierst du ein altes Profil 
 
 ## Die Liste Existing backups
 
-Der Abschnitt **Backup & Export** kann eine Liste **Existing backups** (vorhandene Backups) samt Lösch-Schaltfläche anzeigen. Im normalen Betrieb bleibt diese Liste leer. **Download Backup** speichert die Datei direkt auf dem Gerät. Eine Kopie in dieser Liste hinterlässt es nicht, und das einzelne rotierende automatische Archiv verwaltet stattdessen der Schalter **Automatic Backups**. Für ein heruntergeladenes Backup brauchst du diese Liste nicht.
+Der Abschnitt **Backup & Export** kann eine Liste **Existing backups** (vorhandene Backups) samt Lösch-Schaltfläche anzeigen. Im normalen Betrieb bleibt diese Liste leer. **Download Backup** speichert die Datei direkt auf dem Gerät. Eine Kopie in dieser Liste hinterlässt es nicht, und die festgelegte Anzahl aufbewahrter automatischer Archive verwaltet stattdessen der Schalter **Automatic Backups**. Für ein heruntergeladenes Backup brauchst du diese Liste nicht.
 
 ## Verwandte Anleitungen
 
