@@ -1,0 +1,245 @@
+# Acesso remoto: Basic Auth e lista de IPs permitidos
+
+Neste guia você aprende a acessar Marinara Engine a partir de outro dispositivo, como o celular, um notebook ou um contêiner Docker. Ele explica as duas opções principais: Basic Auth e a lista de IPs permitidos. Também trata da liberação para redes privadas, do HTTPS, do Admin Access e da mensagem de bloqueio ao salvar (CSRF). Quase tudo aqui é configurado no arquivo `.env` do servidor, e não dentro do aplicativo.
+
+Um rápido glossário para acompanhar o guia:
+
+- Arquivo `.env`: um arquivo de configurações em texto simples, na pasta do Marinara Engine, ao lado do arquivo `package.json`.
+- Loopback: a própria máquina que está rodando o servidor. O endereço dela é `127.0.0.1` ou `localhost`.
+- Acesso remoto: abrir Marinara em qualquer dispositivo que NÃO seja a máquina que roda o servidor.
+
+## O que Marinara bloqueia por padrão
+
+Para proteger os seus dados, uma instalação nova do Marinara recusa conexões de outros dispositivos até você configurar o controle de acesso. Por padrão, só três tipos de cliente são confiáveis:
+
+1. Loopback (`127.0.0.1` ou `::1`), a própria máquina que roda o servidor.
+2. Dispositivos Tailscale da sua tailnet. Tailscale é uma ferramenta de rede privada, e os endereços dela usam a faixa `100.64.0.0/10`.
+3. Clientes Docker no mesmo host. Marinara reconhece a faixa de bridge usual `172.16.0.0/12` e o gateway padrão exato do contêiner, o que cobre também o Docker Desktop e faixas de endereços personalizadas.
+
+Todo o resto, como o celular na mesma rede Wi-Fi ou um cliente vindo da internet pública, fica bloqueado até você escolher uma das opções abaixo. Um dispositivo bloqueado que abre Marinara no navegador vê uma página escura de configuração. O título dela diz **This Marinara Engine install needs access control before remote devices can connect.** A página mostra o IP do próprio dispositivo e dois trechos do arquivo `.env` prontos para copiar e colar.
+
+Se você não fizer nada e nunca definir uma senha, Marinara continua restrito a essas três origens confiáveis. Esse é o padrão seguro.
+
+## Onde fica o arquivo .env
+
+Todas as configurações de acesso ficam no arquivo `.env`, na raiz do projeto, ao lado do arquivo `package.json`. Se você ainda não tem um, copie o exemplo:
+
+```bash
+cp .env.example .env
+```
+
+Abra o arquivo `.env` em qualquer editor de texto. A maioria das configurações de acesso, incluindo Basic Auth, a lista de IPs permitidos, o segredo de administrador e as origens de CSRF, entra em vigor em poucos segundos, sem reiniciar. Algumas configurações de baixo nível ainda precisam de reinício, entre elas a variável `PORT`, a variável `HOST` e os caminhos dos certificados HTTPS.
+
+Pode acontecer de outros dispositivos não alcançarem o servidor de jeito nenhum, com um tempo limite em vez de um 403. Nesse caso, o servidor talvez esteja escutando só na máquina local. Configure o servidor para escutar em todas as interfaces de rede:
+
+```env
+HOST=0.0.0.0
+```
+
+Os inicializadores de terminal (`start.bat`, `start.sh`) já definem `HOST=0.0.0.0` para você. Rodar o comando `pnpm start` diretamente não faz isso.
+
+## Qual opção escolher
+
+Leia os itens na ordem e pare no primeiro que corresponder ao seu caso.
+
+1. Você só se conecta pelo Tailscale, ou só a partir de contêineres Docker no mesmo host. Não precisa fazer nada. Já funciona.
+2. Você quer acessar Marinara pelo celular, tablet ou notebook na rede Wi-Fi de casa. Use Basic Auth (Opção 1, abaixo).
+3. Você está expondo Marinara à internet pública. Use Basic Auth com HTTPS.
+4. Os dispositivos clientes têm endereços IP fixos e você prefere não digitar senha. Use a lista de IPs permitidos (Opção 2, abaixo).
+5. Toda a sua rede é confiável e você nunca quer senha. Use a liberação para redes privadas (Opção 3, abaixo). Leia primeiro o aviso que está lá.
+
+Basic Auth é a escolha mais flexível. Funciona a partir de qualquer IP, não exige configuração em cada dispositivo, e o navegador guarda o login.
+
+## Opção 1: Basic Auth (recomendada)
+
+Basic Auth significa que o navegador pede um nome de usuário e uma senha antes de liberar o acesso. Para ativar, acrescente duas linhas ao arquivo `.env`:
+
+```env
+BASIC_AUTH_USER=alice
+BASIC_AUTH_PASS=correct-horse-battery-staple
+```
+
+Escolha uma senha forte e exclusiva. Basic Auth envia o login em toda requisição, então trate essa senha como a de qualquer outra conta. É possível gerar uma senha aleatória:
+
+```bash
+openssl rand -base64 24
+```
+
+Salve o arquivo `.env`. A mudança entra em vigor em poucos segundos, sem reiniciar. Depois, siga estes passos no dispositivo remoto.
+
+1. Abra Marinara no navegador usando o endereço do servidor, por exemplo `http://192.168.1.50:7860`.
+2. Digite o nome de usuário e a senha que você definiu quando o navegador pedir.
+3. O aplicativo deve carregar. O navegador guarda o login pelo resto da sessão.
+
+Por padrão, o aviso do navegador mostra **Marinara Engine**. Esse texto pode ser alterado com a variável `BASIC_AUTH_REALM`.
+
+Alguns clientes pulam a senha mesmo com Basic Auth ativo:
+
+- Loopback (`127.0.0.1`, `::1`), então você nunca precisa de senha na própria máquina do servidor.
+- Qualquer endereço na variável `IP_ALLOWLIST`. Atenção: definir uma lista de IPs permitidos também bloqueia todos os endereços que não estiverem nela (veja a Opção 2).
+- Tailscale (`100.64.0.0/10`) e o tráfego de bridge/gateway do Docker no mesmo host, a menos que você desative a liberação deles.
+- O endereço `/api/health`, para que os monitores de disponibilidade continuem funcionando.
+
+Importante: Basic Auth apenas codifica a senha. Não criptografa. Quem estiver observando uma conexão sem criptografia consegue ler a senha. Se você expõe Marinara à internet pública, combine Basic Auth com HTTPS (veja abaixo).
+
+## Opção 2: lista de IPs permitidos
+
+A lista de IPs permitidos libera endereços específicos sem senha. É uma boa opção quando os dispositivos têm endereços IP estáveis. Defina uma lista de endereços ou faixas separados por vírgula:
+
+```env
+IP_ALLOWLIST=192.168.1.0/24,203.0.113.42
+```
+
+O `/24` do exemplo é notação CIDR. CIDR é uma forma curta de escrever uma faixa inteira de endereços em uma única entrada. Por exemplo, `192.168.1.0/24` cobre todos os endereços de `192.168.1.0` até `192.168.1.255`. Um endereço sozinho, sem barra, como `203.0.113.42`, corresponde apenas àquele dispositivo.
+
+Como a lista de IPs permitidos funciona:
+
+- Qualquer endereço fora da lista é recusado com **403 Forbidden**.
+- Loopback é sempre permitido, então você não corre o risco de perder o acesso local.
+- O tráfego Tailscale e o de bridge/gateway do Docker no mesmo host também ignoram a lista, a menos que você desative a liberação deles (veja abaixo).
+- Entradas inválidas são ignoradas e registradas no log. Elas não derrubam o servidor.
+- A lista continua rígida mesmo com Basic Auth ativo. Os endereços listados pulam o pedido de senha. Todos os outros endereços continuam bloqueados com **403 Forbidden** e nunca recebem o pedido de login.
+
+A lista não cria uma configuração mista em que os dispositivos listados pulam a senha e todos os outros fazem login. Se você quer que os outros dispositivos entrem com senha, deixe a variável `IP_ALLOWLIST` sem valor e use só Basic Auth.
+
+É possível suspender a aplicação da regra por um tempo sem excluir a lista. Isso ajuda ao investigar problemas a partir de um IP novo. Coloque a chave de ativação em false:
+
+```env
+IP_ALLOWLIST_ENABLED=false
+```
+
+## Opção 3: liberação para redes privadas (sem senha)
+
+Talvez toda a sua rede seja confiável, por exemplo uma LAN doméstica (rede local) sem encaminhamento de portas. Nesse caso, você pode remover o bloqueio sem definir senha:
+
+```env
+ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK=true
+```
+
+Isso restaura o comportamento antigo de "aberto na LAN, bloqueado na internet pública". Vale apenas para as faixas privadas padrão, por exemplo `10.0.0.0/8`, `172.16.0.0/12` e `192.168.0.0/16`. A faixa CGNAT `100.64.0.0/10` também entra na conta. CGNAT é um sistema de endereços compartilhados usado por alguns provedores de internet, e Tailscale usa a mesma faixa. Endereços da internet pública continuam bloqueados com um 403.
+
+Aviso: qualquer pessoa na mesma rede passa a acessar Marinara sem senha. Isso não é problema em uma rede que você controla. Já em um Wi-Fi compartilhado de cafeteria, aeroporto ou alojamento, é. Na dúvida, use Basic Auth.
+
+Existe também uma chave mais ampla, `ALLOW_UNAUTHENTICATED_REMOTE=true`, que libera o acesso sem senha a partir de QUALQUER endereço, inclusive da internet pública. Não ative essa chave. Se você realmente precisa de acesso público, use Basic Auth com HTTPS, ou coloque na frente um proxy reverso que cuide do login.
+
+## Liberação para Tailscale e Docker
+
+Duas chaves permitem que o tráfego Tailscale e Docker pule tanto a lista de IPs permitidos quanto Basic Auth, do mesmo jeito que o loopback faz. As duas chaves vêm ativadas por padrão. É por isso que uma instalação nova já está acessível pelo Tailscale ou a partir dos seus contêineres Docker, sem configuração:
+
+```env
+BYPASS_AUTH_TAILSCALE=true
+BYPASS_AUTH_DOCKER=true
+```
+
+Esses padrões são seguros. Um par Tailscale já fez login na sua conta Tailscale para entrar na rede. Os endereços de bridge do Docker e o gateway exato detectado de dentro do contêiner representam o mesmo host Docker. Mesmo com Basic Auth ativo, os seus clientes Tailscale e Docker continuam pulando o pedido de senha. O resto da rede precisa fazer login.
+
+Coloque uma chave em false se você quiser senha também para esses clientes. Há dois motivos menos comuns para desativar uma delas.
+
+O seu provedor de internet pode usar CGNAT na faixa `100.64.0.0/10`, a mesma faixa do Tailscale. Nesse caso, desative a liberação do Tailscale:
+
+```env
+BYPASS_AUTH_TAILSCALE=false
+```
+
+A sua LAN comum pode usar endereços `172.16.x.x`. Nesse caso, desative a liberação do Docker e acrescente os contêineres específicos à variável `IP_ALLOWLIST`:
+
+```env
+BYPASS_AUTH_DOCKER=false
+```
+
+Marinara também pode estar atrás de um contêiner de proxy reverso na bridge do Docker ou no gateway detectado. Para que as verificações de acesso do Marinara valham para os clientes encaminhados pelo proxy, defina:
+
+```env
+REQUIRE_AUTH_FOR_DOCKER_PROXY=true
+```
+
+O servidor registra um aviso `[auth-bypass]` no log na primeira vez que uma dessas liberações deixa uma requisição passar. Esse aviso confirma que a liberação está ativa.
+
+## Servir por HTTPS
+
+HTTPS criptografa a conexão usando TLS. TLS é a criptografia que transforma um endereço `http` comum em um endereço `https` seguro. Use sempre HTTPS em qualquer instalação acessível fora de uma rede privada totalmente confiável, principalmente com Basic Auth.
+
+Há duas formas de fazer isso.
+
+1. TLS integrado. Aponte o servidor para um arquivo de certificado e um de chave privada:
+
+```env
+SSL_CERT=/path/to/cert.pem
+SSL_KEY=/path/to/key.pem
+```
+
+2. Proxy reverso. Coloque Marinara atrás do nginx, Caddy, Traefik ou de um Cloudflare Tunnel. O proxy cuida da parte de HTTPS e encaminha para Marinara por HTTP simples na mesma máquina.
+
+Você precisa de um certificado e de uma chave antes de definir as variáveis `SSL_CERT` e `SSL_KEY`. Uma ferramenta como o `mkcert` cria um certificado para uso local, e o `certbot` cria um para um domínio público. Se os arquivos estiverem faltando ou ilegíveis, o servidor para na inicialização e informa os caminhos exatos que tentou usar.
+
+## Admin Access e ações privilegiadas
+
+Algumas ações são especialmente delicadas: limpar dados, criar ou baixar backups, importar e exportar perfis, instalar temas e instalar o runtime de modelo local. Elas exigem um segredo compartilhado à parte, chamado segredo de administrador, além da opção de acesso que você escolheu acima.
+
+Na máquina de loopback, essas ações costumam funcionar sem o segredo de administrador. Em um dispositivo remoto, você precisa configurar o segredo. Siga estes passos.
+
+1. No arquivo `.env`, defina um valor aleatório forte e salve. Ele entra em vigor em poucos segundos, sem reiniciar.
+
+```env
+ADMIN_SECRET=some-long-random-string
+```
+
+2. No dispositivo remoto, abra Marinara e vá em **Settings** (Configurações), depois na aba **Advanced** e então na seção **Admin Access** (acesso de administrador).
+3. Cole o mesmo valor no campo (o texto de exemplo dele diz **ADMIN_SECRET**) e clique em **Save**.
+4. A mensagem **Admin secret saved for this browser** deve aparecer.
+
+Alguns pontos importantes sobre o segredo de administrador:
+
+- Ele fica guardado só naquele navegador. Não sincroniza entre dispositivos. Cada navegador que precisa das ações privilegiadas tem que receber o valor colado separadamente.
+- Clicar em **Save** com o campo vazio limpa o valor e mostra **Admin secret cleared**.
+- Se quem administra o servidor definir `MARINARA_REQUIRE_ADMIN_SECRET_ON_LOOPBACK=true`, até a máquina de loopback passa a precisar do segredo.
+- Isso é independente de Basic Auth. Os dois podem ser usados juntos. Basic Auth protege o aplicativo inteiro, e o segredo de administrador protege as ações perigosas.
+
+Quando uma ação privilegiada falha em um dispositivo remoto, Marinara mostra uma mensagem de erro com duas soluções. Uma é abrir o aplicativo pelo localhost. A outra é definir a variável `ADMIN_SECRET` no arquivo `.env` do servidor e depois colar o mesmo valor em **Settings** > **Advanced** > **Admin Access**.
+
+## Por que o salvamento está bloqueado (CSRF)
+
+CSRF quer dizer cross-site request forgery, ou falsificação de requisição entre sites. É uma proteção que impede outro site aberto no navegador de fazer mudanças no Marinara sem a sua permissão, sem você perceber. Ela funciona automaticamente. Não existe configuração para ativá-la.
+
+Às vezes o CSRF bloqueia os seus próprios salvamentos. Isso costuma acontecer quando você acessa Marinara por um nome de domínio público ou por uma porta incomum em que o servidor ainda não confia. Duas coisas avisam quando isso acontece.
+
+- Uma faixa vermelha no topo do aplicativo avisa que **Saves will silently fail**, porque essa origem não é confiável. A faixa mostra a linha exata a acrescentar no arquivo `.env` e tem um botão **Copy**.
+- Se um salvamento for mesmo recusado, aparece uma pequena mensagem pop-up. O título dela é **Save blocked: missing CSRF header**, **Save blocked: cross-site request rejected** ou **Save blocked: origin not trusted**.
+
+Para resolver, acrescente o seu endereço à lista de confiança no arquivo `.env`:
+
+```env
+CSRF_TRUSTED_ORIGINS=https://chat.example.com,http://203.0.113.10:7831
+```
+
+Ao usar um domínio público ou de proxy reverso, libere também o nome do host:
+
+```env
+TRUSTED_HOSTS=chat.example.com
+```
+
+Endereços diretos de LAN, Tailscale, IPv4 e IPv6 não precisam da variável `TRUSTED_HOSTS`. Nomes locais `.local`/`.home.arpa` e nomes de máquina de rótulo único são aceitos automaticamente. Um nome de host exato já listado na variável `CSRF_TRUSTED_ORIGINS` também é aceito.
+
+Origens de loopback, endereços comuns de LAN, Tailscale (`100.64.0.0/10`) e bridge do Docker (`172.16.0.0/12`) são confiáveis automaticamente. Você só precisa listar endereços IP públicos e nomes de domínio. A mudança entra em vigor em poucos segundos, sem reiniciar.
+
+## Uma observação sobre provedores locais bloqueados
+
+Digamos que você conecte Marinara a um provedor de IA local, por exemplo um que roda na sua própria máquina. A requisição pode ser recusada com uma mensagem sobre uma "private, loopback, metadata, or reserved IP range". Essa é outra verificação de segurança, chamada proteção contra SSRF. SSRF quer dizer server-side request forgery, ou falsificação de requisição pelo lado do servidor. Ela impede o servidor de chamar endereços privados sem a sua autorização. O erro informa a variável exata a definir no arquivo `.env`, como `PROVIDER_LOCAL_URLS_ENABLED`. Veja a [Referência de configuração do servidor](CONFIGURATION.md) para a lista completa.
+
+## Acesso pelo celular ou tablet
+
+Para abrir Marinara no celular ou no tablet dentro da mesma rede:
+
+1. Verifique se o servidor escuta em todas as interfaces, com `HOST=0.0.0.0` no arquivo `.env`.
+2. Escolha uma das opções de acesso acima. Basic Auth é a mais simples para um celular na rede Wi-Fi de casa.
+3. Descubra o endereço IP local da máquina do servidor (por exemplo `192.168.1.50`).
+4. No celular, abra `http://192.168.1.50:7860` em um navegador. A porta padrão é `7860`.
+5. Se você configurou Basic Auth, digite o nome de usuário e a senha quando forem pedidos.
+
+Se a página não carregar de jeito nenhum, talvez o servidor não esteja acessível. Confira `HOST=0.0.0.0` e o valor da variável `PORT`. Se aparecer um 403, o dispositivo alcança o servidor, mas ainda não tem permissão. Revise a opção que você escolheu acima.
+
+## Guias relacionados
+
+- [Referência de configuração do servidor](CONFIGURATION.md) para a lista completa das configurações do arquivo `.env` e dos casos especiais.
+- [Solução de problemas do Marinara Engine](TROUBLESHOOTING.md) para erros de conexão, acesso pelo celular e mais.
+- [Perguntas frequentes](FAQ.md) para um passo a passo rápido de como acessar Marinara de outro dispositivo.
