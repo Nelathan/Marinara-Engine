@@ -1,0 +1,105 @@
+# Architektura rozszerzeń osobistych
+
+Rozszerzenia osobiste to kod domyślnie wyłączony i zatwierdzany skrótem treści, uruchamiany w dwóch odizolowanych środowiskach. Domyślnie dostępna jest tylko jedna klasa rozszerzeń: wersje robocze przygotowane przez Professor Mari. Każde inne źródło to rozszerzenie zewnętrzne, które wymaga otwarcia dwóch niezależnych bramek przez osobę obsługującą serwer.
+
+## Niezmienniki bezpieczeństwa
+
+Te właściwości muszą pozostać prawdziwe:
+
+1. Utworzenie i import zawsze dają wersję roboczą: wyłączoną i niezatwierdzoną.
+2. Zatwierdzenie wymaga dokładnego, aktualnego skrótu treści `sha256:` oraz wyraźnego potwierdzenia, że kod działa w piaskownicy.
+3. Każda zmiana kodu wykonywalnego wyłącza rozszerzenie i czyści `approvedHash`.
+4. Przywrócenie starszej wersji daje wyłączoną wersję roboczą.
+5. Kopia zapasowa oraz import profilu czyszczą zatwierdzenie i stan włączenia.
+6. Professor Mari może tworzyć i aktualizować wersje robocze, ale nie ma żadnej akcji, która je zatwierdza albo włącza.
+7. Każde źródło inne niż `professor_mari` jest zewnętrzne, w tym `external`, `local`, `legacy`, `profile_import` oraz nieznane wartości sprowadzane do `legacy`.
+8. Rekordy zewnętrzne nie pojawiają się w odpowiedziach zarządzania ani środowiska uruchomieniowego, chyba że `ENABLE_EXTERNAL_EXTENSIONS=true`, a zapisana zgoda z sekcji **Danger Zone** (strefa zagrożenia) też ma wartość prawda.
+9. Zamknięcie którejkolwiek bramki wyłącza zapisane rekordy zewnętrzne i zatrzymuje działające procesy serwera. Odpytywanie środowiska uruchomieniowego przeglądarki usuwa aktywne wątki Worker.
+10. Kod przeglądarkowy nigdy nie wykonuje się w dokumencie aplikacji Marinara Engine. Kod serwerowy nigdy nie wykonuje się w procesie serwera Marinara Engine.
+11. Nie ma instalatora z adresu URL, zdalnego katalogu ani automatycznej aktualizacji.
+12. Wkłady do interfejsu gospodarza to zwykłe, zwalidowane deskryptory. Znaczniki, style, adresy URL, komponenty i funkcje zwrotne rozszerzenia nigdy nie trafiają do drzewa React aplikacji Marinara Engine.
+13. Rejestracja wkładu, jego aktywacja, zdarzenia, aktualizacje i usunięcie pozostają związane z dokładnym zatwierdzonym skrótem treści włączonego rozszerzenia.
+
+Bramek pilnują trasy API i usługi środowiska uruchomieniowego. Ukrycie kontrolek nie jest granicą bezpieczeństwa. Rekord zewnętrzny dodany ręcznie, przywrócony, odziedziczony po starszej wersji albo wprowadzony poza normalną ścieżką musi pozostać niewidoczny i niewykonywalny tak długo, jak choć jedna bramka jest zamknięta.
+
+## Przechowywanie danych i polityka
+
+Tabela plikowa `installed_extensions` przechowuje metadane, kod wykonywalny, `contentHash`, `approvedHash`, źródło oraz do dziesięciu wcześniejszych wersji kodu. Prywatne ustawienia rozszerzenia korzystają z kluczy `app_settings` z przedrostkiem `extension-storage:`. Zgoda z sekcji **Danger Zone** zapisuje się pod kluczem `external-extensions-enabled`.
+
+Podczas startu uruchamia się `preparePersonalExtensionTrust`. Stary wiersz bez skrótu zostaje zachowany, ale wyłączony i niezatwierdzony. Wiersz, którego zapisany skrót nie zgadza się już z polami kodu wykonywalnego, również zostaje wyłączony i dostaje nowy odcisk treści.
+
+Plik `personal-extension-policy.service.ts` łączy bramkę odczytywaną na bieżąco z pliku `.env` z zapisaną zgodą użytkownika. Plik `personal-extension-storage.service.ts` potrafi wyłączyć wszystkie rekordy spoza Professor Mari. Obserwator pliku `.env` stosuje politykę ponownie w mniej więcej dwie sekundy i prosi środowisko uruchomieniowe serwera o zatrzymanie kodu, gdy bramka się zamyka.
+
+## API
+
+Powierzchnia zarządzania znajduje się pod `/api/personal-extensions`:
+
+- `GET /policy` zwraca stan obu bramek oraz informację, czy piaskownica serwera jest dostępna.
+- `PATCH /policy/external` zmienia zgodę z sekcji **Danger Zone** i odrzuca wartość `true`, dopóki bramka w pliku `.env` jest zamknięta.
+- `GET /` wypisuje wersje robocze od Professor Mari, a wersje zewnętrzne dopiero wtedy, gdy obie bramki są otwarte.
+- `POST /` importuje rozszerzenie zewnętrzne i kończy się odmową, jeśli obie bramki nie są otwarte.
+- `PATCH /:id` edytuje albo wyłącza wersję roboczą.
+- `POST /:id/approve` zatwierdza dokładny aktualny skrót, stosuje bramkę zewnętrzną i odmawia zatwierdzenia rozszerzenia serwerowego bez obsługiwanej piaskownicy systemu operacyjnego.
+- `POST /:id/rollback` przywraca wcześniejszą, wyłączoną wersję.
+- `DELETE /:id` usuwa rozszerzenie razem z prywatnymi ustawieniami.
+
+Metadane zatwierdzonego środowiska uruchomieniowego przeglądarki odczytuje `GET /runtime/client`. Dokument wykonywalny wydaje `GET /:id/sandbox.html?hash=...`, i to wyłącznie wtedy, gdy dokładnie ten skrót jest włączony, zatwierdzony i dopuszczony przez politykę.
+
+## Środowisko uruchomieniowe przeglądarki
+
+Komponent `PersonalExtensionInjector.tsx` tworzy ukrytą ramkę iframe z `sandbox="allow-scripts"` i bez `allow-same-origin`. Ramka ma więc nieprzejrzyste pochodzenie i nie sięgnie do drzewa DOM, ciasteczek, magazynu ani interfejsów tego samego pochodzenia aplikacji Marinara Engine.
+
+Odpowiedź piaskownicy zastępuje zwykłą politykę strony wąskim CSP: żadnych domyślnych zasobów, żądań sieciowych, formularzy, obiektów ani prawa do nawigacji. Kod CSS rozszerzenia zostaje wewnątrz ukrytej ramki iframe. JavaScript działa w osobnym wątku Worker, który tworzy zaufany kod startowy ramki. Globalne obiekty sieci i zagnieżdżonych wątków Worker są usuwane jako dodatkowa warstwa obrony.
+
+Wątek Worker dostaje tylko:
+
+- logowanie w osobnej przestrzeni nazw;
+- prywatny magazyn rozszerzenia, pośredniczony przez dokument nadrzędny;
+- zarządzane liczniki czasu;
+- rejestrację funkcji sprzątających;
+- ograniczone okno w ramce iframe przez `marinara.ui.showWindow(...)`;
+- zaufane miejsca na wkłady w interfejsie gospodarza przez `marinara.ui.registerContribution(...)`.
+
+Wywołanie `marinara.ui.showWindow({ title, elements, onEvent, onClose })` zwraca uchwyt z metodami `update({ title?, elements? })` i `close()`. Wątek Worker wysyła wyłącznie deskryptory, a każdy element buduje zaufany kod startowy ramki, korzystając z interfejsów DOM i `textContent` (nigdy `innerHTML`). Aplikacja odsłania normalnie ukrytą ramkę piaskownicy tylko na czas otwartego okna i chowa ją z powrotem po zamknięciu.
+
+Wywołanie `marinara.ui.registerContribution({ id, kind, label, description?, icon?, elements?, onActivate?, onEvent? })` zwraca zamrożony uchwyt z metodami `update(patch)` i `remove()`. Obsługuje trzy stałe miejsca:
+
+- `button`: zwarta akcja na górnym pasku przy większych ekranach, a wszędzie dodatkowo akcja w menu **Extensions** (rozszerzenia);
+- `menu-item`: akcja w menu **Extensions**;
+- `panel`: wpis, który otwiera zaufany panel boczny **Extensions** aplikacji Marinara Engine.
+
+Elementy panelu korzystają z tego samego deklaratywnego słownika co okna ograniczone: `heading`, `text`, `pre`, `button`, `input`, `select`, `toggle`, `slider`, `color` i `spacer`. Kontrolki interaktywne wymagają unikalnych identyfikatorów. Przycisk w panelu wysyła do `onEvent` obiekt `{ contributionId, elementId, values }`; pole `values` zawiera aktualną wartość tekstową każdej kontrolki. Funkcja `onActivate` wykonuje się wewnątrz wątku Worker rozszerzenia, gdy użytkownik otworzy albo wywoła dany wkład. Po zmianie stanu rozszerzenie może wywołać `handle.update(...)`, żeby podmienić etykietę, opis, ikonę lub elementy panelu.
+
+Klient niezależnie sprawdza każdy deskryptor, zanim doda go do magazynu środowiska uruchomieniowego. Rodzaje wkładów, ikony, kontrolki, identyfikatory, listy opcji, długości tekstów, łączny tekst panelu, liczba elementów oraz liczba wkładów na jedno rozszerzenie mają listę dozwolonych wartości i twarde limity. React renderuje tekst rozszerzenia jako tekst. Kod HTML, CSS, adresy URL, komponenty React ani funkcje zwrotne gospodarza pochodzące z rozszerzenia nie są przyjmowane. Aplikacja usuwa wszystkie wkłady, gdy wątek Worker zostaje zatrzymany, gdy zmienia się jego skrót albo gdy znika on z odpowiedzi o zatwierdzonym środowisku uruchomieniowym. Zdarzenia trafiają wyłącznie do wątku Worker zarejestrowanego dla tego samego identyfikatora rozszerzenia i tego samego skrótu treści.
+
+Nie ma tu pomocnika do drzewa DOM, dostępu do API aplikacji Marinara Engine, dostępu do zdarzeń dokumentu nadrzędnego ani dowolnego dostępu do sieci. Ramka iframe sprawdza komunikaty i ogranicza ich częstotliwość. Strażnik oparty na sygnale życia kończy wątek Worker, który nie odpowiada albo kręci się w pętli.
+
+## Zgodność złożonych rozszerzeń
+
+Protokół wkładów ma obsłużyć prawdziwe narzędzia z rozbudowanymi ustawieniami i wieloetapowe procesy, a nie tylko ozdobne przyciski. Złożone rozszerzenie może stopniowo podmieniać elementy panelu i trzymać własny stan w prywatnym magazynie rozszerzenia.
+
+Starsze pakiety, które wstawiają przyciski po selektorach aplikacji, przeszukują wnętrzności React, rysują dowolne nakładki albo wywołują trasy `/api` z tego samego pochodzenia, nie zadziałają w bezpiecznym środowisku uruchomieniowym bez zmian. Przenieś je, zastępując ich interfejs deskryptorami wkładów. Funkcje, które potrzebują danych aplikacji Marinara Engine albo efektów wizualnych na poziomie sceny, muszą korzystać z osobnej, wąsko określonej i zatwierdzonej przez użytkownika zdolności pośredniczącej, o ile taka istnieje; nigdy nie przywracaj surowego dostępu do drzewa DOM ani nieograniczonych uprawnień do API jako skrótu dla zgodności.
+
+## Środowisko uruchomieniowe serwera
+
+Kod serwerowy działa w osobnym procesie Node, nigdy przez import wewnątrz procesu głównego. Model uprawnień Node odbiera dostęp do systemu plików, sieci, procesów potomnych, wątków, dodatków natywnych, WASI i inspektora. Proces potomny działa dodatkowo wewnątrz:
+
+- mechanizmu Seatbelt w systemie macOS; albo
+- mechanizmu Bubblewrap w systemie Linux, z osobnymi przestrzeniami nazw PID, sieci, IPC i punktów montowania.
+
+Piaskownica dostaje minimalne środowisko, małą stertę V8, żadnych plików aplikacji, żadnych sekretów serwera oraz ograniczone rozmiarem pliki protokołu z podziałem na linie, umieszczone w prywatnym folderze tymczasowym. Dostaje wyłącznie logowanie, prywatny magazyn rozszerzenia, zarządzane liczniki czasu i rejestrację funkcji sprzątających. Limity liczby komunikatów i osobny plik sygnału życia powstrzymują zalewanie protokołu oraz pętle bez końca.
+
+Uprawnienia Node i moduł `node:vm` to warstwy dodatkowej obrony, a nie granica bezpieczeństwa. Osobna piaskownica systemu operacyjnego jest obowiązkowa. Windows, Android, Linux bez `bwrap` i każda inna nieobsługiwana platforma odmawiają włączenia rozszerzeń serwerowych.
+
+## Weryfikacja
+
+Uruchom:
+
+```bash
+pnpm check
+pnpm regression:extensions-security
+pnpm regression:professor-mari-shell-sandbox
+pnpm smoke:ui
+```
+
+Test regresyjny bezpieczeństwa musi udowodnić: dwuetapową bramkę, unieważnienie przy zmianie dokładnego skrótu, kształt wątku Worker o nieprzejrzystym pochodzeniu, sprawdzanie i sprzątanie wkładów gospodarza, brak wstawiania kodu z tego samego pochodzenia, czyszczenie środowiska, odcięcie systemu plików i sieci, prywatny magazyn oraz bezpieczne domyślne zachowanie przy niedostępnej piaskownicy.
