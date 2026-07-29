@@ -8,7 +8,7 @@ Agenten sind kleine KI-Helfer, die rund um die Hauptantwort im Chat automatisch 
 
 Agenten werden pro Chat aktiviert, nicht pro Charakter. Auf einer Charakterkarte gibt es keinen Schalter für Agenten. Zwei Chats mit demselben Charakter können völlig unterschiedliche Agenten nutzen. Welche Agenten laufen, legst du in den Einstellungen des jeweiligen Chats fest.
 
-Frisch installierte Marinara-Engine-Versionen bringen keine optionalen Agenten mit. Das hält die Basis-App und die Termux-Installation klein. Der offizielle Katalog ab v2.3.0 enthält 29 Pakete zum Installieren per Klick: 6 Writer Agents, 8 Tracker Agents und 15 Misc Agents, darunter Maps, Calls und alle sechs Conversation-Spiele. Quellcode, Manifeste, herunterladbare Artefakte und der Katalog auf Repository-Ebene sind öffentlich einsehbar unter [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents). Die vollständige Beschreibung jedes einzelnen Agenten steht in der [Referenz der herunterladbaren Agenten](built-in-agents.md). Wie du eigene baust, zeigt [Eigene Agenten erstellen](custom-agents.md).
+Frisch installierte Marinara-Engine-Versionen bringen keine optionalen Agenten mit. Das hält die Basis-App und die Termux-Installation klein. Der offizielle Katalog ab v2.3.0 enthält 30 Pakete zum Installieren per Klick: 6 Writer Agents, 8 Tracker Agents und 16 Misc Agents, darunter Long-Term Memory, Maps, Calls und alle sechs Conversation-Spiele. Quellcode, Manifeste, herunterladbare Artefakte und der Katalog auf Repository-Ebene sind öffentlich einsehbar unter [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents). Die vollständige Beschreibung jedes einzelnen Agenten steht in der [Referenz der herunterladbaren Agenten](built-in-agents.md). Wie du eigene baust, zeigt [Eigene Agenten erstellen](custom-agents.md).
 
 ## Die drei Phasen
 
@@ -26,7 +26,7 @@ Ein Klick auf **Download Agents** (Agenten herunterladen) oben öffnet den offiz
 
 Hinter dem Katalog in der App steht das öffentliche [Repository Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents). Dort lässt sich jedes Paket und jedes Artefakt einsehen. Für den Normalfall gilt trotzdem: über **Download Agents** installieren, damit Marinara Kompatibilität, Berechtigungen, Hashes, Archivinhalte und nötige Neustarts prüfen kann.
 
-Der Katalog umfasst Chat-Agenten aus erster Hand, Hierarchical Maps, Audio- und Videoanrufe für Conversation sowie sämtliche optionalen Conversation-Spiele. Installierte Agenten sind in **Writer Agents**, **Tracker Agents** und **Misc Agents** gruppiert, dazu kommt ein Bereich **Custom Agents** für selbst gebaute. Deinstallierst du ein Katalogpaket, verschwinden Code und Einstellungen aus der Engine – Nachrichten und Chatverlauf bleiben erhalten. Löschst du einen eigenen Agenten, ist er endgültig weg.
+Der Katalog umfasst Chat-Agenten aus erster Hand, World Maps, Audio- und Videoanrufe für Conversation sowie sämtliche optionalen Conversation-Spiele. Installierte Agenten sind in **Writer Agents**, **Tracker Agents** und **Misc Agents** gruppiert, dazu kommt ein Bereich **Custom Agents** für selbst gebaute. Deinstallierst du ein Katalogpaket, verschwinden Code und Einstellungen aus der Engine – Nachrichten und Chatverlauf bleiben erhalten. Löschst du einen eigenen Agenten, ist er endgültig weg.
 
 Kommst du von einer Engine-Version, die diese Funktionen noch fest mitbrachte, lädt Marinara die passenden Pakete einmalig herunter. Chat-Auswahl, Agent-Einstellungen, gespeicherte Laufzeitdaten und Verlauf bleiben dabei bestehen. Erreicht diese Migration den Katalog nicht, versucht sie es beim nächsten Start erneut, statt irgendetwas zu verwerfen.
 
@@ -60,9 +60,9 @@ Wird die Last hoch, färbt sich diese Anzeige bernsteinfarben und zeigt ein Warn
 
 Eine frische Installation startet ohne installierte oder aktive optionale Agenten. Jeder Chat-Modus zeigt nur die installierten Pakete, die zu ihm passen.
 
-- **Roleplay**: Installiere Roleplay-Agenten aus dem Katalog und füge sie dann in Chat Settings hinzu. Hierarchical Maps taucht dort auf wie jeder andere unterstützte Agent.
+- **Roleplay**: Installiere Roleplay-Agenten aus dem Katalog und füge sie dann in Chat Settings hinzu. World Maps taucht dort auf wie jeder andere unterstützte Agent.
 - **Conversation**: Installiere Calls oder einzelne Tischspiele aus dem Katalog. Spiele erscheinen in der Spieleauswahl und melden ihre Slash-Befehle an; Anrufe ergänzen ihre Symbolleiste und ihre Bedienelemente in Chat Settings.
-- **Game Mode**: Installierte Game-kompatible Agenten lassen sich beim Anlegen eines Spiels auswählen oder später ergänzen. Hierarchical Maps steuert Kartenarbeitsfläche und Weltkartenansicht nur bei, wenn es für dieses Spiel aktiv ist.
+- **Game Mode**: Installierte Game-kompatible Agenten lassen sich beim Anlegen eines Spiels auswählen oder später ergänzen. World Maps steuert Kartenarbeitsfläche und Weltkartenansicht nur bei, wenn es für dieses Spiel aktiv ist.
 
 Kompatible Agenten kannst du jederzeit hinzufügen oder entfernen.
 
