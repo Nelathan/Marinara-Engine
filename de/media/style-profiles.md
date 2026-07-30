@@ -126,7 +126,7 @@ Marinara zieht das Stilprofil aus drei Quellen. Die spezifischste Wahl gewinnt. 
 2. Das **Style Profile** (Stilprofil) an der Bild-Verbindung (unter **Local Image Defaults** im Verbindungs-Editor).
 3. Der globale **Default style** aus den **Settings**.
 
-Der Abschnitt **Local Image Defaults** (lokale Bild-Standardwerte) erscheint nur bei lokalen Stable-Diffusion-Verbindungen (AUTOMATIC1111 / SD Web UI, ComfyUI und NovelAI). Bei allen anderen Anbietern greift direkt der globale **Default style**. Für ein Profil pro Verbindung öffnest du die Verbindung, klappst **Local Image Defaults** auf und wählst im Dropdown-Menü **Style Profile** ein Profil. Steht dort **Use global default**, gilt weiterhin die globale Wahl. Kann Marinara aus dem Modellnamen der Verbindung ein passendes Profil erraten, erscheint eine Schaltfläche **Use ...**, die es mit einem Klick übernimmt.
+Der Abschnitt **Local Image Defaults** (lokale Bild-Standardwerte) erscheint nur bei lokalen Stable-Diffusion-Verbindungen (AUTOMATIC1111 / SD Web UI, ComfyUI und NovelAI). Bei allen anderen Anbietern greift direkt der globale **Default style**. Für ein Profil pro Verbindung öffnest du die Verbindung, klappst **Local Image Defaults** auf und wählst im Dropdown-Menü **Style Profile** ein Profil. Steht dort **Use global default**, gilt weiterhin die globale Wahl. Kann Marinara aus dem Modellnamen der Verbindung ein passendes Profil erraten, erscheint eine Schaltfläche "Use ...", die es mit einem Klick übernimmt.
 
 ## Verwandte Anleitungen
 
