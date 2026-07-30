@@ -27,7 +27,7 @@ Opcja **Download Backup** tworzy jeden plik **.zip** z bazą danych, ustawieniam
 2. Przejdź na zakładkę **Advanced**.
 3. Znajdź sekcję **Backup & Export**.
 4. Kliknij przycisk **Download Backup**.
-5. W trakcie pracy na przycisku widnieje napis **Creating backup...**.
+5. W trakcie pracy na przycisku widnieje napis **Creating backup…**.
 6. W przeglądarce Chrome lub Edge na komputerze otwiera się okno **Save As**, w którym wskazujesz miejsce zapisu pliku. Wybierz folder i zapisz.
 7. Po zakończeniu powinien pojawić się komunikat **Backup saved!** albo **Backup downloaded!**.
 

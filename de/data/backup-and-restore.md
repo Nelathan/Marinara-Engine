@@ -27,7 +27,7 @@ Von einem Handy, Tablet oder einem anderen Gerät aus brauchen Backup und Wieder
 2. Wechsle zum Tab **Advanced**.
 3. Suche den Abschnitt **Backup & Export**.
 4. Klick auf **Download Backup**.
-5. Während der Arbeit zeigt die Schaltfläche **Creating backup...**.
+5. Während der Arbeit zeigt die Schaltfläche **Creating backup…**.
 6. In Chrome oder Edge am Desktop öffnet sich ein **Save As**-Dialogfenster, in dem du den Speicherort auswählst. Wähle einen Ordner und speichere.
 7. Am Ende erscheint **Backup saved!** oder **Backup downloaded!**.
 

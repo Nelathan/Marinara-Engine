@@ -28,7 +28,7 @@
     },
     {
       "path": "UPGRADING.md",
-      "sha256": "ed90055ba87428fbff7cd1ec7ef1792c4929a8d5c62f4e45d5967cd88e5aa742",
+      "sha256": "d90db04cc8ce61c6bd63f704792efbc9fc0f7e496bdbb36e0093c459fb409d89",
       "bytes": 21401
     },
     {
@@ -68,8 +68,8 @@
     },
     {
       "path": "appearance/appearance-settings.md",
-      "sha256": "e05b1875b1b20be4de59d5dcca3b94bf0c705e34295e545021ea1409f17a1019",
-      "bytes": 14252
+      "sha256": "c1f320eb6103ad1a609ed4d68dbd99d1df5ca1e2a791244783577941b461bea8",
+      "bytes": 14258
     },
     {
       "path": "appearance/card-css-theming.md",
@@ -78,7 +78,7 @@
     },
     {
       "path": "appearance/chat-backgrounds.md",
-      "sha256": "53c1bbea9538a03da99b50723620ab798429d28d5470fbe25511e620b20bd950",
+      "sha256": "2fd423b92438c64e08763627c9b5610039a73c731fbed222f62a37bd52fd2ead",
       "bytes": 14350
     },
     {
@@ -108,7 +108,7 @@
     },
     {
       "path": "characters/creating-and-editing-characters.md",
-      "sha256": "f89c4c9237599cb90ea6b4af839028107ad757b0eb9161563062f94756acf967",
+      "sha256": "fc975779ec6872698c90ec5a9ecec56f8522fe32f9a15b842167df2c0d2a54cf",
       "bytes": 20250
     },
     {
@@ -198,7 +198,7 @@
     },
     {
       "path": "connections/connecting-to-a-provider.md",
-      "sha256": "75c8936f0794d3188118cdadf73c211ed6449c22ff35eeff5199aeb29a5335d8",
+      "sha256": "26cbd9ccd18ffb8495647ff5ffb8b0409e45c0d86dd268a61e056cf82b8701fd",
       "bytes": 9859
     },
     {
@@ -263,7 +263,7 @@
     },
     {
       "path": "data/backup-and-restore.md",
-      "sha256": "04e3dcb57438d54c140de32b12aecfca21ec3e24d51891a0495095184ceef23c",
+      "sha256": "4850eb5ba8e63b89ea3e53938bbed6f9a3b28ff54b25cd3e84a924ac780ac0db",
       "bytes": 16610
     },
     {
@@ -468,7 +468,7 @@
     },
     {
       "path": "lorebooks/entries.md",
-      "sha256": "6ca6cf0bfae416bbe3f1bb976f8be0cce9fce01d3e8bfba4f482037e7e564c34",
+      "sha256": "8a219ac6648035131f56128dddde470e793eda470ee7b5b360e1a41f496e0499",
       "bytes": 22050
     },
     {

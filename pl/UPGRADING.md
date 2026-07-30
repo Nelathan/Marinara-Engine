@@ -24,7 +24,7 @@ Aktualizacje są bezpieczne, ale kopia zapasowa to tania polisa. Warto ją zrobi
 4. Kliknij przycisk **Download Backup** (pobranie kopii zapasowej).
 5. Zapisz plik `.zip` w bezpiecznym miejscu.
 
-Na czas pracy napis na przycisku zmienia się na **Creating backup...**. Po zakończeniu przeglądarka zapisuje archiwum `.zip` z danymi.
+Na czas pracy napis na przycisku zmienia się na **Creating backup…**. Po zakończeniu przeglądarka zapisuje archiwum `.zip` z danymi.
 
 Pełne kroki tworzenia i przywracania kopii zapasowej znajdziesz w przewodniku [Kopia zapasowa i przywracanie danych aplikacji Marinara](data/backup-and-restore.md).
 
@@ -132,11 +132,11 @@ Lista rozwijana **Release Channel** (kanał wydań) decyduje o tym, które wersj
 
 Wybór opcji **Staging/UAT** wyświetla ostrzeżenie: "Staging builds are pre-release tester builds. Back up your app data before applying them."
 
-Zmiana kanału traktowana jest jak decyzja świadoma. Przy wyborze innego kanału z przeglądarki na urządzeniu, które uruchamia serwer, przycisk aktualizacji zmienia się na **Switch to** z nazwą kanału i działa nawet wtedy, gdy zwykłe aktualizacje w aplikacji są wyłączone. Na czas pracy pokazuje **Switching...**. Zwykłe aktualizacje w obrębie jednego kanału nadal wymagają konfiguracji opisanej niżej w sekcji Apply Update, a urządzenia zdalne wymagają jej zawsze.
+Zmiana kanału traktowana jest jak decyzja świadoma. Przy wyborze innego kanału z przeglądarki na urządzeniu, które uruchamia serwer, przycisk aktualizacji zmienia się na **Switch to** z nazwą kanału i działa nawet wtedy, gdy zwykłe aktualizacje w aplikacji są wyłączone. Na czas pracy pokazuje **Switching…**. Zwykłe aktualizacje w obrębie jednego kanału nadal wymagają konfiguracji opisanej niżej w sekcji Apply Update, a urządzenia zdalne wymagają jej zawsze.
 
 ### Check for Updates
 
-Kliknij przycisk **Check for Updates** (sprawdzenie aktualizacji). Na czas pracy przycisk pokazuje **Checking...**.
+Kliknij przycisk **Check for Updates** (sprawdzenie aktualizacji). Na czas pracy przycisk pokazuje **Checking…**.
 
 Pod przyciskiem widać wersję **Release** oraz kod commita w polu **Build**. Gdy gałąź jest znana, pojawia się też linia **Branch**.
 
@@ -179,7 +179,7 @@ Przycisk **Refresh App** wyrejestrowuje service workera i czyści pamięć podr�
 
 Użyj przycisku **Refresh App**, kiedy aplikacja wygląda na nieodświeżoną albo pokazuje pustą stronę po aktualizacji, choć serwer działa już na nowej wersji. Naprawia to zablokowaną stronę. Nie zmienia kodu serwera, więc nie zastąpi prawdziwej aktualizacji.
 
-Na czas pracy przycisk pokazuje **Refreshing...**, a potem aplikacja przeładowuje się.
+Na czas pracy przycisk pokazuje **Refreshing…**, a potem aplikacja przeładowuje się.
 
 ## Gdy aktualizacja się nie powiedzie
 

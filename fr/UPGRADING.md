@@ -24,7 +24,7 @@ Les mises à jour sont sûres, mais une sauvegarde coûte peu et rassure. Fais-e
 4. Clique sur **Download Backup** (télécharger la sauvegarde).
 5. Enregistre le fichier `.zip` dans un endroit sûr.
 
-Le bouton affiche **Creating backup...** pendant le traitement. À la fin, le navigateur enregistre une archive `.zip` de tes données.
+Le bouton affiche **Creating backup…** pendant le traitement. À la fin, le navigateur enregistre une archive `.zip` de tes données.
 
 La marche à suivre complète pour sauvegarder et restaurer se trouve dans [Sauvegarder et restaurer Marinara](data/backup-and-restore.md).
 
@@ -132,11 +132,11 @@ Le menu déroulant **Release Channel** (canal de publication) détermine les ver
 
 Choisir **Staging/UAT** affiche un avertissement : "Staging builds are pre-release tester builds. Back up your app data before applying them."
 
-Changer de canal est traité comme un choix délibéré. Quand tu sélectionnes un autre canal depuis un navigateur situé sur la machine qui fait tourner le serveur, le bouton de mise à jour devient **Switch to** suivi du nom du canal, et il fonctionne même si les mises à jour intégrées à l'application sont désactivées. Il affiche **Switching...** pendant l'opération. Les mises à jour normales dans le même canal exigent toujours la configuration décrite plus bas sous Apply Update, et les appareils distants aussi.
+Changer de canal est traité comme un choix délibéré. Quand tu sélectionnes un autre canal depuis un navigateur situé sur la machine qui fait tourner le serveur, le bouton de mise à jour devient **Switch to** suivi du nom du canal, et il fonctionne même si les mises à jour intégrées à l'application sont désactivées. Il affiche **Switching…** pendant l'opération. Les mises à jour normales dans le même canal exigent toujours la configuration décrite plus bas sous Apply Update, et les appareils distants aussi.
 
 ### Check for Updates
 
-Clique sur **Check for Updates** (vérifier les mises à jour). Le bouton affiche **Checking...** pendant le traitement.
+Clique sur **Check for Updates** (vérifier les mises à jour). Le bouton affiche **Checking…** pendant le traitement.
 
 Sous le bouton apparaissent ta version **Release** et le code de commit de ton **Build**. Une ligne **Branch** s'affiche également quand la branche est connue.
 
@@ -179,7 +179,7 @@ Le bouton **Refresh App** (rafraîchir l'application) se trouve dans la même se
 
 Utilise **Refresh App** quand l'application semble figée sur une ancienne version ou affiche un écran blanc après une mise à jour, alors que le serveur tourne déjà sur la nouvelle version. Cela répare une page web bloquée. Le code du serveur n'est pas touché : ce n'est donc pas un substitut à une vraie mise à jour.
 
-Le bouton affiche **Refreshing...** pendant le traitement, puis l'application se recharge.
+Le bouton affiche **Refreshing…** pendant le traitement, puis l'application se recharge.
 
 ## Si une mise à jour échoue
 

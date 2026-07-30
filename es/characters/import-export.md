@@ -85,5 +85,5 @@ Los pasos anteriores cubren las tarjetas que eliges a mano. Para mover una insta
 ## Guías relacionadas
 
 - [Crear y editar personajes](creating-and-editing-characters.md)
-- [Browser: Encontrar e importar personajes](bot-browser.md)
+- [Card Browser: buscar e importar personajes](bot-browser.md)
 - [Importar desde SillyTavern](../data/importing-from-sillytavern.md)

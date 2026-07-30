@@ -24,7 +24,7 @@ Updates sind sicher, aber ein Backup kostet wenig und schützt viel. Leg vor jed
 4. Klick auf **Download Backup** (Backup herunterladen).
 5. Speichere die `.zip`-Datei an einem sicheren Ort.
 
-Während der Arbeit wechselt die Beschriftung der Schaltfläche zu **Creating backup...**. Danach speichert der Browser ein `.zip`-Archiv mit deinen Daten.
+Während der Arbeit wechselt die Beschriftung der Schaltfläche zu **Creating backup…**. Danach speichert der Browser ein `.zip`-Archiv mit deinen Daten.
 
 Alle Schritte zum Sichern und Wiederherstellen findest du unter [Marinara sichern und wiederherstellen](data/backup-and-restore.md).
 
@@ -132,11 +132,11 @@ Das Dropdown-Menü **Release Channel** (Release-Kanal) legt fest, welche Builds 
 
 Bei der Wahl von **Staging/UAT** erscheint der Hinweis „Staging builds are pre-release tester builds. Back up your app data before applying them.“
 
-Ein Kanalwechsel gilt als bewusste Entscheidung. Wählst du in einem Browser auf dem Rechner mit dem Server einen anderen Kanal, wird aus der Update-Schaltfläche **Switch to** gefolgt vom Kanalnamen – und das funktioniert selbst dann, wenn gewöhnliche Updates in der App abgeschaltet sind. Währenddessen zeigt sie **Switching...**. Normale Updates im selben Kanal brauchen weiterhin die unter „Apply Update“ beschriebene Einrichtung, entfernte Geräte ohnehin immer.
+Ein Kanalwechsel gilt als bewusste Entscheidung. Wählst du in einem Browser auf dem Rechner mit dem Server einen anderen Kanal, wird aus der Update-Schaltfläche **Switch to** gefolgt vom Kanalnamen – und das funktioniert selbst dann, wenn gewöhnliche Updates in der App abgeschaltet sind. Währenddessen zeigt sie **Switching…**. Normale Updates im selben Kanal brauchen weiterhin die unter „Apply Update“ beschriebene Einrichtung, entfernte Geräte ohnehin immer.
 
 ### Check for Updates
 
-Klick auf **Check for Updates** (nach Updates suchen). Während der Prüfung zeigt die Schaltfläche **Checking...**.
+Klick auf **Check for Updates** (nach Updates suchen). Während der Prüfung zeigt die Schaltfläche **Checking…**.
 
 Darunter erscheinen die Version unter **Release** und der Commit-Code unter **Build**. Ist der Branch bekannt, kommt zusätzlich eine Zeile **Branch** dazu.
 
@@ -179,7 +179,7 @@ Die Schaltfläche **Refresh App** (App neu laden) sitzt im selben Abschnitt **Up
 
 Nutz **Refresh App**, wenn die App nach einem Update veraltet wirkt oder eine leere Seite zeigt, der Server aber bereits die neue Version ausführt. Es behebt eine festhängende Webseite. Am Server-Code ändert sich nichts – ein echtes Update ersetzt es also nicht.
 
-Während der Arbeit zeigt die Schaltfläche **Refreshing...**, danach lädt die App neu.
+Während der Arbeit zeigt die Schaltfläche **Refreshing…**, danach lädt die App neu.
 
 ## Wenn ein Update fehlschlägt
 

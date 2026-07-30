@@ -27,7 +27,7 @@ Le bouton **Download Backup** crée un seul fichier **.zip** avec la base de don
 2. Va dans l'onglet **Advanced**.
 3. Repère la section **Backup & Export**.
 4. Clique sur **Download Backup**.
-5. Pendant le traitement, le bouton affiche **Creating backup...**.
+5. Pendant le traitement, le bouton affiche **Creating backup…**.
 6. Sur Chrome ou Edge en version bureau, une fenêtre **Save As** s'ouvre pour choisir la destination du fichier. Choisis un dossier et enregistre.
 7. À la fin, le message **Backup saved!** ou **Backup downloaded!** doit apparaître.
 

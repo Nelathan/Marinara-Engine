@@ -27,7 +27,7 @@ O botão **Download Backup** cria um único arquivo **.zip** com o banco de dado
 2. Vá para a aba **Advanced**.
 3. Localize a seção **Backup & Export**.
 4. Clique em **Download Backup**.
-5. Enquanto o backup é criado, o botão mostra **Creating backup...**.
+5. Enquanto o backup é criado, o botão mostra **Creating backup…**.
 6. No Chrome ou no Edge de computador, abre-se a janela **Save As** para você escolher onde salvar o arquivo. Escolha uma pasta e salve.
 7. No fim, aparece **Backup saved!** ou **Backup downloaded!**.
 

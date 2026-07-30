@@ -31,7 +31,7 @@ Voici la marche à suivre pour ajouter ton premier fournisseur.
 3. Sous **Provider** (Fournisseur), clique sur le bouton du service voulu, par exemple **OpenAI**, **Anthropic** ou **OpenRouter**.
 4. Clique sur **Create**. Marinara crée la connexion et ouvre pour elle l'éditeur complet, **Connection Editor**.
 5. Repère le champ **API Key** (clé API). Colle ici la clé obtenue chez le fournisseur. Si tu n'as pas encore de clé, clique sur le lien **Get your {Provider} API key** sous le champ. Ce lien ouvre la page des clés du fournisseur dans le navigateur.
-6. Ouvre le menu déroulant **Model** (Modèle) et choisis un modèle. Le champ **Search models...** permet de filtrer la liste. Si la liste est vide, clique sur **Fetch Models from API** pour charger les modèles accessibles avec ton compte.
+6. Ouvre le menu déroulant **Model** (Modèle) et choisis un modèle. Le champ **Search models…** permet de filtrer la liste. Si la liste est vide, clique sur **Fetch Models from API** pour charger les modèles accessibles avec ton compte.
 7. Clique sur **Save** (Enregistrer). Le texte d'état, près du haut, passe à **Saved**.
 
 En général, le champ **Base URL** (URL de base) n'a pas besoin d'être modifié. Marinara le remplit pour les fournisseurs connus. Ne le change que si tu passes par un proxy ou par un serveur local.

@@ -60,7 +60,7 @@ Le menu déroulant **Font** se trouve dans cette même section. Pour ajouter tes
 
 ## Couleurs et contour du texte du chat
 
-Toujours dans la section **Text & Scale**, trois réglages déterminent la lisibilité du texte du chat par-dessus l'arrière-plan.
+Toujours dans la section **Text & Scale**, quatre réglages déterminent la lisibilité du texte du chat par-dessus l'arrière-plan.
 
 - **Chat Text Color** (couleur du texte du chat) définit la couleur principale du texte des messages. Par défaut : `#d4d4d4` en mode Dark et `#1a1025` en mode Light.
 - **Default Dialogue Color** colore les dialogues entre guillemets quand une fiche de personnage ou de persona ne définit pas sa propre **Dialogue Highlight Color**. Ce réglage reste toujours actif ; les couleurs définies dans une fiche ont la priorité.

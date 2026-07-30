@@ -60,7 +60,7 @@ Im selben Abschnitt sitzt das Dropdown-Menü **Font**. Wie du eigene Schriftarte
 
 ## Textfarben und Kontur im Chat
 
-Ebenfalls im Abschnitt **Text & Scale** steuern drei Bedienelemente, wie gut sich Chat-Text vom Hintergrund abhebt.
+Ebenfalls im Abschnitt **Text & Scale** steuern vier Bedienelemente, wie gut sich Chat-Text vom Hintergrund abhebt.
 
 - **Chat Text Color** (Chat-Textfarbe) legt die Hauptfarbe für den Text der Chat-Nachrichten fest. Der Standard ist `#d4d4d4` im Dark-Modus und `#1a1025` im Light-Modus.
 - **Default Dialogue Color** färbt wörtliche Rede, wenn eine Charakterkarte oder Persona keine eigene Dialogue Highlight Color definiert. Sie ist immer aktiv; kartenspezifische Farben haben Vorrang.

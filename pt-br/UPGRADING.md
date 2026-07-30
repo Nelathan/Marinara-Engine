@@ -24,7 +24,7 @@ Atualizar é seguro, mas um backup é um seguro barato. Faça um antes de qualqu
 4. Clique em **Download Backup** (baixar o backup).
 5. Salve o arquivo `.zip` em um lugar seguro.
 
-O botão muda para **Creating backup...** enquanto o processo roda. No fim, o navegador salva um arquivo `.zip` com os dados.
+O botão muda para **Creating backup…** enquanto o processo roda. No fim, o navegador salva um arquivo `.zip` com os dados.
 
 Os passos completos de backup e restauração estão em [Fazer backup e restaurar Marinara](data/backup-and-restore.md).
 
@@ -132,11 +132,11 @@ O menu suspenso **Release Channel** (canal de versões) define quais compilaçõ
 
 Ao escolher **Staging/UAT**, aparece o aviso: "Staging builds are pre-release tester builds. Back up your app data before applying them."
 
-Trocar de canal é tratado como uma escolha deliberada. Quando você escolhe outro canal em um navegador na máquina que roda o servidor, o botão de atualização muda para **Switch to** seguido do nome do canal, e funciona mesmo com as atualizações dentro do aplicativo desligadas. Enquanto roda, ele mostra **Switching...**. As atualizações normais, dentro do mesmo canal, ainda exigem a configuração descrita em Apply Update abaixo, e os dispositivos remotos exigem sempre.
+Trocar de canal é tratado como uma escolha deliberada. Quando você escolhe outro canal em um navegador na máquina que roda o servidor, o botão de atualização muda para **Switch to** seguido do nome do canal, e funciona mesmo com as atualizações dentro do aplicativo desligadas. Enquanto roda, ele mostra **Switching…**. As atualizações normais, dentro do mesmo canal, ainda exigem a configuração descrita em Apply Update abaixo, e os dispositivos remotos exigem sempre.
 
 ### Check for Updates
 
-Clique em **Check for Updates** (verificar atualizações). O botão mostra **Checking...** enquanto trabalha.
+Clique em **Check for Updates** (verificar atualizações). O botão mostra **Checking…** enquanto trabalha.
 
 Abaixo do botão aparecem a versão em **Release** e o código de commit em **Build**. Uma linha **Branch** também aparece quando o branch é conhecido.
 
@@ -179,7 +179,7 @@ O botão **Refresh App** (atualizar o aplicativo) fica na mesma seção **Update
 
 Use **Refresh App** quando o aplicativo parecer desatualizado ou mostrar uma tela em branco depois de uma atualização, mas o servidor já estiver rodando a versão nova. Isso resolve uma página travada. Como não muda o código do servidor, não substitui uma atualização de verdade.
 
-O botão mostra **Refreshing...** enquanto trabalha, e depois o aplicativo recarrega.
+O botão mostra **Refreshing…** enquanto trabalha, e depois o aplicativo recarrega.
 
 ## Quando a atualização falha
 

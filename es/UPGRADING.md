@@ -24,7 +24,7 @@ Las actualizaciones son seguras, pero una copia de seguridad es un seguro barato
 4. Haz clic en **Download Backup** (Descargar copia de seguridad).
 5. Guarda el archivo `.zip` en un lugar seguro.
 
-Deberías ver que el botón cambia a **Creating backup...** mientras trabaja. Cuando termina, tu navegador guarda un archivo `.zip` con tus datos.
+Deberías ver que el botón cambia a **Creating backup…** mientras trabaja. Cuando termina, tu navegador guarda un archivo `.zip` con tus datos.
 
 Los pasos completos para copias de seguridad y restauración están en [Copia de seguridad y restauración de Marinara](data/backup-and-restore.md).
 
@@ -132,11 +132,11 @@ El menú desplegable **Release Channel** (Canal de lanzamiento) elige qué compi
 
 Elegir **Staging/UAT** muestra un aviso: "Staging builds are pre-release tester builds. Back up your app data before applying them."
 
-Cambiar de canal se trata como una decisión deliberada. Cuando eliges un canal distinto desde un navegador en la máquina que ejecuta el servidor, el botón de actualización cambia a **Switch to** seguido del nombre del canal, y funciona incluso cuando las actualizaciones normales dentro de la app están desactivadas. Muestra **Switching...** mientras se ejecuta. Las actualizaciones normales dentro del mismo canal siguen necesitando la configuración descrita en Apply Update más abajo, y los dispositivos remotos siempre la necesitan.
+Cambiar de canal se trata como una decisión deliberada. Cuando eliges un canal distinto desde un navegador en la máquina que ejecuta el servidor, el botón de actualización cambia a **Switch to** seguido del nombre del canal, y funciona incluso cuando las actualizaciones normales dentro de la app están desactivadas. Muestra **Switching…** mientras se ejecuta. Las actualizaciones normales dentro del mismo canal siguen necesitando la configuración descrita en Apply Update más abajo, y los dispositivos remotos siempre la necesitan.
 
 ### Check for Updates
 
-Haz clic en **Check for Updates** (Comprobar actualizaciones). El botón muestra **Checking...** mientras trabaja.
+Haz clic en **Check for Updates** (Comprobar actualizaciones). El botón muestra **Checking…** mientras trabaja.
 
 Debajo del botón ves tu versión **Release** y el código de commit de tu **Build**. También aparece una línea **Branch** cuando se conoce la rama.
 
@@ -179,7 +179,7 @@ El botón **Refresh App** (Refrescar app) está en la misma sección **Updates**
 
 Usa **Refresh App** cuando la app se ve desactualizada o muestra una pantalla en blanco después de una actualización, pero el servidor ya está ejecutando la nueva versión. Arregla una página web atascada. No cambia el código del servidor, así que no sustituye a una actualización real.
 
-El botón muestra **Refreshing...** mientras trabaja, y luego la app se vuelve a cargar.
+El botón muestra **Refreshing…** mientras trabaja, y luego la app se vuelve a cargar.
 
 ## Si una actualización falla
 

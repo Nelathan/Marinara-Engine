@@ -107,7 +107,7 @@ Auch KI-generierte Szenen-Hintergründe aus der Galerie landen in derselben Bibl
 
 ## Wo die Hintergrund-Auswahl gespeichert wird
 
-Zwei verschiedene Einstellungen bestimmen den Hintergrund eines Chats – und beide werden unterschiedlich gespeichert:
+Drei verschiedene Einstellungen bestimmen den Hintergrund eines Chats – und alle drei werden unterschiedlich gespeichert:
 
 - Den **Chat Background** eines Chats speichert Marinara zusammen mit dem Chat auf dem Server. Er begleitet den Chat auf jedes Gerät, auf dem du ihn öffnest.
 - Hintergrund-Ordner samt Zuordnungen liegen auf dem Server und begleiten die Bibliothek auf andere Geräte.

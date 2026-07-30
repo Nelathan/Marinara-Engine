@@ -85,5 +85,5 @@ Os passos acima valem para cards escolhidos manualmente. Para trazer uma instala
 ## Guias relacionados
 
 - [Criando e editando personagens](creating-and-editing-characters.md)
-- [Browser: encontrar e importar personagens](bot-browser.md)
+- [Card Browser: encontrar e importar personagens](bot-browser.md)
 - [Importando do SillyTavern](../data/importing-from-sillytavern.md)

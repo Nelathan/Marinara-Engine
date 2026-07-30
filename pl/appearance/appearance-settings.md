@@ -60,7 +60,7 @@ W tej samej sekcji leży lista rozwijana **Font**. Aby dodać własne czcionki a
 
 ## Kolory tekstu czatu i obrys
 
-Również w sekcji **Text & Scale** trzy kontrolki decydują o tym, jak tekst czatu czyta się na tle.
+Również w sekcji **Text & Scale** cztery kontrolki decydują o tym, jak tekst czatu czyta się na tle.
 
 - **Chat Text Color** (kolor tekstu czatu) ustawia główny kolor tekstu wiadomości. Domyślnie jest to `#d4d4d4` w trybie Dark i `#1a1025` w trybie Light.
 - **Default Dialogue Color** (domyślny kolor dialogów) koloruje wypowiedzi w cudzysłowie wtedy, gdy karta postaci lub karta persony nie definiuje własnego koloru Dialogue Highlight Color. Działa zawsze, ale kolory z karty mają pierwszeństwo.

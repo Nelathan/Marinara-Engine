@@ -60,7 +60,7 @@ El menú desplegable **Font** (fuente) está en esta misma sección. Para añadi
 
 ## Colores y contorno del texto del chat
 
-También en la sección **Text & Scale**, tres controles cambian cómo se lee el texto del chat sobre tu fondo.
+También en la sección **Text & Scale**, cuatro controles cambian cómo se lee el texto del chat sobre tu fondo.
 
 - **Chat Text Color** (color del texto del chat) fija el color principal del texto de los mensajes del chat. El predeterminado es `#d4d4d4` en modo Dark y `#1a1025` en modo Light.
 - **Default Dialogue Color** (color de diálogo predeterminado) da color al diálogo entrecomillado cuando una tarjeta de personaje o persona no define su propio Dialogue Highlight Color. Siempre está activo; los colores específicos de la tarjeta tienen prioridad.

@@ -85,5 +85,5 @@ Les étapes ci-dessus concernent les fiches que tu choisis à la main. Pour dép
 ## Guides associés
 
 - [Créer et modifier des personnages](creating-and-editing-characters.md)
-- [Browser : trouver et importer des personnages](bot-browser.md)
+- [Card Browser : trouver et importer des personnages](bot-browser.md)
 - [Importer depuis SillyTavern](../data/importing-from-sillytavern.md)

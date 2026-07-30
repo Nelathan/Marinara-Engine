@@ -107,7 +107,7 @@ Os planos de fundo de cena gerados por IA que você cria a partir da galeria tam
 
 ## Onde suas escolhas de plano de fundo ficam salvas
 
-Duas configurações diferentes decidem qual plano de fundo um chat mostra, e cada uma é salva de um jeito:
+Três configurações diferentes decidem qual plano de fundo um chat mostra, e cada uma é salva de um jeito:
 
 - Marinara salva o **Chat Background** escolhido junto com aquele chat, no servidor. Ele acompanha o chat em qualquer dispositivo onde você o abrir.
 - As pastas de planos de fundo e suas atribuições ficam salvas no servidor e acompanham a biblioteca em outros dispositivos.

@@ -28,7 +28,7 @@
     },
     {
       "path": "UPGRADING.md",
-      "sha256": "d71b81779026b7ac1a29b8f2ce1cb3622ae82c930d5988e062646a0c5464ee0d",
+      "sha256": "fff4e68542466228aa3d4d39d25161c8704cf6a448e59fc33e6ec5256ff7514a",
       "bytes": 13369
     },
     {
@@ -68,7 +68,7 @@
     },
     {
       "path": "appearance/appearance-settings.md",
-      "sha256": "868c1d8b29235fe7945d33d7dcbae1c6d6ca49d370284e9d7e56376350e5cf80",
+      "sha256": "656b79c0331d4492b897e5c0121bee5d52c97fa15967d923bac5528132d94d93",
       "bytes": 9959
     },
     {
@@ -78,8 +78,8 @@
     },
     {
       "path": "appearance/chat-backgrounds.md",
-      "sha256": "3abe68437db15a1eb280a59ea65283da9bfaa0d2978ec43746774f04865795b1",
-      "bytes": 9328
+      "sha256": "654a0f29600fb58f2d2904c37fbfbcc5b5d5dd6f87a9a6c8cf5625b7948958bb",
+      "bytes": 9332
     },
     {
       "path": "appearance/custom-css-themes.md",
@@ -118,8 +118,8 @@
     },
     {
       "path": "characters/import-export.md",
-      "sha256": "e25d64298b4b50f5dc7d10f99dda4e8bfc6ec5bffea848696679e3713dc489f1",
-      "bytes": 6300
+      "sha256": "81983065fa6c34656c57c2f6104240a8c052ff3477184c792b9087879b2e9b77",
+      "bytes": 6305
     },
     {
       "path": "characters/library-organization.md",
@@ -198,7 +198,7 @@
     },
     {
       "path": "connections/connecting-to-a-provider.md",
-      "sha256": "3f8f482d6478f53e6f1757434a209a92c12fe583ed9923d747ec0689022cf454",
+      "sha256": "5c475afeba4bce4a52654873404faab98007734e04d3c7a5aca1a618357a39ac",
       "bytes": 6371
     },
     {
@@ -263,7 +263,7 @@
     },
     {
       "path": "data/backup-and-restore.md",
-      "sha256": "e07f7a2f11a355755aec53214a8c46120a3dd3cda635ecad2187b162bd96d579",
+      "sha256": "8df73bd686f548e364018b0d27b661a4e90ea183ddc7f1c32979fc3139426c1c",
       "bytes": 10670
     },
     {

@@ -107,7 +107,7 @@ Tła scen generowane przez AI w galerii trafiają do tej samej biblioteki, więc
 
 ## Gdzie zapisują się wybrane tła
 
-O tym, jakie tło pokazuje czat, decydują dwa różne ustawienia, a każde zapisuje się inaczej:
+O tym, jakie tło pokazuje czat, decydują trzy różne ustawienia, a każde zapisuje się inaczej:
 
 - Tło **Chat Background** wybrane dla czatu zapisuje się razem z tym czatem na serwerze. Towarzyszy czatowi na każdym urządzeniu, na którym go otworzysz.
 - Foldery teł i przypisania do nich zapisują się na serwerze i wędrują razem z biblioteką na inne urządzenia.

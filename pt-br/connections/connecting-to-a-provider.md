@@ -31,7 +31,7 @@ Siga estes passos para adicionar o primeiro provedor:
 3. Em **Provider**, clique no botão do serviço que você quer, por exemplo **OpenAI**, **Anthropic** ou **OpenRouter**.
 4. Clique em **Create**. Marinara cria a conexão e abre o **Connection Editor** completo para ela.
 5. Localize o campo **API Key**. Cole aqui a chave do provedor. Se você ainda não tem uma chave, clique no link **Get your {Provider} API key**, logo abaixo do campo. Esse link abre a página de chaves do provedor no navegador.
-6. Abra o menu suspenso **Model** e escolha um modelo. Digite na caixa **Search models...** para filtrar a lista. Se a lista estiver vazia, clique em **Fetch Models from API** para carregar os modelos que a sua conta pode usar.
+6. Abra o menu suspenso **Model** e escolha um modelo. Digite na caixa **Search models…** para filtrar a lista. Se a lista estiver vazia, clique em **Fetch Models from API** para carregar os modelos que a sua conta pode usar.
 7. Clique em **Save**. O texto de status perto do topo muda para **Saved**.
 
 Em geral não é preciso mexer no campo **Base URL**. Marinara preenche esse campo sozinho para os provedores conhecidos. Só altere se você usa um proxy ou um servidor local.

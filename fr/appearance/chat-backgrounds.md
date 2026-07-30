@@ -107,7 +107,7 @@ Les arrière-plans de scène générés par IA depuis la galerie atterrissent eu
 
 ## Où tes choix d'arrière-plan sont enregistrés
 
-Deux réglages distincts déterminent l'arrière-plan affiché par un chat, et ils ne s'enregistrent pas de la même façon :
+Trois réglages distincts déterminent l'arrière-plan affiché par un chat, et ils ne s'enregistrent pas de la même façon :
 
 - L'arrière-plan **Chat Background** choisi pour un chat est enregistré avec ce chat, sur le serveur. Il suit le chat sur tous les appareils où tu l'ouvres.
 - Les dossiers d'arrière-plans et leurs affectations sont enregistrés sur le serveur et suivent la bibliothèque sur les autres appareils.

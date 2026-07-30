@@ -27,7 +27,7 @@ Desde un teléfono, una tableta o cualquier otro dispositivo, la copia de seguri
 2. Ve a la pestaña **Advanced**.
 3. Busca la sección **Backup & Export**.
 4. Haz clic en **Download Backup**.
-5. El botón muestra **Creating backup...** mientras trabaja.
+5. El botón muestra **Creating backup…** mientras trabaja.
 6. En Chrome o Edge de escritorio, se abre una ventana **Save As** para que elijas dónde va el archivo. Elige una carpeta y guarda.
 7. Cuando termine, deberías ver **Backup saved!** o **Backup downloaded!**.
 

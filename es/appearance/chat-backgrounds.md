@@ -107,7 +107,7 @@ Los fondos de escena generados con IA que creas desde la galería también van a
 
 ## Dónde se guardan tus elecciones de fondo
 
-Dos ajustes distintos deciden qué fondo muestra un chat, y se guardan de formas diferentes:
+Tres ajustes distintos deciden qué fondo muestra un chat, y se guardan de formas diferentes:
 
 - El **Chat Background** que eliges para un chat se guarda con ese chat en el servidor. Sigue al chat en cualquier dispositivo en el que lo abras.
 - Las carpetas de fondos y sus asignaciones se guardan en el servidor y siguen a la biblioteca a otros dispositivos.
