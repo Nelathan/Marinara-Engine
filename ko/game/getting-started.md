@@ -1,0 +1,159 @@
+# Game Mode: 시작하기
+
+Game Mode(게임 모드)는 Marinara Engine을 AI 게임 마스터가 진행하는 1인용 롤플레잉 게임으로 바꿔 줍니다. 이 가이드에서는 Game Mode가 어떤 모드이고 시작하기 전에 무엇이 필요한지 설명합니다. 이어서 설정 마법사를 차례대로 살펴보고 각 게임 기능이 어디에 있는지 안내합니다. 한 번 읽고 게임을 시작한 다음, 더 깊은 내용은 문서 끝의 링크를 따라가세요.
+
+## Game Mode란
+
+Game Mode는 Marinara의 채팅 모드 중 하나입니다. 나머지는 Conversation(대화)과 Roleplay(롤플레이)입니다.
+
+Game Mode에서는 AI 게임 마스터(GM)가 이야기를 진행합니다. 게임 마스터는 세계를 서술하고, 만나는 캐릭터를 모두 연기하고, 다음에 무슨 일이 일어날지 정하는 AI입니다. 테이블톱 게임의 던전 마스터와 같은 역할입니다.
+
+엔진은 턴이 이어지는 동안 게임 상태를 대신 추적합니다. 지도, 파티, 플레이어가 아닌 캐릭터(NPC), 아이템, 퀘스트, 게임 속 시간, 날씨가 여기에 들어갑니다. 게임은 여러 턴에 걸쳐 진행됩니다. 긴 게임은 여러 **세션**으로 나눌 수 있습니다. 테이블톱 모임이 캠페인을 여러 날에 나눠 진행하는 것과 같습니다. 캠페인은 이어지는 이야기 전체를 가리킵니다.
+
+모든 규칙 요소를 다 써야 하는 것은 아닙니다. 전투와 주사위를 건너뛰고 이야기와 그림 위주로 Game Mode를 즐기는 사람도 있습니다. RPG 시스템은 필요할 때만 꺼내 쓰면 됩니다.
+
+## 시작하기 전에
+
+게임을 시작하는 데 꼭 필요한 것은 하나뿐입니다. GM이 사용할 AI 제공자 연결입니다. 연결은 Marinara를 AI 제공자에 이어 주어 글을 생성할 수 있게 해 줍니다. 아직 만들어 두지 않았다면 [AI 제공자에 연결하기](../connections/connecting-to-a-provider.md)를 참고하세요.
+
+나머지는 모두 선택 사항이고 기본값은 꺼짐입니다. 다음 기능은 나중에 추가해도 됩니다.
+
+- **이미지 생성.** Game Mode의 화면은 배경과 캐릭터 그림이 들어가는 구성입니다. 이 자리를 채우려면 이미지 생성 연결이 필요합니다. 설정 마법사의 **Visual Generation**(비주얼 생성) 설정은 기본이 꺼짐이라 직접 켜야 합니다. 켜지 않아도 이야기, 상태 추적, 전투는 그대로 쓸 수 있고 그림 영역만 비어 있습니다.
+- **장면 효과용 Local Model.** Marinara는 사용 중인 컴퓨터에서 작은 모델을 직접 돌릴 수 있습니다. 화면에는 **Local Model (Gemma)**로 표시됩니다. 이 모델이 추가 비용 없이 배경과 음악을 제안합니다. 설정 마법사의 기본 선택이기도 합니다. [Local Model 설정](../connections/local-model.md)을 참고하세요.
+- **동영상 생성 연결.** 장면 동영상이나 움직이는 스토리보드를 쓸 때만 필요합니다.
+- **음악.** **Music DJ** 에이전트가 게임 음악을 재생할 수 있습니다. Spotify나 로컬 음악 폴더가 필요하며 기본은 꺼짐입니다.
+
+## 설정 마법사
+
+Game Mode 채팅을 만들면 **설정 마법사**가 열립니다. 단계는 7개입니다. 반드시 입력해야 하는 항목은 첫 단계의 GM 연결뿐이고, 나머지는 모두 무난한 기본값이 들어 있습니다. 마법사를 빠르게 넘기고 나머지는 Marinara에 맡겨도 됩니다.
+
+7단계는 다음과 같습니다.
+
+1. **Connection.** 게임 이름을 정하고, GM 연결을 고르고, 필요하면 장면 효과 연결도 지정하세요. 장면 효과의 기본값은 **Local Model (Gemma)**입니다.
+2. **World.** 장르, 무대, 톤, 난이도, 콘텐츠 등급, 언어를 정하세요.
+3. **Party.** 직접 연기할 페르소나와 **Game Master Mode**(GM 모드), 함께할 파티원을 고르세요.
+4. **Goals.** 이 모험에서 무엇을 기대하는지 GM에게 알려 주세요.
+5. **Lorebooks.** GM이 사실로 다뤄야 할 로어북을 연결하세요. 로어북은 세계 설정을 모아 둔 것입니다. [로어북](../lorebooks/overview.md)을 참고하세요.
+6. **Features.** Visual Generation, 스토리보드, Music DJ, HUD 위젯 같은 선택 기능을 켜세요.
+7. **GM.** 연출 방식을 고르고, 세계가 만들어지기 전에 GM 고급 지시문을 검토하세요.
+
+다 마쳤으면 **Start Game**(게임 시작)을 클릭하세요.
+
+### 알아 두면 좋은 기본값
+
+아래는 **World**(월드), **Party**(파티), **Features** 단계의 처음 값입니다. 전부 바꿀 수 있습니다.
+
+| 설정 | 기본값 | 비고 |
+|---|---|---|
+| Genre | Fantasy | 여러 개 선택 가능하며, 직접 입력한 항목도 추가할 수 있습니다 |
+| Tone | Heroic | 여러 개 선택 가능합니다 |
+| Difficulty | Normal | Casual, Normal, Hard, Brutal 중에서 고릅니다. 높일수록 전투가 가혹해집니다 |
+| Content Rating | SFW | SFW 또는 NSFW입니다. NSFW는 성인용 내용을 허용할 뿐 강제하지 않습니다 |
+| Language | English | 게임 속 모든 글이 이 언어로 작성됩니다 |
+| Game Master Mode | Standalone GM | Standalone GM은 GM을 대신 만들어 주고, Character GM은 가지고 있는 캐릭터 카드를 GM으로 씁니다 |
+| Visual Generation | Off | 이미지를 쓰려면 켜세요. 이미지 생성 연결이 필요합니다 |
+| Automatic Storyboard Illustrations | On | Visual Generation을 켠 뒤에만 동작합니다 |
+| Automatic Storyboard Animations | Off | 동영상 생성 연결이 필요합니다 |
+| Keyframes per Turn | 3 | 스토리보드 일러스트와 함께 쓰며, 범위는 1에서 6까지입니다 |
+| Game Presentation | Standard | **Storyboard Optimized**는 Storyboard Game Prompt, Comic Page Animation 플래너, Storyboard Illustration, Comic Page Video 프롬프트를 함께 맞춥니다 |
+| Music DJ | Off | Spotify나 로컬 음악 폴더가 필요합니다 |
+| Custom HUD Widgets | On | 새로 만든 세계에 맞춰 AI가 만든 상태 위젯을 씁니다 |
+| Start Muted | Off | 소리를 끈 상태로 게임을 시작합니다 |
+
+Game Mode가 처음이라면 **Game Master Mode**를 **Standalone GM**에 그대로 두세요. Marinara가 공정하면서 살짝 능청스러운 GM을 만들어 주므로, 직접 GM 카드를 쓰기 전에 이 모드의 감을 잡을 수 있습니다.
+
+GM 턴을 영상으로 찍을 수 있는 시각적 장면 단위로 쓰게 하려면 마지막 단계에서 **Storyboard Optimized**(스토리보드 최적화)를 고르세요. 이 선택은 내장 프리셋인 **Storyboard Game Prompt**, **Comic Page Animation** 플래너, **Storyboard Illustration**, **Comic Page Video**를 함께 지정합니다. Comic Page Animation은 클립 길이에 맞춰 시간순 컷의 개수를 제한하고, Storyboard Illustration은 계획된 키프레임을 이미지 모델용 형식으로 다듬으며, Comic Page Video는 그 컷들을 순서가 정해진 애니메이션 참고 자료로 다룹니다. 이미지 생성이나 동영상 생성을 대신 켜 주지는 않으며, 골라 둔 연결도 바꾸지 않습니다. GM은 마법사의 **Keyframes per Turn**(턴당 키프레임 수) 값을 인상적인 장면을 잡는 목표치로 삼지만, 짧은 대화에서는 더 적게 쓰고 이야기에 필요할 때는 서술 문단을 더 늘리기도 합니다.
+
+설정을 마친 뒤에도 애니메이션풍 단일 컷 조합을 그대로 쓸 수 있습니다. Animation Planner에는 **Anime Episode Director**를, Storyboard Video Prompt에는 **Anime Game Video**를 고르세요.
+
+**GM Prompt**(GM 프롬프트) 편집기는 선택한 연출에 실제로 적용되는 프롬프트를 미리 보여 줍니다. **Storyboard Optimized**를 고른 상태에서 편집기를 열면 키프레임 개수 매크로까지 포함한 Storyboard Game Prompt가 나타납니다. 그 텍스트를 그대로 두면 내장 프리셋이 계속 선택된 상태로 남고, 손을 대면 연출 프리셋을 덮어쓰는 사용자 지정 프롬프트가 만들어집니다.
+
+## AI 호출의 3가지 종류
+
+Game Mode는 서로 다른 3가지 AI 호출을 씁니다. 이 구분을 알아 두면 비용과 오류가 어디에서 생기는지 파악하기 쉽습니다.
+
+1. **월드 생성.** **Start Game**을 클릭할 때 한 번만 실행됩니다. GM 연결이 JSON이라는 형식으로 크고 짜임새 있는 문서 하나를 돌려줍니다. 이 문서에는 월드 개요, 시작 지도, NPC, 파티의 게임 시트, 화면에 표시될 위젯이 담깁니다. JSON은 규칙이 엄격한 텍스트 형식이라 AI가 형식을 정확히 지켜야 하며, 그러지 않으면 게임이 읽어 들이지 못합니다. 가장 까다로운 단계이고, 그래서 모델 선택이 여기서 가장 중요합니다.
+2. **게임 턴.** 메시지를 보낼 때마다 현재 상태를 담은 프롬프트가 새로 만들어집니다. 그러면 GM이 이야기를 서술하고 세계를 갱신합니다. 전투 라운드 계산은 모델이 아니라 엔진이 하므로 결과가 공정하고 일관되게 유지됩니다.
+3. **세션 요약.** 세션을 끝내면 GM이 짜임새 있는 요약과 연속성 메모를 작성합니다. 새 세션을 시작하면 다음 이야기가 자연스럽게 이어지도록 짧은 연결 메시지를 씁니다. 지난 세션은 요약으로 압축되므로 캠페인이 길어져도 모델이 감당할 수 있습니다.
+
+## 말할 대상 모드: 지금 누구에게 말하는지
+
+입력창에는 파일 첨부 버튼 옆에 작은 말풍선 버튼이 있습니다. 툴팁은 **Choose who to address**(말할 대상 선택)입니다. 이 버튼으로 메시지를 누구에게 보낼지 정하며, 상태는 3가지입니다.
+
+- 기본값에서는 메시지가 장면 안으로 들어갑니다. 게임 속 평범한 행동이나 대사가 되며, GM과 파티가 이야기 안에서 반응합니다.
+- **Talk to Party**(파티에게 말하기)는 `[To the party]` 표시를 붙여 동료들에게 직접 말을 겁니다. "여기서는 어떻게 할까?" 같은 전술 논의에 쓰세요. 이 항목은 파티가 비어 있지 않을 때만 나타납니다.
+- **Talk to GM**(GM에게 말하기)은 `[To the GM]` 표시를 붙여 GM에게 캐릭터 밖에서 말을 겁니다. "내 캐릭터가 그 신전을 알고 있나요?" 같은 질문이나 진행 속도를 조절해 달라는 요청에 쓰세요.
+
+메뉴에서 지금 켜져 있는 모드에는 **On** 표시가 붙습니다. **Talk to Party**나 **Talk to GM**을 끄려면 같은 메뉴 항목을 다시 클릭하세요. 그러면 메시지는 다시 장면 안으로 들어갑니다.
+
+## 에이전트 켜기
+
+에이전트는 GM과 함께 돌아가는 선택형 AI입니다. 게임에서 쓰려면 진행 중에 **Chat Settings**(채팅 설정)를 열고 **Agents**(에이전트) 섹션으로 가서 **Enable Agents**(에이전트 활성화)를 켜세요. 에이전트는 호출을 추가로 하므로 비용이 늘어납니다.
+
+Game Mode에서 알아 두면 좋은 에이전트는 2가지입니다.
+
+- **Game Session Keeper**는 세션이 이어질 때 흐름이 끊기지 않도록 돕습니다.
+- **Music DJ**는 배경 음악을 고릅니다. Spotify나 로컬 음악 폴더가 필요합니다.
+
+Game Mode에서는 **Review Agent Outputs**(에이전트 출력 검토)도 쓸 수 있어서 에이전트가 만들어 낸 결과를 확인할 수 있습니다. 에이전트 전반은 [에이전트: 채팅을 도와주는 AI](../agents/agents-overview.md)에서 다룹니다.
+
+## 모델 고르기
+
+Game Mode에서 가장 어려운 부분은 월드 생성입니다. 빠진 필드 하나 없이 길고 엄격한 JSON 문서를 모델에게 요구하기 때문입니다. 평범한 채팅은 잘 해내는 모델도 이 단계에서는 실패할 수 있습니다.
+
+월드 생성에는 유료 연결로 쓰는 최신 최상위 모델을 권합니다. 2026년 기준으로 주요 제공자의 최상위 등급 모델에서 결과가 좋았다는 보고가 많습니다. Anthropic Claude, OpenAI GPT, Google Gemini가 그 예입니다. 구체적인 모델 이름은 자주 바뀌므로 고정된 목록이 아니라 예시로만 봐 주세요.
+
+이후의 게임 턴에는 더 저렴한 모델로 낮춰도 될 때가 있습니다. 턴에서는 엄격한 JSON이 아니라 서술을 요구하기 때문입니다. GM이 NPC를 잊거나 앞선 설정과 어긋나기 시작하면 다시 더 강한 모델로 올리세요.
+
+월드 생성에는 무료 모델이나 자동 라우팅 모델을 피하세요. 월드 생성용 JSON을 만들지 못하는 작은 모델로 연결될 수 있습니다. 크기가 작은 오픈 웨이트 모델도 대개 이 단계에서 실패합니다.
+
+파라미터 전체 설명은 [생성 파라미터](../prompts/generation-parameters.md)에서 확인하세요.
+
+## 각 게임 주제가 있는 곳
+
+이 가이드는 게임을 시작하는 데까지만 안내합니다. 더 깊은 주제는 각각 별도의 가이드가 있습니다.
+
+- [Game Mode: 전투](combat.md)에서는 인카운터, 행동 메뉴, 피해 계산, 퀵 타임 이벤트를 다룹니다.
+- [Game Mode: 파티와 NPC](party-and-npcs.md)에서는 파티 막대, 캐릭터 시트, 모험 일지를 다룹니다.
+- [Game Mode: 세션과 저장 데이터](sessions-and-saves.md)에서는 세션을 끝내고 시작하는 방법과 세션 기록을 다룹니다.
+- [Game Mode: 지도, 시간, 날씨](map-time-weather.md)에서는 지도 보기와 자동으로 흐르는 시계, 날씨를 다룹니다.
+- [Game Mode: 주사위와 스킬 판정](dice-and-skill-checks.md)에서는 주사위 메뉴와 스킬 판정 규칙을 다룹니다.
+- [Game Mode: HUD 위젯](hud-widgets.md)에서는 화면에 표시되는 상태 위젯을 다룹니다.
+- [게임 에셋](game-assets.md)에서는 음악, 사운드, 스프라이트, 배경 라이브러리를 다룹니다.
+- [스토리보드 엔진 가이드](storyboard.md)에서는 GM 턴을 만화풍 키프레임으로 바꾸는 방법을 다룹니다.
+
+Author's Notes(작가 노트)는 다른 모드와 똑같이 동작합니다. [Roleplay Mode: 시작하기](../roleplay/getting-started.md)를 참고하세요.
+
+## 문제 해결
+
+### 월드 생성이 JSON 오류나 422 오류로 실패합니다
+
+가장 흔한 원인은 모델이 짜임새 있는 JSON을 끝까지 만들어 내지 못한 것입니다. 다음을 순서대로 시도하세요.
+
+1. GM이 어떤 연결을 쓰고 있는지 확인하세요. 무료 모델이나 자동 라우팅 모델을 가리키고 있다면 성능이 좋은 유료 모델로 바꾸세요.
+2. 다시 시도하세요. 일회성 실패도 있어서 같은 설정으로 두 번째에 성공하기도 합니다.
+3. 무대나 선호 사항 입력란이 너무 길다면 줄이세요. 입력이 길수록 모델이 JSON 출력에 쓸 여유가 줄어듭니다.
+
+호출이 거의 성공했는데 JSON이 조금 어긋난 정도라면 Marinara가 **Repair JSON**(JSON 수정) 창을 띄웁니다. 이 창은 모델의 원본 출력을 줄 번호가 붙은 편집기로 보여 줍니다. 상태 줄에서 JSON이 유효한지, 아니면 어떤 구문 오류가 있는지 알려 줍니다. 유효한 JSON을 보기 좋게 정리하려면 **Format**(형식 정리)을 클릭하세요. 그런 다음 **Apply Repaired JSON**(수정한 JSON 적용)을 클릭하면 전체를 다시 생성하는 비용 없이 고친 내용을 쓸 수 있습니다. **Repair JSON**은 세션 요약을 비롯한 다른 구조화 호출에서도 나타납니다.
+
+증상별 해결 방법은 [Marinara Engine 문제 해결](../TROUBLESHOOTING.md)에서 더 볼 수 있습니다.
+
+### 어두운 톤을 골랐는데 GM이 밝게 서술합니다
+
+톤과 상관없이 밝은 어조를 유지하는 모델이 있습니다. 방법은 2가지입니다. 마법사의 선호 사항 입력란에 "서술을 음울하게 유지하고 실패를 미화하지 마세요."처럼 분명한 지시를 적으세요. 아니면 원하는 톤에 맞는 기본 어조를 가진 모델로 바꾸세요.
+
+## 관련 가이드
+
+- [Game Mode: 전투](combat.md)
+- [Game Mode: 파티와 NPC](party-and-npcs.md)
+- [Game Mode: 세션과 저장 데이터](sessions-and-saves.md)
+- [Game Mode: 지도, 시간, 날씨](map-time-weather.md)
+- [Game Mode: 주사위와 스킬 판정](dice-and-skill-checks.md)
+- [Game Mode: HUD 위젯](hud-widgets.md)
+- [게임 에셋](game-assets.md)
+- [스토리보드 엔진 가이드](storyboard.md)
+- [Roleplay Mode: 시작하기](../roleplay/getting-started.md)
+- [AI 제공자에 연결하기](../connections/connecting-to-a-provider.md)
+- [에이전트: 채팅을 도와주는 AI](../agents/agents-overview.md)
+- [생성 파라미터](../prompts/generation-parameters.md)
+- [Marinara Engine 문제 해결](../TROUBLESHOOTING.md)
