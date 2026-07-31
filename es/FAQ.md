@@ -166,13 +166,13 @@ Professor Mari todavía puede editar archivos fuente ordinarios de Marinara. Los
 
 Nota: en una dirección remota ordinaria, las acciones de Professor Mari que cambian datos necesitan tanto Basic Auth como un secreto de administrador. Las rutas de red de confianza o en lista permitida pueden usar las excepciones descritas en [Acceso remoto](REMOTE_ACCESS.md).
 
-## ¿Cómo funcionan las animaciones de storyboard de Game Mode?
+## ¿Cómo funcionan las animaciones de storyboard?
 
-Un **storyboard** (secuencia de viñetas) convierte un turno de narración terminado del game master en una secuencia corta de imágenes de fotogramas clave estilo manga. También puede agregar clips animados cortos. El turno luego se reproduce como una minisecuencia cinematográfica. Los storyboards existen solo en **Game Mode**.
+Un **storyboard** (secuencia de viñetas) convierte texto de historia ya terminado en una secuencia corta de imágenes de fotogramas clave y puede agregar clips animados. En **Game Mode**, sigue a un turno de narración terminado del game master. En **Roleplay**, el Storyboard Agent combina los intercambios recién terminados en un episodio integrado después de un número configurable de respuestas del asistente.
 
-Para crear uno a mano, abre la **Gallery** (Galería) y haz clic en **Create storyboard** (Crear storyboard) para el turno de narración más reciente. Para reabrir un storyboard que cerraste, haz clic en **View storyboard** (Ver storyboard).
+Para crear uno a mano, abre la **Gallery** (Galería) y haz clic en **Create storyboard** (Crear storyboard). Game Mode puede reabrir su visor con **View storyboard** (Ver storyboard); Roleplay muestra el resultado debajo de la respuesta del asistente que termina el episodio.
 
-Para crearlos automáticamente, abre **Chat Settings**, ve a **Agents**, encuentra la tarjeta **Storyboards** y activa **Automatic Storyboard Illustrations** (Ilustraciones de storyboard automáticas). Activa **Automatic Storyboard Animations** (Animaciones de storyboard automáticas) también si además quieres clips de video, lo que necesita una conexión de Video Generation. Para el flujo de trabajo completo, consulta [Storyboards de Game Mode](game/storyboard.md).
+Para crearlos automáticamente, abre **Chat Settings**, ve a **Agents** y encuentra la tarjeta **Storyboards**. Game Mode tiene interruptores separados de ilustración y animación. Roleplay ofrece **Manual only** (Solo manual), **Still images** (Imágenes fijas) o **Animations** (Animaciones), además de **Assistant messages per episode** (Mensajes del asistente por episodio). Los clips de video necesitan una conexión de Video Generation. Para ambos flujos de trabajo, consulta [Guía del Storyboard Engine](game/storyboard.md).
 
 ## ¿Los personajes pueden hablar en voz alta en una llamada?
 

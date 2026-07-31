@@ -46,7 +46,7 @@ Choose an image generation connection for the Illustrator agent, or mark one as 
 - **Selfie**: создает селфи персонажа в режиме Conversation.
 - **Background**: генерирует фон сцены и сразу применяет его, как описано выше.
 - **Video**: делает видео сцены по последней иллюстрации.
-- **Create storyboard**: создает ключевые кадры раскадровки для режима Game Mode.
+- **Create storyboard**: создает ключевые кадры для последнего хода режима Game Mode или для завершенного эпизода режима Roleplay, когда включена раскадровка.
 - **Browse Images**: открывает браузер сохраненных изображений, откуда их можно вставить.
 - **View storyboard**: открывает последнюю раскадровку режима Game Mode.
 
@@ -60,7 +60,7 @@ Choose an image generation connection for the Illustrator agent, or mark one as 
 - **Pin to chat**: закрепляет изображение в чате.
 - **Download image**: сохраняет изображение на устройство.
 - **Animate illustration**: превращает это изображение в видео сцены.
-- **Copy prompt**: копирует сохраненный промпт изображения – текст, который Marinara отправляет модели ИИ. Если промпт не сохранен, кнопка показывает **No prompt saved** и не работает.
+- **Copy prompt**: копирует сохраненный промпт изображения. Если промпт не сохранен, кнопка показывает **No prompt saved** и не работает.
 - **Delete gallery image**: удаляет изображение после подтверждения.
 
 ## Проверка промпта перед отправкой

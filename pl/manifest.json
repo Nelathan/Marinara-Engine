@@ -8,8 +8,8 @@
     },
     {
       "path": "FAQ.md",
-      "sha256": "ce667d6f55cdbf9848f1f593b2cdec453598c429bd69d8c162a6ffd94b67d031",
-      "bytes": 21473
+      "sha256": "78b5807eb9bd77ff251ce72ea6cac3b019bedbba9aadcffc3bd661cb4cd16f31",
+      "bytes": 21639
     },
     {
       "path": "INSTALLATION.md",
@@ -23,8 +23,8 @@
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "303be6efd27c8ab4d6e5f349ddba1a5138856fc4cce989fb700747461499e35a",
-      "bytes": 32656
+      "sha256": "c5e8556cd5489a79f3324875cb736351f130ce73a41367cab56bbfd2dc2b4f7d",
+      "bytes": 33171
     },
     {
       "path": "UPGRADING.md",
@@ -398,8 +398,8 @@
     },
     {
       "path": "game/storyboard.md",
-      "sha256": "82b3851cd2fb12bf4ea530f0db9792ffd4ccbcc50cd77d1991189e2904a8dd69",
-      "bytes": 25087
+      "sha256": "886f0e8d3fce52479fce3cebd40a1fe9b969afa064471a1f381ae0dec8a8e15d",
+      "bytes": 28134
     },
     {
       "path": "home/achievements.md",
@@ -523,13 +523,13 @@
     },
     {
       "path": "media/scene-backgrounds.md",
-      "sha256": "414aa9ee5a2539bb602a547194a63cc8783e5cda1ae2cf2df4b3b727ddb2904f",
-      "bytes": 6470
+      "sha256": "2cf438fd5fcc578cd036293c5d469b6ee88fa41f9a62f971c2ccb6744a65cbef",
+      "bytes": 6555
     },
     {
       "path": "media/scene-video.md",
-      "sha256": "f2fa9ac76f72a26c8a55f41fe8e997ebd0bd517f30b978412abb92f7aa96a39e",
-      "bytes": 16238
+      "sha256": "45c1eadc7f842b5f4c43b3ccda61e62711cf8976ea237d754ca59efc464d6887",
+      "bytes": 16827
     },
     {
       "path": "media/style-profiles.md",
@@ -578,8 +578,8 @@
     },
     {
       "path": "prompts/prompt-overrides.md",
-      "sha256": "194da7b59b1f01bf7c27f5dbb22d392899c393195eff244634b9b42618eb8b0c",
-      "bytes": 5537
+      "sha256": "c673cf2ffc6c4f5173695f7b60d8003ebac59fa25f0e1cf64c3204350364a6e7",
+      "bytes": 5583
     },
     {
       "path": "roleplay/backgrounds.md",

@@ -46,7 +46,7 @@ Na górze panelu przyciski akcji pojawiają się tylko wtedy, gdy dana funkcja d
 - **Selfie**: generuje selfie postaci w trybie Conversation.
 - **Background**: generuje i ustawia tło sceny, tak jak opisano wyżej.
 - **Video**: tworzy wideo ze sceny na podstawie najnowszej ilustracji.
-- **Create storyboard**: generuje klatki kluczowe storyboardu w trybie Game Mode.
+- **Create storyboard**: generuje klatki kluczowe dla ostatniej tury w trybie Game Mode albo dla zakończonego odcinka w trybie Roleplay, gdy storyboard jest aktywny.
 - **Browse Images**: otwiera przeglądarkę zapisanych obrazów do wstawienia.
 - **View storyboard**: otwiera najnowszy storyboard z trybu Game Mode.
 

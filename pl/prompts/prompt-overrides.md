@@ -11,7 +11,7 @@ Ta funkcja dotyczy wyłącznie promptów do obrazów i wideo. Nie zmienia teksto
 Kilka pojęć używanych niżej:
 
 - **Sprite** to element grafiki postaci, na przykład wyraz twarzy albo poza całej sylwetki.
-- **Storyboard** to zestaw ilustrowanych klatek wygenerowanych z jednej tury w trybie Game Mode.
+- **Storyboard** to zestaw ilustrowanych klatek wygenerowanych z jednej tury w trybie Game Mode albo z ukończonego odcinka w trybie Roleplay.
 
 ## Gdzie ich szukać
 

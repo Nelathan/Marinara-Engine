@@ -46,7 +46,7 @@ En la parte superior del panel, los botones de acción solo aparecen cuando la f
 - **Selfie**: genera una selfie del personaje en el modo Conversation.
 - **Background**: genera y aplica un fondo de escena, como se describió arriba.
 - **Video**: crea un video de escena a partir de la ilustración más reciente.
-- **Create storyboard**: genera fotogramas clave de storyboard (secuencia de viñetas) del Game Mode.
+- **Create storyboard**: genera fotogramas clave del turno más reciente del Game Mode o del episodio de Roleplay terminado, cuando Storyboard (secuencia de viñetas) está activo.
 - **Browse Images**: abre un explorador de imágenes guardadas para insertar.
 - **View storyboard**: abre el storyboard más reciente del Game Mode.
 

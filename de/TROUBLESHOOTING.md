@@ -187,17 +187,18 @@ Starte Marinara danach neu und klick im Fenster für die Sprite-Generierung auf 
 - Bau das Werkzeug mit `pnpm backgroundremover:reinstall` neu.
 - Willst du während der Fehlersuche ausschließlich die automatische Matte-Bereinigung ohne KI-Rückfalllösung erzwingen, setz `SPRITE_BACKGROUND_REMOVAL_ENGINE=builtin` in der `.env`.
 
-### Storyboards oder Szenenvideos im Game Mode erscheinen nicht
+### Storyboards im Game Mode oder Roleplay erscheinen nicht
 
-Storyboards sind eine Game-Mode-Funktion. Sie machen aus einem abgeschlossenen Erzählzug Keyframe-Bilder und optional kurze Clips.
+Game-Mode-Storyboards machen aus einer abgeschlossenen GM-Erzählung Keyframe-Bilder und optional kurze Clips. Roleplay-Storyboards fassen abgeschlossene Wortwechsel zusammen und zeigen das Ergebnis direkt hinter der Antwort im Chat.
 
 - Für ein manuelles Szenenvideo generierst du zuerst ein Bild in der **Gallery** oder lädst eines hoch und nutzt dann dessen Aktion **Video** oder **Animate**. Die **Gallery** trennt **Images** und **Videos** in Tabs – sieh also im Tab **Videos** nach.
-- Für automatische Storyboards öffnest du **Chat Settings** > **Agents** > **Storyboards** und prüfst, ob **Automatic Storyboard Illustrations** eingeschaltet ist. Willst du auch Clips, schalte zusätzlich **Automatic Storyboard Animations** ein.
-- Keyframe-Bilder brauchen eine Game-Bildverbindung. Clips zusätzlich eine Videoverbindung.
+- Für automatische Game-Mode-Storyboards öffnest du **Chat Settings** > **Agents** > **Storyboards** und prüfst, ob **Automatic Storyboard Illustrations** eingeschaltet ist. Willst du auch Clips, schalte zusätzlich **Automatic Storyboard Animations** ein.
+- Im Roleplay fügst du den Agenten **Storyboard** zum Chat hinzu. Wähl **Still images** oder **Animations**, leg **Assistant messages per episode** fest und wähl die Bildverbindung für das Storyboard. **Manual only** startet stattdessen über **Create storyboard** in der Galerie.
+- Keyframe-Bilder brauchen eine Bildverbindung. Clips zusätzlich eine Videoverbindung.
 - Funktioniert ein eigener Prompt besser, wenn alle Charaktere zusammengefasst sind, schalte **Use NovelAI Character Prompts** aus.
 - Langsame Anbieter laufen leicht in ein Zeitlimit. Erhöh `IMAGE_GEN_TIMEOUT_MS` oder `VIDEO_GEN_TIMEOUT_MS` in der `.env` und starte Marinara neu. Der Server liest diese Werte nur beim Start.
 
-Die komplette Einrichtung beschreibt [Game Mode: Erste Schritte](game/getting-started.md).
+Beide Abläufe beschreibt die [Anleitung zur Storyboard-Engine](game/storyboard.md); die Einrichtung des Spiels beschreibt [Game Mode: Erste Schritte](game/getting-started.md).
 
 ### Die Weltgenerierung im Game Mode zeigt einen JSON-Fehler
 

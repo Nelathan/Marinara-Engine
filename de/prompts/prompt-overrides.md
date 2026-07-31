@@ -11,7 +11,7 @@ Die Funktion betrifft ausschließlich Bild- und Video-Prompts. Der Text-Prompt, 
 Ein paar Begriffe, die unten vorkommen:
 
 - Ein **Sprite** ist ein Stück Charakterkunst, etwa ein Gesichtsausdruck oder eine Ganzkörperpose.
-- Ein **Storyboard** ist eine Folge illustrierter Einzelbilder, die aus einem Zug im Game Mode entstehen.
+- Ein **Storyboard** ist eine Folge illustrierter Einzelbilder, die aus einem Zug im Game Mode oder aus einer abgeschlossenen Roleplay-Episode entstehen.
 
 ## Wo du sie findest
 

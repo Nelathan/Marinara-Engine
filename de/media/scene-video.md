@@ -89,7 +89,7 @@ So animierst du das neueste Bild:
 
 1. Achte darauf, dass unter **Images** mindestens ein Bild liegt. Nutze sonst **Illustrate** (Illustrieren) oder lade ein Bild hoch.
 2. Klick auf **Video** in der Aktionsleiste oben in der Galerie.
-3. Ist **Expose media prompts before sending** unter **Settings**, **Generations**, **Image Generation** aktiviert, prüfst oder bearbeitest du jetzt den fertig zusammengesetzten Animations-Prompt und klickst auf **Generate**. Brichst du dieses Fenster ab, geht keine Anfrage an den Anbieter.
+3. Ist **Expose media prompts before sending** unter **Settings**, **Generations**, **Overall Generations** aktiviert, prüfst oder bearbeitest du jetzt den fertig zusammengesetzten Animations-Prompt und klickst auf **Generate**. Brichst du dieses Fenster ab, geht keine Anfrage an den Anbieter.
 4. Die Schaltfläche wechselt zu **Generating...**, und ein Banner meldet die laufende Videogenerierung.
 5. Ist alles fertig, erscheint der Clip unter dem Tab **Videos**.
 
@@ -99,7 +99,7 @@ So animierst du stattdessen ein bestimmtes Bild:
 2. Zeig mit der Maus auf das gewünschte Bild.
 3. Klick in den eingeblendeten Bedienelementen auf **Animate illustration** (Illustration animieren, das Filmsymbol).
 
-Bei aktivierter Prompt-Prüfung erscheint auch für **Animate illustration** dasselbe Fenster **Review Video Prompt** (Video-Prompt prüfen). Es zeigt genau den Prompt, den der Server zusammengesetzt hat, dazu Dauer, Seitenverhältnis und Auflösung für das gewählte Bild. Deine Änderung gilt nur für diese eine Generierung und ersetzt nicht die wiederverwendbare Vorlage Game Video Prompt.
+Bei aktivierter Prompt-Prüfung erscheint auch für **Animate illustration** dasselbe Fenster **Review Video Prompt** (Video-Prompt prüfen). Es zeigt genau den Prompt, den der Server zusammengesetzt hat, dazu Dauer, Seitenverhältnis und Auflösung für das gewählte Bild. Deine Änderung gilt nur für diese eine Generierung. Im Roleplay steuerst du die wiederverwendbaren Anweisungen hinter diesem Prompt separat über **Roleplay Gallery Animation Director** unter **Settings**, **Generations**, **Video Generation Prompt Overrides**.
 
 Unter **Videos** läuft jeder Clip direkt im Panel und zeigt Länge und Modellnamen an. Mit **Pin video to chat** (Video an den Chat anheften) heftest du einen Clip fest, mit **Download scene video** (Szenenvideo herunterladen) speicherst du ihn. Gibt es noch keine Clips, steht dort **No videos yet**.
 
@@ -132,7 +132,7 @@ Jeder Chat wählt seine eigene Videoverbindung. Das stellst du unter **Chat Sett
 - **Game Video Prompt**: die Prompt-Vorlage, die bestimmt, wie sich das Bild bewegt. Der eingebaute Standard heißt **Cinematic Scene Video**.
 - **Edit Video Presets**: eigene Kopien der Video-Prompt-Vorlage für diesen Chat anlegen und bearbeiten.
 
-Der **Game Video Prompt** steuert weiterhin die manuellen Videos aus Galerie und Game Assets. Für Storyboard-Keyframe-Clips lässt sich unter **Chat Settings**, **Agents**, dann **Storyboards** ein abweichender **Storyboard Video Prompt** wählen. Ohne eigene Storyboard-Auswahl erben sie den Game Video Prompt.
+Der **Game Video Prompt** steuert weiterhin die manuellen Videos aus Galerie und Game Assets im Game Mode. Galerie-Animationen im Roleplay nutzen stattdessen **Roleplay Gallery Animation Director**. Für Storyboard-Keyframe-Clips lässt sich unter **Chat Settings**, **Agents**, dann **Storyboards** ein abweichender **Storyboard Video Prompt** wählen. Ohne eigene Storyboard-Auswahl erben sie den Game Video Prompt.
 
 Beim Anlegen eines Game-Mode-Chats bietet auch der Einrichtungsassistent eine Auswahl **Video Generation Connection**. Sie steht im Schritt **Features** und erscheint, sobald du **Visual Generation** aktivierst.
 
@@ -144,7 +144,7 @@ Ein Teil der Video-Standardwerte steckt in den App-Einstellungen statt in einer 
 
 Die wichtigste Szenenvideo-Einstellung dort ist **Scene video fallback length** (Ausweichlänge für Szenenvideos), standardmäßig 10 Sekunden. Sie greift nur, wenn die gewählte Videoverbindung keine eigene Länge mitbringt. Einstellbar sind 1 bis 60 Sekunden.
 
-Im selben Bereich liegen die **Video Generation Prompt Overrides**, wo du die wiederverwendbaren Video-Prompt-Vorlagen bearbeitest. Das ist der fortgeschrittene Weg, die Bewegung der Clips zu ändern, ganz ohne Code.
+Im selben Bereich liegen die **Video Generation Prompt Overrides**, wo du die wiederverwendbaren Video-Prompt-Vorlagen bearbeitest. **Roleplay Gallery Animation Director** steuert die Anweisungen, die vor einem Galerie-Clip im Roleplay an das gewählte Prompt Model gehen. Die Variable `${durationSeconds}` darin wird durch die gewählte Cliplänge ersetzt. Das ist der fortgeschrittene Weg, die Bewegung der Clips zu ändern, ganz ohne Code.
 
 Ebenfalls dort steht die Einstellung **Animated expression length**. Sie gehört zu einer anderen Funktion, den animierten Porträt-Sprites – den Charakterbildern auf der Bühne. Dazu mehr unter [Animierte Gesichtsausdrücke](animated-expressions.md).
 

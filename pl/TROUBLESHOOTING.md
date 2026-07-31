@@ -187,17 +187,18 @@ Potem uruchom aplikację Marinara Engine ponownie i kliknij przycisk **Reapply C
 - Zbuduj narzędzie ponownie poleceniem `pnpm backgroundremover:reinstall`.
 - Aby na czas diagnozy wymusić automatyczne czyszczenie maty bez mechanizmu awaryjnego AI, ustaw `SPRITE_BACKGROUND_REMOVAL_ENGINE=builtin` w pliku `.env`.
 
-### Storyboardy lub wideo scen w trybie Game Mode się nie pojawiają
+### Storyboardy w trybie Game Mode lub Roleplay się nie pojawiają
 
-Storyboardy to funkcja trybu Game Mode. Zamieniają zakończoną turę narracji w obrazy kluczowe i opcjonalne klipy.
+Storyboardy w trybie Game Mode zamieniają zakończoną narrację postaci GM w obrazy kluczowe i opcjonalne klipy. Storyboardy w trybie Roleplay łączą zakończone wymiany zdań i pokazują wynik bezpośrednio pod odpowiedzią asystenta.
 
 - Aby ręcznie zrobić wideo sceny, najpierw wygeneruj lub wgraj obraz w sekcji **Gallery** (Galeria), a potem użyj przy nim akcji **Video** albo **Animate**. Sekcja **Gallery** rozdziela **Images** i **Videos** na zakładki, więc zajrzyj do zakładki **Videos**.
-- Przy automatycznych storyboardach otwórz **Chat Settings** > **Agents** > **Storyboards** i sprawdź, czy **Automatic Storyboard Illustrations** jest włączone. Jeśli mają powstawać także klipy, włącz również **Automatic Storyboard Animations**.
-- Obrazy kluczowe wymagają połączenia do generowania obrazów w grze. Klipy potrzebują dodatkowo połączenia wideo.
+- Przy automatycznych storyboardach w trybie Game Mode otwórz **Chat Settings** > **Agents** > **Storyboards** i sprawdź, czy **Automatic Storyboard Illustrations** jest włączone. Jeśli mają powstawać także klipy, włącz również **Automatic Storyboard Animations**.
+- W trybie Roleplay dodaj do czatu agenta **Storyboard**. Wybierz **Still images** albo **Animations**, ustaw **Assistant messages per episode** i wskaż połączenie do generowania obrazów dla storyboardu. Opcja **Manual only** uruchamia storyboard dopiero przyciskiem **Create storyboard** w sekcji **Gallery**.
+- Obrazy kluczowe wymagają połączenia do generowania obrazów. Klipy potrzebują dodatkowo połączenia wideo.
 - Jeśli własny prompt działa lepiej ze wszystkimi postaciami naraz, wyłącz **Use NovelAI Character Prompts**.
 - U wolnych dostawców może zostać przekroczony limit czasu. Zwiększ `IMAGE_GEN_TIMEOUT_MS` lub `VIDEO_GEN_TIMEOUT_MS` w pliku `.env`, a potem uruchom aplikację Marinara Engine ponownie. Serwer odczytuje te wartości tylko przy starcie.
 
-Pełną konfigurację opisuje przewodnik [Game Mode: pierwsze kroki](game/getting-started.md).
+Oba sposoby pracy opisuje [Przewodnik po silniku storyboardów](game/storyboard.md), a konfigurację gry – [Game Mode: pierwsze kroki](game/getting-started.md).
 
 ### Generowanie świata w trybie Game Mode pokazuje błąd JSON
 

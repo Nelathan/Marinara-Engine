@@ -11,7 +11,7 @@ Cette fonctionnalité concerne uniquement les prompts d'images et de vidéos. El
 Quelques termes utilisés plus bas :
 
 - Un **sprite** est un élément d'illustration d'un personnage, par exemple une expression du visage ou une pose en pied.
-- Un **storyboard** est une série d'images générées à partir d'un tour de Game Mode.
+- Un **storyboard** est une série d'images générées à partir d'un tour de Game Mode ou d'un épisode de Roleplay terminé.
 
 ## Où les trouver
 

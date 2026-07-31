@@ -11,7 +11,7 @@ Este recurso trata apenas dos prompts de imagem e de vídeo. Ele não muda o pro
 Alguns termos usados abaixo:
 
 - Um **sprite** é uma arte do personagem, como uma expressão facial ou uma pose de corpo inteiro.
-- Um **storyboard** é um conjunto de quadros ilustrados gerados a partir de um turno do Game Mode.
+- Um **storyboard** é um conjunto de quadros ilustrados gerados a partir de um turno do Game Mode ou de um episódio de Roleplay concluído.
 
 ## Onde encontrar
 

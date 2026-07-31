@@ -89,7 +89,7 @@ Para animar la imagen más reciente:
 
 1. Asegúrate de que exista al menos una imagen en la pestaña **Images**. Usa **Illustrate** (Ilustrar) o sube una imagen primero.
 2. Haz clic en **Video** en la fila de acciones de la parte superior de la **Gallery**.
-3. Si **Expose media prompts before sending** (Mostrar los prompts de medios antes de enviar) está activado en **Settings**, **Generations** (Generaciones), **Image Generation** (Generación de imágenes), revisa o edita el prompt de animación compilado y haz clic en **Generate** (Generar). Cancelar esta ventana no inicia una solicitud al proveedor.
+3. Si **Expose media prompts before sending** (Mostrar los prompts de medios antes de enviar) está activado en **Settings**, **Generations** (Generaciones), **Overall Generations** (Generaciones generales), revisa o edita el prompt de animación compilado y haz clic en **Generate** (Generar). Cancelar esta ventana no inicia una solicitud al proveedor.
 4. El botón cambia a **Generating...** (Generando...), y un aviso te dice que la generación de video está en curso.
 5. Cuando termina, el clip aparece en la pestaña **Videos**.
 
@@ -99,7 +99,7 @@ Para animar una imagen específica en vez de la más reciente:
 2. Pasa el cursor sobre la imagen que quieras.
 3. Haz clic en el botón **Animate illustration** (Animar ilustración) (el icono de película) en los controles que aparecen al pasar el cursor.
 
-La misma ventana **Review Video Prompt** (Revisar el prompt de video) aparece para **Animate illustration** cuando la revisión de prompts está activada. Muestra el prompt exacto compilado por el servidor, la duración, la relación de aspecto y la resolución que se usarán para esa imagen seleccionada. Tu edición se aplica solo a esa generación y no reemplaza la plantilla reutilizable Game Video Prompt.
+La misma ventana **Review Video Prompt** (Revisar el prompt de video) aparece para **Animate illustration** cuando la revisión de prompts está activada. Muestra el prompt exacto compilado por el servidor, la duración, la relación de aspecto y la resolución que se usarán para esa imagen seleccionada. Tu edición se aplica solo a esa generación. En Roleplay, las instrucciones reutilizables que producen este prompt se controlan aparte con **Roleplay Gallery Animation Director** (Director de animación de la galería de Roleplay) en **Settings**, **Generations**, **Video Generation Prompt Overrides** (Anulaciones del prompt de generación de video).
 
 En la pestaña **Videos**, cada clip se reproduce en línea y muestra su duración y el nombre del modelo. Puedes fijar un clip con **Pin video to chat** (Fijar video al chat), o guardarlo con **Download scene video** (Descargar video de escena). Si aún no hay clips, la pestaña dice **No videos yet** (Aún no hay videos).
 
@@ -132,7 +132,7 @@ Los chats de **Game Mode** muestran una tarjeta **Scene Videos** descrita como *
 - **Game Video Prompt**: la plantilla de prompt que decide cómo se anima la imagen. El valor predeterminado incorporado es **Cinematic Scene Video**.
 - **Edit Video Presets** (Editar presets de video): añade y edita tus propias copias de la plantilla de prompt de video para este chat.
 
-El **Game Video Prompt** sigue controlando los videos manuales de la **Gallery** y de **Game Assets**. Los clips de fotograma clave del storyboard (secuencia de viñetas) pueden elegir un **Storyboard Video Prompt** distinto en **Chat Settings**, **Agents**, luego **Storyboards**. Si no se fija una elección de storyboard aparte, heredan el Game Video Prompt.
+El **Game Video Prompt** sigue controlando los videos manuales de la **Gallery** y de **Game Assets** en Game Mode. Las animaciones de la **Gallery** en Roleplay usan **Roleplay Gallery Animation Director** en su lugar. Los clips de fotograma clave del storyboard (secuencia de viñetas) pueden elegir un **Storyboard Video Prompt** distinto en **Chat Settings**, **Agents**, luego **Storyboards**. Si no se fija una elección de storyboard aparte, heredan el Game Video Prompt.
 
 Cuando creas por primera vez un chat de Game Mode, el asistente de configuración también tiene un selector **Video Generation Connection** (Conexión de generación de video). Está en el paso **Features** (Funciones), y aparece después de que actives **Visual Generation** (Generación visual).
 
@@ -144,7 +144,7 @@ Algunos valores predeterminados de video están en los ajustes de la app, no en 
 
 El ajuste principal de video de escena aquí es **Scene video fallback length** (Duración de reserva del video de escena), que de forma predeterminada es 10 segundos. Se usa solo cuando la conexión de video seleccionada no tiene duración propia. Puedes fijarlo de 1 a 60 segundos.
 
-Esta sección también contiene **Video Generation Prompt Overrides** (Anulaciones del prompt de generación de video), donde puedes editar las plantillas de prompt de video reutilizables. Esta es la forma avanzada de cambiar cómo se mueven los clips sin editar código.
+Esta sección también contiene **Video Generation Prompt Overrides**, donde puedes editar las plantillas de prompt de video reutilizables. **Roleplay Gallery Animation Director** controla las instrucciones que se envían al Prompt Model seleccionado antes de generar un clip de la **Gallery** en Roleplay. Su variable `${durationSeconds}` se reemplaza con la duración de clip seleccionada. Esta es la forma avanzada de cambiar cómo se mueven los clips sin editar código.
 
 La misma sección tiene un ajuste **Animated expression length** (Duración de la expresión animada). Ese pertenece a una función aparte, los sprites (imágenes del personaje) de retrato animado. Consulta [Expresiones animadas](animated-expressions.md) para esa función.
 

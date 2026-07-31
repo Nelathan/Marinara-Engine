@@ -11,7 +11,7 @@ Esta función trata solo de los prompts de imagen y de video. No cambia el promp
 Algunos términos que se usan más abajo:
 
 - Un **sprite** (imagen del personaje) es una pieza de arte del personaje, como una expresión facial o una pose de cuerpo entero.
-- Un **storyboard** (secuencia de viñetas) es un conjunto de fotogramas ilustrados generados a partir de un turno de Game Mode.
+- Un **storyboard** (secuencia de viñetas) es un conjunto de fotogramas ilustrados generados a partir de un turno de Game Mode o de un episodio de roleplay completado.
 
 ## Dónde encontrarlos
 

@@ -89,7 +89,7 @@ Panel **Gallery** ma zakładkę **Images** i zakładkę **Videos**, każdą z li
 
 1. Sprawdź, czy w zakładce **Images** jest przynajmniej jeden obraz. Użyj wcześniej przycisku **Illustrate** albo wgraj obraz.
 2. Kliknij przycisk **Video** w rzędzie akcji na górze panelu **Gallery**.
-3. Jeśli w sekcji **Settings**, **Generations**, **Image Generation** włączono opcję **Expose media prompts before sending**, przejrzyj lub popraw skompilowany prompt animacji i kliknij przycisk **Generate**. Anulowanie tego okna nie wysyła do dostawcy żadnego żądania.
+3. Jeśli w sekcji **Settings**, **Generations**, **Overall Generations** włączono opcję **Expose media prompts before sending**, przejrzyj lub popraw skompilowany prompt animacji i kliknij przycisk **Generate**. Anulowanie tego okna nie wysyła do dostawcy żadnego żądania.
 4. Przycisk zmienia się w **Generating...**, a baner informuje, że generowanie wideo trwa.
 5. Po zakończeniu klip pojawia się w zakładce **Videos**.
 
@@ -99,7 +99,7 @@ Panel **Gallery** ma zakładkę **Images** i zakładkę **Videos**, każdą z li
 2. Najedź kursorem na wybrany obraz.
 3. Kliknij przycisk **Animate illustration** (ikona kliszy filmowej) wśród kontrolek, które się wtedy pokazują.
 
-Przy włączonym przeglądaniu promptu to samo okno **Review Video Prompt** pojawia się także dla przycisku **Animate illustration**. Pokazuje dokładny prompt skompilowany przez serwer, czas trwania, proporcje obrazu i rozdzielczość, które zostaną użyte dla wybranego obrazu. Poprawka działa tylko dla tego jednego generowania i nie zastępuje wielokrotnego szablonu Game Video Prompt.
+Przy włączonym przeglądaniu promptu to samo okno **Review Video Prompt** pojawia się także dla przycisku **Animate illustration**. Pokazuje dokładny prompt skompilowany przez serwer, czas trwania, proporcje obrazu i rozdzielczość, które zostaną użyte dla wybranego obrazu. Poprawka działa tylko dla tego jednego generowania. W trybie **Roleplay** wielokrotnymi instrukcjami, które tworzą ten prompt, steruje osobno ustawienie **Roleplay Gallery Animation Director** w sekcji **Settings**, **Generations**, **Video Generation Prompt Overrides**.
 
 W zakładce **Videos** każdy klip odtwarza się na miejscu i pokazuje swoją długość oraz nazwę modelu. Klip można przypiąć przyciskiem **Pin video to chat** albo zapisać przyciskiem **Download scene video**. Dopóki nie ma żadnych klipów, zakładka pokazuje napis **No videos yet**.
 
@@ -132,7 +132,7 @@ Czaty w trybie **Game Mode** pokazują kafelek **Scene Videos** z opisem "Genera
 - **Game Video Prompt**: szablon promptu decydujący o tym, jak animuje się obraz. Wbudowany domyślny szablon to **Cinematic Scene Video**.
 - **Edit Video Presets**: dodawanie i edycja własnych kopii szablonu promptu wideo dla tego czatu.
 
-Szablon **Game Video Prompt** nadal steruje ręcznymi filmami z panelu **Gallery** i **Game Assets**. Klipy z klatek kluczowych storyboardu mogą korzystać z innego szablonu **Storyboard Video Prompt** w sekcji **Chat Settings**, **Agents**, następnie **Storyboards**. Bez osobnego wyboru dla storyboardu dziedziczą one szablon Game Video Prompt.
+Szablon **Game Video Prompt** nadal steruje ręcznymi filmami z panelu **Gallery** i **Game Assets** w trybie **Game Mode**. Animacje z panelu **Gallery** w trybie **Roleplay** korzystają zamiast tego z ustawienia **Roleplay Gallery Animation Director**. Klipy z klatek kluczowych storyboardu mogą korzystać z innego szablonu **Storyboard Video Prompt** w sekcji **Chat Settings**, **Agents**, następnie **Storyboards**. Bez osobnego wyboru dla storyboardu dziedziczą one szablon Game Video Prompt.
 
 Przy pierwszym tworzeniu czatu w trybie **Game Mode** kreator konfiguracji też ma listę **Video Generation Connection**. Znajduje się w kroku **Features** i pojawia się po włączeniu opcji **Visual Generation**.
 
@@ -144,7 +144,7 @@ Część ustawień domyślnych wideo mieszka w ustawieniach aplikacji, nie w po�
 
 Głównym ustawieniem wideo sceny jest tutaj **Scene video fallback length**, domyślnie 10 sekund. Działa tylko wtedy, gdy wybrane połączenie wideo nie ma własnej długości. Da się je ustawić w zakresie od 1 do 60 sekund.
 
-W tej samej sekcji jest też **Video Generation Prompt Overrides**, gdzie edytuje się wielokrotne szablony promptów wideo. To zaawansowany sposób na zmianę ruchu w klipach bez ruszania kodu.
+W tej samej sekcji jest też **Video Generation Prompt Overrides**, gdzie edytuje się wielokrotne szablony promptów wideo. Ustawienie **Roleplay Gallery Animation Director** steruje instrukcjami wysyłanymi do wybranego modelu Prompt Model, zanim powstanie klip z panelu **Gallery** w trybie **Roleplay**. Zmienna `${durationSeconds}` zostaje w nich zastąpiona wybraną długością klipu. To zaawansowany sposób na zmianę ruchu w klipach bez ruszania kodu.
 
 Ta sama sekcja zawiera ustawienie **Animated expression length**. Należy ono do osobnej funkcji, czyli animowanych sprite'ów portretowych. Opisuje ją przewodnik [Animowane wyrazy twarzy](animated-expressions.md).
 

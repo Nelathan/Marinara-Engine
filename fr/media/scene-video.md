@@ -89,7 +89,7 @@ Pour animer l'image la plus récente :
 
 1. Vérifie qu'au moins une image existe sous l'onglet **Images**. Passe d'abord par **Illustrate** (illustrer) ou téléverse une image.
 2. Clique sur **Video** dans la rangée d'actions en haut de la galerie.
-3. Si l'option **Expose media prompts before sending** est activée sous **Settings**, **Generations**, **Image Generation**, relis ou modifie le prompt d'animation compilé, puis clique sur **Generate**. Fermer cette fenêtre sans valider n'envoie aucune requête au fournisseur.
+3. Si l'option **Expose media prompts before sending** est activée sous **Settings**, **Generations**, **Overall Generations**, relis ou modifie le prompt d'animation compilé, puis clique sur **Generate**. Fermer cette fenêtre sans valider n'envoie aucune requête au fournisseur.
 4. Le bouton devient **Generating...**, et une bannière signale que la génération de vidéos est en cours.
 5. Une fois terminé, le clip apparaît sous l'onglet **Videos**.
 
@@ -99,7 +99,7 @@ Pour animer une image précise plutôt que la plus récente :
 2. Survole l'image voulue.
 3. Clique sur le bouton **Animate illustration** (animer l'illustration), l'icône de pellicule, dans les commandes de survol.
 
-La même fenêtre **Review Video Prompt** (relire le prompt vidéo) s'affiche pour **Animate illustration** quand la relecture du prompt est activée. Elle montre le prompt exact compilé par le serveur, la durée, le format d'image et la résolution qui seront utilisés pour l'image sélectionnée. Ta modification ne vaut que pour cette génération : elle ne remplace pas le modèle réutilisable Game Video Prompt.
+La même fenêtre **Review Video Prompt** (relire le prompt vidéo) s'affiche pour **Animate illustration** quand la relecture du prompt est activée. Elle montre le prompt exact compilé par le serveur, la durée, le format d'image et la résolution qui seront utilisés pour l'image sélectionnée. Ta modification ne vaut que pour cette génération. En Roleplay, les instructions réutilisables qui produisent ce prompt se règlent à part, avec **Roleplay Gallery Animation Director**, sous **Settings**, **Generations**, **Video Generation Prompt Overrides**.
 
 Sous l'onglet **Videos**, chaque clip se lit directement dans la page et affiche sa durée et le nom du modèle. Épingle un clip avec **Pin video to chat** (épingler la vidéo au chat), ou enregistre-le avec **Download scene video** (télécharger la vidéo de scène). S'il n'y a encore aucun clip, l'onglet affiche **No videos yet**.
 
@@ -132,7 +132,7 @@ Les chats **Game Mode** affichent une carte **Scene Videos** décrite ainsi : "G
 - **Game Video Prompt** : le modèle de prompt qui décide de la façon dont l'image s'anime. Le modèle intégré par défaut est **Cinematic Scene Video**.
 - **Edit Video Presets** : ajoute et modifie tes propres copies du modèle de prompt vidéo pour ce chat.
 
-Le **Game Video Prompt** continue de piloter les vidéos manuelles de la galerie et de **Game Assets**. Les clips d'images-clés du storyboard peuvent, eux, utiliser un **Storyboard Video Prompt** différent, sous **Chat Settings**, **Agents**, puis **Storyboards**. Sans choix distinct pour le storyboard, ils héritent du Game Video Prompt.
+Le **Game Video Prompt** continue de piloter les vidéos manuelles de la galerie et de **Game Assets** en Game Mode. Les animations de la galerie en Roleplay passent, elles, par **Roleplay Gallery Animation Director**. Les clips d'images-clés du storyboard peuvent, eux, utiliser un **Storyboard Video Prompt** différent, sous **Chat Settings**, **Agents**, puis **Storyboards**. Sans choix distinct pour le storyboard, ils héritent du Game Video Prompt.
 
 À la création d'un chat Game Mode, l'assistant de configuration propose lui aussi un sélecteur **Video Generation Connection**. Il se trouve à l'étape **Features** et apparaît une fois que tu as activé **Visual Generation**.
 
@@ -144,7 +144,7 @@ Certains réglages vidéo par défaut se trouvent dans les paramètres de l'appl
 
 Le principal réglage de vidéo de scène ici est **Scene video fallback length** (durée de repli des vidéos de scène), fixé à 10 secondes par défaut. Il ne sert que si la connexion vidéo sélectionnée n'a pas de durée propre. Tu peux le régler de 1 à 60 secondes.
 
-Cette section contient aussi **Video Generation Prompt Overrides**, où tu modifies les modèles de prompt vidéo réutilisables. C'est la méthode avancée pour changer la façon dont les clips bougent, sans toucher au code.
+Cette section contient aussi **Video Generation Prompt Overrides**, où tu modifies les modèles de prompt vidéo réutilisables. **Roleplay Gallery Animation Director** pilote les instructions envoyées au Prompt Model sélectionné avant la génération d'un clip de galerie en Roleplay. Sa variable `${durationSeconds}` est remplacée par la durée de clip choisie. C'est la méthode avancée pour changer la façon dont les clips bougent, sans toucher au code.
 
 La même section propose un réglage **Animated expression length**. Il relève d'une autre fonctionnalité, les sprites de portrait animés. Voir [Expressions animées](animated-expressions.md) à ce sujet.
 

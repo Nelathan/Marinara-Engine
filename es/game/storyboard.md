@@ -1,10 +1,10 @@
 # Guía del Storyboard Engine
 
-Esta guía explica los storyboards (secuencias de viñetas) en Marinara Engine. Un storyboard convierte un turno terminado del Game Mode (modo juego) en una breve serie de imágenes de fotogramas clave. También puede añadir clips animados cortos, incluidos planos continuos al estilo anime. El turno se lee entonces como una minicinemática. Los storyboards son una función exclusiva del Game Mode. No existen en los chats de Roleplay ni de Conversation.
+Esta guía explica los storyboards (secuencias de viñetas) en Marinara Engine. Un storyboard convierte un texto de historia terminado en una breve serie de imágenes de fotogramas clave y puede añadir clips animados. Los storyboards del Game Mode (modo juego) siguen a un único turno del GM ya terminado. Los storyboards de Roleplay combinan intercambios terminados en un episodio que se muestra dentro del chat. Los chats de Conversation no usan Storyboards.
 
 ## Qué son los storyboards
 
-El Game Mode es el modo de chat donde un Game Master (GM, director del juego) con IA narra una aventura por turnos. Cuando el GM termina un turno de narración, el Storyboard Engine puede ilustrar ese único turno.
+El Game Mode es el modo de chat donde un Game Master (GM, director del juego) con IA narra una aventura por turnos. Cuando el GM termina un turno de narración, el Storyboard Engine puede ilustrar ese único turno. En Roleplay, el Storyboard Agent lee los mensajes del usuario y del asistente ya terminados desde su episodio exitoso anterior.
 
 Marinara lee la narración del GM y la divide en una breve serie de fotogramas clave ordenados. Cada fotograma clave es una imagen de un momento del turno. Un storyboard contiene de 1 a 6 fotogramas clave. El valor predeterminado es 3.
 
@@ -14,11 +14,38 @@ Antes de planear las imágenes, Marinara elimina las etiquetas de comando del GM
 
 Las imágenes fijas de fotogramas clave se guardan en la **Gallery** (Galería), en la pestaña **Images**. Los clips de fotogramas clave se guardan como videos de escena, en la pestaña **Videos**. Como son elementos normales de la **Gallery**, puedes ver una vista previa, descargar, fijar o copiar el prompt (las instrucciones enviadas a la IA) de cualquier fotograma clave por separado.
 
+## Episodios de storyboard en Roleplay
+
+Los Storyboards de Roleplay son independientes del Illustrator. El Illustrator puede seguir creando sus imágenes sueltas de siempre mientras el Storyboard planea uno o más fotogramas clave ordenados a partir de una sección terminada del chat.
+
+1. Instala **Storyboard** desde **Agents > Download Agents**.
+2. Abre un chat de Roleplay y luego añade **Storyboard** en **Chat Settings > Agents**.
+3. En la tarjeta Storyboard, elige **Manual only**, **Still images** o **Animations**.
+4. Selecciona las conexiones de prompt, de imagen y, opcionalmente, de video. La conexión de imagen es obligatoria.
+5. Para un episodio manual, abre **Gallery** y elige **Create storyboard**. Los episodios automáticos se ejecutan después de la cantidad configurada de respuestas del asistente recién terminadas.
+
+El intervalo predeterminado es 1, así que un episodio automático puede aparecer después de cada respuesta del asistente recién terminada. Un valor más alto de **Assistant messages per episode** deja que se acumulen el diálogo y el ida y vuelta. Cuando se alcanza el intervalo, Marinara combina los mensajes desde el Storyboard exitoso anterior, dentro de una ventana reciente acotada. Abrir un chat existente no rellena hacia atrás los mensajes antiguos, y un episodio fallido no adelanta el punto de referencia de la cadencia exitosa.
+
+Los fotogramas clave de Roleplay se muestran dentro del chat, justo después de la respuesta del asistente que cierra el episodio. Usa las flechas de los Storyboards con varios fotogramas clave para moverte entre ellos. Las imágenes y los clips también se guardan en la **Gallery**.
+
+La planificación en Roleplay tiene cuatro capas editables dentro de los ajustes globales de **Agents > Storyboard**:
+
+- **Episode contract** selecciona los momentos de la historia ya terminados a partir de los mensajes entregados.
+- **Visual style** ofrece opciones de normal/anime, NovelAI, cómic, manga a color y manga en blanco y negro.
+- **Animation addon** solo se incluye para los Storyboards animados. Trata la ilustración como el fotograma exacto de T=0 y luego describe una acción sencilla, el comportamiento de cámara, el diálogo de origen, los efectos de sonido, la ambientación y una pausa final.
+- **Output contract** define el JSON de fotogramas clave que devuelve el modelo de planificación.
+
+Estos prompts de Roleplay no reemplazan la biblioteca optimizada de planificadores del Game Mode. Los formateadores de proveedor de imagen y de video siguen siendo compartidos y seleccionables. El plan de animación es neutral respecto al proveedor, así que puede usar Google Gemini Omni, LTX/ComfyUI u otra conexión de **Video Generation** configurada que acepte solicitudes de imagen a video. Las capacidades del proveedor y la calidad del resultado siguen variando.
+
+## Storyboards del Game Mode
+
+Esta sección explica cómo configurar, generar, revisar y animar storyboards para los turnos del Game Mode.
+
 ## Antes de empezar
 
 Necesitas configurar algunas cosas antes de que un storyboard pueda renderizarse.
 
-1. Un chat en Game Mode. Esta función solo funciona en Game Mode.
+1. Un chat en Game Mode. La configuración que se describe abajo es específica del flujo de trabajo del Game Mode.
 2. Una conexión de imagen que funcione para el ilustrador del juego. Configúrala en cualquiera de los dos sitios. Solo necesitas uno:
    - Juego existente: abre **Chat Settings** (Ajustes del chat), ve a **Agents** y luego a la tarjeta **Illustrator**. Activa **Game Illustrator** y elige una **Image Connection**.
    - Juego nuevo: en el asistente de configuración, activa **Visual Generation** y elige una **Image Generation Connection**.

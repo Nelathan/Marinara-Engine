@@ -179,7 +179,7 @@ Uma **imagem de referência** é uma figura já existente que você envia junto 
 
 As imagens de referência precisas da NovelAI só funcionam em um modelo V4.5, como `nai-diffusion-4-5-full`. Se você pedir referências em outro modelo, a geração falha com uma mensagem clara.
 
-## Queue image generation requests
+## Enfileirar as requisições de geração de imagens
 
 O botão liga/desliga **Queue image generation requests** fica em **Settings** (Configurações), depois **Generations**, depois **Image Generation**. Ele vem ativado por padrão.
 

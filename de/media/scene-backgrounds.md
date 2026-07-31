@@ -46,7 +46,7 @@ Oben im Panel erscheinen Schaltflächen jeweils nur dann, wenn die passende Funk
 - **Selfie**: erzeugt ein Selfie eines Charakters im Modus Conversation.
 - **Background**: generiert einen Szenen-Hintergrund und wendet ihn an, wie oben beschrieben.
 - **Video**: macht aus der neuesten Illustration ein Szenenvideo.
-- **Create storyboard**: erzeugt Storyboard-Keyframes für den Game Mode.
+- **Create storyboard**: erzeugt Keyframes für den letzten Game-Mode-Zug oder eine abgeschlossene Roleplay-Episode, sofern Storyboard aktiv ist.
 - **Browse Images**: öffnet eine Übersicht gespeicherter Bilder zum Einfügen.
 - **View storyboard**: öffnet das neueste Game-Mode-Storyboard.
 

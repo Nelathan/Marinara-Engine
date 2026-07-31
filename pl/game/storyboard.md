@@ -1,10 +1,10 @@
 # Przewodnik po silniku storyboardów
 
-Ten przewodnik wyjaśnia, czym są storyboardy w aplikacji Marinara Engine. Storyboard zamienia jedną zakończoną turę w trybie Game Mode w krótką serię klatek kluczowych. Może też dodać krótkie animowane klipy, w tym ciągłe ujęcia w stylu anime. Tura czyta się wtedy jak mała scenka przerywnikowa. Storyboardy działają wyłącznie w trybie Game Mode. Nie ma ich w czatach Roleplay ani Conversation.
+Ten przewodnik wyjaśnia, czym są storyboardy w aplikacji Marinara Engine. Storyboard zamienia gotowy tekst fabularny w krótką serię klatek kluczowych i może dodać animowane klipy. Storyboardy w trybie Game Mode powstają z jednej zakończonej tury GM. Storyboardy w trybie Roleplay łączą zakończone wymiany wiadomości w odcinek osadzony w czacie. Czaty Conversation nie korzystają ze storyboardów.
 
 ## Czym są storyboardy
 
-Game Mode to tryb czatu, w którym Game Master (GM, czyli mistrz gry) prowadzony przez AI opowiada przygodę podzieloną na tury. Kiedy GM kończy turę narracji, silnik storyboardów może ją zilustrować.
+Game Mode to tryb czatu, w którym Game Master (GM, czyli mistrz gry) prowadzony przez AI opowiada przygodę podzieloną na tury. Kiedy GM kończy turę narracji, silnik storyboardów może ją zilustrować. W trybie Roleplay agent Storyboard czyta zakończone wiadomości użytkownika i odpowiedzi AI od czasu swojego poprzedniego udanego odcinka.
 
 Marinara czyta narrację GM i dzieli ją na krótką serię uporządkowanych klatek kluczowych. Każda klatka kluczowa to jeden obrazek pokazujący jedną chwilę z tury. Storyboard mieści od 1 do 6 klatek kluczowych. Domyślnie są 3.
 
@@ -14,11 +14,38 @@ Zanim Marinara zaplanuje obrazy, usuwa z tury znaczniki poleceń GM. Znaczniki p
 
 Nieruchome klatki kluczowe zapisują się w panelu **Gallery** (Galeria), w zakładce **Images** (Obrazy). Klipy klatek kluczowych zapisują się jako wideo scen, w zakładce **Videos** (Wideo). Ponieważ są zwykłymi elementami panelu **Gallery**, każdą klatkę kluczową da się osobno obejrzeć, pobrać, przypiąć albo skopiować z niej prompt (tekst, który Marinara wysyła do AI).
 
+## Odcinki storyboardu w trybie Roleplay
+
+Storyboardy w trybie Roleplay to co innego niż Illustrator. Illustrator dalej tworzy swoje zwykłe pojedyncze obrazy, a Storyboard planuje w tym czasie jedną lub więcej uporządkowanych klatek kluczowych z zakończonego fragmentu czatu.
+
+1. Zainstaluj agenta **Storyboard** w sekcji **Agents > Download Agents**.
+2. Otwórz czat w trybie Roleplay, a potem dodaj agenta **Storyboard** w **Chat Settings > Agents**.
+3. W sekcji **Storyboard** wybierz **Manual only**, **Still images** albo **Animations**.
+4. Wskaż połączenie promptu, połączenie obrazowe i opcjonalnie połączenie wideo. Połączenie obrazowe jest wymagane.
+5. Odcinek ręczny: otwórz panel **Gallery** i kliknij przycisk **Create storyboard**. Odcinki automatyczne uruchamiają się po ustawionej liczbie nowych zakończonych odpowiedzi AI.
+
+Domyślny odstęp to 1, więc odcinek automatyczny może pojawiać się po każdej nowo zakończonej odpowiedzi AI. Większa wartość w polu **Assistant messages per episode** daje miejsce na dialog i wymianę zdań. Po osiągnięciu odstępu Marinara łączy wiadomości od poprzedniego udanego storyboardu, w granicach ograniczonego okna ostatnich wiadomości. Otwarcie istniejącego czatu nie uzupełnia starych wiadomości wstecz, a nieudany odcinek nie przesuwa punktu odniesienia dla kolejnych odcinków.
+
+Klatki kluczowe w trybie Roleplay wyświetlają się w czacie, zaraz pod odpowiedzią kończącą odcinek. W storyboardach z kilkoma klatkami kluczowymi przełączaj kadry strzałkami. Obrazy i klipy zapisują się też w panelu **Gallery**.
+
+Planowanie w trybie Roleplay ma cztery edytowalne warstwy w globalnych ustawieniach **Agents > Storyboard**:
+
+- **Episode contract** wybiera zakończone wątki fabularne z przekazanych wiadomości.
+- **Visual style** daje do wyboru styl zwykły/anime, NovelAI, komiks, kolorową mangę i mangę czarno-białą.
+- **Animation addon** dokłada się tylko do storyboardów animowanych. Traktuje ilustrację jako dokładną klatkę T=0, a potem opisuje prostą akcję, zachowanie kamery, dialog ze źródła, efekty dźwiękowe, tło dźwiękowe i przytrzymanie na końcu.
+- **Output contract** określa format JSON klatek kluczowych, który zwraca model planujący.
+
+Te prompty trybu Roleplay nie zastępują zoptymalizowanej biblioteki planerów trybu Game Mode. Formatery dostawców obrazu i wideo pozostają wspólne i nadal da się je wybierać. Plan animacji jest niezależny od dostawcy, więc może korzystać z Google Gemini Omni, LTX/ComfyUI albo innego skonfigurowanego połączenia Video Generation, które przyjmuje żądania image-to-video. Możliwości dostawców i jakość wyniku wciąż się różnią.
+
+## Storyboardy w trybie Game Mode
+
+Ta sekcja wyjaśnia, jak skonfigurować, wygenerować, przejrzeć i animować storyboardy dla tur w trybie Game Mode.
+
 ## Zanim zaczniesz
 
 Kilka rzeczy trzeba przygotować, zanim storyboard się wygeneruje.
 
-1. Czat w trybie Game Mode. Ta funkcja działa tylko w trybie Game Mode.
+1. Czat w trybie Game Mode. Poniższa konfiguracja dotyczy konkretnie pracy w trybie Game Mode.
 2. Działające połączenie obrazowe dla ilustratora gry. Ustaw je w jednym z dwóch miejsc – wystarczy jedno:
    - Istniejąca gra: otwórz panel **Chat Settings** (ustawienia czatu), przejdź do zakładki **Agents** (Agenci), a potem do sekcji **Illustrator**. Włącz opcję **Game Illustrator** i wybierz połączenie w polu **Image Connection**.
    - Nowa gra: w kreatorze konfiguracji włącz opcję **Visual Generation** i wybierz połączenie w polu **Image Generation Connection**.

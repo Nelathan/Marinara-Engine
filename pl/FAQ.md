@@ -166,13 +166,13 @@ Professor Mari może też edytować zwykłe pliki źródłowe aplikacji Marinara
 
 Uwaga: na zwykłym adresie zdalnym działania Professor Mari zmieniające dane wymagają zarówno Basic Auth, jak i sekretu administratora. Zaufane trasy sieciowe albo te z listy dozwolonych mogą korzystać z obejść opisanych w przewodniku [Dostęp zdalny](REMOTE_ACCESS.md).
 
-## Jak działają animowane storyboardy w trybie Game Mode?
+## Jak działają animowane storyboardy?
 
-**Storyboard** zamienia jedną gotową turę narracji mistrza gry w krótką sekwencję klatek kluczowych w stylu mangi. Może też dodać krótkie animowane klipy. Tura odtwarza się wtedy jak mała przerywnikowa scenka. Storyboardy istnieją tylko w trybie **Game Mode**.
+**Storyboard** zamienia gotowy tekst opowieści w krótką sekwencję klatek kluczowych i może dodać animowane klipy. W trybie **Game Mode** obejmuje jedną gotową turę narracji mistrza gry. W trybie **Roleplay** agent Storyboard łączy nowo zakończone wymiany zdań w odcinek osadzony w czacie, po ustawionej liczbie odpowiedzi AI.
 
-Żeby zrobić storyboard ręcznie, otwórz sekcję **Gallery** (galeria) i kliknij przycisk **Create storyboard** przy najnowszej turze narracji. Zamknięty storyboard otwiera się ponownie przyciskiem **View storyboard**.
+Żeby zrobić storyboard ręcznie, otwórz sekcję **Gallery** (galeria) i kliknij przycisk **Create storyboard**. W trybie Game Mode podgląd otwiera się ponownie przyciskiem **View storyboard**, a w trybie Roleplay wynik pojawia się pod odpowiedzią kończącą odcinek.
 
-Żeby powstawały automatycznie, otwórz panel **Chat Settings**, przejdź do sekcji **Agents**, znajdź kartę **Storyboards** i włącz opcję **Automatic Storyboard Illustrations**. Włącz też **Automatic Storyboard Animations**, jeśli chcesz mieć klipy wideo – to wymaga połączenia typu Video Generation. Cały proces opisuje [Przewodnik po silniku storyboardów](game/storyboard.md).
+Żeby powstawały automatycznie, otwórz panel **Chat Settings**, przejdź do sekcji **Agents** i znajdź kartę **Storyboards**. Tryb Game Mode ma osobne przełączniki ilustracji i animacji. Tryb Roleplay daje do wyboru **Manual only**, **Still images** albo **Animations**, a do tego pole **Assistant messages per episode**. Klipy wideo wymagają połączenia typu Video Generation. Oba procesy opisuje [Przewodnik po silniku storyboardów](game/storyboard.md).
 
 ## Czy postacie mogą mówić na głos w rozmowie?
 

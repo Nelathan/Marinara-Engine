@@ -1,10 +1,10 @@
 # Guia do Storyboard Engine
 
-Este guia explica os storyboards no Marinara Engine. O storyboard transforma um turno concluído do Game Mode em uma pequena sequência de imagens, os quadros-chave. Ele também pode acrescentar clipes animados curtos, incluindo tomadas contínuas em estilo anime. O turno passa a ser lido como uma minicutscene. O storyboard é um recurso exclusivo do Game Mode. Ele não existe nos chats de Roleplay nem de Conversation.
+Este guia explica os storyboards no Marinara Engine. O storyboard transforma um trecho concluído da história em uma pequena sequência de imagens, os quadros-chave, e pode acrescentar clipes animados. No Game Mode, o storyboard cobre um turno concluído do GM. No Roleplay, o storyboard reúne trocas de mensagens já concluídas em um episódio exibido dentro do chat. Os chats de Conversation não usam storyboards.
 
 ## O que é um storyboard
 
-Game Mode é o modo de chat em que um Game Master (GM) de IA, ou seja, o mestre do jogo, narra uma aventura por turnos. Quando o GM termina um turno de narração, o Storyboard Engine pode ilustrar aquele único turno.
+Game Mode é o modo de chat em que um Game Master (GM) de IA, ou seja, o mestre do jogo, narra uma aventura por turnos. Quando o GM termina um turno de narração, o Storyboard Engine pode ilustrar aquele único turno. No Roleplay, o agente Storyboard lê as mensagens do usuário e do assistente concluídas desde o último episódio bem-sucedido.
 
 Marinara lê a narração do GM e divide o texto em uma pequena sequência de quadros-chave ordenados. Cada quadro-chave é uma imagem de um momento do turno. O storyboard comporta de 1 a 6 quadros-chave. O padrão é 3.
 
@@ -14,11 +14,38 @@ Antes de planejar as imagens, Marinara remove as tags de comando do GM. As tags 
 
 As imagens estáticas dos quadros-chave são salvas na **Gallery** (Galeria), na aba **Images**. Os clipes dos quadros-chave são salvos como vídeos de cena, na aba **Videos**. Como são itens normais da Gallery, cada quadro-chave pode ser visualizado, baixado, fixado, e você também pode copiar o prompt dele, o texto que Marinara envia para a IA.
 
+## Episódios de storyboard no Roleplay
+
+No Roleplay, o storyboard é independente do Illustrator. O Illustrator continua criando as imagens únicas de sempre, enquanto o Storyboard planeja um ou mais quadros-chave ordenados a partir de um trecho já concluído do chat.
+
+1. Instale o agente **Storyboard** em **Agents > Download Agents**.
+2. Abra um chat em Roleplay e acrescente o agente **Storyboard** em **Chat Settings > Agents**.
+3. Na seção **Storyboard**, escolha **Manual only**, **Still images** ou **Animations**.
+4. Selecione a conexão de prompt, a de imagem e, se quiser, a de vídeo. A conexão de imagem é obrigatória.
+5. Para um episódio manual, abra a **Gallery** e clique em **Create storyboard**. Os episódios automáticos rodam depois do número configurado de novas respostas concluídas do assistente.
+
+O intervalo padrão é 1, ou seja, um episódio automático pode surgir a cada nova resposta concluída do assistente. Um valor maior no campo **Assistant messages per episode** deixa o diálogo e a troca de mensagens se acumularem. Ao atingir o intervalo, Marinara junta as mensagens desde o último Storyboard bem-sucedido, dentro de uma janela recente limitada. Abrir um chat existente não recupera as mensagens antigas, e um episódio que falha não avança o marco de cadência.
+
+No Roleplay, os quadros-chave aparecem logo depois da resposta do assistente que encerra o episódio. Nos storyboards com vários quadros-chave, use as setas para passar de um quadro para outro. As imagens e os clipes também são salvos na **Gallery**.
+
+O planejamento no Roleplay tem quatro camadas editáveis nas configurações globais em **Agents > Storyboard**:
+
+- **Episode contract** escolhe os momentos de história já concluídos entre as mensagens enviadas.
+- **Visual style** oferece as opções normal/anime, NovelAI, quadrinhos, mangá colorido e mangá em preto e branco.
+- **Animation addon** entra apenas nos storyboards animados. Ele trata a ilustração como o quadro exato de T=0 e depois descreve uma ação simples, o comportamento da câmera, o diálogo de origem, os efeitos sonoros, o ambiente e uma pausa no fim.
+- **Output contract** define o JSON de quadros-chave que o modelo de planejamento devolve.
+
+Esses prompts do Roleplay não substituem a biblioteca otimizada de planejadores do Game Mode. Os formatadores dos provedores de imagem e de vídeo continuam compartilhados e podem ser selecionados. O plano de animação é neutro em relação ao provedor, então ele pode usar Google Gemini Omni, LTX/ComfyUI ou outra conexão **Video Generation** configurada que aceite pedidos de imagem para vídeo. Ainda assim, os recursos de cada provedor e a qualidade do resultado variam.
+
+## Storyboards no Game Mode
+
+Esta seção explica como configurar, gerar, revisar e animar os storyboards dos turnos do Game Mode.
+
 ## Antes de começar
 
 Algumas coisas precisam estar prontas para o storyboard ser gerado.
 
-1. Um chat em Game Mode. O recurso só funciona nesse modo.
+1. Um chat em Game Mode. A configuração abaixo é específica do fluxo de trabalho do Game Mode.
 2. Uma conexão de imagem funcionando para o ilustrador do jogo. Configure em um dos dois lugares. Só um já basta:
    - Jogo existente: abra **Chat Settings** (configurações do chat), vá em **Agents** e depois na seção **Illustrator**. Ative **Game Illustrator** e escolha uma **Image Connection**.
    - Jogo novo: no assistente de configuração, ative **Visual Generation** e escolha uma **Image Generation Connection**.
