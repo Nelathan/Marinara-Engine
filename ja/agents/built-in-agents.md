@@ -14,7 +14,7 @@
 
 Marinaraは**Agents**パネルでエージェントを3つのカテゴリーに分けています。**Writer Agents**、**Tracker Agents**、**Misc Agents**の3つです。この一覧も同じ分類に従います。
 
-実行間隔とは、毎回のメッセージではなく、アシスタントのメッセージ数回に1度だけエージェントを動かす設定です。実行間隔はエージェントの設定で最大100まで変更できます。
+実行間隔とは、毎回のメッセージではなく、ユーザーとアシスタントのメッセージ数回に1度だけエージェントを動かす設定です。実行間隔はエージェントの設定で最大100まで変更できます。
 
 ## 執筆エージェント
 
@@ -42,7 +42,7 @@ Marinaraは**Agents**パネルでエージェントを3つのカテゴリーに�
 
 - **フェーズ**: Post-Processing。
 - **使える場所**: Roleplay。
-- **主な設定**: デフォルトではアシスタントのメッセージ8回に1度動きます。[エージェントの承認とAgent Suite](approvals-and-agent-suite.md)を参照してください。
+- **主な設定**: デフォルトではユーザーとアシスタントのメッセージ8回に1度動きます。[エージェントの承認とAgent Suite](approvals-and-agent-suite.md)を参照してください。
 
 ### Narrative Director
 
@@ -167,7 +167,7 @@ Knowledge Retrievalより費用を抑えられる代替手段です。要約す�
 
 - **フェーズ**: Post-Processing。
 - **使える場所**: Roleplay。
-- **主な設定**: デフォルトではアシスタントのメッセージ5回に1度動きます。設定には**Prompt Model**、**Image Style**、**Attach Card Appearance**、**Send Avatar References**があります。詳しい設定方法は[Illustratorエージェント](../media/illustrator-agent.md)を参照してください。
+- **主な設定**: デフォルトではユーザーとアシスタントのメッセージ5回に1度動きます。設定には**Prompt Model**、**Image Style**、**Attach Card Appearance**、**Send Avatar References**があります。詳しい設定方法は[Illustratorエージェント](../media/illustrator-agent.md)を参照してください。
 
 ### Lorebook Keeper
 
@@ -175,7 +175,7 @@ Knowledge Retrievalより費用を抑えられる代替手段です。要約す�
 
 - **フェーズ**: Post-Processing。
 - **使える場所**: Roleplay。Game Modeでは、セッション終了時に同じ働きをする**Game Session Keeper**という派生版があります。
-- **主な設定**: デフォルトではアシスタントのメッセージ8回に1度動きます。エントリーの保存先は**Target Lorebook**の選択欄で決めます。自動で選ばせることもできます。
+- **主な設定**: デフォルトではユーザーとアシスタントのメッセージ8回に1度動きます。エントリーの保存先は**Target Lorebook**の選択欄で決めます。自動で選ばせることもできます。
 
 ### Combat
 

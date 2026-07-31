@@ -12,7 +12,7 @@ Cada fotograma clave está ligado a un rango del texto del turno. Estos rangos d
 
 Antes de planear las imágenes, Marinara elimina las etiquetas de comando del GM del turno. Las etiquetas de comando del GM son etiquetas de instrucción ocultas dentro de un mensaje del GM, como tiradas de dados o actualizaciones del estado del juego. Se eliminan para que no aparezcan en la imagen.
 
-Las imágenes fijas de fotogramas clave se guardan en la **Gallery** (Galería), en la pestaña **Images**. Los clips de fotogramas clave se guardan como videos de escena, en la pestaña **Videos**. Como son elementos normales de la **Gallery**, puedes ver una vista previa, descargar, fijar o copiar el prompt (las instrucciones enviadas a la IA) de cualquier fotograma clave por separado.
+Las imágenes fijas de fotogramas clave se guardan en la **Gallery** (Galería), en la pestaña **Images**. Los clips de fotogramas clave se guardan como videos de escena, en la pestaña **Videos**. Como son elementos normales de la Gallery, puedes ver una vista previa, descargar, fijar o copiar el prompt (las instrucciones enviadas a la IA) de cualquier fotograma clave por separado.
 
 ## Episodios de storyboard en Roleplay
 
@@ -22,11 +22,11 @@ Los Storyboards de Roleplay son independientes del Illustrator. El Illustrator p
 2. Abre un chat de Roleplay y luego añade **Storyboard** en **Chat Settings > Agents**.
 3. En la tarjeta Storyboard, elige **Manual only**, **Still images** o **Animations**.
 4. Selecciona las conexiones de prompt, de imagen y, opcionalmente, de video. La conexión de imagen es obligatoria.
-5. Para un episodio manual, abre **Gallery** y elige **Create storyboard**. Los episodios automáticos se ejecutan después de la cantidad configurada de respuestas del asistente recién terminadas.
+5. Para un episodio manual, abre **Gallery** y elige **Create storyboard**. Los episodios automáticos se ejecutan cuando se ha acumulado la cantidad configurada de mensajes del usuario y del asistente y termina una respuesta del asistente.
 
-El intervalo predeterminado es 1, así que un episodio automático puede aparecer después de cada respuesta del asistente recién terminada. Un valor más alto de **Assistant messages per episode** deja que se acumulen el diálogo y el ida y vuelta. Cuando se alcanza el intervalo, Marinara combina los mensajes desde el Storyboard exitoso anterior, dentro de una ventana reciente acotada. Abrir un chat existente no rellena hacia atrás los mensajes antiguos, y un episodio fallido no adelanta el punto de referencia de la cadencia exitosa.
+El intervalo predeterminado es 1, así que un episodio automático puede aparecer después de cada respuesta del asistente recién terminada. Un valor más alto de **Messages per episode** deja que se acumulen el diálogo y el ida y vuelta. Los mensajes del usuario y del asistente hacen avanzar el intervalo. Cuando se alcanza el intervalo, Marinara combina los mensajes desde el Storyboard exitoso anterior, dentro de una ventana reciente acotada. Abrir un chat existente no rellena hacia atrás los mensajes antiguos, y un episodio fallido no adelanta el punto de referencia de la cadencia exitosa.
 
-Los fotogramas clave de Roleplay se muestran dentro del chat, justo después de la respuesta del asistente que cierra el episodio. Usa las flechas de los Storyboards con varios fotogramas clave para moverte entre ellos. Las imágenes y los clips también se guardan en la **Gallery**.
+Los fotogramas clave de Roleplay se muestran dentro del chat, justo después de la respuesta del asistente que cierra el episodio. Usa las flechas de los Storyboards con varios fotogramas clave para moverte entre ellos. Las imágenes y los clips también se guardan en la Gallery.
 
 La planificación en Roleplay tiene cuatro capas editables dentro de los ajustes globales de **Agents > Storyboard**:
 
@@ -35,7 +35,7 @@ La planificación en Roleplay tiene cuatro capas editables dentro de los ajustes
 - **Animation addon** solo se incluye para los Storyboards animados. Trata la ilustración como el fotograma exacto de T=0 y luego describe una acción sencilla, el comportamiento de cámara, el diálogo de origen, los efectos de sonido, la ambientación y una pausa final.
 - **Output contract** define el JSON de fotogramas clave que devuelve el modelo de planificación.
 
-Estos prompts de Roleplay no reemplazan la biblioteca optimizada de planificadores del Game Mode. Los formateadores de proveedor de imagen y de video siguen siendo compartidos y seleccionables. El plan de animación es neutral respecto al proveedor, así que puede usar Google Gemini Omni, LTX/ComfyUI u otra conexión de **Video Generation** configurada que acepte solicitudes de imagen a video. Las capacidades del proveedor y la calidad del resultado siguen variando.
+Estos prompts de Roleplay no reemplazan la biblioteca optimizada de planificadores del Game Mode. Los formateadores de proveedor de imagen y de video siguen siendo compartidos y seleccionables. El plan de animación es neutral respecto al proveedor, así que puede usar Google Gemini Omni, LTX/ComfyUI u otra conexión de Video Generation configurada que acepte solicitudes de imagen a video. Las capacidades del proveedor y la calidad del resultado siguen variando.
 
 ## Storyboards del Game Mode
 
@@ -125,9 +125,9 @@ Los dos planificadores crean el plan visual. **Illustration Planner** se usa par
 
 **Storyboard Illustration Prompt** formatea luego la descripción de imagen del planificador en la solicitud final enviada al modelo de imagen. Los chats existentes usan de forma predeterminada **Game Scene Illustration**. **Storyboard Illustration** mantiene el resultado del planificador como principal, mientras añade referencias de personaje, notas de apariencia, dirección artística de la campaña e instrucciones de imagen.
 
-**Storyboard Video Prompt** es independiente del **Game Video Prompt** general de la tarjeta **Scene Videos**. Combina el fotograma clave generado, la indicación de movimiento del Animation Planner y el contexto de la escena actual en la solicitud final enviada al modelo de video. Déjalo en la opción heredada para reutilizar el prompt general, o selecciona **Anime Game Video** para los clips de fotogramas clave sin cambiar los videos manuales de la **Gallery** ni de **Game Assets**.
+**Storyboard Video Prompt** es independiente del **Game Video Prompt** general de la tarjeta **Scene Videos**. Combina el fotograma clave generado, la indicación de movimiento del Animation Planner y el contexto de la escena actual en la solicitud final enviada al modelo de video. Déjalo en la opción heredada para reutilizar el prompt general, o selecciona **Anime Game Video** para los clips de fotogramas clave sin cambiar los videos manuales de la Gallery ni de Game Assets.
 
-Selecciona **Comic Page Animation** para las páginas de origen de cómic que tienen en cuenta la duración, y luego elige **Comic Page Video** para interpretar esas viñetas como momentos de referencia visual ordenados para un clip. La opción original **Comic Page** sigue disponible para ilustraciones normales. La opción de video separada deja sin cambios el **Game Video Prompt** heredado más los videos manuales de la **Gallery** y de **Game Assets**.
+Selecciona **Comic Page Animation** para las páginas de origen de cómic que tienen en cuenta la duración, y luego elige **Comic Page Video** para interpretar esas viñetas como momentos de referencia visual ordenados para un clip. La opción original **Comic Page** sigue disponible para ilustraciones normales. La opción de video separada deja sin cambios el **Game Video Prompt** heredado más los videos manuales de la Gallery y de Game Assets.
 
 Los juegos nuevos creados con la presentación **Storyboard Optimized** seleccionan el **Storyboard Game Prompt**, el planificador **Comic Page Animation**, **Storyboard Illustration** y **Comic Page Video**. Puedes cambiar ese chat a la combinación de un solo plano en cualquier momento seleccionando **Still Keyframe Animation** y **Anime Game Video**.
 

@@ -38,6 +38,7 @@ Ces macros récupèrent les noms et les champs de fiche de celui qui parle et du
 | `{{user}}` / `{{userName}}` | Le nom affiché du moment (ou le nom du persona). Par défaut `User` si aucun persona n'est défini. |
 | `{{userNamePhonetic}}` | Le champ Phonetic name du persona, ou `{{user}}` s'il est vide. |
 | `{{char}}` / `{{charName}}` | Le nom du personnage en cours. Par défaut `Character`. |
+| `{{<21-character-card-ID>}}` | Syntaxe indicative pour le nom d'une autre fiche de personnage. Remplace le texte entre chevrons par l'ID exact de 21 caractères de cette fiche. |
 | `{{charNamePhonetic}}` | Le champ Phonetic name du personnage, ou `{{char}}` s'il est vide. |
 | `{{characters}}` | Tous les personnages du chat, séparés par des virgules. |
 | `{{group}}` | Tous les autres personnages actifs du chat de groupe, sauf celui qui répond. Le persona ne figure pas dans cette liste de personnages. |
@@ -66,6 +67,8 @@ Dans un chat avec un seul personnage, elles se résolvent d'après ce personnage
 `{{group}}` suit le personnage qui répond, y compris pendant les générations individuelles d'un groupe. Par exemple, si Pantalone répond dans un groupe Roleplay contenant Powers That Be, Maukie et Pantalone, `{{group}}` donne `Powers That Be, Maukie`. Une fiche de personnage reste dans cette liste même si son nom coïncide avec `{{user}}`.
 
 Le champ Phonetic name a deux rôles. Il fixe la prononciation du nom par la synthèse vocale (Text to Speech). Il alimente aussi `{{charNamePhonetic}}` et `{{userNamePhonetic}}`. Tu le trouves à la fois dans l'éditeur **Character Editor** et dans l'éditeur **Persona Editor**.
+
+Pour faire référence à un personnage absent du chat en cours, copie l'ID de sa fiche et place-le directement entre doubles accolades, par exemple `{{V1StGXR8_Z5jdHi6B-myT}}`. Marinara remplace la macro par le nom de la fiche et ajoute au prompt système le contexte de personnage de la fiche référencée. Les messages d'accueil et les exemples de dialogue de cette fiche sont exclus. Les lorebooks activés rattachés à cette fiche restent soumis à leurs règles habituelles de mots-clés, d'entrées **Constant**, de filtres, de probabilité et de budget de tokens.
 
 ## Macros du mode Conversation
 

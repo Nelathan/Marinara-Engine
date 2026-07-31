@@ -54,7 +54,7 @@ Anders als **Push Story**, das nur einmal wirkt, läuft **Secret Plot** über vi
 
 ### Run Interval
 
-Ist **Secret Plot** aktiv, erscheint das Feld **Run Interval** (Aktualisierungsintervall). Es legt fest, wie viele Antworten zwischen zwei Aktualisierungen des verborgenen Handlungsbogens liegen. Gezählt werden Assistant-Nachrichten, also die Antworten des Charakters.
+Ist **Secret Plot** aktiv, erscheint das Feld **Run Interval** (Aktualisierungsintervall). Es legt fest, wie viele User- und Assistant-Nachrichten zwischen zwei Aktualisierungen des verborgenen Handlungsbogens liegen.
 
 Der Standard ist 8. Erlaubt ist jede ganze Zahl von 1 bis 100. Je kleiner die Zahl, desto häufiger aktualisiert die KI den Plan. Je größer, desto seltener.
 

@@ -8,8 +8,8 @@
     },
     {
       "path": "FAQ.md",
-      "sha256": "6ce3eec72806ffddd33c62645c8f424f79579d26e5d88ab2f663804d777b4390",
-      "bytes": 21303
+      "sha256": "1b329b54a8a8f22f834ee0ae73491c0f7de87fa29cb6fc43c3650c6f579cf9c5",
+      "bytes": 21365
     },
     {
       "path": "INSTALLATION.md",
@@ -23,8 +23,8 @@
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "26cf3a4603d3d083420b7dfa115b4748153db4be4e4f9fd81f66988e2fa96628",
-      "bytes": 32407
+      "sha256": "3e70131a96faade2f95368e2d1317075e026986aa679156a8ff831795b7bbe99",
+      "bytes": 32411
     },
     {
       "path": "UPGRADING.md",
@@ -43,8 +43,8 @@
     },
     {
       "path": "agents/built-in-agents.md",
-      "sha256": "3a278b78f7796475a6274f59b8726c29af43db57b5af8711822ff1e60016c6dc",
-      "bytes": 20917
+      "sha256": "494b58d4cff113db6d3fc18868b2b07a00d4ac75064706a32942fbe42604a7f0",
+      "bytes": 20973
     },
     {
       "path": "agents/custom-agents.md",
@@ -218,8 +218,8 @@
     },
     {
       "path": "connections/providers-reference.md",
-      "sha256": "685524a19c70c8d48d0c64d72c9d0a249771d02a59bb2cb993f249972fc693b8",
-      "bytes": 10677
+      "sha256": "28f99f6c6e1fd486c2db5b9c00ef8f9cf84dc5185e0288b073027b9b1370ac25",
+      "bytes": 10687
     },
     {
       "path": "connections/subscription-clis.md",
@@ -398,8 +398,8 @@
     },
     {
       "path": "game/storyboard.md",
-      "sha256": "0ace99556a107147adff4b5aca442c8490f49a293a5e34f2ddab04ec02e34e00",
-      "bytes": 28044
+      "sha256": "abe37ad368bd13fd6c4af92cd458ab3861230d3e39c2212a66b3e004c1fe6da3",
+      "bytes": 28131
     },
     {
       "path": "home/achievements.md",
@@ -508,13 +508,13 @@
     },
     {
       "path": "media/illustrator-agent.md",
-      "sha256": "522a3b18e1f02ef6e77dd193729e336175402ebdcfd3a8095a33c521a9b84204",
-      "bytes": 7293
+      "sha256": "909a252176f4c720b8fbb5ca5cd2dbacfe15d542aa4774f17fb1b304ab29e94c",
+      "bytes": 7302
     },
     {
       "path": "media/image-providers.md",
-      "sha256": "ecf1142ac3ea67acc999f4269f548cee89eee71183561f97e1ddc1f0dcd89614",
-      "bytes": 14429
+      "sha256": "1c637fda11425b3dba091bb59733bc846b7bae85724cb5f66ab87efb1921f016",
+      "bytes": 15122
     },
     {
       "path": "media/music.md",
@@ -563,8 +563,8 @@
     },
     {
       "path": "prompts/macros.md",
-      "sha256": "3f6d617203dff14fc7249a2288a79a3cb483b52ef4fa814718d7dd55c29ba288",
-      "bytes": 17547
+      "sha256": "20faecec93f6e468c9d55d9616ca620b765b3f77d246966bae3115a3c4b01e38",
+      "bytes": 18257
     },
     {
       "path": "prompts/preset-variables.md",
@@ -603,8 +603,8 @@
     },
     {
       "path": "roleplay/narrative-director.md",
-      "sha256": "08b8c2b68ac32e8e8646e59f6ae460b66296bace9554225fe7259b2ff0cd1f45",
-      "bytes": 6140
+      "sha256": "7cef287980a4feefc349f812b7c224c8c11cab726ba21fa0af9b839bddf5160b",
+      "bytes": 6083
     },
     {
       "path": "roleplay/scenes.md",

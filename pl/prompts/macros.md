@@ -38,6 +38,7 @@ Te makra wstawiają imiona oraz pola kart osoby mówiącej i odpowiadającej pos
 | `{{user}}` / `{{userName}}` | Twoja bieżąca nazwa wyświetlana (albo nazwa persony). Bez ustawionej persony domyślnie `User`. |
 | `{{userNamePhonetic}}` | Pole Phonetic name twojej persony, a przy pustym polu `{{user}}`. |
 | `{{char}}` / `{{charName}}` | Nazwa bieżącej postaci. Domyślnie `Character`. |
+| `{{<21-character-card-ID>}}` | Zapis zastępczy dla nazwy innej karty postaci. Tekst w nawiasach kątowych zastąp dokładnym 21-znakowym ID tej karty. |
 | `{{charNamePhonetic}}` | Pole Phonetic name postaci, a przy pustym polu `{{char}}`. |
 | `{{characters}}` | Wszystkie postacie w czacie, oddzielone przecinkami. |
 | `{{group}}` | Wszystkie pozostałe aktywne postacie w czacie grupowym, bez postaci właśnie odpowiadającej. Persona nie należy do tej listy postaci. |
@@ -66,6 +67,8 @@ W czacie z jedną postacią makra odnoszą się do tej właśnie postaci. W czac
 Makro `{{group}}` podąża za postacią, która właśnie odpowiada – również podczas pojedynczych generowań w grupie. Przykład: jeśli w grupie w trybie Roleplay są Powers That Be, Maukie i Pantalone, a odpowiada Pantalone, `{{group}}` daje `Powers That Be, Maukie`. Karta postaci zostaje na tej liście nawet wtedy, gdy jej nazwa akurat pokrywa się z `{{user}}`.
 
 Pole Phonetic name pełni dwie funkcje. Decyduje o tym, jak imię wymawia syntezator mowy. Zasila też makra `{{charNamePhonetic}}` i `{{userNamePhonetic}}`. Znajdziesz je zarówno w panelu **Character Editor**, jak i w panelu **Persona Editor**.
+
+Aby odwołać się do postaci, której nie ma w bieżącym czacie, skopiuj ID jej karty i wstaw je bezpośrednio w podwójne nawiasy klamrowe, na przykład `{{V1StGXR8_Z5jdHi6B-myT}}`. Marinara zamienia to makro na nazwę karty i dodaje do promptu systemowego kontekst postaci z przywołanej karty. Powitania i przykładowe dialogi tej karty zostają pominięte. Włączone lorebooki podpięte do tej karty nadal podlegają swoim zwykłym regułom słów kluczowych, wpisów **Constant**, filtrów, prawdopodobieństwa i limitu tokenów.
 
 ## Makra trybu Conversation
 

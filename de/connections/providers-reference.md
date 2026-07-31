@@ -123,7 +123,7 @@ Die Einrichtung Schritt für Schritt und den Schalter **Treat as local/custom en
 
 ## Image Generation
 
-**Image Generation** ist ein besonderer Anbieter. Nach der Auswahl legst du zusätzlich einen **Service** (Dienst) fest – das Bild-Backend, das die eigentliche Arbeit erledigt. Jeder Dienst bringt eine eigene Standard-Base-URL mit und regelt selbst, ob ein API-Key nötig ist. Dazu zählen kostenpflichtige Cloud-APIs wie **OpenAI (DALL-E)**, **Stability AI** und **NovelAI**. Daneben gibt es kostenlose Optionen wie **Pollinations** und **Stable Horde**. Lokale Server wie **ComfyUI** und **SD Web UI (AUTOMATIC1111 / Forge)** funktionieren ebenfalls.
+**Image Generation** ist ein besonderer Anbieter. Nach der Auswahl legst du zusätzlich einen **Service** (Dienst) fest – das Bild-Backend, das die eigentliche Arbeit erledigt. Jeder Dienst bringt eine eigene Standard-Base-URL mit und regelt selbst, ob ein API-Key nötig ist. Dazu zählen kostenpflichtige Cloud-APIs wie **OpenAI (DALL-E)**, **Stability AI**, **NovelAI** und **Z.AI**. Daneben gibt es kostenlose Optionen wie **Pollinations** und **Stable Horde**. Lokale Server wie **ComfyUI** und **SD Web UI (AUTOMATIC1111 / Forge)** funktionieren ebenfalls.
 
 Die vollständige Liste der Bilddienste, ihre Einrichtung und die Einstellungen zur Generierung findest du unter [Anbieter und Einrichtung der Bildgenerierung](../media/image-providers.md).
 

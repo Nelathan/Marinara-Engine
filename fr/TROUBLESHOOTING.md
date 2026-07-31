@@ -193,7 +193,7 @@ Les storyboards de Game Mode transforment une narration du GM terminée en image
 
 - Pour une vidéo de scène manuelle, génère ou téléverse d'abord une image dans la **Gallery**, puis utilise son action **Video** ou **Animate**. La **Gallery** répartit **Images** et **Videos** dans des onglets distincts : pense à regarder l'onglet **Videos**.
 - Pour les storyboards automatiques de Game Mode, ouvre **Chat Settings** > **Agents** > **Storyboards** et vérifie que **Automatic Storyboard Illustrations** est activé. Active aussi **Automatic Storyboard Animations** si tu veux également des clips.
-- En Roleplay, ajoute l'agent **Storyboard** au chat. Choisis **Still images** ou **Animations**, règle **Assistant messages per episode**, puis sélectionne la connexion d'images du storyboard. Avec **Manual only**, la génération part plutôt de **Create storyboard** dans la **Gallery**.
+- En Roleplay, ajoute l'agent **Storyboard** au chat. Choisis **Still images** ou **Animations**, règle **Messages per episode**, puis sélectionne la connexion d'images du storyboard. Avec **Manual only**, la génération part plutôt de **Create storyboard** dans la **Gallery**.
 - Les images-clés ont besoin d'une connexion d'images. Les clips ont en plus besoin d'une connexion vidéo.
 - Si un prompt personnalisé donne de meilleurs résultats avec tous les personnages réunis, désactive **Use NovelAI Character Prompts**.
 - Les fournisseurs lents peuvent atteindre le délai d'expiration. Augmente `IMAGE_GEN_TIMEOUT_MS` ou `VIDEO_GEN_TIMEOUT_MS` dans le fichier `.env`, puis redémarre Marinara. Le serveur ne lit ces valeurs qu'au démarrage.

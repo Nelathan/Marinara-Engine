@@ -168,11 +168,11 @@ Professor MariはMarinaraの通常のソースファイルなら編集できま�
 
 ## 絵コンテのアニメーションはどう動きますか?
 
-**絵コンテ**は、できあがった物語の文章をキーフレーム画像を並べた短い連続シーンに変えるもので、アニメーションのクリップを加えることもできます。**Game Mode**では、ゲームマスターの語りが1ターン分そろったところで作られます。**Roleplay**では、Storyboard Agentが新しくそろったやり取りをまとめ、指定した数のアシスタントの返信ごとにチャット内のエピソードとして仕上げます。
+**絵コンテ**は、できあがった物語の文章をキーフレーム画像を並べた短い連続シーンに変えるもので、アニメーションのクリップを加えることもできます。**Game Mode**では、ゲームマスターの語りが1ターン分そろったところで作られます。**Roleplay**では、Storyboard Agentが新しくそろったやり取りをまとめ、指定した数のユーザーとアシスタントのメッセージごとにチャット内のエピソードとして仕上げます。
 
 手動で作るには、**Gallery**(ギャラリー)を開き、**Create storyboard**(絵コンテの作成)をクリックします。Game Modeでは**View storyboard**(絵コンテの表示)からビューアーを開き直せます。Roleplayでは、エピソードの最後になったアシスタントの返信の下に結果が表示されます。
 
-自動で作るには、**Chat Settings**を開き、**Agents**に移動して、**Storyboards**カードを探します。Game Modeにはイラストとアニメーションのトグルが別々にあります。Roleplayでは**Manual only**、**Still images**、**Animations**から選び、**Assistant messages per episode**も指定できます。動画のクリップにはVideo Generationの接続が必要です。どちらの手順も[絵コンテエンジンガイド](game/storyboard.md)で説明しています。
+自動で作るには、**Chat Settings**を開き、**Agents**に移動して、**Storyboards**カードを探します。Game Modeにはイラストとアニメーションのトグルが別々にあります。Roleplayでは**Manual only**、**Still images**、**Animations**から選び、**Messages per episode**も指定できます。この数にはユーザーとアシスタントの両方のメッセージが入ります。動画のクリップにはVideo Generationの接続が必要です。どちらの手順も[絵コンテエンジンガイド](game/storyboard.md)で説明しています。
 
 ## 通話でキャラクターに声を出してもらえますか?
 

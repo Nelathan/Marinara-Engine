@@ -123,7 +123,7 @@ Ollama、LM Studio、KoboldCppのように、ローカルまたは自前で立�
 
 ## Image Generation
 
-**Image Generation**(画像生成)は特別なプロバイダーです。これを選んだあと、実際の処理を担当する画像バックエンドとして**Service**(サービス)も選びます。サービスごとにデフォルトのBase URLが違い、APIキーが必要かどうかも違います。サービスには、**OpenAI (DALL-E)**、**Stability AI**、**NovelAI**のような有料のクラウドAPIがあります。**Pollinations**や**Stable Horde**のような無料の選択肢もあります。**ComfyUI**や**SD Web UI (AUTOMATIC1111 / Forge)**のようなローカルサーバーも利用できます。
+**Image Generation**(画像生成)は特別なプロバイダーです。これを選んだあと、実際の処理を担当する画像バックエンドとして**Service**(サービス)も選びます。サービスごとにデフォルトのBase URLが違い、APIキーが必要かどうかも違います。サービスには、**OpenAI (DALL-E)**、**Stability AI**、**NovelAI**、**Z.AI**のような有料のクラウドAPIがあります。**Pollinations**や**Stable Horde**のような無料の選択肢もあります。**ComfyUI**や**SD Web UI (AUTOMATIC1111 / Forge)**のようなローカルサーバーも利用できます。
 
 画像サービスの全一覧、その設定、生成のオプションは[画像生成プロバイダーと設定](../media/image-providers.md)にまとめています。
 
@@ -135,7 +135,7 @@ Ollama、LM Studio、KoboldCppのように、ローカルまたは自前で立�
 
 ## 埋め込み
 
-埋め込みは、ロアブックの意味検索と**Memory Recall**を支える仕組みです。テキストを数値の並びに変換することで、Marinaraは関連するエントリーを見つけられます。ほとんどのチャットプロバイダーでは、接続エディターで**Embedding Model**(埋め込みモデル)と、任意で**Embedding Endpoint URL**(埋め込みエンドポイントのURL)を設定できます。
+埋め込みは、ロアブックの意味検索とMemory Recallを支える仕組みです。テキストを数値の並びに変換することで、Marinaraは関連するエントリーを見つけられます。ほとんどのチャットプロバイダーでは、接続エディターで**Embedding Model**(埋め込みモデル)と、任意で**Embedding Endpoint URL**(埋め込みエンドポイントのURL)を設定できます。
 
 埋め込みを作れないプロバイダーもあります。**Anthropic**、**Claude (Subscription)**、**OpenAI (ChatGPT)**、**Grok CLI (Subscription)**は対応していません。これらを使う場合は、**Embedding Connection**(埋め込み用の接続)ドロップダウンでほかの接続を借ります。OpenAI互換の接続、**Google Gemini**、内蔵の**Local Model**などが使えます。
 

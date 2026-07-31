@@ -168,11 +168,11 @@ Uwaga: na zwykłym adresie zdalnym działania Professor Mari zmieniające dane w
 
 ## Jak działają animowane storyboardy?
 
-**Storyboard** zamienia gotowy tekst opowieści w krótką sekwencję klatek kluczowych i może dodać animowane klipy. W trybie **Game Mode** obejmuje jedną gotową turę narracji mistrza gry. W trybie **Roleplay** agent Storyboard łączy nowo zakończone wymiany zdań w odcinek osadzony w czacie, po ustawionej liczbie odpowiedzi AI.
+**Storyboard** zamienia gotowy tekst opowieści w krótką sekwencję klatek kluczowych i może dodać animowane klipy. W trybie **Game Mode** obejmuje jedną gotową turę narracji mistrza gry. W trybie **Roleplay** agent Storyboard łączy nowo zakończone wymiany zdań w odcinek osadzony w czacie, po ustawionej liczbie wiadomości użytkownika i AI.
 
 Żeby zrobić storyboard ręcznie, otwórz sekcję **Gallery** (galeria) i kliknij przycisk **Create storyboard**. W trybie Game Mode podgląd otwiera się ponownie przyciskiem **View storyboard**, a w trybie Roleplay wynik pojawia się pod odpowiedzią kończącą odcinek.
 
-Żeby powstawały automatycznie, otwórz panel **Chat Settings**, przejdź do sekcji **Agents** i znajdź kartę **Storyboards**. Tryb Game Mode ma osobne przełączniki ilustracji i animacji. Tryb Roleplay daje do wyboru **Manual only**, **Still images** albo **Animations**, a do tego pole **Assistant messages per episode**. Klipy wideo wymagają połączenia typu Video Generation. Oba procesy opisuje [Przewodnik po silniku storyboardów](game/storyboard.md).
+Żeby powstawały automatycznie, otwórz panel **Chat Settings**, przejdź do sekcji **Agents** i znajdź kartę **Storyboards**. Tryb Game Mode ma osobne przełączniki ilustracji i animacji. Tryb Roleplay daje do wyboru **Manual only**, **Still images** albo **Animations**, a do tego pole **Messages per episode**, które liczy zarówno wiadomości użytkownika, jak i AI. Klipy wideo wymagają połączenia typu Video Generation. Oba procesy opisuje [Przewodnik po silniku storyboardów](game/storyboard.md).
 
 ## Czy postacie mogą mówić na głos w rozmowie?
 

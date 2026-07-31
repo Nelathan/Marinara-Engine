@@ -14,7 +14,7 @@ Chaque agent ci-dessous est résumé en trois points.
 
 Marinara répartit ses agents en trois catégories dans le panneau **Agents** : **Writer Agents**, **Tracker Agents** et **Misc Agents**. Cette référence reprend le même classement.
 
-Un intervalle d'exécution signifie que l'agent s'exécute périodiquement, après un certain nombre de réponses de l'IA, au lieu de s'exécuter après chaque message. Cet intervalle se change dans la configuration de l'agent, jusqu'à 100.
+Un intervalle d'exécution signifie que l'agent s'exécute périodiquement, après un certain nombre de messages, les tiens et ceux de l'IA, au lieu de s'exécuter après chaque message. Cet intervalle se change dans la configuration de l'agent, jusqu'à 100.
 
 ## Writer Agents
 
@@ -42,7 +42,7 @@ Observe l'évolution d'un personnage au fil du jeu et propose des modifications 
 
 - **Phase** : **Post-Processing**.
 - **Où ça marche** : Roleplay.
-- **Réglages clés** : par défaut, il s'exécute une fois toutes les 8 réponses de l'IA. Voir [Approbations d'agents et Agent Suite](approvals-and-agent-suite.md).
+- **Réglages clés** : par défaut, il s'exécute une fois tous les 8 messages, les tiens et ceux de l'IA. Voir [Approbations d'agents et Agent Suite](approvals-and-agent-suite.md).
 
 ### Narrative Director
 
@@ -156,7 +156,7 @@ Simule un public en direct qui réagit à ta scène, sous la forme d'un widget *
 Extrait des souvenirs durables depuis les résumés de chat, les fiches de personnages et les lorebooks, vers un coffre appartenant au package, puis rappelle le contexte pertinent avant la réponse principale. Il gère la consultation du coffre par périmètre, l'import de sources, la relecture des brouillons en attente et le placement du contexte rappelé sur un marqueur de preset.
 
 - **Intégration** : package de fonctionnalité ; il apporte du contexte avant la génération et une interface de gestion de la mémoire, au lieu de s'exécuter comme un tracker classique après la génération.
-- **Où ça marche** : Conversation, Roleplay, Visual Novel et Game. Visual Novel utilise le profil d'extraction de Roleplay.
+- **Où ça marche** : Conversation, Roleplay et Game.
 - **Réglages clés** : activation, budget de tokens du rappel (128-16 384), nombre maximum de fragments rappelés (1-100), seuil de score, contexte des messages récents (1-20), style de rappel et pondérations sémantique, lexicale, graphe et mots-clés, inclusion des souvenirs résolus, préambule de rappel, raisonnement et verbosité de l'extraction, limites de génération, limites de sources, modèles de prompt, extraction de mots-clés par l'IA, et extraction en Game Mode.
 - **Cycle de vie des données** : les contrôles de sauvegarde de Memory Settings servent à exporter ou remplacer le coffre, les brouillons et les réglages. La suppression de toutes les données efface définitivement les souvenirs, les brouillons, l'activité et les index dérivés, mais conserve les réglages. Désinstaller le package préserve le coffre Long-Term Memory en vue d'une réinstallation. L'installer, le mettre à jour ou le retirer demande un redémarrage de Marinara.
 - **Compatibilité** : moteur `2.3.3` jusqu'à, mais sans inclure, `2.4.0`. Le package utilise les permissions `agent-runtime`, `chat-read`, `routes`, `storage` et `ui`.
@@ -167,7 +167,7 @@ Prend en charge la génération d'images et de vidéos. Il rédige des prompts v
 
 - **Phase** : **Post-Processing**.
 - **Où ça marche** : Roleplay.
-- **Réglages clés** : par défaut, il s'exécute une fois toutes les 5 réponses de l'IA. Les réglages comprennent **Prompt Model**, **Image Style**, **Attach Card Appearance** et **Send Avatar References**. Pour la configuration complète, voir [Agent Illustrator](../media/illustrator-agent.md).
+- **Réglages clés** : par défaut, il s'exécute une fois tous les 5 messages, les tiens et ceux de l'IA. Les réglages comprennent **Prompt Model**, **Image Style**, **Attach Card Appearance** et **Send Avatar References**. Pour la configuration complète, voir [Agent Illustrator](../media/illustrator-agent.md).
 
 ### Lorebook Keeper
 
@@ -175,7 +175,7 @@ Crée et met à jour des entrées de lorebook à partir des faits importants de 
 
 - **Phase** : **Post-Processing**.
 - **Où ça marche** : Roleplay. En Game Mode, une variante de fin de session, **Game Session Keeper**, fait le même travail à la fin d'une session.
-- **Réglages clés** : par défaut, il s'exécute une fois toutes les 8 réponses de l'IA. Le sélecteur **Target Lorebook** détermine la destination des entrées, avec une option de sélection automatique.
+- **Réglages clés** : par défaut, il s'exécute une fois tous les 8 messages, les tiens et ceux de l'IA. Le sélecteur **Target Lorebook** détermine la destination des entrées, avec une option de sélection automatique.
 
 ### Combat
 

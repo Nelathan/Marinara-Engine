@@ -6,7 +6,7 @@ Z tego przewodnika dowiesz się, do czego służy agent **Illustrator** – wbud
 
 Agent to niewielki pomocnik AI, który działa automatycznie w obrębie jednego czatu. Agent **Illustrator** uruchamia się po zakończeniu generowania, czyli dopiero wtedy, gdy AI skończy pisać odpowiedź. Czyta ostatnią odpowiedź i ocenia, czy dana chwila zasługuje na obrazek. Jeśli tak, agent **Illustrator** pisze prompt obrazu i wysyła go do dostawcy obrazów. Prompt to tekstowy opis, który mówi modelowi graficznemu, co ma narysować.
 
-Agent **Illustrator** nie rysuje do każdej wiadomości. Domyślnie po wykonaniu obrazu czeka mniej więcej 5 przyjętych odpowiedzi AI, zanim zrobi kolejny. Przeglądanie swipe'ów ani ponowne generowanie tej samej odpowiedzi nie przesuwa tego licznika. Jeśli agent uzna, że dana chwila nie nadaje się na ilustrację, pomija ją i nie tworzy obrazu. Każdy powstały obraz trafia do sekcji **Gallery** (Galeria) danego czatu.
+Agent **Illustrator** nie rysuje do każdej wiadomości. Domyślnie po wykonaniu obrazu czeka na 5 przyjętych wiadomości użytkownika i AI, zanim zrobi kolejny. Przeglądanie swipe'ów ani ponowne generowanie tej samej odpowiedzi nie przesuwa tego licznika. Jeśli agent uzna, że dana chwila nie nadaje się na ilustrację, pomija ją i nie tworzy obrazu. Każdy powstały obraz trafia do sekcji **Gallery** (Galeria) danego czatu.
 
 Agenta **Illustrator** można używać w czatach **Roleplay** i **Game Mode**, a jego instalacja odblokowuje też selfie w trybie Conversation. Krótki opis w aplikacji brzmi: "Responsible for image and video generations." Kroki konfiguracji i ustawienia opisane w tym przewodniku dotyczą czatów Roleplay. Tryb Game Mode korzysta zamiast tego z jednego prostego przełącznika, opisanego niżej w sekcji o trybie Game Mode.
 

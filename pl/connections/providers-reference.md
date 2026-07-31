@@ -123,7 +123,7 @@ Konfigurację krok po kroku i przełącznik **Treat as local/custom endpoint** (
 
 ## Image Generation
 
-**Image Generation** to dostawca szczególny. Po jego wybraniu wskazujesz jeszcze pozycję **Service**, czyli zaplecze, które faktycznie generuje obrazy. Każda usługa ma własny domyślny adres bazowy i własną zasadę co do tego, czy klucz API jest wymagany. Wśród usług są płatne API chmurowe, takie jak **OpenAI (DALL-E)**, **Stability AI** i **NovelAI**. Są też opcje darmowe: **Pollinations** i **Stable Horde**. Działają również serwery lokalne, na przykład **ComfyUI** oraz **SD Web UI (AUTOMATIC1111 / Forge)**.
+**Image Generation** to dostawca szczególny. Po jego wybraniu wskazujesz jeszcze pozycję **Service**, czyli zaplecze, które faktycznie generuje obrazy. Każda usługa ma własny domyślny adres bazowy i własną zasadę co do tego, czy klucz API jest wymagany. Wśród usług są płatne API chmurowe, takie jak **OpenAI (DALL-E)**, **Stability AI**, **NovelAI** i **Z.AI**. Są też opcje darmowe: **Pollinations** i **Stable Horde**. Działają również serwery lokalne, na przykład **ComfyUI** oraz **SD Web UI (AUTOMATIC1111 / Forge)**.
 
 Pełną listę usług graficznych, ich konfigurację i ustawienia generowania znajdziesz w przewodniku [Dostawcy generowania obrazów i konfiguracja](../media/image-providers.md).
 

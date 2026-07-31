@@ -14,7 +14,7 @@ Przy każdym agencie poniżej znajdziesz trzy szybkie informacje.
 
 Marinara dzieli agentów na trzy kategorie w panelu **Agents**: **Writer Agents**, **Tracker Agents** i **Misc Agents**. Ten przegląd trzyma się tego samego podziału.
 
-Odstęp uruchamiania oznacza, że agent działa raz na kilka wiadomości asystenta, a nie po każdej wiadomości. Odstęp uruchamiania zmienisz w konfiguracji agenta, maksymalnie do 100.
+Odstęp uruchamiania oznacza, że agent działa raz na kilka wiadomości użytkownika i asystenta, a nie po każdej wiadomości. Odstęp uruchamiania zmienisz w konfiguracji agenta, maksymalnie do 100.
 
 ## Agenci piszący
 
@@ -42,7 +42,7 @@ Obserwuje, jak postać zmienia się w trakcie gry, i proponuje zmiany w jej karc
 
 - **Faza**: Post-Processing.
 - **Gdzie działa**: Roleplay.
-- **Najważniejsze ustawienia**: domyślnie działa raz na 8 wiadomości asystenta. Zobacz [Zatwierdzanie zapisów agentów i Agent Suite](approvals-and-agent-suite.md).
+- **Najważniejsze ustawienia**: domyślnie działa raz na 8 wiadomości użytkownika i asystenta. Zobacz [Zatwierdzanie zapisów agentów i Agent Suite](approvals-and-agent-suite.md).
 
 ### Narrative Director
 
@@ -156,7 +156,7 @@ Symuluje publiczność reagującą na żywo na twoją scenę; jej reakcje pokazu
 Wyciąga trwałe wspomnienia ze streszczeń czatu, zapisów o postaciach i lorebooków do skarbca należącego do pakietu, a potem przywołuje pasujący kontekst przed główną odpowiedzią. Obsługuje przeglądanie skarbca w zawężonym zakresie, import źródeł, przegląd oczekujących wersji roboczych oraz umieszczanie przywołanego kontekstu według znacznika w presecie.
 
 - **Integracja**: pakiet funkcji – dokłada kontekst przed generowaniem oraz interfejs zarządzania pamięcią, zamiast działać jak zwykły tracker po wygenerowaniu.
-- **Gdzie działa**: Conversation, Roleplay, Visual Novel i Game. Tryb Visual Novel korzysta z profilu wyciągania danych trybu Roleplay.
+- **Gdzie działa**: Conversation, Roleplay i Game.
 - **Najważniejsze ustawienia**: włączenie, limit tokenów przywołania (128-16,384), maksymalna liczba przywołanych fragmentów (1-100), próg oceny, kontekst ostatnich wiadomości (1-20), styl przywołania oraz wagi semantyczna, leksykalna, grafowa i słów kluczowych, dołączanie rozstrzygniętych wspomnień, wstęp do przywołania, rozumowanie i szczegółowość wyciągania danych, limity generowania, limity źródeł, szablony promptów, wyciąganie słów kluczowych przez AI oraz wyciąganie danych w trybie Game.
 - **Cykl życia danych**: do eksportu lub zastąpienia skarbca, wersji roboczych i ustawień służą przyciski kopii zapasowej w sekcji Memory Settings. Usunięcie wszystkich danych trwale kasuje wspomnienia, wersje robocze, aktywność i indeksy pochodne, ale zachowuje ustawienia. Odinstalowanie pakietu zachowuje skarbiec Long-Term Memory na wypadek ponownej instalacji. Instalacja, aktualizacja i usunięcie wymagają ponownego uruchomienia aplikacji Marinara Engine.
 - **Zgodność**: silnik od wersji `2.3.3` do wersji sprzed `2.4.0`. Pakiet korzysta z uprawnień `agent-runtime`, `chat-read`, `routes`, `storage` i `ui`.
@@ -167,7 +167,7 @@ Odpowiada za generowanie obrazów i wideo. Pisze prompty wizualne do ważnych mo
 
 - **Faza**: Post-Processing.
 - **Gdzie działa**: Roleplay.
-- **Najważniejsze ustawienia**: domyślnie działa raz na 5 wiadomości asystenta. Wśród ustawień są **Prompt Model**, **Image Style**, **Attach Card Appearance** i **Send Avatar References**. Pełną konfigurację opisuje przewodnik [Agent Illustrator](../media/illustrator-agent.md).
+- **Najważniejsze ustawienia**: domyślnie działa raz na 5 wiadomości użytkownika i asystenta. Wśród ustawień są **Prompt Model**, **Image Style**, **Attach Card Appearance** i **Send Avatar References**. Pełną konfigurację opisuje przewodnik [Agent Illustrator](../media/illustrator-agent.md).
 
 ### Lorebook Keeper
 
@@ -175,7 +175,7 @@ Tworzy i aktualizuje wpisy w lorebookach na podstawie ważnych faktów z czatu, 
 
 - **Faza**: Post-Processing.
 - **Gdzie działa**: Roleplay. W trybie Game Mode tę samą pracę na koniec sesji wykonuje wariant **Game Session Keeper**.
-- **Najważniejsze ustawienia**: domyślnie działa raz na 8 wiadomości asystenta. Lista wyboru **Target Lorebook** decyduje, gdzie trafiają wpisy, i ma opcję automatycznego wyboru.
+- **Najważniejsze ustawienia**: domyślnie działa raz na 8 wiadomości użytkownika i asystenta. Lista wyboru **Target Lorebook** decyduje, gdzie trafiają wpisy, i ma opcję automatycznego wyboru.
 
 ### Combat
 

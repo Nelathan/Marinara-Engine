@@ -123,7 +123,7 @@ Para la configuración paso a paso y el interruptor **Treat as local/custom endp
 
 ## Image Generation
 
-**Image Generation** es un proveedor especial. Después de elegirlo, también eliges un **Service** (Servicio), que es el backend de imágenes que hace el trabajo. Cada servicio tiene su propia URL base predeterminada y su propia regla sobre si se requiere una API key. Entre los servicios hay APIs de nube de pago como **OpenAI (DALL-E)**, **Stability AI** y **NovelAI**. También incluye opciones gratuitas como **Pollinations** y **Stable Horde**. Los servidores locales como **ComfyUI** y **SD Web UI (AUTOMATIC1111 / Forge)** también funcionan.
+**Image Generation** es un proveedor especial. Después de elegirlo, también eliges un **Service** (Servicio), que es el backend de imágenes que hace el trabajo. Cada servicio tiene su propia URL base predeterminada y su propia regla sobre si se requiere una API key. Entre los servicios hay APIs de nube de pago como **OpenAI (DALL-E)**, **Stability AI**, **NovelAI** y **Z.AI**. También incluye opciones gratuitas como **Pollinations** y **Stable Horde**. Los servidores locales como **ComfyUI** y **SD Web UI (AUTOMATIC1111 / Forge)** también funcionan.
 
 La lista completa de servicios de imágenes, su configuración y sus ajustes de generación están en [Proveedores y configuración de generación de imágenes](../media/image-providers.md).
 

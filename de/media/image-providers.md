@@ -1,6 +1,6 @@
 # Anbieter für Bildgenerierung und Einrichtung
 
-In dieser Anleitung erfährst du, wie du einen Dienst für Bildgenerierung mit Marinara Engine verbindest. Außerdem steht hier, was die 16 Dienste jeweils brauchen. Die Bildgenerierung liefert Szenenillustrationen, Selfies, Szenenhintergründe sowie generierte Avatare, Porträts und Sprites.
+In dieser Anleitung erfährst du, wie du einen Dienst für Bildgenerierung mit Marinara Engine verbindest. Außerdem steht hier, was die 17 Dienste jeweils brauchen. Die Bildgenerierung liefert Szenenillustrationen, Selfies, Szenenhintergründe sowie generierte Avatare, Porträts und Sprites.
 
 Die Bildgenerierung richtest du als besondere Art von Verbindung ein. Sobald eine Bildverbindung läuft, greift jede Bildfunktion der App darauf zu.
 
@@ -23,7 +23,7 @@ Liefert **Test Image** ein Bild, ist die Verbindung einsatzbereit. Schlägt der 
 
 ## Den passenden Dienst auswählen
 
-Die 16 Dienste teilen sich in drei Gruppen. Cloud-Dienste brauchen einen API-Key und ein Konto. Kostenlose Dienste brauchen keinen Key. Lokale Dienste lassen die Bildsoftware auf dem eigenen Rechner laufen.
+Die 17 Dienste teilen sich in drei Gruppen. Cloud-Dienste brauchen einen API-Key und ein Konto. Kostenlose Dienste brauchen keinen Key. Lokale Dienste lassen die Bildsoftware auf dem eigenen Rechner laufen.
 
 Die Tabelle zeigt alle Dienste auf einen Blick. Details und Eigenheiten folgen weiter unten im Abschnitt zum jeweiligen Dienst.
 
@@ -36,6 +36,7 @@ Die Tabelle zeigt alle Dienste auf einen Blick. Details und Eigenheiten folgen w
 | OpenRouter Images | Ja | Cloud |
 | xAI / Grok Imagine | Ja | Cloud |
 | Venice.ai | Ja | Cloud |
+| Z.AI | Ja | Cloud |
 | Atlas Cloud | Ja | Cloud |
 | NanoGPT | Ja | Cloud |
 | Block Entropy | Ja | Cloud |
@@ -73,6 +74,10 @@ Cloud-Dienst mit der Standard-Base-URL `https://api.x.ai/v1`. Nötig ist ein API
 ## Venice.ai
 
 Cloud-Dienst mit der Standard-Base-URL `https://api.venice.ai/api/v1`. Nötig ist ein API-Key von Venice. Mit **Fetch Models from API** lädst du die Bildmodelle, die dein Konto freischaltet. Marinara nutzt den nativen Bild-Endpunkt von Venice, schaltet den optionalen Safe-Mode-Weichzeichner ab und rechnet die gewünschten Maße automatisch in das Größenformat des jeweiligen Modells um: Pixel, Seitenverhältnis oder Auflösungsstufe. Trotzdem kann eine Anfrage an den Richtlinien des Anbieters oder an Modellgrenzen scheitern.
+
+## Z.AI
+
+Cloud-Dienst mit der Standard-Base-URL `https://api.z.ai/api/paas/v4`. Nötig ist ein allgemeiner API-Key von Z.AI; Keys aus dem GLM Coding Plan und der Endpunkt `/api/coding/paas/v4` taugen nicht für die Bildgenerierung. Mit **Fetch Models from API** wählst du **GLM-Image** oder **CogView 4** aus. Marinara rechnet das gewünschte Seitenverhältnis in eine Größe um, die das gewählte Modell unterstützt, schickt die Anfrage an den nativen Bild-Endpunkt von Z.AI und lädt die temporäre Ergebnis-URL in den lokalen Speicher. Diese erste Fassung beherrscht nur Text-to-Image und schickt keine Referenzbilder mit.
 
 ## Atlas Cloud
 
@@ -170,6 +175,7 @@ Ein **Referenzbild** ist ein vorhandenes Bild, das du zusammen mit dem Prompt sc
 | NovelAI | Bis zu 16, nur V4.5-Modell |
 | xAI / Grok Imagine | Bis zu 3 |
 | Venice.ai | Bei Text-to-Image-Generierung nicht unterstützt |
+| Z.AI | In der aktuellen Text-to-Image-Integration nicht unterstützt |
 | Atlas Cloud | Erstes Bild bei passenden Modell-IDs für Image-to-Image, Edit oder Kontext |
 | NanoGPT | Bis zu 3 |
 | Stability AI | Nur das erste Bild, als Image-to-Image genutzt |

@@ -22,9 +22,9 @@ Roleplay-Storyboards sind vom Illustrator getrennt. Der Illustrator erzeugt weit
 2. Öffne einen Roleplay-Chat und füge **Storyboard** unter **Chat Settings > Agents** hinzu.
 3. Wähle in der Karte Storyboard zwischen **Manual only**, **Still images** und **Animations**.
 4. Wähle die Verbindungen für Prompt, Bild und – wenn gewünscht – Video. Die Bild-Verbindung ist Pflicht.
-5. Für eine Episode von Hand öffnest du die **Gallery** und wählst **Create storyboard**. Automatische Episoden starten nach der eingestellten Zahl neu abgeschlossener KI-Antworten.
+5. Für eine Episode von Hand öffnest du die **Gallery** und wählst **Create storyboard**. Automatische Episoden starten, sobald die eingestellte Zahl an Nachrichten von dir und von der KI zusammengekommen ist und eine KI-Antwort abschließt.
 
-Der Standardwert ist 1, eine automatische Episode kann also nach jeder neu abgeschlossenen KI-Antwort erscheinen. Ein höherer Wert bei **Assistant messages per episode** lässt Dialog und Hin und Her erst einmal anwachsen. Ist das Intervall erreicht, fasst Marinara die Nachrichten seit dem letzten erfolgreichen Storyboard zusammen, begrenzt auf ein Fenster der jüngsten Nachrichten. Beim Öffnen eines bestehenden Chats holt Marinara alte Nachrichten nicht nach. Und eine fehlgeschlagene Episode verschiebt den Ankerpunkt des Takts nicht.
+Der Standardwert ist 1, eine automatische Episode kann also nach jeder neu abgeschlossenen KI-Antwort erscheinen. Ein höherer Wert bei **Messages per episode** lässt Dialog und Hin und Her erst einmal anwachsen. Nachrichten von dir und von der KI zählen beide fürs Intervall. Ist das Intervall erreicht, fasst Marinara die Nachrichten seit dem letzten erfolgreichen Storyboard zusammen, begrenzt auf ein Fenster der jüngsten Nachrichten. Beim Öffnen eines bestehenden Chats holt Marinara alte Nachrichten nicht nach. Und eine fehlgeschlagene Episode verschiebt den Ankerpunkt des Takts nicht.
 
 Roleplay-Keyframes erscheinen direkt im Chat, unter der KI-Antwort, die die Episode abschließt. Umfasst ein Storyboard mehrere Keyframes, blätterst du mit den Pfeilen zwischen den Bildern. Bilder und Clips landen zusätzlich in der Gallery.
 

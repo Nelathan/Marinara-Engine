@@ -168,11 +168,11 @@ Hinweis: Über eine gewöhnliche entfernte Adresse brauchen die datenändernden 
 
 ## Wie funktionieren Storyboard-Animationen?
 
-Ein **Storyboard** macht aus fertigem Erzähltext eine kurze Folge von Keyframe-Bildern und kann animierte Clips ergänzen. Im **Game Mode** folgt es einem fertigen Erzählzug des Game Masters. Im **Roleplay** fasst der Storyboard-Agent neu abgeschlossene Wortwechsel zu einer eingebetteten Episode zusammen – nach einer einstellbaren Anzahl von Assistant-Antworten.
+Ein **Storyboard** macht aus fertigem Erzähltext eine kurze Folge von Keyframe-Bildern und kann animierte Clips ergänzen. Im **Game Mode** folgt es einem fertigen Erzählzug des Game Masters. Im **Roleplay** fasst der Storyboard-Agent neu abgeschlossene Wortwechsel zu einer eingebetteten Episode zusammen – nach einer einstellbaren Anzahl von User- und Assistant-Nachrichten.
 
 Von Hand erstellst du eines so: Öffne die **Gallery** (Galerie) und klick auf **Create storyboard** (Storyboard erstellen). Im Game Mode holst du den Betrachter mit **View storyboard** (Storyboard ansehen) zurück; im Roleplay erscheint das Ergebnis unter der Assistant-Antwort, die die Episode abschließt.
 
-Automatisch geht es so: Öffne die **Chat Settings**, wechsle zu **Agents** und such die Karte **Storyboards**. Der Game Mode hat getrennte Schalter für Illustrationen und Animationen. Im Roleplay stehen **Manual only**, **Still images** und **Animations** zur Wahl, dazu **Assistant messages per episode**. Videoclips brauchen eine Verbindung für Videogenerierung. Beide Abläufe stehen unter [Anleitung zur Storyboard-Engine](game/storyboard.md).
+Automatisch geht es so: Öffne die **Chat Settings**, wechsle zu **Agents** und such die Karte **Storyboards**. Der Game Mode hat getrennte Schalter für Illustrationen und Animationen. Im Roleplay stehen **Manual only**, **Still images** und **Animations** zur Wahl, dazu **Messages per episode**. Dieses Feld zählt User- und Assistant-Nachrichten zusammen. Videoclips brauchen eine Verbindung für Videogenerierung. Beide Abläufe stehen unter [Anleitung zur Storyboard-Engine](game/storyboard.md).
 
 ## Können Charaktere in einem Anruf laut sprechen?
 

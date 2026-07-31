@@ -54,7 +54,7 @@ A diferencia de **Push Story**, que actúa una vez, **Secret Plot** se ejecuta a
 
 ### Run Interval
 
-Cuando **Secret Plot** está activado, aparece un campo **Run Interval**. Esto establece cuántas respuestas pasan entre actualizaciones del arco oculto. El número se cuenta en mensajes del asistente, que son las respuestas del personaje.
+Cuando **Secret Plot** está activado, aparece un campo **Run Interval**. Esto establece cuántos mensajes del usuario y del asistente pasan entre actualizaciones del arco oculto.
 
 El predeterminado es 8. Puedes establecer cualquier número entero del 1 al 100. Un número más bajo actualiza el plan con más frecuencia. Un número más alto lo actualiza con menos frecuencia.
 

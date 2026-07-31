@@ -54,7 +54,7 @@ Contrairement à **Push Story**, qui agit une seule fois, **Secret Plot** s'éte
 
 ### Run Interval
 
-Quand **Secret Plot** est activé, un champ **Run Interval** (intervalle d'exécution) apparaît. Il détermine le nombre de réponses qui s'écoulent entre deux mises à jour de l'arc caché. Le compte porte sur les messages de l'assistant, c'est-à-dire les réponses du personnage.
+Quand **Secret Plot** est activé, un champ **Run Interval** (intervalle d'exécution) apparaît. Il détermine le nombre de messages, les tiens comme ceux de l'assistant, qui s'écoulent entre deux mises à jour de l'arc caché.
 
 La valeur par défaut est 8. Tu peux saisir n'importe quel nombre entier de 1 à 100. Plus le nombre est bas, plus le plan se met à jour souvent. Plus il est élevé, moins les mises à jour sont fréquentes.
 

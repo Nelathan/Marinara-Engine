@@ -34,7 +34,7 @@ npm install -g corepack
 
 ### Windows: `'pnpm' is not recognized` durante a compilação do pacote compartilhado
 
-Na versão 2.3.0, Marinara conseguia iniciar o pnpm pelo Corepack e depois falhava na compilação do pacote compartilhado, porque essa etapa tentava executar um segundo pnpm global. A versão 2.3.1 remove essa exigência aninhada. Feche o inicializador que falhou e rode `start.bat` outra vez, para que ele baixe o script de compilação corrigido antes de recompilar. Não é preciso remover nenhum dado.
+Na versão 2.3.0, Marinara conseguia iniciar o pnpm pelo Corepack e depois falhava na compilação do pacote compartilhado, porque essa etapa tentava executar um segundo executável `pnpm` global. A versão 2.3.1 remove essa exigência aninhada. Feche o inicializador que falhou e rode `start.bat` outra vez, para que ele baixe o script de compilação corrigido antes de recompilar. Não é preciso remover nenhum dado.
 
 Se o próprio checkout não conseguir atualizar, rode `git pull` na pasta do Marinara e inicie de novo. Como solução temporária na versão 2.3.0, instale globalmente a versão fixada do gerenciador de pacotes, rode o inicializador outra vez e depois atualize normalmente:
 
@@ -193,7 +193,7 @@ Os storyboards do Game Mode transformam uma narração concluída do GM em image
 
 - Para um vídeo de cena manual, gere ou faça upload de uma imagem na **Gallery** e depois use a ação **Video** ou **Animate** dessa imagem. A **Gallery** separa **Images** e **Videos** em abas, então confira a aba **Videos**.
 - Para os storyboards automáticos do Game Mode, abra **Chat Settings** > **Agents** > **Storyboards** e confirme que a opção **Automatic Storyboard Illustrations** está ligada. Ligue também **Automatic Storyboard Animations** se quiser os vídeos.
-- No Roleplay, adicione o agente **Storyboard** ao chat. Escolha **Still images** ou **Animations**, defina o campo **Assistant messages per episode** e selecione a conexão de imagem do Storyboard. A opção **Manual only** roda pelo botão **Create storyboard** da Gallery.
+- No Roleplay, adicione o agente **Storyboard** ao chat. Escolha **Still images** ou **Animations**, defina o campo **Messages per episode** e selecione a conexão de imagem do Storyboard. A opção **Manual only** roda pelo botão **Create storyboard** da Gallery.
 - As imagens de quadro-chave precisam de uma conexão de imagem. Os vídeos precisam ainda de uma conexão de vídeo.
 - Se um prompt personalizado funciona melhor com todos os personagens juntos, desligue a opção **Use NovelAI Character Prompts**.
 - Provedores lentos podem estourar o tempo limite. Aumente `IMAGE_GEN_TIMEOUT_MS` ou `VIDEO_GEN_TIMEOUT_MS` no arquivo `.env` e reinicie Marinara. O servidor só lê esses valores na inicialização.

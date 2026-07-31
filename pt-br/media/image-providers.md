@@ -1,6 +1,6 @@
 # Provedores de geração de imagens e configuração
 
-Neste guia você aprende a conectar um serviço de geração de imagens ao Marinara Engine. Ele também mostra o que cada um dos 16 serviços exige. A geração de imagens alimenta as ilustrações de cena, as selfies, os planos de fundo de cena e os avatares, retratos e sprites gerados.
+Neste guia você aprende a conectar um serviço de geração de imagens ao Marinara Engine. Ele também mostra o que cada um dos 17 serviços exige. A geração de imagens alimenta as ilustrações de cena, as selfies, os planos de fundo de cena e os avatares, retratos e sprites gerados.
 
 A geração de imagens é configurada como um tipo especial de conexão. Depois que uma conexão de imagem funciona, todos os recursos de imagem do aplicativo podem usá-la.
 
@@ -23,7 +23,7 @@ Se o botão **Test Image** devolver uma figura, a conexão está pronta. Se falh
 
 ## Como escolher um serviço
 
-Os 16 serviços se dividem em três grupos. Os serviços de nuvem exigem uma chave de API e uma conta. Os serviços gratuitos não exigem chave. Os serviços locais rodam um programa de imagens no seu próprio computador.
+Os 17 serviços se dividem em três grupos. Os serviços de nuvem exigem uma chave de API e uma conta. Os serviços gratuitos não exigem chave. Os serviços locais rodam um programa de imagens no seu próprio computador.
 
 A tabela abaixo mostra cada serviço de relance. Os detalhes e as particularidades vêm nas seções de cada serviço.
 
@@ -36,6 +36,7 @@ A tabela abaixo mostra cada serviço de relance. Os detalhes e as particularidad
 | OpenRouter Images | Sim | Nuvem |
 | xAI / Grok Imagine | Sim | Nuvem |
 | Venice.ai | Sim | Nuvem |
+| Z.AI | Sim | Nuvem |
 | Atlas Cloud | Sim | Nuvem |
 | NanoGPT | Sim | Nuvem |
 | Block Entropy | Sim | Nuvem |
@@ -73,6 +74,10 @@ Serviço de nuvem com a Base URL padrão `https://api.x.ai/v1`. Exige uma chave 
 ## Venice.ai
 
 Serviço de nuvem com a Base URL padrão `https://api.venice.ai/api/v1`. Exige uma chave de API da Venice. Use **Fetch Models from API** para carregar os modelos de imagem disponíveis na sua conta. Marinara usa o endpoint de imagem nativo da Venice, desativa o desfoque opcional do modo seguro da Venice e converte automaticamente as dimensões pedidas para o formato de tamanho de cada modelo, seja em pixels, em proporção de tela ou em faixas de resolução. Ainda assim, as políticas do provedor ou os limites do modelo podem recusar uma requisição.
+
+## Z.AI
+
+Serviço de nuvem com a Base URL padrão `https://api.z.ai/api/paas/v4`. Exige uma chave de API comum da Z.AI; as chaves do GLM Coding Plan e o endpoint `/api/coding/paas/v4` não valem para a geração de imagens. Use **Fetch Models from API** para escolher **GLM-Image** ou **CogView 4**. Marinara converte a proporção de tela pedida para um tamanho aceito pelo modelo escolhido, envia a requisição ao endpoint de imagem nativo da Z.AI e baixa para o armazenamento local a URL temporária do resultado. Esta primeira versão só faz texto para imagem e não envia imagens de referência.
 
 ## Atlas Cloud
 
@@ -170,6 +175,7 @@ Uma **imagem de referência** é uma figura já existente que você envia junto 
 | NovelAI | Até 16, somente no modelo V4.5 |
 | xAI / Grok Imagine | Até 3 |
 | Venice.ai | Sem suporte na geração de texto para imagem |
+| Z.AI | Sem suporte na integração atual de texto para imagem |
 | Atlas Cloud | Primeira imagem, em IDs de modelo compatíveis com imagem para imagem, edição ou Kontext |
 | NanoGPT | Até 3 |
 | Stability AI | Somente a primeira imagem, usada como imagem para imagem |

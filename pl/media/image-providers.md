@@ -1,6 +1,6 @@
 # Dostawcy generowania obrazów i konfiguracja
 
-Ten przewodnik wyjaśnia, jak podłączyć usługę generowania obrazów do aplikacji Marinara Engine. Opisuje też, czego wymaga każda z 16 usług. Na generowaniu obrazów opierają się ilustracje scen, selfie, tła scen oraz generowane awatary, portrety i sprite'y.
+Ten przewodnik wyjaśnia, jak podłączyć usługę generowania obrazów do aplikacji Marinara Engine. Opisuje też, czego wymaga każda z 17 usług. Na generowaniu obrazów opierają się ilustracje scen, selfie, tła scen oraz generowane awatary, portrety i sprite'y.
 
 Generowanie obrazów konfiguruje się jako szczególny rodzaj połączenia. Kiedy jedno połączenie do obrazów działa, może z niego korzystać każda funkcja graficzna w aplikacji.
 
@@ -23,7 +23,7 @@ Jeśli po kliknięciu **Test Image** pojawi się obrazek, połączenie jest goto
 
 ## Wybór usługi
 
-Te 16 usług dzieli się na trzy grupy. Usługi w chmurze wymagają klucza API i konta. Usługi darmowe nie potrzebują klucza. Usługi lokalne uruchamiają program do obrazów na twoim własnym komputerze.
+Te 17 usług dzieli się na trzy grupy. Usługi w chmurze wymagają klucza API i konta. Usługi darmowe nie potrzebują klucza. Usługi lokalne uruchamiają program do obrazów na twoim własnym komputerze.
 
 Tabela poniżej pokazuje wszystkie usługi w skrócie. Szczegóły i haczyki opisują dalsze sekcje, po jednej na usługę.
 
@@ -36,6 +36,7 @@ Tabela poniżej pokazuje wszystkie usługi w skrócie. Szczegóły i haczyki opi
 | OpenRouter Images | Tak | Chmura |
 | xAI / Grok Imagine | Tak | Chmura |
 | Venice.ai | Tak | Chmura |
+| Z.AI | Tak | Chmura |
 | Atlas Cloud | Tak | Chmura |
 | NanoGPT | Tak | Chmura |
 | Block Entropy | Tak | Chmura |
@@ -73,6 +74,10 @@ Usługa w chmurze z domyślnym adresem `https://api.x.ai/v1` w polu **Base URL**
 ## Venice.ai
 
 Usługa w chmurze z domyślnym adresem `https://api.venice.ai/api/v1` w polu **Base URL**. Wymaga klucza API do usługi Venice. Kliknij przycisk **Fetch Models from API**, żeby wczytać modele graficzne dostępne na twoim koncie. Marinara korzysta z natywnego punktu końcowego Venice, wyłącza opcjonalne rozmycie trybu bezpiecznego i sama dopasowuje żądane wymiary do formatu wielkości używanego przez dany model: pikseli, proporcji albo poziomu rozdzielczości. Mimo to zasady po stronie dostawcy lub limity modelu nadal mogą odrzucić żądanie.
+
+## Z.AI
+
+Usługa w chmurze z domyślnym adresem `https://api.z.ai/api/paas/v4` w polu **Base URL**. Wymaga zwykłego klucza API do usługi Z.AI. Klucze z planu GLM Coding Plan oraz punkt końcowy `/api/coding/paas/v4` nie nadają się do generowania obrazów. Kliknij przycisk **Fetch Models from API**, żeby wybrać model **GLM-Image** albo **CogView 4**. Marinara dopasowuje żądane proporcje do rozmiaru obsługiwanego przez wybrany model, wysyła żądanie do natywnego punktu końcowego Z.AI i pobiera tymczasowy adres wyniku do pamięci lokalnej. Ta pierwsza wersja obsługuje tylko zamianę tekstu na obraz i nie wysyła obrazów referencyjnych.
 
 ## Atlas Cloud
 
@@ -170,6 +175,7 @@ Każda usługa ma też pola tekstowe **Prompt Prefix** oraz **Negative Prefix**.
 | NovelAI | Do 16, tylko model V4.5 |
 | xAI / Grok Imagine | Do 3 |
 | Venice.ai | Nieobsługiwane przy zamianie tekstu na obraz |
+| Z.AI | Nieobsługiwane w obecnej integracji zamiany tekstu na obraz |
 | Atlas Cloud | Pierwszy obraz, przy zgodnych identyfikatorach modeli do zamiany obrazu na obraz, edycji lub trybu Kontext |
 | NanoGPT | Do 3 |
 | Stability AI | Tylko pierwszy obraz, użyty do zamiany obrazu na obraz |

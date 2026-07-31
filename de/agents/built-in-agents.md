@@ -14,7 +14,7 @@ Zu jedem Agenten unten gibt es drei Kurzangaben.
 
 Marinara sortiert die Agenten im Panel **Agents** in drei Kategorien: **Writer Agents**, **Tracker Agents** und **Misc Agents**. Diese Referenz übernimmt dieselbe Einteilung.
 
-Ein Laufintervall bedeutet: Der Agent läuft nur alle paar Assistenten-Nachrichten statt nach jeder Nachricht. Das Intervall lässt sich in der Einrichtung des Agenten ändern, bis maximal 100.
+Ein Laufintervall bedeutet: Der Agent läuft nur alle paar Nutzer- und Assistenten-Nachrichten statt nach jeder Nachricht. Das Intervall lässt sich in der Einrichtung des Agenten ändern, bis maximal 100.
 
 ## Writer-Agenten
 
@@ -42,7 +42,7 @@ Beobachtet, wie sich ein Charakter im Spiel verändert, und schlägt Änderungen
 
 - **Phase**: Post-Processing.
 - **Wo er funktioniert**: Roleplay.
-- **Wichtige Einstellungen**: Standardmäßig läuft er alle 8 Assistenten-Nachrichten. Siehe [Agenten-Freigaben und die Agent Suite](approvals-and-agent-suite.md).
+- **Wichtige Einstellungen**: Standardmäßig läuft er alle 8 Nutzer- und Assistenten-Nachrichten. Siehe [Agenten-Freigaben und die Agent Suite](approvals-and-agent-suite.md).
 
 ### Narrative Director
 
@@ -156,9 +156,9 @@ Simuliert ein Live-Publikum, das auf die Szene reagiert – sichtbar als schwebe
 Extrahiert dauerhafte Erinnerungen aus Chat-Zusammenfassungen, Charakteraufzeichnungen und Lorebooks in einen paketeigenen Speicher und ruft vor der Hauptantwort passenden Kontext ab. Der Agent unterstützt das gefilterte Durchsuchen des Speichers, den Import von Quellen, die Prüfung ausstehender Entwürfe und das Platzieren abgerufenen Kontexts über eine Preset-Markierung.
 
 - **Integration**: Funktionspaket; es liefert Kontext vor der Generierung und eine Oberfläche zur Speicherverwaltung, statt wie ein gewöhnlicher Tracker nach der Generierung zu laufen.
-- **Wo er funktioniert**: Conversation, Roleplay, Visual Novel und Game. Visual Novel verwendet das Extraktionsprofil von Roleplay.
+- **Wo es funktioniert**: Conversation, Roleplay und Game.
 - **Wichtige Einstellungen**: Aktivierung, Token-Budget für den Abruf (128–16.384), Höchstzahl abgerufener Abschnitte (1–100), Bewertungsschwelle, Kontext der letzten Nachrichten (1–20), Abrufstil sowie semantische, lexikalische, Graph- und Schlüsselwortgewichtung, Einbeziehung erledigter Erinnerungen, Abruf-Präambel, Reasoning und Ausführlichkeit der Extraktion, Generierungsgrenzen, Quellengrenzen, Prompt-Vorlagen, KI-Schlüsselwortextraktion und Extraktion im Game Mode.
-- **Datenlebenszyklus**: Mit den Backup-Bedienelementen unter Memory Settings exportierst oder ersetzt du Speicher, Entwürfe und Einstellungen. **Delete all data** löscht Erinnerungen, Entwürfe, Aktivität und abgeleitete Indizes dauerhaft, behält aber die Einstellungen. Beim Deinstallieren bleibt der Long-Term-Memory-Speicher für eine spätere Neuinstallation erhalten. Installation, Aktualisierung und Entfernung erfordern einen Neustart von Marinara.
+- **Datenlebenszyklus**: Mit den Backup-Bedienelementen unter Memory Settings exportierst oder ersetzt du Speicher, Entwürfe und Einstellungen. Delete all data löscht Erinnerungen, Entwürfe, Aktivität und abgeleitete Indizes dauerhaft, behält aber die Einstellungen. Beim Deinstallieren bleibt der Long-Term-Memory-Speicher für eine spätere Neuinstallation erhalten. Installation, Aktualisierung und Entfernung erfordern einen Neustart von Marinara.
 - **Kompatibilität**: Engine `2.3.3` bis ausschließlich `2.4.0`. Das Paket verwendet die Berechtigungen `agent-runtime`, `chat-read`, `routes`, `storage` und `ui`.
 
 ### Illustrator
@@ -167,7 +167,7 @@ Zuständig für Bild- und Videogenerierung. Er schreibt visuelle Prompts für wi
 
 - **Phase**: Post-Processing.
 - **Wo er funktioniert**: Roleplay.
-- **Wichtige Einstellungen**: Standardmäßig läuft er alle 5 Assistenten-Nachrichten. Zu den Einstellungen gehören **Prompt Model**, **Image Style**, **Attach Card Appearance** und **Send Avatar References**. Die komplette Einrichtung steht unter [Illustrator-Agent](../media/illustrator-agent.md).
+- **Wichtige Einstellungen**: Standardmäßig läuft er alle 5 Nutzer- und Assistenten-Nachrichten. Zu den Einstellungen gehören **Prompt Model**, **Image Style**, **Attach Card Appearance** und **Send Avatar References**. Die komplette Einrichtung steht unter [Illustrator-Agent](../media/illustrator-agent.md).
 
 ### Lorebook Keeper
 
@@ -175,7 +175,7 @@ Legt Lorebook-Einträge aus wichtigen Fakten des Chats an und aktualisiert sie, 
 
 - **Phase**: Post-Processing.
 - **Wo er funktioniert**: Roleplay. Im Game Mode erledigt die Variante **Game Session Keeper** dieselbe Aufgabe am Ende einer Sitzung.
-- **Wichtige Einstellungen**: Standardmäßig läuft er alle 8 Assistenten-Nachrichten. Die Auswahl **Target Lorebook** bestimmt, wo die Einträge landen – wahlweise automatisch.
+- **Wichtige Einstellungen**: Standardmäßig läuft er alle 8 Nutzer- und Assistenten-Nachrichten. Die Auswahl **Target Lorebook** bestimmt, wo die Einträge landen – wahlweise automatisch.
 
 ### Combat
 

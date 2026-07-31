@@ -6,7 +6,7 @@ Este guia explica o **Illustrator** (ilustrador), um ajudante embutido que desen
 
 Um agente é um pequeno ajudante de IA que roda automaticamente dentro de um chat. O **Illustrator** é um agente de pós-processamento, ou seja, entra em ação depois que a IA termina cada resposta. Ele lê a resposta mais recente e decide se aquele momento merece uma imagem. Quando merece, o Illustrator escreve um prompt de imagem (o texto que Marinara envia para a IA) e manda para o provedor de imagens. O prompt é a descrição em texto que diz ao modelo de imagem o que desenhar.
 
-O Illustrator não desenha a cada mensagem. Por padrão, depois de criar uma imagem ele espera cerca de 5 respostas aceitas da IA antes de criar outra. Dar swipe (resposta alternativa) ou regenerar a mesma resposta não faz esse intervalo avançar. Se ele achar que o momento não vale uma ilustração, pula e não gera nada. Toda imagem criada vai para a galeria do chat, na seção **Gallery** (galeria).
+O Illustrator não desenha a cada mensagem. Por padrão, depois de criar uma imagem ele espera 5 mensagens aceitas, do usuário e da IA, antes de criar outra. Dar swipe (resposta alternativa) ou regenerar a mesma resposta não faz esse intervalo avançar. Se ele achar que o momento não vale uma ilustração, pula e não gera nada. Toda imagem criada vai para a galeria do chat, na seção **Gallery** (galeria).
 
 O Illustrator funciona em chats de **Roleplay** e **Game Mode**, e instalar o agente também libera as selfies do Conversation Mode. A descrição curta dele no aplicativo diz: "Responsible for image and video generations." Os passos de configuração e as opções deste guia valem para os chats de Roleplay. Game Mode usa um único botão liga/desliga, explicado na seção de Game Mode mais abaixo.
 
@@ -57,7 +57,7 @@ O Illustrator usa duas conexões diferentes, e vale a pena não confundir uma co
 
 O **Prompt Model** é o modelo de texto que escreve o prompt de imagem. Não é o modelo que desenha a imagem. Escolha no menu suspenso **Prompt Model**, no card do Illustrator. O padrão é **Main chat model**, que reaproveita a mesma conexão já usada pelo chat. Escolha outra conexão de texto se preferir que outro modelo escreva os prompts.
 
-A conexão de imagem é o provedor de imagens que desenha a imagem final. Você define essa conexão como descrito em "Antes de começar": em **Defaults → Images** ou na tela de configuração do próprio agente.
+A conexão de imagem é o provedor de imagens que desenha a imagem final. Você define essa conexão como descrito em **Antes de começar**: em **Defaults → Images** ou na tela de configuração do próprio agente.
 
 ## Attach Card Appearance e Send Avatar References
 

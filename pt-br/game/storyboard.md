@@ -20,13 +20,13 @@ No Roleplay, o storyboard é independente do Illustrator. O Illustrator continua
 
 1. Instale o agente **Storyboard** em **Agents > Download Agents**.
 2. Abra um chat em Roleplay e acrescente o agente **Storyboard** em **Chat Settings > Agents**.
-3. Na seção **Storyboard**, escolha **Manual only**, **Still images** ou **Animations**.
+3. Na seção Storyboard, escolha **Manual only**, **Still images** ou **Animations**.
 4. Selecione a conexão de prompt, a de imagem e, se quiser, a de vídeo. A conexão de imagem é obrigatória.
-5. Para um episódio manual, abra a **Gallery** e clique em **Create storyboard**. Os episódios automáticos rodam depois do número configurado de novas respostas concluídas do assistente.
+5. Para um episódio manual, abra a **Gallery** e clique em **Create storyboard**. Os episódios automáticos rodam quando o número configurado de mensagens do usuário e do assistente se acumula e uma resposta do assistente termina.
 
-O intervalo padrão é 1, ou seja, um episódio automático pode surgir a cada nova resposta concluída do assistente. Um valor maior no campo **Assistant messages per episode** deixa o diálogo e a troca de mensagens se acumularem. Ao atingir o intervalo, Marinara junta as mensagens desde o último Storyboard bem-sucedido, dentro de uma janela recente limitada. Abrir um chat existente não recupera as mensagens antigas, e um episódio que falha não avança o marco de cadência.
+O intervalo padrão é 1, ou seja, um episódio automático pode surgir a cada nova resposta concluída do assistente. Um valor maior no campo **Messages per episode** deixa o diálogo e a troca de mensagens se acumularem. As mensagens do usuário e as do assistente avançam o intervalo. Ao atingir o intervalo, Marinara junta as mensagens desde o último Storyboard bem-sucedido, dentro de uma janela recente limitada. Abrir um chat existente não recupera as mensagens antigas, e um episódio que falha não avança o marco de cadência.
 
-No Roleplay, os quadros-chave aparecem logo depois da resposta do assistente que encerra o episódio. Nos storyboards com vários quadros-chave, use as setas para passar de um quadro para outro. As imagens e os clipes também são salvos na **Gallery**.
+No Roleplay, os quadros-chave aparecem logo depois da resposta do assistente que encerra o episódio. Nos storyboards com vários quadros-chave, use as setas para passar de um quadro para outro. As imagens e os clipes também são salvos na Gallery.
 
 O planejamento no Roleplay tem quatro camadas editáveis nas configurações globais em **Agents > Storyboard**:
 
@@ -35,7 +35,7 @@ O planejamento no Roleplay tem quatro camadas editáveis nas configurações glo
 - **Animation addon** entra apenas nos storyboards animados. Ele trata a ilustração como o quadro exato de T=0 e depois descreve uma ação simples, o comportamento da câmera, o diálogo de origem, os efeitos sonoros, o ambiente e uma pausa no fim.
 - **Output contract** define o JSON de quadros-chave que o modelo de planejamento devolve.
 
-Esses prompts do Roleplay não substituem a biblioteca otimizada de planejadores do Game Mode. Os formatadores dos provedores de imagem e de vídeo continuam compartilhados e podem ser selecionados. O plano de animação é neutro em relação ao provedor, então ele pode usar Google Gemini Omni, LTX/ComfyUI ou outra conexão **Video Generation** configurada que aceite pedidos de imagem para vídeo. Ainda assim, os recursos de cada provedor e a qualidade do resultado variam.
+Esses prompts do Roleplay não substituem a biblioteca otimizada de planejadores do Game Mode. Os formatadores dos provedores de imagem e de vídeo continuam compartilhados e podem ser selecionados. O plano de animação é neutro em relação ao provedor, então ele pode usar Google Gemini Omni, LTX/ComfyUI ou outra conexão Video Generation configurada que aceite pedidos de imagem para vídeo. Ainda assim, os recursos de cada provedor e a qualidade do resultado variam.
 
 ## Storyboards no Game Mode
 

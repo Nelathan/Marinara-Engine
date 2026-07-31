@@ -38,6 +38,7 @@ Estas macros trazem os nomes e os campos do card de quem fala e do personagem qu
 | `{{user}}` / `{{userName}}` | O nome de exibição atual (ou o nome da persona). Sem persona definida, o padrão é `User`. |
 | `{{userNamePhonetic}}` | O nome Phonetic da persona, ou `{{user}}` quando esse campo está vazio. |
 | `{{char}}` / `{{charName}}` | O nome do personagem atual. O padrão é `Character`. |
+| `{{<21-character-card-ID>}}` | Sintaxe de marcador para o nome de outro card de personagem. Troque o texto entre colchetes angulares pelo ID exato de 21 caracteres desse card. |
 | `{{charNamePhonetic}}` | O nome Phonetic do personagem, ou `{{char}}` quando esse campo está vazio. |
 | `{{characters}}` | Todos os personagens do chat, separados por vírgulas. |
 | `{{group}}` | Todos os outros personagens ativos do chat em grupo, sem contar quem está respondendo. A persona não faz parte dessa lista de personagens. |
@@ -66,6 +67,8 @@ Em um chat com um só personagem, essas macros apontam para ele. No chat em grup
 A macro `{{group}}` acompanha o personagem que está respondendo no momento, inclusive durante gerações individuais dentro do grupo. Por exemplo: se Pantalone responde em um grupo de Roleplay formado por Powers That Be, Maukie e Pantalone, `{{group}}` resulta em `Powers That Be, Maukie`. Um card de personagem continua nessa lista mesmo que o nome dele coincida com `{{user}}`.
 
 O campo Phonetic tem duas funções. Ele define como o nome é pronunciado na conversão de texto em voz. E também alimenta as macros `{{charNamePhonetic}}` e `{{userNamePhonetic}}`. O campo aparece tanto no **Character Editor** quanto no **Persona Editor**.
+
+Para citar um personagem que não está no chat atual, copie o ID do card dele e coloque esse ID direto entre chaves duplas, como `{{V1StGXR8_Z5jdHi6B-myT}}`. Marinara troca a macro pelo nome do card e adiciona ao prompt de sistema o contexto de personagem do card citado. As saudações iniciais e os diálogos de exemplo desse card ficam de fora. Os lorebooks ativados que estão ligados a esse card continuam sujeitos às regras normais de palavras-chave, entradas **Constant**, filtros, probabilidade e orçamento de tokens.
 
 ## Macros do Conversation Mode
 

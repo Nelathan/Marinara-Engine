@@ -14,7 +14,7 @@ Cada agente de abajo muestra tres datos rápidos.
 
 Marinara agrupa sus agentes en tres categorías en el panel **Agents**: **Writer Agents** (agentes escritores), **Tracker Agents** (agentes de seguimiento) y **Misc Agents** (agentes varios). Esta referencia usa la misma agrupación.
 
-Un intervalo de ejecución significa que el agente se ejecuta una vez cada varios mensajes del asistente en lugar de después de cada mensaje. Puedes cambiar un intervalo de ejecución en la configuración del agente, hasta 100.
+Un intervalo de ejecución significa que el agente se ejecuta una vez cada varios mensajes del usuario y del asistente en lugar de después de cada mensaje. Puedes cambiar un intervalo de ejecución en la configuración del agente, hasta 100.
 
 ## Writer agents
 
@@ -42,7 +42,7 @@ Observa cómo cambia un personaje durante el juego y sugiere ediciones a la tarj
 
 - **Fase**: Post-Processing.
 - **Dónde funciona**: Roleplay.
-- **Ajustes clave**: se ejecuta una vez cada 8 mensajes del asistente de forma predeterminada. Consulta [Aprobaciones de agentes y el Agent Suite](approvals-and-agent-suite.md).
+- **Ajustes clave**: se ejecuta una vez cada 8 mensajes del usuario y del asistente de forma predeterminada. Consulta [Aprobaciones de agentes y el Agent Suite](approvals-and-agent-suite.md).
 
 ### Narrative Director
 
@@ -156,9 +156,9 @@ Simula un público en vivo que reacciona a tu escena, mostrado como un widget fl
 Extrae recuerdos duraderos de los resúmenes del chat, los registros de personajes y los lorebooks a un almacén propio del paquete y recupera el contexto pertinente antes de la respuesta principal. Permite explorar el almacén por ámbito, importar fuentes, revisar borradores pendientes y colocar el contexto recuperado mediante un marcador del preset.
 
 - **Integración**: paquete de funciones; aporta contexto previo a la generación y una interfaz para gestionar la memoria, en vez de ejecutarse como un tracker normal después de la generación.
-- **Dónde funciona**: Conversation, Roleplay, Visual Novel y Game. Visual Novel usa el perfil de extracción de Roleplay.
+- **Dónde funciona**: Conversation, Roleplay y Game.
 - **Ajustes clave**: activación, presupuesto de tokens de recuperación (128–16.384), cantidad máxima de fragmentos recuperados (1–100), umbral de puntuación, contexto de mensajes recientes (1–20), estilo de recuperación y pesos semántico, léxico, de grafo y de palabras clave, inclusión de recuerdos resueltos, preámbulo de recuperación, razonamiento y nivel de detalle de la extracción, límites de generación, límites de fuentes, plantillas de prompt, extracción de palabras clave mediante IA y extracción en Game Mode.
-- **Ciclo de vida de los datos**: usa los controles de copia de seguridad de Memory Settings para exportar o sustituir el almacén, los borradores y los ajustes. **Delete all data** elimina de forma permanente los recuerdos, los borradores, la actividad y los índices derivados, pero conserva los ajustes. Al desinstalar el paquete se conserva el almacén de Long-Term Memory para una instalación posterior. Instalarlo, actualizarlo o eliminarlo requiere reiniciar Marinara.
+- **Ciclo de vida de los datos**: usa los controles de copia de seguridad de Memory Settings para exportar o sustituir el almacén, los borradores y los ajustes. Delete all data elimina de forma permanente los recuerdos, los borradores, la actividad y los índices derivados, pero conserva los ajustes. Al desinstalar el paquete se conserva el almacén de Long-Term Memory para una instalación posterior. Instalarlo, actualizarlo o eliminarlo requiere reiniciar Marinara.
 - **Compatibilidad**: Engine `2.3.3` hasta antes de `2.4.0`. El paquete usa los permisos `agent-runtime`, `chat-read`, `routes`, `storage` y `ui`.
 
 ### Illustrator
@@ -167,7 +167,7 @@ Responsable de las generaciones de imágenes y video. Escribe prompts visuales p
 
 - **Fase**: Post-Processing.
 - **Dónde funciona**: Roleplay.
-- **Ajustes clave**: se ejecuta una vez cada 5 mensajes del asistente de forma predeterminada. Los ajustes incluyen **Prompt Model** (modelo de prompt), **Image Style** (estilo de imagen), **Attach Card Appearance** (adjuntar la apariencia de la tarjeta) y **Send Avatar References** (enviar referencias de avatar). Para la configuración completa, consulta [Agente Illustrator](../media/illustrator-agent.md).
+- **Ajustes clave**: se ejecuta una vez cada 5 mensajes del usuario y del asistente de forma predeterminada. Los ajustes incluyen **Prompt Model** (modelo de prompt), **Image Style** (estilo de imagen), **Attach Card Appearance** (adjuntar la apariencia de la tarjeta) y **Send Avatar References** (enviar referencias de avatar). Para la configuración completa, consulta [Agente Illustrator](../media/illustrator-agent.md).
 
 ### Lorebook Keeper
 
@@ -175,7 +175,7 @@ Crea y actualiza entradas de lorebook a partir de datos importantes de tu chat, 
 
 - **Fase**: Post-Processing.
 - **Dónde funciona**: Roleplay. En Game Mode, una variante de fin de sesión llamada **Game Session Keeper** hace el mismo trabajo al final de una sesión.
-- **Ajustes clave**: se ejecuta una vez cada 8 mensajes del asistente de forma predeterminada. Un selector **Target Lorebook** (lorebook de destino) elige a dónde van las entradas, con una opción de selección automática.
+- **Ajustes clave**: se ejecuta una vez cada 8 mensajes del usuario y del asistente de forma predeterminada. Un selector **Target Lorebook** (lorebook de destino) elige a dónde van las entradas, con una opción de selección automática.
 
 ### Combat
 

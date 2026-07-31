@@ -22,9 +22,9 @@ Storyboardy w trybie Roleplay to co innego niż Illustrator. Illustrator dalej t
 2. Otwórz czat w trybie Roleplay, a potem dodaj agenta **Storyboard** w **Chat Settings > Agents**.
 3. W sekcji **Storyboard** wybierz **Manual only**, **Still images** albo **Animations**.
 4. Wskaż połączenie promptu, połączenie obrazowe i opcjonalnie połączenie wideo. Połączenie obrazowe jest wymagane.
-5. Odcinek ręczny: otwórz panel **Gallery** i kliknij przycisk **Create storyboard**. Odcinki automatyczne uruchamiają się po ustawionej liczbie nowych zakończonych odpowiedzi AI.
+5. Odcinek ręczny: otwórz panel **Gallery** i kliknij przycisk **Create storyboard**. Odcinki automatyczne uruchamiają się, gdy uzbiera się ustawiona liczba wiadomości użytkownika i AI, a odpowiedź AI dobiegnie końca.
 
-Domyślny odstęp to 1, więc odcinek automatyczny może pojawiać się po każdej nowo zakończonej odpowiedzi AI. Większa wartość w polu **Assistant messages per episode** daje miejsce na dialog i wymianę zdań. Po osiągnięciu odstępu Marinara łączy wiadomości od poprzedniego udanego storyboardu, w granicach ograniczonego okna ostatnich wiadomości. Otwarcie istniejącego czatu nie uzupełnia starych wiadomości wstecz, a nieudany odcinek nie przesuwa punktu odniesienia dla kolejnych odcinków.
+Domyślny odstęp to 1, więc odcinek automatyczny może pojawiać się po każdej nowo zakończonej odpowiedzi AI. Większa wartość w polu **Messages per episode** daje miejsce na dialog i wymianę zdań. Odstęp przesuwają zarówno wiadomości użytkownika, jak i wiadomości AI. Po osiągnięciu odstępu Marinara łączy wiadomości od poprzedniego udanego storyboardu, w granicach ograniczonego okna ostatnich wiadomości. Otwarcie istniejącego czatu nie uzupełnia starych wiadomości wstecz, a nieudany odcinek nie przesuwa punktu odniesienia dla kolejnych odcinków.
 
 Klatki kluczowe w trybie Roleplay wyświetlają się w czacie, zaraz pod odpowiedzią kończącą odcinek. W storyboardach z kilkoma klatkami kluczowymi przełączaj kadry strzałkami. Obrazy i klipy zapisują się też w panelu **Gallery**.
 

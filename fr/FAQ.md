@@ -168,11 +168,11 @@ Professor Mari peut aussi modifier les fichiers source ordinaires de Marinara. E
 
 ## Comment fonctionnent les animations de storyboard ?
 
-Un **storyboard** transforme un texte d'histoire terminé en une courte séquence d'images-clés, et il peut y ajouter des clips animés. En **Game Mode**, il porte sur un tour de narration terminé du Game Master. En **Roleplay**, l'agent Storyboard réunit les échanges qui viennent de se terminer en un épisode affiché dans le fil, après un nombre réglable de réponses de l'IA.
+Un **storyboard** transforme un texte d'histoire terminé en une courte séquence d'images-clés, et il peut y ajouter des clips animés. En **Game Mode**, il porte sur un tour de narration terminé du Game Master. En **Roleplay**, l'agent Storyboard réunit les échanges qui viennent de se terminer en un épisode affiché dans le fil, après un nombre réglable de messages, les tiens comme ceux de l'IA.
 
 Pour en créer un à la main, ouvre la **Gallery** (galerie) et clique sur **Create storyboard**. En Game Mode, le bouton **View storyboard** rouvre la visionneuse ; en Roleplay, le résultat s'affiche sous la réponse de l'IA qui clôt l'épisode.
 
-Pour les générer automatiquement, ouvre **Chat Settings**, va dans **Agents** et trouve la carte **Storyboards**. En Game Mode, les illustrations et les animations ont chacune leur interrupteur. En Roleplay, tu choisis entre **Manual only**, **Still images** et **Animations**, plus le réglage **Assistant messages per episode**. Les clips vidéo demandent une connexion de génération de vidéos. Pour les deux déroulés, voir [Guide du moteur de storyboard](game/storyboard.md).
+Pour les générer automatiquement, ouvre **Chat Settings**, va dans **Agents** et trouve la carte **Storyboards**. En Game Mode, les illustrations et les animations ont chacune leur interrupteur. En Roleplay, tu choisis entre **Manual only**, **Still images** et **Animations**, plus le réglage **Messages per episode**, qui compte à la fois tes messages et ceux de l'IA. Les clips vidéo demandent une connexion de génération de vidéos. Pour les deux déroulés, voir [Guide du moteur de storyboard](game/storyboard.md).
 
 ## Les personnages peuvent-ils parler à voix haute pendant un appel ?
 

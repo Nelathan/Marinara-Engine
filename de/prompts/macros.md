@@ -38,6 +38,7 @@ Diese Makros ziehen Namen und Kartenfelder der sprechenden Person und des antwor
 | `{{user}}` / `{{userName}}` | Deinen aktuellen Anzeigenamen (oder Persona-Namen). Ohne gesetzte Persona steht dort `User`. |
 | `{{userNamePhonetic}}` | Das Feld Phonetic deiner Persona, oder `{{user}}`, wenn es leer ist. |
 | `{{char}}` / `{{charName}}` | Den Namen des aktuellen Charakters. Standard ist `Character`. |
+| `{{<21-character-card-ID>}}` | Platzhalter-Syntax für den Namen einer anderen Charakterkarte. Ersetze den Text in den spitzen Klammern durch die exakte 21-stellige ID dieser Karte. |
 | `{{charNamePhonetic}}` | Das Feld Phonetic des Charakters, oder `{{char}}`, wenn es leer ist. |
 | `{{characters}}` | Alle Charaktere im Chat, durch Kommas getrennt. |
 | `{{group}}` | Alle anderen aktiven Charaktere im Gruppenchat, ohne den gerade Antwortenden. Die Persona zählt nicht zu dieser Charakterliste. |
@@ -66,6 +67,8 @@ In einem Chat mit einem einzelnen Charakter beziehen sie sich auf genau diesen. 
 `{{group}}` richtet sich nach dem gerade antwortenden Charakter, auch bei einzelnen Generierungen innerhalb der Gruppe. Antwortet also Pantalone in einer Roleplay-Gruppe aus Powers That Be, Maukie und Pantalone, ergibt `{{group}}` den Wert `Powers That Be, Maukie`. Eine Charakterkarte bleibt selbst dann in dieser Liste, wenn ihr Name zufällig `{{user}}` entspricht.
 
 Das Feld Phonetic hat zwei Aufgaben. Es legt fest, wie die Sprachausgabe den Namen ausspricht. Und es speist `{{charNamePhonetic}}` und `{{userNamePhonetic}}`. Du findest es sowohl im **Character Editor** als auch im **Persona Editor**.
+
+Willst du einen Charakter ansprechen, der nicht Teil des aktuellen Chats ist, kopiere die ID seiner Karte und setz sie direkt in doppelte geschweifte Klammern, zum Beispiel `{{V1StGXR8_Z5jdHi6B-myT}}`. Marinara ersetzt das Makro durch den Namen der Karte und ergänzt den System-Prompt um den Charakterkontext der referenzierten Karte. Begrüßungen und Beispieldialoge dieser Karte bleiben außen vor. Aktivierte Lorebooks, die an dieser Karte hängen, unterliegen weiterhin ihren normalen Regeln für Schlüsselwörter, **Constant**-Einträge, Filter, Wahrscheinlichkeit und Token-Budget.
 
 ## Makros für den Conversation Mode
 

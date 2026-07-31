@@ -22,9 +22,9 @@ En Roleplay, les storyboards sont indépendants de l'agent **Illustrator**. Celu
 2. Ouvre un chat Roleplay, puis ajoute **Storyboard** dans **Chat Settings > Agents**.
 3. Dans le bloc **Storyboard**, choisis **Manual only**, **Still images** ou **Animations**.
 4. Sélectionne les connexions de prompt, d'image et, en option, de vidéo. La connexion d'image est obligatoire.
-5. Pour un épisode manuel, ouvre le panneau **Gallery** et choisis **Create storyboard**. Les épisodes automatiques se déclenchent après le nombre configuré de nouvelles réponses de l'assistant terminées.
+5. Pour un épisode manuel, ouvre le panneau **Gallery** et choisis **Create storyboard**. Les épisodes automatiques se déclenchent une fois le nombre configuré de messages utilisateur et assistant atteint, à la fin d'une réponse de l'assistant.
 
-L'intervalle par défaut est de 1 : un épisode automatique peut donc apparaître après chaque nouvelle réponse de l'assistant terminée. Une valeur plus élevée dans le champ **Assistant messages per episode** laisse les dialogues et les échanges s'accumuler. Une fois l'intervalle atteint, Marinara réunit les messages postérieurs au dernier storyboard réussi, dans une fenêtre récente limitée. Ouvrir un chat existant ne rattrape pas les anciens messages, et un épisode en échec ne fait pas avancer le point de repère de la cadence.
+L'intervalle par défaut est de 1 : un épisode automatique peut donc apparaître après chaque nouvelle réponse de l'assistant terminée. Une valeur plus élevée dans le champ **Messages per episode** laisse les dialogues et les échanges s'accumuler. Les messages utilisateur comme ceux de l'assistant font avancer l'intervalle. Une fois l'intervalle atteint, Marinara réunit les messages postérieurs au dernier storyboard réussi, dans une fenêtre récente limitée. Ouvrir un chat existant ne rattrape pas les anciens messages, et un épisode en échec ne fait pas avancer le point de repère de la cadence.
 
 Les images-clés de Roleplay s'affichent directement à la suite de la réponse de l'assistant qui clôt l'épisode. Sur les storyboards à plusieurs images-clés, les flèches permettent de passer d'une image à l'autre. Les images et les clips sont aussi enregistrés dans le panneau **Gallery**.
 

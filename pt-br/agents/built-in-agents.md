@@ -14,7 +14,7 @@ Cada agente abaixo traz três informações rápidas.
 
 Marinara separa os agentes em três categorias no painel **Agents**: **Writer Agents**, **Tracker Agents** e **Misc Agents**. Esta referência usa a mesma divisão.
 
-Um intervalo de execução faz o agente rodar uma vez a cada tantas mensagens do assistente, em vez de rodar depois de cada mensagem. O intervalo pode ser alterado na configuração do agente, até o limite de 100.
+Um intervalo de execução faz o agente rodar uma vez a cada tantas mensagens do usuário e do assistente, em vez de rodar depois de cada mensagem. O intervalo pode ser alterado na configuração do agente, até o limite de 100.
 
 ## Writer agents
 
@@ -42,7 +42,7 @@ Observa como um personagem muda durante o jogo e sugere edições no card desse 
 
 - **Fase**: Post-Processing.
 - **Onde funciona**: Roleplay.
-- **Configurações principais**: por padrão, roda uma vez a cada 8 mensagens do assistente. Veja [Aprovações de agentes e o Agent Suite](approvals-and-agent-suite.md).
+- **Configurações principais**: por padrão, roda uma vez a cada 8 mensagens do usuário e do assistente. Veja [Aprovações de agentes e o Agent Suite](approvals-and-agent-suite.md).
 
 ### Narrative Director
 
@@ -167,7 +167,7 @@ Responsável pela geração de imagens e de vídeos. Ele escreve prompts visuais
 
 - **Fase**: Post-Processing.
 - **Onde funciona**: Roleplay.
-- **Configurações principais**: por padrão, roda uma vez a cada 5 mensagens do assistente. Entre as configurações estão **Prompt Model**, **Image Style**, **Attach Card Appearance** e **Send Avatar References**. Para configurar tudo, veja [Agente Illustrator](../media/illustrator-agent.md).
+- **Configurações principais**: por padrão, roda uma vez a cada 5 mensagens do usuário e do assistente. Entre as configurações estão **Prompt Model**, **Image Style**, **Attach Card Appearance** e **Send Avatar References**. Para configurar tudo, veja [Agente Illustrator](../media/illustrator-agent.md).
 
 ### Lorebook Keeper
 
@@ -175,7 +175,7 @@ Cria e atualiza entradas de lorebook a partir dos fatos importantes do seu chat,
 
 - **Fase**: Post-Processing.
 - **Onde funciona**: Roleplay. No Game Mode, uma variante de fim de sessão chamada **Game Session Keeper** faz o mesmo trabalho no encerramento da sessão.
-- **Configurações principais**: por padrão, roda uma vez a cada 8 mensagens do assistente. O seletor **Target Lorebook** define para onde vão as entradas, com uma opção de escolha automática.
+- **Configurações principais**: por padrão, roda uma vez a cada 8 mensagens do usuário e do assistente. O seletor **Target Lorebook** define para onde vão as entradas, com uma opção de escolha automática.
 
 ### Combat
 

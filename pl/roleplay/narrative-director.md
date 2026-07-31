@@ -54,7 +54,7 @@ Przycisk **Push Story** działa raz, a **Secret Plot** – przez wiele odpowiedz
 
 ### Run Interval
 
-Po włączeniu funkcji **Secret Plot** pojawia się pole **Run Interval** (odstęp między uruchomieniami). Decyduje ono o tym, ile odpowiedzi mija między kolejnymi aktualizacjami ukrytego wątku. Liczone są wiadomości typu assistant, czyli odpowiedzi postaci.
+Po włączeniu funkcji **Secret Plot** pojawia się pole **Run Interval** (odstęp między uruchomieniami). Decyduje ono o tym, ile wiadomości typu user i assistant mija między kolejnymi aktualizacjami ukrytego wątku.
 
 Domyślna wartość to 8. Można wpisać dowolną liczbę całkowitą od 1 do 100. Im mniejsza liczba, tym częstsze aktualizacje planu. Im większa, tym rzadsze.
 

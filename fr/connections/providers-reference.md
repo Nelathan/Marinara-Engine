@@ -123,7 +123,7 @@ Pour la configuration pas à pas et l'interrupteur **Treat as local/custom endpo
 
 ## Image Generation
 
-**Image Generation** est un fournisseur à part. Une fois que tu l'as choisi, tu sélectionnes aussi un **Service** (service), c'est-à-dire le moteur d'images qui fait le travail. Chaque service a sa propre URL de base par défaut et sa propre règle sur la nécessité d'une clé API. On y trouve des API cloud payantes comme **OpenAI (DALL-E)**, **Stability AI** et **NovelAI**. On y trouve aussi des options gratuites comme **Pollinations** et **Stable Horde**. Les serveurs locaux comme **ComfyUI** et **SD Web UI (AUTOMATIC1111 / Forge)** fonctionnent également.
+**Image Generation** est un fournisseur à part. Une fois que tu l'as choisi, tu sélectionnes aussi un **Service** (service), c'est-à-dire le moteur d'images qui fait le travail. Chaque service a sa propre URL de base par défaut et sa propre règle sur la nécessité d'une clé API. On y trouve des API cloud payantes comme **OpenAI (DALL-E)**, **Stability AI**, **NovelAI** et **Z.AI**. On y trouve aussi des options gratuites comme **Pollinations** et **Stable Horde**. Les serveurs locaux comme **ComfyUI** et **SD Web UI (AUTOMATIC1111 / Forge)** fonctionnent également.
 
 La liste complète des services d'images, leur configuration et les réglages de génération se trouvent dans [Fournisseurs de génération d'images et configuration](../media/image-providers.md).
 

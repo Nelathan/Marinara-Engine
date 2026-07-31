@@ -168,11 +168,11 @@ Nota: en una dirección remota ordinaria, las acciones de Professor Mari que cam
 
 ## ¿Cómo funcionan las animaciones de storyboard?
 
-Un **storyboard** (secuencia de viñetas) convierte texto de historia ya terminado en una secuencia corta de imágenes de fotogramas clave y puede agregar clips animados. En **Game Mode**, sigue a un turno de narración terminado del game master. En **Roleplay**, el Storyboard Agent combina los intercambios recién terminados en un episodio integrado después de un número configurable de respuestas del asistente.
+Un **storyboard** (secuencia de viñetas) convierte texto de historia ya terminado en una secuencia corta de imágenes de fotogramas clave y puede agregar clips animados. En **Game Mode**, sigue a un turno de narración terminado del game master. En **Roleplay**, el Storyboard Agent combina los intercambios recién terminados en un episodio integrado después de un número configurable de mensajes del usuario y del asistente.
 
 Para crear uno a mano, abre la **Gallery** (Galería) y haz clic en **Create storyboard** (Crear storyboard). Game Mode puede reabrir su visor con **View storyboard** (Ver storyboard); Roleplay muestra el resultado debajo de la respuesta del asistente que termina el episodio.
 
-Para crearlos automáticamente, abre **Chat Settings**, ve a **Agents** y encuentra la tarjeta **Storyboards**. Game Mode tiene interruptores separados de ilustración y animación. Roleplay ofrece **Manual only** (Solo manual), **Still images** (Imágenes fijas) o **Animations** (Animaciones), además de **Assistant messages per episode** (Mensajes del asistente por episodio). Los clips de video necesitan una conexión de Video Generation. Para ambos flujos de trabajo, consulta [Guía del Storyboard Engine](game/storyboard.md).
+Para crearlos automáticamente, abre **Chat Settings**, ve a **Agents** y encuentra la tarjeta **Storyboards**. Game Mode tiene interruptores separados de ilustración y animación. Roleplay ofrece **Manual only** (Solo manual), **Still images** (Imágenes fijas) o **Animations** (Animaciones), además de **Messages per episode** (Mensajes por episodio), que cuenta tanto los mensajes del usuario como los del asistente. Los clips de video necesitan una conexión de Video Generation. Para ambos flujos de trabajo, consulta [Guía del Storyboard Engine](game/storyboard.md).
 
 ## ¿Los personajes pueden hablar en voz alta en una llamada?
 

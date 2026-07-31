@@ -123,7 +123,7 @@ Para a configuração passo a passo e para o botão liga/desliga **Treat as loca
 
 ## Image Generation
 
-**Image Generation** é um provedor especial. Depois de escolhê-lo, você escolhe também um **Service** (serviço), que é o backend de imagem responsável pelo trabalho. Cada serviço tem a própria URL base padrão e a própria regra sobre exigir ou não uma chave de API. Entre os serviços há APIs de nuvem pagas, como **OpenAI (DALL-E)**, **Stability AI** e **NovelAI**. Há também opções gratuitas, como **Pollinations** e **Stable Horde**. Servidores locais como **ComfyUI** e **SD Web UI (AUTOMATIC1111 / Forge)** também funcionam.
+**Image Generation** é um provedor especial. Depois de escolhê-lo, você escolhe também um **Service** (serviço), que é o backend de imagem responsável pelo trabalho. Cada serviço tem a própria URL base padrão e a própria regra sobre exigir ou não uma chave de API. Entre os serviços há APIs de nuvem pagas, como **OpenAI (DALL-E)**, **Stability AI**, **NovelAI** e **Z.AI**. Há também opções gratuitas, como **Pollinations** e **Stable Horde**. Servidores locais como **ComfyUI** e **SD Web UI (AUTOMATIC1111 / Forge)** também funcionam.
 
 A lista completa dos serviços de imagem, a configuração de cada um e os ajustes de geração estão em [Provedores de geração de imagens e configuração](../media/image-providers.md).
 

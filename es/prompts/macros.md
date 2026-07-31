@@ -38,6 +38,7 @@ Estas macros traen los nombres y los campos de la tarjeta de la persona que habl
 | `{{user}}` / `{{userName}}` | Tu nombre visible actual (o el nombre de la persona). El valor predeterminado es `User` cuando no hay ninguna persona definida. |
 | `{{userNamePhonetic}}` | El nombre Phonetic de tu persona, o `{{user}}` cuando está vacío. |
 | `{{char}}` / `{{charName}}` | El nombre del personaje actual. El valor predeterminado es `Character`. |
+| `{{<21-character-card-ID>}}` | Sintaxis de marcador de posición para el nombre de otra tarjeta de personaje. Reemplaza el texto entre corchetes angulares por el ID exacto de 21 caracteres de esa tarjeta. |
 | `{{charNamePhonetic}}` | El nombre Phonetic del personaje, o `{{char}}` cuando está vacío. |
 | `{{characters}}` | Todos los personajes del chat, unidos por comas. |
 | `{{group}}` | Todos los demás personajes activos del chat grupal, excluyendo al que responde en ese momento. La persona no forma parte de esta lista de personajes. |
@@ -66,6 +67,8 @@ En un chat con un solo personaje, estas se resuelven contra ese personaje. En un
 `{{group}}` sigue al personaje que responde en ese momento, incluso durante las generaciones grupales individuales. Por ejemplo, si Pantalone está respondiendo en un grupo de Roleplay que contiene a Powers That Be, Maukie y Pantalone, `{{group}}` se resuelve como `Powers That Be, Maukie`. Una tarjeta de personaje permanece en esta lista aunque su nombre coincida con `{{user}}`.
 
 El campo del nombre Phonetic tiene dos funciones. Define cómo pronuncia el nombre el text-to-speech. También alimenta a `{{charNamePhonetic}}` y `{{userNamePhonetic}}`. Lo encontrarás tanto en el **Character Editor** como en el **Persona Editor**.
+
+Para referirte a un personaje que no está en el chat actual, copia el ID de esa tarjeta y ponlo directamente dentro de llaves dobles, como `{{V1StGXR8_Z5jdHi6B-myT}}`. Marinara reemplaza la macro por el nombre de la tarjeta y agrega al prompt de sistema el contexto de personaje de la tarjeta referida. Los saludos iniciales y el diálogo de ejemplo de esa tarjeta quedan fuera. Los lorebooks activados que estén vinculados a esa tarjeta siguen sujetos a sus reglas normales de palabras clave, entradas **Constant**, filtros, probabilidad y presupuesto de tokens.
 
 ## Macros del modo de conversación
 
