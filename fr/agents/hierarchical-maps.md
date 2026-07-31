@@ -1,6 +1,6 @@
 # World Maps : installation, création et déplacements
 
-> **Compatibilité actuelle :** ce guide correspond à World Maps **1.2.0**
+> **Compatibilité actuelle :** ce guide correspond à World Maps **1.2.1**
 > sur Marinara Engine **2.3.5**. Le package fonctionne avec les chats Roleplay et Game.
 
 World Maps donne à Roleplay et Game un état du monde persistant. Au lieu
@@ -21,25 +21,29 @@ lore éligible qui y est rattaché peuvent ancrer la réponse suivante. Les cart
 peuvent aussi suivre un voyage narré jusqu'au bout vers un lieu connu, ou ajouter
 un lieu tout juste découvert quand l'histoire y arrive vraiment.
 
-Chaque chat reçoit sa propre copie de travail d'une carte. Les modèles de carte,
-valables pour tout le compte, te permettent de préparer une fois un univers
-original ou de fandom, puis d'en ajouter une copie propre à n'importe quel chat
-Roleplay ou Game.
+Les cartes peuvent être indépendantes dans chaque chat, ou reliées à un même
+monde partagé appartenant au compte. Les modèles créent des copies propres qui
+peuvent ensuite diverger. Un monde partagé conserve au contraire une seule
+hiérarchie canonique et un seul jeu d'illustrations, tandis que chaque chat relié
+garde son lieu actuel, son historique de déplacements, ses instantanés et ses
+liaisons avec Game.
 
 ## Ce que propose la fonctionnalité
 
-World Maps 1.2.0 apporte :
+World Maps 1.2.1 apporte :
 
 - des régions, agglomérations, lieux, bâtiments, étages et pièces imbriqués ;
 - des fils d'Ariane et un lieu d'histoire actuel qui fait autorité ;
 - des vues en liste, en carte positionnée et en couches ordonnées pour les lieux enfants ;
 - les déplacements parent/enfant, les liens directs et la planification d'itinéraires sur plusieurs tours ;
 - des déplacements validés à partir de la narration achevée et la découverte de nouveaux lieux ;
+- des mondes partagés appartenant au compte, reliables à plusieurs chats Roleplay et Game ;
+- des brouillons par chat, avec revue, et des commandes de publication, d'abandon, de conflit et de séparation indépendante ;
 - des modèles de carte valables pour tout le compte, créés à la main, avec l'IA ou par import ;
 - des brouillons et extensions de carte assistés par l'IA, ancrés dans la configuration ou le lore sélectionné ;
 - des descriptions de lieu publiques, une mémoire privée pour le modèle et du lore attaché au lieu exact ;
-- une image de référence issue de la galerie, facultative, pour chaque lieu ;
-- un arrière-plan de galerie distinct pour chaque carte d'enfants positionnée ;
+- une image de référence facultative pour chaque lieu, prise dans la galerie du chat ou dans la galerie globale ;
+- un arrière-plan distinct, pris dans la galerie du chat ou dans la galerie globale, pour chaque carte d'enfants positionnée ;
 - une génération par lots, avec revue, des illustrations de lieu manquantes ;
 - une redéfinition globale du prompt d'illustration des cartes, à base de variables ;
 - la prise en charge de la référence de lieu pour les illustrations Roleplay et les Storyboards de Game ;
@@ -82,7 +86,7 @@ jour), installe cette mise à jour aussi. Effectue le redémarrage demandé avan
 d'utiliser le package.
 
 La page World Maps indique la version installée du package et son état de
-disponibilité, donne accès à la bibliothèque de modèles du compte et affiche
+disponibilité, donne accès à la bibliothèque de cartes du monde du compte et affiche
 l'état de la carte du chat en cours. Installer le package le rend disponible,
 mais ne l'active pas dans tous les chats.
 
@@ -92,13 +96,13 @@ mais ne l'active pas dans tous les chats.
 2. Ouvre **Chat Settings** avec le bouton en forme d'engrenage.
 3. Active **Enable Agents** (activer les agents).
 4. Sous **Tracker Agents** (agents de suivi), active **World Maps**.
-5. Ouvre **Edit hierarchical map** (modifier la carte hiérarchique) ou la
-   bibliothèque **Map templates** (modèles de carte).
+5. Ouvre **Edit world map** (modifier la carte du monde) ou la
+   bibliothèque **World map library** (bibliothèque de cartes du monde).
 
-La bibliothèque de modèles se comporte de la même façon, qu'elle soit ouverte
-depuis la page **Agents** principale ou depuis les **Chat Settings** du
-Roleplay. Utilise **Add to chat** (ajouter au chat) pour copier un modèle dans
-le chat actif.
+La bibliothèque se comporte de la même façon, qu'elle soit ouverte depuis la
+page **Agents** principale ou depuis les **Chat Settings** du Roleplay. Utilise
+**Add to chat** (ajouter au chat) pour obtenir une copie de modèle indépendante,
+ou **Link to chat** (relier au chat) pour un monde partagé durable.
 
 ### Game
 
@@ -138,10 +142,58 @@ Chaque application crée une copie de travail indépendante. Les modifications
 apportées ensuite au modèle ne changent rien aux chats qui l'ont déjà copié, et
 les modifications faites dans un chat ne changent pas le modèle.
 
-Les modèles ne copient pas les illustrations de la galerie du chat. Les
-identifiants d'image appartiennent à la galerie du chat d'origine et ne seraient
-pas transposables. Ajoute ou génère les références de lieu et les arrière-plans
-de carte du chat de travail après avoir appliqué le modèle.
+Les modèles conservent des références vers les illustrations de la galerie
+globale, valables pour tout le compte. Quand tu utilises **Save as template**
+(enregistrer comme modèle) depuis un chat, Maps fait passer dans la galerie
+globale les illustrations du chat référencées, et réutilise une image partagée
+identique quand il en existe déjà une. Chaque chat qui applique le modèle pointe
+alors vers la même illustration partagée, sans créer une copie de plus dans la galerie.
+
+Seules les illustrations sont partagées. Chaque définition de carte appliquée
+reste une copie de travail indépendante : modifier le modèle ne met pas à jour les cartes déjà ajoutées à des chats.
+
+## Relier plusieurs chats à un même monde partagé
+
+Utilise **Shared worlds** (mondes partagés) dans la bibliothèque de cartes du
+monde quand plusieurs chats Roleplay ou Game doivent lire la même hiérarchie
+canonique. Crée un monde partagé vide, importes-en un, transforme un modèle
+existant avec **Make shared** (rendre partagé), ou ouvre une carte de chat
+enregistrée et choisis **Make shared**. Cette dernière option fait passer les
+illustrations du chat référencées dans la galerie globale, crée le monde
+appartenant au compte, puis y relie le chat d'origine.
+
+Choisis **Link to chat** pour y rattacher un chat ouvert. Le lieu actuel et tous
+les identifiants de lieu déjà utilisés par l'historique de campagne doivent
+exister dans le monde partagé. Sinon, utilise **Independent copy** (copie
+indépendante), ou commence par migrer la carte actuelle du chat vers un nouveau
+monde partagé.
+
+Les chats reliés ne partagent que la définition de la carte et les illustrations
+de la galerie globale. Ils ne partagent ni les messages, ni les lieux actuels,
+ni les instantanés de déplacement, ni l'état du jeu, ni les liaisons avec la
+carte de Game, ni les connexions aux fournisseurs, ni les identifiants.
+
+Les modifications et les découvertes faites dans un chat relié sont enregistrées
+comme un brouillon non publié, propre à ce chat. Elles ne changent ni le monde
+canonique ni les autres chats tant que tu n'as pas choisi **Publish changes**
+(publier les modifications). Autre option : **Discard** (abandonner) jette le
+brouillon, et **Fork independent** (se séparer en copie indépendante) détache le
+chat en lui laissant sa version du moment. Si le monde canonique change alors
+qu'un brouillon est en attente, Maps signale un conflit et impose une séparation
+ou un abandon, plutôt que d'écraser une version en silence.
+
+Modifier un monde partagé depuis la bibliothèque met à jour directement la
+définition canonique. Les lieux utilisés par des chats reliés ne peuvent pas
+être supprimés : archive-les pour que leurs identifiants stables restent
+disponibles. Un monde partagé ne peut pas non plus être supprimé tant que tous
+les chats reliés ne sont pas séparés ou reliés ailleurs.
+
+Les mondes partagés et les modèles conservent des références vers les
+illustrations de la galerie globale, sans copier le fichier image dans chaque
+chat. Marinara empêche la suppression d'une image de la galerie globale tant
+qu'un modèle enregistré, un monde partagé, une carte de chat indépendante ou le
+brouillon d'un chat relié y renvoie encore. Retire d'abord ces liens quand tu
+veux vraiment supprimer le fichier lui-même.
 
 ## Comprendre l'éditeur de carte
 
@@ -392,7 +444,7 @@ indépendants, même quand ils réutilisent la même image de la galerie.
 
 | Illustration                 | Rôle                                                                                                                    | Envoyée à la génération d'images ?                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Location reference image** | Ancre l'identité visuelle du lieu actuel exact. Choisis-la dans la galerie ou crée-la avec l'IA.                         | Oui, quand **Use for Roleplay illustrations and Game storyboards** est activé et que la demande est éligible. |
+| **Location reference image** | Ancre l'identité visuelle du lieu actuel exact. Choisis une illustration du chat ou de la galerie globale partagée, ou crée-la avec l'IA. | Oui, quand **Use for Roleplay illustrations and Game storyboards** est activé et que la demande est éligible. |
 | **Child map background**     | Apparaît derrière les lieux enfants déplaçables d'un parent en présentation Map. Chaque couche de carte a le sien.      | Non. Uniquement pour l'affichage.                                                                          |
 
 Les références de personnage ou de persona conservent qui est présent ; la
@@ -415,8 +467,9 @@ nombre de références automatiques qui tiennent encore.
 Sélectionne un lieu dans l'éditeur et ouvre **Location reference image** (image
 de référence du lieu).
 
-- **Choose from Gallery** (choisir dans la galerie) attribue une image existante
-  déjà validée.
+- **Choose artwork** (choisir une illustration) attribue une image déjà validée,
+  prise dans le chat en cours ou dans la galerie globale partagée. Le sélecteur
+  indique la source de chaque image.
 - **Create with AI** ouvre un prompt d'image d'ambiance modifiable et enregistre
   le résultat dans la galerie avant que tu décides de l'utiliser ou non.
 - **Use for Roleplay illustrations and Game storyboards** (utiliser pour les
@@ -545,17 +598,21 @@ obligatoires et sers-toi des aperçus résolus avant d'enregistrer.
 
 ## Importer, exporter et archiver sans risque
 
-Utilise **Export** pour télécharger la hiérarchie de travail sous forme de
-fichier `.world-map.json`. Laisse **Include map artwork** activé pour regrouper
+Utilise **Export** depuis un chat, un modèle ou l'éditeur d'un monde partagé pour
+télécharger la hiérarchie de travail sous forme de fichier `.world-map.json`. Laisse **Include map artwork** activé pour regrouper
 dans le même fichier les images de référence des lieux et les arrière-plans des
 cartes d'enfants. Désactive cette option pour obtenir une sauvegarde plus petite,
 limitée à la définition. Les anciens fichiers `.hierarchical-map.json` restent
 importables.
 
-Utilise **Import** pour charger une hiérarchie dans la copie de travail. Les
-illustrations regroupées sont restaurées dans la Gallery du chat de destination
-et leurs liens d'image sont remappés. Vérifie le résultat, puis clique sur
-**Save** pour le rendre officiel. L'import n'enregistre rien tout de suite.
+Utilise **Import** pour charger une hiérarchie dans la copie de travail d'un
+chat, dans un modèle indépendant ou dans un monde partagé. Les illustrations
+regroupées sont restaurées et leurs liens d'image sont remappés. Les
+illustrations appartenant à un chat reviennent dans la galerie du chat de
+destination. Les illustrations partagées sont réutilisées depuis la galerie
+globale quand la même image existe déjà, ou y sont ajoutées une seule fois quand
+un modèle ou une référence partagée en a besoin. Vérifie le résultat, puis clique
+sur **Save** pour le rendre officiel. L'import n'enregistre rien tout de suite.
 
 Dès que l'historique de campagne renvoie à une carte, les modifications
 importées doivent conserver les identifiants de lieu existants. Ajoute ou mets à

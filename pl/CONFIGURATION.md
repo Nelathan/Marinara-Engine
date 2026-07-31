@@ -62,6 +62,8 @@ Zmienna środowiskowa to zgoda osoby prowadzącej serwer, a przełącznik w sekc
 
 Szkice od asystentki Professor Mari działają bez tej flagi. Powstają wyłączone i mimo to wymagają zatwierdzenia dokładnego skrótu ich kodu.
 
+Tryb Sandboxed Browser Extensions pozostaje domyślny. Część starszych pakietów od osób trzecich ma oznaczenie **Full page access** (pełny dostęp do strony), bo opiera się na strukturze DOM aplikacji Marinara Engine. W tym trybie kod działa wewnątrz strony aplikacji Marinara Engine, dokładnie w zatwierdzonej postaci. Ma wtedy dostęp do treści strony, pamięci przeglądarki, interfejsów sieciowych i bieżącej sesji w tym samym źródle. Dostają go wyłącznie wpisy External Extensions po otwarciu obu bram, a do tego trzeba osobno potwierdzić ostrzeżenie. Jeśli rozszerzenie zostawia po sobie zmiany w wyglądzie lub w działaniu, wyłącz ten tryb i odśwież stronę.
+
 ## Gdzie leży plik .env
 
 Konfiguracja mieści się w pliku o nazwie `.env`. To zwykły plik tekstowy z jednym ustawieniem w linii, w postaci `KEY=value`. Linie zaczynające się od `#` to komentarze, które serwer pomija.
@@ -129,7 +131,7 @@ Najważniejsze ustawienia kontroli dostępu:
 | `TRUSTED_PRIVATE_NETWORKS` | wbudowane wartości domyślne | Zastępuje domyślne zakresy sieci prywatnych. Wpisz też te domyślne, które mają zostać. |
 | `BYPASS_AUTH_TAILSCALE` | `true` | Pozwala ruchowi z sieci Tailscale pominąć logowanie i listę dozwolonych adresów. |
 | `BYPASS_AUTH_DOCKER` | `true` | Pozwala ruchowi z mostka Docker oraz dokładnie tej bramie domyślnej, którą wykryto wewnątrz kontenera Docker, pominąć logowanie i listę dozwolonych adresów. |
-| `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `false` | Wymusza zwykłe logowanie dla ruchu Docker, który wygląda na przepuszczony przez odwrotne proxy. |
+| `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `true` | Wymaga zwykłego logowania i sprawdzenia listy dozwolonych adresów dla ruchu Docker przekazanego przez proxy. Ustaw `false` tylko wtedy, gdy każdy klient po stronie nadrzędnej jest zaufany. |
 | `TRUSTED_HOSTS` | pusta | Dodatkowe nazwy publiczne lub nazwy odwrotnego proxy, na które Marinara może odpowiadać. Bezpośredni adres IP, `localhost`, `.local`, `.home.arpa` oraz jednoczłonowe nazwy w sieci lokalnej działają same z siebie. |
 | `SSL_CERT` | pusta | Ścieżka do pliku certyfikatu TLS. Ustaw razem z `SSL_KEY`, żeby serwer sam obsługiwał HTTPS. |
 | `SSL_KEY` | pusta | Ścieżka do pliku klucza prywatnego TLS. |
@@ -250,7 +252,7 @@ Włącz tylko ten przełącznik, którego naprawdę potrzebujesz dla własnej us
 | Zmienna | Domyślnie | Do czego służy |
 | --- | --- | --- |
 | `PROVIDER_LOCAL_URLS_ENABLED` | `false` | Pozwala adresom URL dostawców AI sięgać adresów prywatnych i sieci lokalnej. W systemie Android domyślnie włączone. |
-| `IMAGE_LOCAL_URLS_ENABLED` | `false` | Pozwala adresom URL dostawców obrazów sięgać adresów prywatnych i sieci lokalnej. |
+| `IMAGE_LOCAL_URLS_ENABLED` | `false` | Pozwala adresom URL dostawców obrazów sięgać adresów prywatnych i sieci lokalnej. Prywatne adresy URL z wygenerowanymi obrazami i tak muszą zgadzać się dokładnie ze źródłem skonfigurowanego dostawcy. |
 | `TTS_LOCAL_URLS_ENABLED` | `false` | Pozwala adresom URL syntezy mowy sięgać adresów prywatnych i sieci lokalnej. |
 | `DEEPLX_LOCAL_URLS_ENABLED` | `false` | Pozwala adresom URL tłumaczenia DeepLX sięgać adresów prywatnych i sieci lokalnej. |
 | `WEBHOOK_LOCAL_URLS_ENABLED` | `false` | Pozwala webhookom własnych narzędzi sięgać adresów prywatnych i sieci lokalnej. |

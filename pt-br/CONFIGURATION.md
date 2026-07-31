@@ -62,6 +62,8 @@ A variável de ambiente é a permissão de quem opera o servidor; o botão liga/
 
 Os rascunhos da Professor Mari continuam disponíveis sem essa opção. Eles nascem desativados e ainda exigem aprovação do hash exato do código.
 
+O modo **Sandboxed Browser Extensions** (extensões de navegador isoladas) continua sendo o padrão. Alguns pacotes de terceiros mais antigos vêm marcados como **Full page access** (acesso total à página), porque dependem do DOM do Marinara. Nesse modo, o código aprovado roda exatamente como está dentro da página do Marinara e alcança o conteúdo da página, o armazenamento do navegador, as APIs de rede e a sessão atual de mesma origem. Ele só fica disponível para as External Extensions depois que as duas travas estão abertas e exige uma confirmação de aviso separada. Desative o modo e recarregue a página se a extensão deixar mudanças visuais ou de comportamento para trás.
+
 ## Onde fica o arquivo .env
 
 A configuração fica em um arquivo chamado `.env`. É um arquivo de texto simples, com uma configuração por linha, no formato `KEY=value`. As linhas que começam com `#` são comentários e o servidor as ignora.
@@ -129,7 +131,7 @@ As principais configurações de controle de acesso são:
 | `TRUSTED_PRIVATE_NETWORKS` | padrões internos | Substitui as faixas de rede privada padrão. Inclua também os padrões que você quiser manter. |
 | `BYPASS_AUTH_TAILSCALE` | `true` | Deixa o tráfego do Tailscale pular o login e a lista de permissões. |
 | `BYPASS_AUTH_DOCKER` | `true` | Deixa o tráfego da ponte do Docker e o gateway padrão exato detectado dentro do Docker pularem o login e a lista de permissões. |
-| `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `false` | Obriga o login normal para o tráfego do Docker que parece vir de proxy reverso. |
+| `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `true` | Exige as verificações normais de login e de lista de permissões para o tráfego do Docker encaminhado por proxy. Defina como `false` só quando todo cliente na frente do servidor for confiável. |
 | `TRUSTED_HOSTS` | vazio | Nomes de host públicos ou de proxy reverso adicionais que Marinara pode atender. IP direto, localhost, `.local`, `.home.arpa` e nomes de rede local de rótulo único funcionam sozinhos. |
 | `SSL_CERT` | vazio | Caminho de um arquivo de certificado TLS. Defina junto com `SSL_KEY` para servir HTTPS diretamente. |
 | `SSL_KEY` | vazio | Caminho do arquivo de chave privada TLS. |
@@ -250,7 +252,7 @@ Ative só a opção de que você precisa para um serviço próprio hospedado em 
 | Variável | Padrão | O que faz |
 | --- | --- | --- |
 | `PROVIDER_LOCAL_URLS_ENABLED` | `false` | Permite que URLs de provedor de IA alcancem endereços privados ou da rede local. Vem ativado no Android. |
-| `IMAGE_LOCAL_URLS_ENABLED` | `false` | Permite que URLs de provedor de imagem alcancem endereços privados ou da rede local. |
+| `IMAGE_LOCAL_URLS_ENABLED` | `false` | Permite que URLs de provedor de imagem alcancem endereços privados ou da rede local. As URLs privadas de resultado das imagens geradas ainda precisam bater com a origem exata do provedor configurado. |
 | `TTS_LOCAL_URLS_ENABLED` | `false` | Permite que URLs de conversão de texto em voz alcancem endereços privados ou da rede local. |
 | `DEEPLX_LOCAL_URLS_ENABLED` | `false` | Permite que URLs de tradução DeepLX alcancem endereços privados ou da rede local. |
 | `WEBHOOK_LOCAL_URLS_ENABLED` | `false` | Permite que webhooks de ferramentas personalizadas alcancem endereços privados ou da rede local. |

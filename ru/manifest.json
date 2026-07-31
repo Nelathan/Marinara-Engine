@@ -3,13 +3,13 @@
   "files": [
     {
       "path": "CONFIGURATION.md",
-      "sha256": "23a32054386f76c1428e806dc40b42a1d4ca0ca1c01c14aa55b8a1165d4afe23",
-      "bytes": 47181
+      "sha256": "b62b9c5e1e9af14d9c4ca3038d0fe8d748a78d5488030be9a33110be19795233",
+      "bytes": 48708
     },
     {
       "path": "FAQ.md",
-      "sha256": "289ce22a4ffb7cd72853fb0afb7badd082d8db6fd64b8c5aad8f85bd4e8da6d8",
-      "bytes": 31574
+      "sha256": "63ede39745eea5f270bb8bbf83a45fbbe20a6e8e0d4e25f9418cd7466eecd526",
+      "bytes": 33841
     },
     {
       "path": "INSTALLATION.md",
@@ -18,13 +18,13 @@
     },
     {
       "path": "REMOTE_ACCESS.md",
-      "sha256": "6e2d8c6b78beb8d02d9b9114600f6c796379ee6be83f29d473a1a742f3593de6",
-      "bytes": 26785
+      "sha256": "f5333df8bd8fcb5ba953ad8793d5d8e14a9680262ecff9d8a8ff1ecc192ca758",
+      "bytes": 27493
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "095eb78483a724ccdea58918b2794c286169489c70805aba7561366ed9347b6e",
-      "bytes": 44958
+      "sha256": "a6bf4cfb36dfa13b89881b1760fca001d6905beebc6c75c718a7adabbdeb5e95",
+      "bytes": 49734
     },
     {
       "path": "UPGRADING.md",
@@ -53,8 +53,8 @@
     },
     {
       "path": "agents/hierarchical-maps.md",
-      "sha256": "467dfdbc745a94c1a8225fa5bf4cd6e48e3c146ca0b611bdbcbf3ec3c6121d96",
-      "bytes": 52807
+      "sha256": "ac4af228263f9f02bf41fdb6c80e0c4fb65427cddd8bc338f1cb5ecff3a25ea4",
+      "bytes": 58834
     },
     {
       "path": "agents/knowledge-sources.md",
@@ -203,8 +203,8 @@
     },
     {
       "path": "connections/local-model.md",
-      "sha256": "bea9636372d2e07e54113d672db164d1686ea01f066fabcdef0ac94aaf9024c9",
-      "bytes": 24789
+      "sha256": "47dc4d0d13de87172c13187bae6012ef191fab546a78949821dbb2f2626f98d9",
+      "bytes": 26424
     },
     {
       "path": "connections/local-self-hosted.md",
@@ -298,8 +298,8 @@
     },
     {
       "path": "development/frontend.md",
-      "sha256": "ae5867801c6abbeb795fee37e5f21aa2e0b2e6ff642198c6a4a3a7db2d8eeb18",
-      "bytes": 65080
+      "sha256": "f3b2f76fd86223147bbb370bfb1a25b5ec24c0c5b2b61c0fb9dcacc16d175db1",
+      "bytes": 65619
     },
     {
       "path": "development/hierarchical-locations-prd-v3.md",
@@ -333,18 +333,18 @@
     },
     {
       "path": "development/personal-extensions.md",
-      "sha256": "a390655d7175efc5a90addcdcc93191e8b936fa358ef310de8f048a48152c34b",
-      "bytes": 18451
+      "sha256": "dba8c228b9dc2ff24981a5f1ef440ea3bd587c0167d5d91f0d6a6951d48973e4",
+      "bytes": 27253
     },
     {
       "path": "extending/custom-tools.md",
-      "sha256": "b434382a3067ec3c17c2d24c098a064c8b59898259723a1c377671c792f8fd3c",
-      "bytes": 27685
+      "sha256": "5e996bc2a463a52da9a1054780ed6ba9d6f483ac2f04e8828355ae1ebd5a2bf0",
+      "bytes": 28644
     },
     {
       "path": "extending/personal-extensions.md",
-      "sha256": "842bdaebb577383b81ed1a2d9c6414b1d3e6777b9f4f530d66ce34b222c1552e",
-      "bytes": 15504
+      "sha256": "78750c0371fba5efd5efb61320ee8e2c038cd0863baba1a9aef89ff087a2298d",
+      "bytes": 24774
     },
     {
       "path": "extending/regex-scripts.md",
@@ -378,8 +378,8 @@
     },
     {
       "path": "game/ltx-2-3-storyboards.md",
-      "sha256": "a5100e9ca99e3aca029302fb0d681d3c6202b2c1b4f912196e78cc0d209f6039",
-      "bytes": 34555
+      "sha256": "dd9a17d55a03ebef12030f251ae2c6a16806a91dba0fbeaad0da18112022471f",
+      "bytes": 35837
     },
     {
       "path": "game/map-time-weather.md",
@@ -408,8 +408,8 @@
     },
     {
       "path": "home/professor-mari.md",
-      "sha256": "a4af4181dd54510b845d6d75b6557b09df08c4d0167e965a2a8caa41a493427f",
-      "bytes": 23203
+      "sha256": "82478bff73e362fcca7cd55ac087774c8addccc7fc554bad8cb7fccfc427824f",
+      "bytes": 23382
     },
     {
       "path": "home/tutorial.md",
@@ -513,8 +513,8 @@
     },
     {
       "path": "media/image-providers.md",
-      "sha256": "43994153bcc029b04036b861fc9b97e5dc613b7c7deb3e48aaee326b1e471ebc",
-      "bytes": 21537
+      "sha256": "c589985f73f56712894b70bf882a97e8b0e09a0053e8c4a4de94bb9c84d5b966",
+      "bytes": 22573
     },
     {
       "path": "media/music.md",

@@ -62,6 +62,8 @@ Die Umgebungsvariable ist die Erlaubnis des Server-Betreibers, der Schalter in d
 
 Entwürfe von Professor Mari bleiben auch ohne dieses Flag verfügbar. Sie werden deaktiviert angelegt, und ihr exakter Code-Hash muss trotzdem freigegeben werden.
 
+Standard bleiben Sandboxed Browser Extensions. Manche ältere Pakete Dritter sind mit **Full page access** (voller Seitenzugriff) gekennzeichnet, weil sie auf das DOM von Marinara angewiesen sind. In diesem Modus läuft genau der freigegebene Code in der Marinara-Seite und kommt an Seiteninhalte, Browser-Speicher, Netzwerk-APIs und die aktuelle Same-Origin-Sitzung heran. Verfügbar ist er nur für External Extensions, sobald beide Freigaben offen sind, und er verlangt eine eigene Bestätigung der Warnung. Hinterlässt die Erweiterung sichtbare oder funktionale Veränderungen, deaktiviere ihn und lade die Seite neu.
+
 ## Wo die .env-Datei liegt
 
 Die Konfiguration steht in einer Datei namens `.env`. Das ist eine einfache Textdatei mit einer Einstellung pro Zeile, in der Form `KEY=value`. Zeilen, die mit `#` beginnen, sind Kommentare und werden vom Server ignoriert.
@@ -129,7 +131,7 @@ Die wichtigsten Einstellungen zur Zugriffskontrolle:
 | `TRUSTED_PRIVATE_NETWORKS`              | eingebaute Standards | Ersetzt die standardmäßigen privaten Netzwerkbereiche. Nimm alle Standards mit auf, die du behalten willst.                                             |
 | `BYPASS_AUTH_TAILSCALE`                 | `true`            | Lässt Tailscale-Verkehr an Anmeldung und Allowlist vorbei.                                                                                                 |
 | `BYPASS_AUTH_DOCKER`                    | `true`            | Lässt Docker-Bridge-Verkehr und das in Docker erkannte Standard-Gateway an Anmeldung und Allowlist vorbei.                                                  |
-| `REQUIRE_AUTH_FOR_DOCKER_PROXY`         | `false`           | Erzwingt die normale Anmeldung für Docker-Verkehr, der nach Reverse Proxy aussieht.                                                                        |
+| `REQUIRE_AUTH_FOR_DOCKER_PROXY`         | `true`            | Verlangt normale Anmelde- und Allowlist-Prüfungen für Docker-Verkehr, den ein Proxy weiterleitet. Setz den Wert nur auf `false`, wenn du allen vorgelagerten Clients vertraust. |
 | `TRUSTED_HOSTS`                         | leer              | Zusätzliche öffentliche oder Reverse-Proxy-Hostnamen, auf die Marinara antworten darf. Direkte IP, localhost, `.local`, `.home.arpa` und einteilige LAN-Namen funktionieren automatisch. |
 | `SSL_CERT`                              | leer              | Pfad zu einer TLS-Zertifikatsdatei. Zusammen mit `SSL_KEY` liefert der Server HTTPS direkt aus.                                                             |
 | `SSL_KEY`                               | leer              | Pfad zur Datei mit dem privaten TLS-Schlüssel.                                                                                                             |
@@ -250,7 +252,7 @@ Aktiviere nur den Schalter, den du für einen selbst gehosteten Dienst auf einem
 | Variable                      | Standard | Wirkung                                                                              |
 | ----------------------------- | ------- | ------------------------------------------------------------------------------------ |
 | `PROVIDER_LOCAL_URLS_ENABLED` | `false` | Erlaubt KI-Anbieter-URLs den Zugriff auf private oder LAN-Adressen. Unter Android standardmäßig an. |
-| `IMAGE_LOCAL_URLS_ENABLED`    | `false` | Erlaubt Bildanbieter-URLs den Zugriff auf private oder LAN-Adressen.                  |
+| `IMAGE_LOCAL_URLS_ENABLED`    | `false` | Erlaubt Bildanbieter-URLs den Zugriff auf private oder LAN-Adressen. Private Ergebnis-URLs generierter Bilder müssen weiterhin exakt dem Ursprung des eingestellten Anbieters entsprechen. |
 | `TTS_LOCAL_URLS_ENABLED`      | `false` | Erlaubt Text-to-Speech-URLs den Zugriff auf private oder LAN-Adressen.                |
 | `DEEPLX_LOCAL_URLS_ENABLED`   | `false` | Erlaubt DeepLX-Übersetzungs-URLs den Zugriff auf private oder LAN-Adressen.           |
 | `WEBHOOK_LOCAL_URLS_ENABLED`  | `false` | Erlaubt Webhooks eigener Tools den Zugriff auf private oder LAN-Adressen.             |

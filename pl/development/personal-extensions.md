@@ -7,7 +7,7 @@ Rozszerzenia osobiste to kod domyślnie wyłączony i zatwierdzany skrótem tre�
 Te właściwości muszą pozostać prawdziwe:
 
 1. Utworzenie i import zawsze dają wersję roboczą: wyłączoną i niezatwierdzoną.
-2. Zatwierdzenie wymaga dokładnego, aktualnego skrótu treści `sha256:` oraz wyraźnego potwierdzenia, że kod działa w piaskownicy.
+2. Zatwierdzenie wymaga dokładnego, aktualnego skrótu treści `sha256:` oraz wyraźnego potwierdzenia, że kod będzie wykonywany. Pełny dostęp do strony wymaga jeszcze jednego, osobnego potwierdzenia.
 3. Każda zmiana kodu wykonywalnego wyłącza rozszerzenie i czyści `approvedHash`.
 4. Przywrócenie starszej wersji daje wyłączoną wersję roboczą.
 5. Kopia zapasowa oraz import profilu czyszczą zatwierdzenie i stan włączenia.
@@ -15,10 +15,13 @@ Te właściwości muszą pozostać prawdziwe:
 7. Każde źródło inne niż `professor_mari` jest zewnętrzne, w tym `external`, `local`, `legacy`, `profile_import` oraz nieznane wartości sprowadzane do `legacy`.
 8. Rekordy zewnętrzne nie pojawiają się w odpowiedziach zarządzania ani środowiska uruchomieniowego, chyba że `ENABLE_EXTERNAL_EXTENSIONS=true`, a zapisana zgoda z sekcji **Danger Zone** (strefa zagrożenia) też ma wartość prawda.
 9. Zamknięcie którejkolwiek bramki wyłącza zapisane rekordy zewnętrzne i zatrzymuje działające procesy serwera. Odpytywanie środowiska uruchomieniowego przeglądarki usuwa aktywne wątki Worker.
-10. Kod przeglądarkowy nigdy nie wykonuje się w dokumencie aplikacji Marinara Engine. Kod serwerowy nigdy nie wykonuje się w procesie serwera Marinara Engine.
+10. Kod przeglądarkowy z piaskownicy nigdy nie wykonuje się w dokumencie aplikacji Marinara Engine. Z osobnego środowiska uruchomieniowego strony może korzystać wyłącznie zewnętrzne rozszerzenie przeglądarkowe z uprawnieniem `full_page_access` zatwierdzonym dokładnym skrótem. Kod serwerowy nigdy nie wykonuje się w procesie serwera Marinara Engine.
 11. Nie ma instalatora z adresu URL, zdalnego katalogu ani automatycznej aktualizacji.
 12. Wkłady do interfejsu gospodarza to zwykłe, zwalidowane deskryptory. Znaczniki, style, adresy URL, komponenty i funkcje zwrotne rozszerzenia nigdy nie trafiają do drzewa React aplikacji Marinara Engine.
 13. Rejestracja wkładu, jego aktywacja, zdarzenia, aktualizacje i usunięcie pozostają związane z dokładnym zatwierdzonym skrótem treści włączonego rozszerzenia.
+14. Migawka kontekstu przeglądarki zawiera w wersji podstawowej wyłącznie identyfikator aktywnego czatu oraz identyfikatory postaci. Opcjonalne uprawnienia `read_active_characters` i `read_active_persona` mogą dodać ograniczone pola z listy dozwolonych, i to tylko z rekordów aktywnych w tym czacie; nigdy nie ujawniają wiadomości, całych bibliotek, niezadeklarowanych pól, metadanych ani dostępu do aplikacji.
+15. Żądane uprawnienia wchodzą w skład skrótu kodu wykonywalnego. Każda zmiana uprawnień wyłącza rozszerzenie i wymaga ponownego zatwierdzenia dokładnym skrótem.
+16. Uprawnienie `full_page_access` przysługuje tylko rozszerzeniom zewnętrznym, wymaga otwarcia obu bramek rozszerzeń zewnętrznych i nigdy nie jest dostępne dla wersji roboczych od Professor Mari. To wyraźnie zadeklarowany tryb zaufania, a nie obietnica piaskownicy.
 
 Bramek pilnują trasy API i usługi środowiska uruchomieniowego. Ukrycie kontrolek nie jest granicą bezpieczeństwa. Rekord zewnętrzny dodany ręcznie, przywrócony, odziedziczony po starszej wersji albo wprowadzony poza normalną ścieżką musi pozostać niewidoczny i niewykonywalny tak długo, jak choć jedna bramka jest zamknięta.
 
@@ -43,9 +46,9 @@ Powierzchnia zarządzania znajduje się pod `/api/personal-extensions`:
 - `POST /:id/rollback` przywraca wcześniejszą, wyłączoną wersję.
 - `DELETE /:id` usuwa rozszerzenie razem z prywatnymi ustawieniami.
 
-Metadane zatwierdzonego środowiska uruchomieniowego przeglądarki odczytuje `GET /runtime/client`. Dokument wykonywalny wydaje `GET /:id/sandbox.html?hash=...`, i to wyłącznie wtedy, gdy dokładnie ten skrót jest włączony, zatwierdzony i dopuszczony przez politykę.
+Metadane zatwierdzonego środowiska uruchomieniowego przeglądarki odczytuje `GET /runtime/client`. Kod z piaskownicy wydaje `GET /:id/sandbox.html?hash=...`. Kod i style pełnej strony wydają `GET /:id/page-runtime.js?hash=...` oraz `GET /:id/page-style.css?hash=...`. Każdy z tych punktów końcowych wymaga, żeby dokładnie ten skrót pozostawał włączony, zatwierdzony i dopuszczony przez politykę; punkty końcowe strony wymagają dodatkowo źródła zewnętrznego i uprawnienia `full_page_access`.
 
-## Środowisko uruchomieniowe przeglądarki
+## Środowisko uruchomieniowe przeglądarki w piaskownicy
 
 Komponent `PersonalExtensionInjector.tsx` tworzy ukrytą ramkę iframe z `sandbox="allow-scripts"` i bez `allow-same-origin`. Ramka ma więc nieprzejrzyste pochodzenie i nie sięgnie do drzewa DOM, ciasteczek, magazynu ani interfejsów tego samego pochodzenia aplikacji Marinara Engine.
 
@@ -57,8 +60,31 @@ Wątek Worker dostaje tylko:
 - prywatny magazyn rozszerzenia, pośredniczony przez dokument nadrzędny;
 - zarządzane liczniki czasu;
 - rejestrację funkcji sprzątających;
+- identyfikatory aktywnego czatu i postaci, tylko do odczytu, przez `marinara.context`;
+- ograniczone pola z kart aktywnych postaci i z wybranej persony, wyłącznie przez osobno zatwierdzone zdolności;
 - ograniczone okno w ramce iframe przez `marinara.ui.showWindow(...)`;
 - zaufane miejsca na wkłady w interfejsie gospodarza przez `marinara.ui.registerContribution(...)`.
+
+Wersja 5 API rozszerzeń przeglądarkowych dodaje `marinara.context.get()` i `marinara.context.subscribe(listener)`. Niezmienna migawka ma taki kształt:
+
+```ts
+{
+  chatId: string | null;
+  characterId: string | null;
+  characterIds: readonly string[];
+  personaId: string | null;
+  characters: readonly PersonalExtensionCharacterSnapshot[];
+  persona: PersonalExtensionPersonaSnapshot | null;
+}
+```
+
+Klient wyprowadza migawkę z `useChatStore` i wysyła ją, gdy zmienia się aktywny czat, jego lista postaci albo wybrana persona. Identyfikatory to niepuste ciągi znaków o długości do 256 znaków, a lista postaci jest pozbawiona duplikatów i ograniczona do 256 pozycji. Ramka iframe przyjmuje aktualizację kontekstu tylko od dokumentu nadrzędnego i tylko wtedy, gdy jej `contentHash` zgadza się z dokładną wersją rozszerzenia, a potem wątek Worker jeszcze raz normalizuje i zamraża dane. Start rozszerzenia czeka na pierwszą migawkę od aplikacji, a po sekundzie wchodzi zapasowy pusty kontekst, żeby zepsuty mostek nie zablokował wątku Worker na zawsze.
+
+Pole `characterId` to ułatwienie dla czatów z jedną postacią i przy czatach grupowych pozostaje `null`; `characterIds` zawiera każdego aktywnego uczestnika. Pole `personaId` jest dostępne tylko z uprawnieniem `read_active_persona`. Bez aktywnego czatu `chatId`, `characterId`, `personaId` i `persona` mają wartość `null`, a `characterIds` oraz `characters` są puste. Rozszerzenia mogą bezpiecznie używać tych identyfikatorów jako kluczy we własnym prywatnym magazynie.
+
+Uprawnienie `read_active_characters` pozwala, żeby `characters` zawierało wyłącznie te pola aktywnych kart: `id`, `name`, `description`, `personality`, `scenario`, `firstMessage`, `exampleDialogue`, `creator`, `characterVersion`, `tags`, `backstory`, `appearance`, `aboutMe` i `conversationDisplayName`. Uprawnienie `read_active_persona` pozwala, żeby `persona` zawierała wyłącznie `id`, `name`, `description`, `personality`, `scenario`, `backstory`, `appearance`, `tags`, `aboutMe` i `conversationDisplayName`. Serwer wyprowadza oba zestawy z aktywnego czatu, stosuje limity dla pojedynczych pól i dla całości, a identyfikatora rekordu przysłanego przez klienta nigdy nie uznaje za dowód uprawnień.
+
+Zdolności deklaruje się w danych rozszerzenia, zapisuje przy każdej wersji, pokazuje w sekcji **Settings** (Ustawienia) i w oknie zatwierdzania oraz wlicza do skrótu kodu wykonywalnego. Aplikacja wysyła najpierw migawkę z samymi identyfikatorami, a potem uzupełnia ją przez zatwierdzonego pośrednika danego rozszerzenia. Wątek Worker niezależnie odrzuca niezadeklarowane rekordy, odrzuca rekordy postaci o identyfikatorach spoza `characterIds`, ponownie stosuje limity i zamraża wynik.
 
 Wywołanie `marinara.ui.showWindow({ title, elements, onEvent, onClose })` zwraca uchwyt z metodami `update({ title?, elements? })` i `close()`. Wątek Worker wysyła wyłącznie deskryptory, a każdy element buduje zaufany kod startowy ramki, korzystając z interfejsów DOM i `textContent` (nigdy `innerHTML`). Aplikacja odsłania normalnie ukrytą ramkę piaskownicy tylko na czas otwartego okna i chowa ją z powrotem po zamknięciu.
 
@@ -74,11 +100,17 @@ Klient niezależnie sprawdza każdy deskryptor, zanim doda go do magazynu środo
 
 Nie ma tu pomocnika do drzewa DOM, dostępu do API aplikacji Marinara Engine, dostępu do zdarzeń dokumentu nadrzędnego ani dowolnego dostępu do sieci. Ramka iframe sprawdza komunikaty i ogranicza ich częstotliwość. Strażnik oparty na sygnale życia kończy wątek Worker, który nie odpowiada albo kręci się w pętli.
 
-## Zgodność złożonych rozszerzeń
+## Środowisko zgodności z pełnym dostępem do strony
 
-Protokół wkładów ma obsłużyć prawdziwe narzędzia z rozbudowanymi ustawieniami i wieloetapowe procesy, a nie tylko ozdobne przyciski. Złożone rozszerzenie może stopniowo podmieniać elementy panelu i trzymać własny stan w prywatnym magazynie rozszerzenia.
+Protokół wkładów pozostaje zalecaną drogą dla narzędzi z rozbudowanymi ustawieniami i dla wieloetapowych procesów. Złożone rozszerzenie może stopniowo podmieniać elementy panelu i trzymać własny stan w prywatnym magazynie rozszerzenia.
 
-Starsze pakiety, które wstawiają przyciski po selektorach aplikacji, przeszukują wnętrzności React, rysują dowolne nakładki albo wywołują trasy `/api` z tego samego pochodzenia, nie zadziałają w bezpiecznym środowisku uruchomieniowym bez zmian. Przenieś je, zastępując ich interfejs deskryptorami wkładów. Funkcje, które potrzebują danych aplikacji Marinara Engine albo efektów wizualnych na poziomie sceny, muszą korzystać z osobnej, wąsko określonej i zatwierdzonej przez użytkownika zdolności pośredniczącej, o ile taka istnieje; nigdy nie przywracaj surowego dostępu do drzewa DOM ani nieograniczonych uprawnień do API jako skrótu dla zgodności.
+Starsze pakiety, które wstawiają przyciski po selektorach aplikacji, przeszukują wnętrzności React, rysują dowolne nakładki albo wywołują trasy `/api` z tego samego pochodzenia, nie zadziałają w bezpiecznym środowisku uruchomieniowym bez zmian. Najlepiej przenieść je na deskryptory wkładów i wąskie zdolności pośredniczące.
+
+Kiedy zgodność naprawdę wymaga strony aplikacji, rozszerzenie zewnętrzne może poprosić o `full_page_access`. Komponent `PersonalExtensionInjector.tsx` ładuje wtedy dokładnie tę zatwierdzoną wersję przez element skryptu z tego samego pochodzenia i opcjonalny arkusz stylów. Kod działa w funkcji asynchronicznej z małym zgodnościowym obiektem `marinara`, który daje tożsamość, logowanie, prywatny magazyn, zarządzane liczniki czasu i rejestrację funkcji sprzątających. Globalne obiekty strony pozostają dostępne, bo dokładnie o takie uprawnienia poprosiło rozszerzenie.
+
+Program ładujący sprawdza `id`, nazwę i skrót treści względem metadanych środowiska uruchomieniowego, zanim wywoła kod. Serwer przy każdym żądaniu skryptu lub arkusza stylów osobno weryfikuje dokładny skrót, stan włączenia, źródło zewnętrzne, uprawnienie oraz politykę dwóch bramek. Zamknięcie bramki wyłącza rekord, a odpytywanie środowiska uruchomieniowego usuwa wstawione elementy i sprząta, na ile się da. To nie cofnie dowolnych skutków ubocznych wywołanych już przez w pełni zaufany kod strony, więc aplikacja ostrzega, że może być potrzebne przeładowanie strony.
+
+Starsze importy z `kind: "marinara.extension"` i bez wyraźnej deklaracji `capabilities` dostają uprawnienie `full_page_access`. Nowoczesny eksport zawsze zapisuje pole zdolności, nawet jako pustą listę, więc bezpieczne pakiety nie zmieniają klasyfikacji przy ponownym imporcie.
 
 ## Środowisko uruchomieniowe serwera
 
@@ -102,4 +134,4 @@ pnpm regression:professor-mari-shell-sandbox
 pnpm smoke:ui
 ```
 
-Test regresyjny bezpieczeństwa musi udowodnić: dwuetapową bramkę, unieważnienie przy zmianie dokładnego skrótu, kształt wątku Worker o nieprzejrzystym pochodzeniu, sprawdzanie i sprzątanie wkładów gospodarza, brak wstawiania kodu z tego samego pochodzenia, czyszczenie środowiska, odcięcie systemu plików i sieci, prywatny magazyn oraz bezpieczne domyślne zachowanie przy niedostępnej piaskownicy.
+Test regresyjny bezpieczeństwa musi udowodnić: dwuetapową bramkę, unieważnienie przy zmianie dokładnego skrótu, kształt wątku Worker o nieprzejrzystym pochodzeniu, ograniczone i związane ze skrótem migawki kontekstu, sprawdzanie i sprzątanie wkładów gospodarza, kierowanie ruchu pełnej strony wyłącznie do źródeł zewnętrznych razem z potwierdzeniem, klasyfikację starszych pakietów, czyszczenie środowiska, odcięcie systemu plików i sieci, prywatny magazyn oraz bezpieczne domyślne zachowanie przy niedostępnej piaskownicy.

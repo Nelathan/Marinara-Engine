@@ -124,14 +124,14 @@ Daneben gibt es den weiter gefassten Schalter `ALLOW_UNAUTHENTICATED_REMOTE=true
 
 ## Ausnahme für Tailscale und Docker
 
-Zwei Schalter lassen Tailscale- und Docker-Verkehr sowohl die IP-Allowlist als auch Basic Auth überspringen, genau wie Loopback. Beide sind standardmäßig aktiv. Deshalb ist eine frische Installation ohne jede Einrichtung schon über Tailscale und aus den eigenen Docker-Containern erreichbar:
+Zwei Schalter lassen direkten Tailscale- und Docker-Verkehr sowohl die IP-Allowlist als auch Basic Auth überspringen, genau wie Loopback. Beide sind standardmäßig aktiv. Deshalb ist eine frische Installation ohne jede Einrichtung schon über Tailscale und direkt aus den eigenen Docker-Containern erreichbar:
 
 ```env
 BYPASS_AUTH_TAILSCALE=true
 BYPASS_AUTH_DOCKER=true
 ```
 
-Diese Standardwerte sind sicher. Ein Tailscale-Peer hat sich bereits in deinem Tailscale-Konto angemeldet, um überhaupt beizutreten. Docker-Bridge-Adressen und das aus dem Container erkannte exakte Gateway stehen für denselben Docker-Host. Auch mit aktivem Basic Auth überspringen deine Tailscale- und Docker-Clients die Abfrage. Der Rest des Netzwerks muss sich anmelden.
+Diese Standardwerte setzen voraus, dass jeder Tailscale-Peer ein vertrauenswürdiger Marinara-Nutzer ist. Docker-Bridge-Adressen und das aus dem Container erkannte exakte Gateway stehen für denselben Docker-Host. Auch mit aktivem Basic Auth überspringen direkte Tailscale- und Docker-Clients die Abfrage. Gehören zu deinem Tailnet weniger vertrauenswürdige Peers, setze `BYPASS_AUTH_TAILSCALE=false`.
 
 Setze einen Schalter auf false, wenn auch diese Clients ein Passwort brauchen sollen. Dafür gibt es zwei seltenere Gründe.
 
@@ -147,11 +147,13 @@ Oder dein normales LAN nutzt Adressen der Form `172.16.x.x`. Dann schalte die Do
 BYPASS_AUTH_DOCKER=false
 ```
 
-Möglich ist außerdem, dass Marinara hinter einem Reverse-Proxy-Container auf der Docker-Bridge oder dem erkannten Gateway steht. Damit Marinaras eigene Zugriffsprüfungen für die vom Proxy weitergeleiteten Clients gelten, setze:
+Möglich ist außerdem, dass Marinara hinter einem Reverse-Proxy- oder Tunnel-Container auf der Docker-Bridge oder dem erkannten Gateway steht. Weiterleitungs-Header (`Forwarded`, `X-Forwarded-For`, `X-Real-IP`, `X-Forwarded-Host` oder `X-Forwarded-Proto`) zeigen an, dass der Docker-Peer für einen anderen Client steht. Deshalb wendet Marinara standardmäßig die normalen Prüfungen von Basic Auth und IP-Allowlist an:
 
 ```env
 REQUIRE_AUTH_FOR_DOCKER_PROXY=true
 ```
+
+Um die alte Ausnahme wiederherzustellen, setze den Schalter auf `false`. Tu das nur, wenn jeder Client, der den Proxy erreichen kann, vertrauenswürdig ist – weitergeleitete Clients erben sonst den passwortlosen Status von Docker.
 
 Der Server protokolliert eine `[auth-bypass]`-Warnung, sobald eine dieser Ausnahmen zum ersten Mal eine Anfrage durchlässt. Die Warnung bestätigt, dass die Ausnahme aktiv ist.
 

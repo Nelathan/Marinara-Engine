@@ -101,27 +101,22 @@ Remplace les valeurs correspondantes de l'export API par les placeholders Marina
 | `%reference_image_name%` | La première image téléversée vers ComfyUI |
 | `%duration_seconds%` | La durée du clip de storyboard, en secondes |
 | `%length%` | La durée convertie dans le contrat de 16 images par seconde de Marinara |
+| `%fps%` | La fréquence d'images que Marinara utilise pour le clip |
 | `%width%`, `%height%` | Les dimensions issues de la résolution et du format d'image de la connexion vidéo |
 | `%seed%` | Une nouvelle graine aléatoire pour la requête |
 | `%model%` | Valeur de modèle facultative venant de la connexion, quand le workflow ne code pas en dur le modèle de son loader |
 
-Le segment de référence, dans le `timeline_data` du nœud LTX Director, doit reprendre le nom du fichier téléversé :
+L'image de référence se place dans le tableau `segments` du `timeline_data` du nœud LTX Director. Dans le workflow API, `timeline_data` est une chaîne JSON sérialisée. Le placeholder `%length%` garde la durée du clip dynamique via `normalDurationFrames` ; le segment d'image de référence, à l'image zéro, conserve volontairement sa propre valeur courte et fixe `"length":16` :
 
 ```json
 {
-  "id": "marinara-reference",
-  "start": 0,
-  "length": 16,
-  "prompt": "",
-  "type": "image",
-  "imageFile": "%reference_image_name%",
-  "isEndFrame": false
+  "timeline_data": "{\"global_prompt\":\"\",\"normalStartFrame\":0,\"normalDurationFrames\":%length%,\"segments\":[{\"id\":\"marinara-reference\",\"start\":0,\"length\":16,\"prompt\":\"\",\"type\":\"image\",\"imageFile\":\"%reference_image_name%\",\"isEndFrame\":false}],\"motionSegments\":[],\"audioSegments\":[]}"
 }
 ```
 
-Rends aussi la durée de la chronologie dynamique avec `%length%`. Si le nœud LTX Director expose des entrées de durée en secondes, utilise `%duration_seconds%` à cet endroit plutôt que de laisser une valeur fixe de cinq secondes.
+Ne place pas `%reference_image_name%` à côté de `timeline_data` ni dans un champ d'image distinct au premier niveau. Garde le nombre d'images, les secondes et la fréquence d'images reliés aux entrées externes du workflow avec `%length%`, `%duration_seconds%` et `%fps%` ; les valeurs numériques affichées par un graphe ComfyUI modifiable ne sont pas des valeurs par défaut de Marinara.
 
-Dans un workflow ComfyUI local, garde les placeholders entre guillemets. Marinara analyse le JSON et convertit en nombres les placeholders strictement numériques avant d'envoyer la requête.
+Garde entre guillemets les placeholders de type chaîne, comme `%reference_image_name%`. Les entrées de nœud strictement numériques peuvent mettre `%length%`, `%duration_seconds%` et `%fps%` entre guillemets, car Marinara les convertit en nombres. À l'intérieur de la chaîne sérialisée `timeline_data`, laisse `%length%` sans guillemets, comme ci-dessus, pour que la valeur décodée de la chronologie soit numérique.
 
 ### Réexporter après chaque modification
 

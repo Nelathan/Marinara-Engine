@@ -57,6 +57,8 @@ Si tu n'es pas prêt à terminer, clique sur **Skip for Now**. Dès qu'un modèl
 
 Installer ou réinstaller le runtime est une action protégée. Sur les installations Windows en un clic, elle est activée automatiquement pour toi. Sur macOS, Linux et Docker, il faut parfois l'autoriser. Voir la section **Dépannage** ci-dessous.
 
+Marinara ne télécharge que les versions de llama.cpp, MLX et uv approuvées pour ta version d'Engine. Marinara vérifie la taille exacte du fichier et la somme de contrôle SHA-256 avant d'extraire ou d'exécuter quoi que ce soit. Le jeu de dépendances Python de MLX est lui aussi verrouillé par version et vérifié par empreinte, avant l'installation du code source mlx-lm relu, sans résolution de paquets supplémentaires. Les mises à jour du runtime arrivent donc par des mises à jour de Marinara relues, et non en suivant en silence une version "latest" venue de l'amont.
+
 ## Télécharger un modèle
 
 La fenêtre de configuration propose deux façons d'obtenir un modèle.
@@ -189,6 +191,8 @@ SIDECAR_RUNTIME_INSTALL_ENABLED=true
 Ou saisis une fois ton secret Admin Access dans **Settings -> Advanced -> Admin Access** (Paramètres), puis réessaie. Voir [Référence de configuration du serveur](../CONFIGURATION.md).
 
 **Le runtime n'a pas démarré.** La fenêtre de configuration affiche un encadré intitulé **Local runtime failed to start** avec l'erreur et le chemin d'un fichier de log, le journal du serveur. Clique sur **Retry Startup**. Si cela échoue, clique sur **Reinstall Runtime**, ou essaie une autre valeur de **Runtime Target**. Le bouton **Continue Without Local AI** te permet de continuer à utiliser Marinara sans le Local Model. La carte dans Connections signale le même problème avec la mention **Local runtime unavailable**.
+
+**Le téléchargement du runtime signale une taille ou une somme de contrôle SHA-256 qui ne correspond pas.** Marinara a écarté le téléchargement avant l'extraction. Mets d'abord Marinara à jour, puis réessaie pour que le manifeste des runtimes approuvés et le téléchargement concordent. Si la même version échoue encore, ne tente pas d'extraire ou d'exécuter l'archive à la main : signale la valeur de **Runtime Target** et l'erreur aux mainteneurs.
 
 **La recherche dans les lorebooks dit que le modèle local n'est pas activé.** Active **Use for tracker agents (roleplay)** ou **Use for game scene analysis** dans la carte Local Model, puis relance la vectorisation.
 

@@ -101,27 +101,22 @@ Reemplaza los valores correspondientes en la exportación API con marcadores de 
 | `%reference_image_name%` | La imagen de primer fotograma subida a ComfyUI |
 | `%duration_seconds%` | La duración del clip del Storyboard en segundos |
 | `%length%` | La duración convertida al contrato de fotogramas de 16 FPS de Marinara |
+| `%fps%` | La velocidad de fotogramas que Marinara usa para el clip |
 | `%width%`, `%height%` | Dimensiones seleccionadas de la resolución y la relación de aspecto de la conexión de video |
 | `%seed%` | Una nueva semilla aleatoria para la solicitud |
 | `%model%` | Valor de modelo opcional de la conexión cuando el flujo de trabajo no fija su modelo de carga en el código |
 
-El segmento de referencia dentro del `timeline_data` de LTX Director debería usar el nombre de archivo subido:
+La imagen de referencia va dentro del arreglo `segments` del `timeline_data` de LTX Director. En el flujo de trabajo de la API, `timeline_data` es una cadena JSON serializada. `%length%` mantiene dinámica la duración del clip a través de `normalDurationFrames`; el segmento de imagen de referencia del fotograma cero conserva a propósito su propio valor corto y fijo `"length":16`:
 
 ```json
 {
-  "id": "marinara-reference",
-  "start": 0,
-  "length": 16,
-  "prompt": "",
-  "type": "image",
-  "imageFile": "%reference_image_name%",
-  "isEndFrame": false
+  "timeline_data": "{\"global_prompt\":\"\",\"normalStartFrame\":0,\"normalDurationFrames\":%length%,\"segments\":[{\"id\":\"marinara-reference\",\"start\":0,\"length\":16,\"prompt\":\"\",\"type\":\"image\",\"imageFile\":\"%reference_image_name%\",\"isEndFrame\":false}],\"motionSegments\":[],\"audioSegments\":[]}"
 }
 ```
 
-Haz también dinámica la duración de la línea de tiempo con `%length%`. Si el nodo LTX Director expone entradas de duración basadas en segundos, usa `%duration_seconds%` ahí en vez de dejar un valor fijo de cinco segundos.
+No pongas `%reference_image_name%` junto a `timeline_data` ni en un campo de imagen aparte de nivel superior. Mantén el número de fotogramas, los segundos y la velocidad de fotogramas conectados a las entradas externas del flujo de trabajo con `%length%`, `%duration_seconds%` y `%fps%`; los valores numéricos que muestra un grafo editable de ComfyUI no son los predeterminados de Marinara.
 
-Mantén los valores de los marcadores de posición entre comillas en un flujo de trabajo local de ComfyUI. Marinara analiza el JSON y convierte los marcadores de posición numéricos exactos en números antes de enviarlo.
+Mantén entre comillas los marcadores de posición de texto como `%reference_image_name%`. Las entradas numéricas exactas de un nodo pueden poner entre comillas `%length%`, `%duration_seconds%` y `%fps%` porque Marinara los convierte en números. Dentro de la cadena serializada `timeline_data`, deja `%length%` sin comillas como se muestra para que el valor decodificado de la línea de tiempo sea numérico.
 
 ### Exporta después de cada edición
 

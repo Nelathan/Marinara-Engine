@@ -392,7 +392,7 @@ O CSS de um tema sincronizado pode pedir o motor nativo Accent Pulse com `--mari
 
 ### Personal Extensions
 
-As Personal Extensions são código em sandbox, guardado no servidor e aprovado por hash exato. A interface de Addons usa `use-personal-extensions.ts`; `PersonalExtensionInjector.tsx` hospeda o código de Browser aprovado em um Worker dedicado, dentro de um iframe em sandbox de origem opaca. As extensões de servidor rodam em um processo Node separado, dentro do Seatbelt do macOS ou do Bubblewrap do Linux, e falham de forma fechada quando nenhum dos dois está disponível. Fontes externas exigem a liberação pelo arquivo `.env` e a ativação em Danger Zone nas fronteiras de listagem, aprovação e execução.
+As Personal Extensions são código em sandbox, guardado no servidor e aprovado por hash exato. A interface de Addons usa `use-personal-extensions.ts`; `PersonalExtensionInjector.tsx` hospeda o código de Browser aprovado em um Worker dedicado, dentro de um iframe em sandbox de origem opaca, e intermedeia instantâneos imutáveis do contexto do chat ativo. Os campos de contexto estão sempre presentes; fora de um chat ativo, `chatId` e `characterId` ficam como `null` e `characterIds` fica vazio. Os campos limitados do card de personagem ativo e da persona selecionada exigem permissões declaradas separadamente e vinculadas ao hash. As extensões de servidor rodam em um processo Node separado, dentro do Seatbelt do macOS ou do Bubblewrap do Linux, e falham de forma fechada quando nenhum dos dois está disponível. Fontes externas exigem a liberação pelo arquivo `.env` e a ativação em Danger Zone nas fronteiras de listagem, aprovação e execução.
 
 Leia [Arquitetura das Personal Extensions](personal-extensions.md) antes de mexer nesse recurso.
 

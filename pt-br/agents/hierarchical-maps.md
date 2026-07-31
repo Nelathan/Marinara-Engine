@@ -1,6 +1,6 @@
 # World Maps: instalação, criação e viagem
 
-> **Compatibilidade atual:** este guia corresponde ao World Maps **1.2.0**
+> **Compatibilidade atual:** este guia corresponde ao World Maps **1.2.1**
 > no Marinara Engine **2.3.5**. O pacote funciona em chats de Roleplay e Game.
 
 World Maps acrescenta um estado do mundo persistente ao Roleplay e ao
@@ -22,13 +22,15 @@ vinculado elegível servem de base para a próxima resposta. O mapa também
 acompanha uma viagem narrada até o fim rumo a um lugar conhecido, ou registra um
 lugar recém-descoberto quando a história realmente chega lá.
 
-Cada chat recebe a própria cópia de trabalho de um mapa. Com os modelos da conta,
-você prepara um mundo original ou de fandom uma vez só e depois adiciona uma
-cópia limpa a qualquer chat de Roleplay ou Game.
+Os mapas podem ser independentes em cada chat ou ficar vinculados a um mundo
+compartilhado da conta. Os modelos criam cópias limpas que podem seguir caminhos
+diferentes. Já um mundo compartilhado mantém uma única hierarquia oficial e um
+único conjunto de artes, enquanto cada chat vinculado guarda o próprio local
+atual, o histórico de viagem, as capturas e os vínculos com o Game.
 
 ## Visão geral do recurso
 
-O World Maps 1.2.0 oferece:
+O World Maps 1.2.1 oferece:
 
 - regiões, assentamentos, lugares, edifícios, andares e cômodos aninhados;
 - caminhos de navegação e um local oficial da história;
@@ -37,12 +39,18 @@ O World Maps 1.2.0 oferece:
 - viagem entre pai e filho, ligações diretas e planejamento de rota em vários
   turnos;
 - movimento validado a partir da narração concluída e descoberta de novos locais;
+- mundos compartilhados da conta que podem ser vinculados a chats de Roleplay e
+  Game;
+- rascunhos revisados por chat, com controles de publicação, descarte, conflito e
+  separação independente;
 - modelos de mapa da conta, criados manualmente, com IA ou por importação;
 - rascunhos e expansões de mapa feitos com IA e apoiados na configuração ou no
   lore selecionado;
 - descrições públicas do local, memória privada do modelo e lore do local exato;
-- uma imagem de referência opcional da galeria para cada local;
-- um plano de fundo da galeria separado para cada mapa de filhos posicionado;
+- uma imagem de referência opcional da galeria do chat ou da Global Gallery (a
+  galeria global da conta) para cada local;
+- um plano de fundo separado, da galeria do chat ou da Global Gallery, para cada
+  mapa de filhos posicionado;
 - geração em lote revisada para as artes de local que estiverem faltando;
 - uma substituição global do prompt de arte do Maps, baseada em variáveis;
 - suporte a referência de local nas ilustrações do Roleplay e nos Storyboards do
@@ -88,9 +96,9 @@ o catálogo depois oferecer **Update**, instale essa atualização também. Siga
 aviso de reinício antes de usar o pacote.
 
 A página do World Maps informa a versão instalada do pacote e se está
-tudo pronto, oferece a biblioteca de modelos da conta e mostra o status do mapa
-no chat atual. Instalar o pacote deixa o recurso disponível, mas não o ativa em
-todos os chats.
+tudo pronto, oferece a biblioteca de mapas do mundo da conta e mostra o status
+do mapa no chat atual. Instalar o pacote deixa o recurso disponível, mas não o
+ativa em todos os chats.
 
 ### Roleplay
 
@@ -98,11 +106,13 @@ todos os chats.
 2. Abra **Chat Settings** pelo botão de engrenagem.
 3. Ative **Enable Agents**.
 4. Em **Tracker Agents**, ative **World Maps**.
-5. Abra **Edit hierarchical map** ou a biblioteca **Map templates**.
+5. Abra **Edit world map** (editar o mapa do mundo) ou a biblioteca **World map
+   library**.
 
-A biblioteca de modelos funciona igual, seja aberta pela página principal
-**Agents**, seja pelo **Chat Settings** do Roleplay. Use **Add to chat** para
-copiar um modelo para o chat ativo.
+A biblioteca funciona igual, seja aberta pela página principal **Agents**, seja
+pelo **Chat Settings** do Roleplay. Use **Add to chat** para uma cópia
+independente do modelo, ou **Link to chat** (vincular ao chat) para um mundo
+compartilhado duradouro.
 
 ### Game
 
@@ -141,10 +151,58 @@ Cada aplicação cria uma cópia de trabalho independente. Edições posteriores
 modelo não mudam os chats que já o copiaram, e as edições feitas no chat não
 mudam o modelo.
 
-Os modelos não copiam a arte da galeria do chat. Os IDs de imagem pertencem à
-galeria do chat de origem e não seriam portáveis. Adicione ou gere as referências
-de local e os planos de fundo do mapa no chat de trabalho depois de aplicar o
-modelo.
+Os modelos mantêm as referências de arte da Global Gallery, que valem para a
+conta inteira. Ao usar **Save as template** (salvar como modelo) em um chat, o
+Maps promove para a Global Gallery a arte do chat que estiver referenciada e
+reaproveita uma imagem compartilhada idêntica, quando já existir uma. Cada chat
+que aplica o modelo passa a apontar para essa mesma arte compartilhada, sem criar
+outra cópia na galeria.
+
+Só a arte é compartilhada. Cada definição de mapa aplicada continua sendo uma
+cópia de trabalho independente: editar o modelo não atualiza os mapas já
+adicionados aos chats.
+
+## Vincular chats a um mundo compartilhado
+
+Use a seção **Shared worlds** (mundos compartilhados) da **World map library**
+quando vários chats de Roleplay ou Game precisarem ler a mesma hierarquia
+oficial. Crie um mundo compartilhado em branco, importe um, promova um modelo
+existente com **Make shared** (tornar compartilhado) ou abra um mapa de chat
+salvo e escolha **Make shared**. Essa última opção promove para a Global Gallery
+a arte do chat referenciada, cria o mundo pertencente à conta e vincula o chat
+original a ele.
+
+Escolha **Link to chat** para anexar um chat aberto. O local atual e todos os IDs
+de local já usados pelo histórico da campanha precisam existir no mundo
+compartilhado. Caso contrário, use **Independent copy** (cópia independente) ou
+migre antes o mapa atual do chat para um novo mundo compartilhado.
+
+Os chats vinculados compartilham apenas a definição do mapa e a arte da Global
+Gallery. Eles não compartilham mensagens, locais atuais, capturas de viagem,
+estado do Game, vínculos com o mapa do Game, conexões de provedor nem
+credenciais.
+
+As edições e descobertas feitas dentro de um chat vinculado são salvas como um
+rascunho não publicado daquele chat. Elas não mudam o mundo oficial nem os outros
+chats enquanto você não escolher **Publish changes** (publicar as alterações).
+Outra opção: usar **Discard** para descartar o rascunho, ou **Fork independent**
+(separar do mundo compartilhado) para desvincular o chat mantendo a versão atual
+dele. Se o mundo oficial mudar enquanto um rascunho estiver pendente, o Maps
+avisa que há um conflito e exige a separação ou o descarte, em vez de sobrescrever
+qualquer uma das versões em silêncio.
+
+Editar um mundo compartilhado pela biblioteca atualiza a definição oficial na
+hora. Os locais usados por chats vinculados não podem ser excluídos; arquive-os
+para que os IDs estáveis continuem disponíveis. Um mundo compartilhado também não
+pode ser excluído enquanto todos os chats vinculados não forem separados ou
+revinculados.
+
+Os mundos compartilhados e os modelos mantêm as referências de arte da Global
+Gallery sem copiar o arquivo de imagem para cada chat. Marinara bloqueia a
+exclusão de uma imagem da Global Gallery enquanto um modelo salvo, um mundo
+compartilhado, um mapa de chat independente ou o rascunho de um chat vinculado
+ainda a referenciar. Remova antes os vínculos de arte, se a intenção for excluir
+o próprio arquivo.
 
 ## Entender o editor de mapas
 
@@ -382,7 +440,7 @@ mesmo quando usam a mesma imagem da galeria.
 
 | Arte                         | Para que serve                                                                                                                     | Vai para a geração de imagens?                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Location reference image** | Fixa a identidade visual do lugar atual exato. Escolha na galeria ou crie com IA.                                                   | Sim, quando **Use for Roleplay illustrations and Game storyboards** está ativado e o pedido é elegível. |
+| **Location reference image** | Fixa a identidade visual do lugar atual exato. Escolha uma arte do chat ou da Global Gallery compartilhada, ou crie com IA.         | Sim, quando **Use for Roleplay illustrations and Game storyboards** está ativado e o pedido é elegível. |
 | **Child map background**     | Aparece atrás dos locais filhos móveis de um pai que usa a apresentação Map. Cada camada do mapa pode ter o próprio plano de fundo. | Não. Serve só para exibição.                                                                           |
 
 As referências de personagem ou de persona preservam quem está presente; a
@@ -404,7 +462,8 @@ referências automáticas cabem.
 
 Selecione um local no editor e abra **Location reference image**.
 
-- **Choose from Gallery** atribui uma imagem já revisada.
+- **Choose artwork** atribui uma imagem já revisada do chat atual ou da Global
+  Gallery compartilhada. O seletor identifica a origem de cada uma.
 - **Create with AI** abre um prompt editável de imagem de ambientação e salva o
   resultado na galeria antes de você decidir se vai usá-lo.
 - **Use for Roleplay illustrations and Game storyboards** controla se a imagem
@@ -524,16 +583,21 @@ obrigatórias e confira as pré-visualizações resolvidas antes de salvar.
 
 ## Importar, exportar e arquivar com segurança
 
-Use **Export** para baixar a hierarquia de trabalho como um arquivo
-`.world-map.json`. Deixe **Include map artwork** ativado para reunir no mesmo
-arquivo as imagens de referência dos locais e os fundos dos mapas de filhos.
+Use **Export** no editor de um chat, de um modelo ou de um mundo compartilhado
+para baixar a hierarquia de trabalho como um arquivo `.world-map.json`. Deixe
+**Include map artwork** ativado para reunir no mesmo arquivo as imagens de
+referência dos locais e os fundos dos mapas de filhos.
 Desative a opção quando quiser um backup menor, só com a definição. Os arquivos
 antigos `.hierarchical-map.json` continuam compatíveis com a importação.
 
-Use **Import** para carregar uma hierarquia na cópia de trabalho. A arte
-incluída é restaurada na Gallery do chat de destino, e os vínculos das imagens
-são remapeados. Revise o resultado e clique em **Save** para torná-lo oficial.
-A importação não salva na hora.
+Use **Import** para carregar uma hierarquia na cópia de trabalho de um chat, em
+um modelo independente ou em um mundo compartilhado. A arte incluída é
+restaurada e os vínculos das imagens são remapeados. A arte que pertence ao chat
+volta para a galeria do chat de destino. A arte compartilhada é reaproveitada da
+Global Gallery quando a mesma imagem já existe, ou é adicionada lá uma única vez
+quando um modelo ou uma referência compartilhada precisa dela. Revise o
+resultado e clique em **Save** para torná-lo oficial. A importação não salva na
+hora.
 
 Depois que o histórico da campanha passa a citar um mapa, as mudanças importadas
 precisam manter os IDs de local existentes. Acrescente ou atualize locais em vez
@@ -558,8 +622,8 @@ precisa ser de Roleplay ou Game. Ative **Enable Agents** e depois ative
 ### A opção Add to chat não aparece na biblioteca de modelos
 
 Abra um chat compatível de Roleplay ou Game antes de abrir a biblioteca. A
-biblioteca mostra **Add to chat** tanto pela página principal do Hierarchical
-Maps quanto pelas configurações do chat. Durante a configuração do Game, a ação
+biblioteca mostra **Add to chat** tanto pela página principal do World Maps
+quanto pelas configurações do chat. Durante a configuração do Game, a ação
 equivalente é **Use template**.
 
 ### A configuração do Game usou os locais errados ou os de reserva

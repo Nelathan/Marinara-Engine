@@ -88,7 +88,7 @@ Si tu n'arrives pas à joindre Marinara depuis un téléphone, une tablette ou u
 - Fais écouter le serveur sur une adresse joignable. Par défaut, il écoute sur `127.0.0.1` (la boucle locale, ta machine et rien d'autre). Les lanceurs shell définissent `HOST=0.0.0.0` pour toi. Si tu as démarré à la main avec `pnpm start`, commence par définir `HOST=0.0.0.0` dans le fichier `.env`.
 - Vérifie que les deux appareils sont sur le même réseau Wi-Fi.
 - Vérifie qu'aucun pare-feu ne bloque le port. Le port par défaut est `7860`, ou celui que tu as défini dans `PORT`.
-- Mets en place un contrôle d'accès. Pour les clients ordinaires du réseau ou publics, définis `BASIC_AUTH_USER` et `BASIC_AUTH_PASS` dans le fichier `.env`. La boucle locale reste sans mot de passe. Le trafic passant par Tailscale et par le pont Docker local, ou par une passerelle de conteneur détectée, est approuvé par défaut.
+- Mets en place un contrôle d'accès. Pour les clients ordinaires du réseau ou publics, définis `BASIC_AUTH_USER` et `BASIC_AUTH_PASS` dans le fichier `.env`. La boucle locale reste sans mot de passe. Le trafic direct passant par Tailscale et par le pont Docker local, ou par une passerelle de conteneur détectée, est approuvé par défaut ; le trafic Docker relayé par un proxy exige une autorisation normale, sauf si tu définis explicitement `REQUIRE_AUTH_FOR_DOCKER_PROXY=false`.
 - Pour les actions privilégiées depuis cet appareil (sauvegardes, effacement de données, mises à jour), définis `ADMIN_SECRET` dans le fichier `.env` du serveur. Colle ensuite la même valeur dans **Settings** > **Advanced** > **Admin Access** sur cet appareil et clique sur **Save**.
 - Si tu passes par un domaine public ou un proxy inverse et que tu vois **Untrusted request host**, ajoute son nom d'hôte exact à `TRUSTED_HOSTS` dans le fichier `.env`. Les adresses IP directes utilisées par les téléphones, les ordinateurs du réseau local et les pairs Tailscale restent acceptées automatiquement.
 
@@ -128,6 +128,17 @@ Le **Local Model** est un modèle d'IA qui tourne sur ta propre machine, sans cl
 
 - Si l'installation d'un environnement d'exécution échoue avec **Sidecar runtime install is disabled**, c'est que le serveur a désactivé cette action par sécurité. Sur ta propre machine, définis `SIDECAR_RUNTIME_INSTALL_ENABLED=true` dans le fichier `.env`. Depuis un autre appareil, colle d'abord ton secret administrateur dans **Settings** > **Advanced** > **Admin Access**.
 - Si le téléchargement ou la configuration du modèle échoue depuis un autre appareil (une adresse réseau ou Docker), le secret administrateur peut lui aussi être nécessaire. Sur ta propre machine, il ne l'est pas. Le point précédent indique où coller le secret.
+- Si une vérification de llama.cpp, de MLX, d'uv ou du verrou de dépendances MLX fournis signale une taille de fichier ou une empreinte SHA-256 qui ne correspond pas, Marinara a écarté ou refusé le fichier avant l'extraction ou l'installation. Mets à jour ou réinstalle Marinara, puis réessaie. N'exécute pas, ne décompresse pas, ne modifie pas et ne contourne pas manuellement le fichier rejeté.
+
+### Mainteneurs : mettre à jour les environnements d'exécution locaux épinglés
+
+Rien ne garantit que les archives sources générées par GitHub restent identiques octet pour octet, même quand le contenu de leur commit ne change pas. Ne "corrige" jamais l'écart signalé par un utilisateur en acceptant les octets vus sur sa machine, ni en affaiblissant la vérification. Les entrées d'environnement d'exécution se réépinglent uniquement dans une modification relue de Marinara Engine :
+
+1. Choisis en amont une révision ou un fichier de release immuable, et relis les changements en amont.
+2. Télécharge le fichier dans un dossier temporaire, note sa taille exacte en octets et calcule son empreinte SHA-256 de ton côté.
+3. Mets à jour le fichier `runtime-integrity-manifest.ts` avec la révision, l'URL, la taille et l'empreinte. Pour MLX, régénère le fichier `packages/server/src/assets/mlx-runtime-requirements.lock` à partir de son fichier `.in`, avec la version d'uv épinglée, sur Apple Silicon et Python 3.12. Relis chaque changement de dépendance, puis mets à jour `requirementsLockSha256`.
+4. Lance `pnpm regression:runtime-integrity`, `pnpm check`, ainsi qu'une véritable installation propre de l'environnement d'exécution sur la plateforme concernée.
+5. Publie la mise à jour relue de Marinara Engine avant de demander aux utilisateurs de réessayer. Ne propose aucun contournement manuel de la somme de contrôle.
 
 Pour la configuration complète, voir [Configurer le Local Model](connections/local-model.md).
 
@@ -310,6 +321,14 @@ La section est volontairement masquée tant que les deux verrous de sécurité n
 Si l'interrupteur de la Danger Zone est désactivé, c'est que l'indicateur côté hôte est encore à faux, ou que l'application n'a pas encore vu le changement. Vérifie que tu as bien modifié le fichier `.env` actif décrit dans [Configuration du serveur](CONFIGURATION.md). Sur Docker, c'est normalement `/app/data/.env`.
 
 Tant que l'un des deux verrous est fermé, les extensions externes, héritées, importées depuis un profil, stockées manuellement ou d'origine inconnue n'apparaissent pas et ne peuvent pas s'exécuter. Rouvrir les verrous ne les réactive pas automatiquement.
+
+### Une extension de navigateur importée s'affiche mais ne fonctionne pas
+
+Ouvre l'extension dans **Settings → Addons → External Extensions** et examine la section **Requested access**. Les paquets plus anciens, au format `marinara.extension` v1 et sans déclaration de capacités, doivent afficher **Full page access**. N'approuve que l'empreinte exacte que tu as inspectée et à laquelle tu fais confiance.
+
+Si un ancien paquet a été réexporté avec une liste de capacités explicitement vide, Marinara le traite comme une extension de bac à sable sûre : le code qui dépend du DOM n'y fonctionne pas. N'ajoute `full_page_access` à son manifeste que si tu mesures la conséquence : le code accède alors à toute la page Marinara, au stockage du navigateur, aux API réseau et à la session de même origine.
+
+Après avoir désactivé une extension à accès complet, recharge Marinara s'il reste un élément de la barre d'outils, une surcouche, un écouteur ou un changement visuel. Le nettoyage se fait au mieux, car le code de la page peut produire des effets de bord en dehors de l'API de compatibilité suivie par Marinara.
 
 ### Une Server Extension signale qu'aucun bac à sable pris en charge n'est disponible
 

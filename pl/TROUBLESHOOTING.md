@@ -88,7 +88,7 @@ Jeśli nie da się otworzyć aplikacji Marinara Engine na telefonie, tablecie al
 - Przypisz serwer do adresu widocznego w sieci. Domyślnie serwer nasłuchuje na `127.0.0.1` (pętla zwrotna, czyli tylko ten komputer). Programy uruchamiające ustawiają `HOST=0.0.0.0` automatycznie. Przy ręcznym starcie poleceniem `pnpm start` najpierw ustaw `HOST=0.0.0.0` w pliku `.env`.
 - Sprawdź, czy oba urządzenia są w tej samej sieci Wi-Fi.
 - Sprawdź, czy zapora sieciowa nie blokuje portu. Domyślny port to `7860` albo ten ustawiony w `PORT`.
-- Skonfiguruj kontrolę dostępu. Dla zwykłych klientów sieciowych i publicznych ustaw `BASIC_AUTH_USER` oraz `BASIC_AUTH_PASS` w pliku `.env`. Pętla zwrotna pozostaje bez hasła. Ruch przez Tailscale oraz przez mostek Docker na tym samym hoście lub wykrytą bramę kontenera jest domyślnie zaufany.
+- Skonfiguruj kontrolę dostępu. Dla zwykłych klientów sieciowych i publicznych ustaw `BASIC_AUTH_USER` oraz `BASIC_AUTH_PASS` w pliku `.env`. Pętla zwrotna pozostaje bez hasła. Bezpośredni ruch przez Tailscale oraz przez mostek Docker na tym samym hoście lub wykrytą bramę kontenera jest domyślnie zaufany. Ruch Docker przekazywany przez proxy wymaga zwykłej autoryzacji, chyba że jawnie ustawisz `REQUIRE_AUTH_FOR_DOCKER_PROXY=false`.
 - Do działań uprzywilejowanych z takiego urządzenia (kopie zapasowe, czyszczenie danych, aktualizacje) ustaw `ADMIN_SECRET` w pliku `.env` serwera. Potem wklej tę samą wartość w **Settings** > **Advanced** > **Admin Access** na tym urządzeniu i kliknij przycisk **Save**.
 - Przy domenie publicznej lub odwrotnym proxy komunikat **Untrusted request host** oznacza, że trzeba dopisać dokładną nazwę hosta do `TRUSTED_HOSTS` w pliku `.env`. Bezpośrednie adresy IP telefonów, komputerów w sieci lokalnej i urządzeń Tailscale są nadal akceptowane automatycznie.
 
@@ -128,6 +128,17 @@ Błędy generowania pojawiają się jako komunikat na dole ekranu. Jeśli połą
 
 - Jeśli instalacja środowiska uruchomieniowego kończy się komunikatem **Sidecar runtime install is disabled**, serwer ma to działanie wyłączone ze względów bezpieczeństwa. Na własnym komputerze ustaw `SIDECAR_RUNTIME_INSTALL_ENABLED=true` w pliku `.env`. Z innego urządzenia najpierw wklej sekret administratora w **Settings** > **Advanced** > **Admin Access**.
 - Jeśli pobieranie modelu albo konfiguracja zawodzi z innego urządzenia (adres sieciowy lub kontener Docker), sekret administratora również może być potrzebny. Na własnym komputerze nie jest wymagany. Miejsce na wklejenie sekretu opisuje punkt wyżej.
+- Jeśli kontrola dołączonego pliku llama.cpp, MLX, uv albo blokady zależności MLX zgłasza niezgodność rozmiaru pliku lub sumy SHA-256, Marinara odrzuciła go jeszcze przed rozpakowaniem lub instalacją. Zaktualizuj albo zainstaluj ponownie aplikację Marinara Engine i spróbuj jeszcze raz. Odrzuconego pliku nie uruchamiaj, nie rozpakowuj, nie edytuj i nie omijaj kontroli ręcznie.
+
+### Dla opiekunów projektu: aktualizacja przypiętych lokalnych środowisk uruchomieniowych
+
+Archiwa źródeł generowane przez GitHub nie muszą pozostawać identyczne bajt po bajcie, nawet jeśli zawartość commita się nie zmienia. Nigdy nie "naprawiaj" niezgodności zgłoszonej przez użytkownika, przyjmując bajty z jego komputera ani osłabiając weryfikację. Dane wejściowe środowiska uruchomieniowego przypinaj ponownie wyłącznie w zmianie kodu aplikacji Marinara Engine, która przeszła recenzję:
+
+1. Wybierz niezmienną rewizję lub plik wydania z repozytorium źródłowego i przejrzyj zmiany po stronie źródła.
+2. Pobierz plik do katalogu tymczasowego, zapisz jego dokładny rozmiar w bajtach i niezależnie oblicz skrót SHA-256.
+3. Wpisz rewizję, adres URL, rozmiar i skrót do pliku `runtime-integrity-manifest.ts`. W przypadku MLX wygeneruj ponownie plik `packages/server/src/assets/mlx-runtime-requirements.lock` z pliku `.in`, używając przypiętej wersji uv na Apple Silicon i Python 3.12, przejrzyj każdą zmianę zależności i zaktualizuj `requirementsLockSha256`.
+4. Uruchom `pnpm regression:runtime-integrity`, `pnpm check` oraz prawdziwą, czystą instalację środowiska uruchomieniowego na platformie, której dotyczy zmiana.
+5. Wydaj sprawdzoną aktualizację aplikacji Marinara Engine, zanim poprosisz użytkowników o ponowną próbę. Nie udostępniaj ręcznego obejścia sumy kontrolnej.
 
 Pełną konfigurację opisuje przewodnik [Konfiguracja modelu Local Model](connections/local-model.md).
 
@@ -310,6 +321,14 @@ Ta sekcja jest celowo ukryta, dopóki nie zostaną otwarte obie blokady bezpiecz
 Jeśli przełącznik w sekcji **Danger Zone** jest nieaktywny, flaga hosta wciąż ma wartość false albo aplikacja nie zauważyła jeszcze zmiany. Sprawdź, czy edytowany plik `.env` leży w aktywnej ścieżce opisanej w przewodniku [Konfiguracja serwera](CONFIGURATION.md). W kontenerze Docker jest to zwykle `/app/data/.env`.
 
 Gdy któraś blokada jest zamknięta, wpisy rozszerzeń zewnętrznych, starszych, zaimportowanych z profilu, zapisanych ręcznie i o nieznanym pochodzeniu nie pojawiają się i nie działają. Ponowne otwarcie blokad nie włącza ich automatycznie.
+
+### Zaimportowane rozszerzenie przeglądarki jest widoczne, ale nie działa
+
+Otwórz rozszerzenie w sekcji **Settings → Addons → External Extensions** i sprawdź pole **Requested access** (żądany zakres dostępu). Starsze pakiety w formacie `marinara.extension` v1 bez deklaracji uprawnień powinny pokazywać **Full page access**. Zatwierdź wyłącznie ten dokładny skrót, który sprawdzono i uznano za godny zaufania.
+
+Jeśli starszy pakiet wyeksportowano ponownie z jawnie pustą listą uprawnień, Marinara traktuje go jak bezpieczne rozszerzenie w piaskownicy. Kod zależny od struktury strony (DOM) w takim rozszerzeniu nie zadziała. Wpis `full_page_access` dodaj do manifestu tylko wtedy, gdy jasne jest, że kod zyska dostęp do całej strony aplikacji Marinara Engine, pamięci przeglądarki, sieciowych API oraz sesji w tym samym źródle.
+
+Po wyłączeniu rozszerzenia z dostępem do całej strony odśwież aplikację Marinara Engine, jeśli został jakiś element paska narzędzi, nakładka, nasłuch zdarzeń albo zmiana wyglądu. Marinara sprząta najlepiej, jak potrafi, bo kod strony może zostawić skutki poza śledzonym API zgodności.
 
 ### Rozszerzenie **Server Extension** zgłasza brak obsługiwanej piaskownicy
 

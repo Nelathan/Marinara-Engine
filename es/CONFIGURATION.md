@@ -62,6 +62,8 @@ La variable de entorno es el permiso del operador del host; el interruptor de la
 
 Los borradores de Professor Mari siguen disponibles sin este indicador. Se crean desactivados y aún requieren la aprobación de su hash de código exacto.
 
+Las Sandboxed Browser Extensions (extensiones de navegador en entorno aislado) siguen siendo la opción predeterminada. Algunos paquetes de terceros más antiguos están marcados como **Full page access** (acceso total a la página) porque dependen del DOM de Marinara. Ese modo ejecuta el código aprobado exacto dentro de la página de Marinara y puede acceder al contenido de la página, al almacenamiento del navegador, a las APIs de red y a la sesión actual del mismo origen. Solo está disponible para las External Extensions después de abrir ambas puertas y requiere una aceptación de advertencia aparte. Desactívalo y recarga la página si la extensión deja cambios visuales o de comportamiento.
+
 ## Dónde está el archivo .env
 
 La configuración vive en un archivo llamado `.env`. Es un archivo de texto plano con un ajuste por línea, en la forma `KEY=value`. Las líneas que empiezan con `#` son comentarios y el servidor los ignora.
@@ -129,7 +131,7 @@ Los principales ajustes de control de acceso son:
 | `TRUSTED_PRIVATE_NETWORKS`              | valores predeterminados integrados | Reemplaza los rangos de red privada predeterminados. Incluye cualquier valor predeterminado que aún quieras.                                                                         |
 | `BYPASS_AUTH_TAILSCALE`                 | `true`            | Deja que el tráfico de Tailscale se salte el inicio de sesión y la lista de permitidos.                                                                                                      |
 | `BYPASS_AUTH_DOCKER`                    | `true`            | Deja que el tráfico de puente de Docker y la puerta de enlace predeterminada exacta detectada dentro de Docker se salten el inicio de sesión y la lista de permitidos.                                             |
-| `REQUIRE_AUTH_FOR_DOCKER_PROXY`         | `false`           | Fuerza el inicio de sesión normal para el tráfico de Docker que parece pasar por un proxy inverso.                                                                                        |
+| `REQUIRE_AUTH_FOR_DOCKER_PROXY`         | `true`            | Exige las comprobaciones normales de inicio de sesión y lista de permitidos para el tráfico de Docker reenviado por un proxy. Ponlo en `false` solo cuando todos los clientes anteriores sean de confianza. |
 | `TRUSTED_HOSTS`                         | vacío             | Nombres de host públicos o de proxy inverso adicionales a los que Marinara puede responder. La IP directa, localhost, `.local`, `.home.arpa` y los nombres de LAN de una sola etiqueta funcionan automáticamente. |
 | `SSL_CERT`                              | vacío             | Ruta a un archivo de certificado TLS. Configúralo con `SSL_KEY` para servir HTTPS directamente.                                                                               |
 | `SSL_KEY`                               | vacío             | Ruta al archivo de clave privada TLS.                                                                                                                         |
@@ -250,7 +252,7 @@ Activa solo el interruptor que necesites para un servicio autoalojado en otra m�
 | Variable                      | Predeterminado | Qué hace                                                                         |
 | ----------------------------- | ------- | ------------------------------------------------------------------------------------ |
 | `PROVIDER_LOCAL_URLS_ENABLED` | `false` | Permite que las URLs de proveedor de IA lleguen a direcciones privadas o de LAN. Activado de forma predeterminada en Android. |
-| `IMAGE_LOCAL_URLS_ENABLED`    | `false` | Permite que las URLs de proveedor de imagen lleguen a direcciones privadas o de LAN.                        |
+| `IMAGE_LOCAL_URLS_ENABLED`    | `false` | Permite que las URLs de proveedor de imagen lleguen a direcciones privadas o de LAN. Las URLs privadas del resultado de imagen generada aún deben coincidir con el origen exacto del proveedor configurado. |
 | `TTS_LOCAL_URLS_ENABLED`      | `false` | Permite que las URLs de texto a voz lleguen a direcciones privadas o de LAN.                    |
 | `DEEPLX_LOCAL_URLS_ENABLED`   | `false` | Permite que las URLs de traducción de DeepLX lleguen a direcciones privadas o de LAN.                    |
 | `WEBHOOK_LOCAL_URLS_ENABLED`  | `false` | Permite que los webhooks de herramientas personalizadas lleguen a direcciones privadas o de LAN.                       |

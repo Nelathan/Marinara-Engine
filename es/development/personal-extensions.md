@@ -7,7 +7,7 @@ Las extensiones personales son código desactivado de forma predeterminada y apr
 Mantén ciertas estas propiedades:
 
 1. La creación y la importación siempre producen un borrador desactivado y sin aprobar.
-2. La aprobación requiere el hash de contenido `sha256:` exacto y actual, y una confirmación explícita de código en el entorno aislado (sandbox).
+2. La aprobación requiere el hash de contenido `sha256:` exacto y actual, y una confirmación explícita de ejecución de código. El acceso a la página completa requiere una confirmación explícita adicional.
 3. Cualquier cambio ejecutable desactiva la extensión y borra `approvedHash`.
 4. La reversión restaura un borrador desactivado.
 5. La copia de seguridad y la importación de perfil borran la aprobación y el estado de activación.
@@ -15,10 +15,13 @@ Mantén ciertas estas propiedades:
 7. Toda fuente distinta de `professor_mari` es externa, incluidas `external`, `local`, `legacy`, `profile_import` y los valores desconocidos que se normalizan a `legacy`.
 8. Los registros externos no aparecen en las respuestas de gestión ni de tiempo de ejecución a menos que `ENABLE_EXTERNAL_EXTENSIONS=true` y la aceptación persistida de la Danger Zone (Zona de peligro) también sea verdadera.
 9. Cerrar cualquiera de los dos controles desactiva los registros externos guardados y detiene los procesos activos del servidor. El sondeo del entorno de ejecución del navegador elimina los procesos de trabajo activos del navegador.
-10. El código del navegador nunca se ejecuta en el documento de Marinara. El código del servidor nunca se ejecuta en el proceso del servidor de Marinara.
+10. El código del navegador en el entorno aislado (sandbox) nunca se ejecuta en el documento de Marinara. Solo una extensión de navegador externa con `full_page_access` aprobado por hash exacto puede usar el entorno de ejecución de página separado. El código del servidor nunca se ejecuta en el proceso del servidor de Marinara.
 11. No hay instalador por URL, catálogo remoto ni actualizador automático.
 12. Las contribuciones al host son descriptores planos validados. El marcado, los estilos, las URLs, los componentes y los callbacks de la extensión nunca cruzan al árbol de React de Marinara.
 13. El registro, la activación, los eventos, las actualizaciones y la eliminación de contribuciones permanecen ligados al hash de contenido aprobado y exacto de la extensión activada.
+14. Las instantáneas de contexto del navegador contienen siempre, como base, solo el ID del chat activo y los IDs de los personajes. Los permisos opcionales `read_active_characters` y `read_active_persona` pueden añadir campos acotados y en lista de permitidos, solo de los registros activos en ese chat; nunca exponen mensajes, bibliotecas completas, campos no declarados, metadatos ni acceso a la aplicación.
+15. Los permisos solicitados forman parte del hash ejecutable. Cualquier cambio de permisos desactiva la extensión y exige una nueva aprobación por hash exacto.
+16. `full_page_access` es solo para extensiones externas, requiere los dos controles de extensiones externas y nunca está disponible para los borradores de Professor Mari. Es un modo de confianza explícito, no una afirmación de aislamiento.
 
 Los controles se aplican en las rutas y en los servicios de tiempo de ejecución. Ocultar controles no es un límite de seguridad. Un registro externo añadido manualmente, restaurado, heredado (legacy) o creado fuera de banda debe permanecer invisible e inejecutable mientras cualquiera de los dos controles esté cerrado.
 
@@ -43,9 +46,9 @@ La superficie de gestión está bajo `/api/personal-extensions`:
 - `POST /:id/rollback` restaura una revisión anterior desactivada.
 - `DELETE /:id` elimina la extensión y los ajustes privados.
 
-Los metadatos aprobados del entorno de ejecución del navegador se leen desde `GET /runtime/client`. El documento ejecutable lo sirve `GET /:id/sandbox.html?hash=...` solo mientras el hash exacto esté activado, aprobado y permitido por la política.
+Los metadatos aprobados del entorno de ejecución del navegador se leen desde `GET /runtime/client`. El código aislado lo sirve `GET /:id/sandbox.html?hash=...`. El código y el CSS de página completa los sirven `GET /:id/page-runtime.js?hash=...` y `GET /:id/page-style.css?hash=...`. Todas estas rutas exigen que el hash exacto siga activado, aprobado y permitido por la política; las rutas de página requieren además una fuente externa y `full_page_access`.
 
-## Entorno de ejecución del navegador
+## Entorno de ejecución aislado del navegador
 
 `PersonalExtensionInjector.tsx` crea un iframe oculto con `sandbox="allow-scripts"` y sin `allow-same-origin`. Por tanto, el iframe tiene un origen opaco y no puede acceder al DOM, las cookies, el almacenamiento ni las APIs del mismo origen de Marinara.
 
@@ -57,8 +60,31 @@ El worker recibe solo:
 - almacenamiento privado de la extensión intermediado por el padre;
 - temporizadores gestionados;
 - registro de limpieza;
+- identificadores de solo lectura del chat activo y de los personajes a través de `marinara.context`;
+- campos acotados de las tarjetas de personaje activas y de la persona seleccionada, solo a través de capacidades aprobadas por separado;
 - una ventana de iframe restringida a través de `marinara.ui.showWindow(...)`;
 - ranuras de contribución del host de confianza a través de `marinara.ui.registerContribution(...)`.
+
+La versión 5 de la API de extensiones de navegador añade `marinara.context.get()` y `marinara.context.subscribe(listener)`. La instantánea inmutable tiene esta forma:
+
+```ts
+{
+  chatId: string | null;
+  characterId: string | null;
+  characterIds: readonly string[];
+  personaId: string | null;
+  characters: readonly PersonalExtensionCharacterSnapshot[];
+  persona: PersonalExtensionPersonaSnapshot | null;
+}
+```
+
+El cliente deriva la instantánea de `useChatStore` y la envía cuando cambia el chat activo, su lista de personajes o su persona seleccionada. Los IDs son cadenas no vacías con un tope de 256 caracteres; la lista de personajes se deduplica y tiene un tope de 256 entradas. El iframe acepta una actualización de contexto solo de su padre y solo cuando su `contentHash` coincide con la revisión exacta de la extensión; después, el Worker vuelve a normalizar y congelar la carga. El arranque de la extensión espera la primera instantánea del host, con una alternativa de contexto nulo al cabo de un segundo para que un puente fallido no pueda bloquear el Worker indefinidamente.
+
+`characterId` es una comodidad para los chats de un solo personaje y sigue siendo `null` en los chats grupales; `characterIds` contiene a todos los participantes activos. `personaId` solo está disponible con `read_active_persona`. Sin chat activo, `chatId`, `characterId`, `personaId` y `persona` son `null`, mientras que `characterIds` y `characters` están vacíos. Las extensiones pueden usar los identificadores de forma segura como claves en su propio almacenamiento privado.
+
+`read_active_characters` permite que `characters` contenga solo los campos `id`, `name`, `description`, `personality`, `scenario`, `firstMessage`, `exampleDialogue`, `creator`, `characterVersion`, `tags`, `backstory`, `appearance`, `aboutMe` y `conversationDisplayName` de las tarjetas activas. `read_active_persona` permite que `persona` contenga solo `id`, `name`, `description`, `personality`, `scenario`, `backstory`, `appearance`, `tags`, `aboutMe` y `conversationDisplayName`. El servidor deriva ambos conjuntos del chat activo, aplica límites por campo y límites agregados, y nunca acepta un ID de registro enviado por el cliente como prueba de alcance.
+
+Las capacidades se declaran en la carga de la extensión, se guardan con cada revisión, se muestran en Settings (Configuración) y en el cuadro de diálogo de aprobación, y se incluyen en el hash ejecutable. El host envía primero la instantánea con solo IDs y luego la enriquece a través del intermediario aprobado y específico de esa extensión. El Worker descarta de forma independiente los registros no declarados, rechaza los registros de personaje cuyos IDs no estén en `characterIds`, vuelve a acotar la carga y congela el resultado.
 
 `marinara.ui.showWindow({ title, elements, onEvent, onClose })` devuelve un identificador con `update({ title?, elements? })` y `close()`. El worker solo envía descriptores, y el arranque del iframe de confianza construye cada elemento con las APIs del DOM y `textContent` (nunca `innerHTML`). El host revela el iframe del sandbox, oculto en el resto de casos, solo mientras hay una ventana abierta, y lo vuelve a ocultar al cerrarla.
 
@@ -74,11 +100,17 @@ El cliente valida de forma independiente cada descriptor antes de añadirlo al a
 
 No hay ayudante del DOM, ni acceso a la API de Marinara, ni acceso a eventos del padre, ni capacidad de red arbitraria. El iframe valida y limita la tasa de los mensajes. Un vigilante de latidos (heartbeat) termina un worker que no responde o que está en un bucle ocupado.
 
-## Compatibilidad de extensiones complejas
+## Entorno de ejecución de compatibilidad de página completa
 
-El protocolo de contribuciones está pensado para admitir herramientas reales cargadas de ajustes y flujos de trabajo de varios pasos, no solo botones decorativos. Una extensión compleja puede reemplazar progresivamente los elementos de un panel y mantener su propio estado en el almacenamiento privado de la extensión.
+El protocolo de contribuciones sigue siendo la vía preferida para las herramientas cargadas de ajustes y los flujos de trabajo de varios pasos. Una extensión compleja puede reemplazar progresivamente los elementos de un panel y mantener su propio estado en el almacenamiento privado de la extensión.
 
-Los paquetes heredados existentes que inyectan botones con selectores del host, recorren los internos de React, escriben superposiciones arbitrarias o llaman a rutas `/api` del mismo origen no funcionan sin cambios en el entorno de ejecución seguro. Pórtalos reemplazando su interfaz por descriptores de contribución. La funcionalidad que necesita datos de la aplicación Marinara o efectos visuales a nivel de escena debe usar una capacidad de intermediación separada, de alcance estrecho y aprobada por el usuario cuando exista; nunca restaures el DOM sin procesar ni la autoridad de API sin restricciones como atajo de compatibilidad.
+Los paquetes heredados existentes que inyectan botones con selectores del host, recorren los internos de React, escriben superposiciones arbitrarias o llaman a rutas `/api` del mismo origen no funcionan sin cambios en el entorno de ejecución seguro. Es preferible portarlos a descriptores de contribución y a capacidades de intermediación de alcance estrecho.
+
+Cuando la compatibilidad necesita de verdad la página del host, una extensión externa puede solicitar `full_page_access`. `PersonalExtensionInjector.tsx` carga esa revisión aprobada exacta mediante un elemento de script del mismo origen y una hoja de estilos opcional. El código fuente se ejecuta dentro de una función asíncrona con un pequeño objeto `marinara` de compatibilidad para identidad, registro, almacenamiento privado, temporizadores gestionados y registro de limpieza; los globales del entorno de la página siguen disponibles porque esa es la autoridad solicitada.
+
+El cargador de página valida el `id`, el nombre y el hash de contenido contra los metadatos del entorno de ejecución antes de invocar el código. El servidor verifica por separado el hash exacto, el estado de activación, la fuente externa, el permiso y la política de los dos controles en cada petición de script o de hoja de estilos. Cerrar un control desactiva el registro; después, el sondeo del entorno de ejecución elimina los nodos inyectados y hace una limpieza en la medida de lo posible. Esto no puede revocar los efectos secundarios arbitrarios que ya haya creado el código de página con confianza total, así que el flujo visible para el usuario avisa de que puede hacer falta recargar.
+
+Las importaciones heredadas con `kind: "marinara.extension"` y sin una declaración explícita de `capabilities` reciben `full_page_access`. Las exportaciones modernas siempre escriben el campo de capacidades, incluso vacío, para que los paquetes seguros no se reclasifiquen al volver a importarlos.
 
 ## Entorno de ejecución del servidor
 
@@ -102,4 +134,4 @@ pnpm regression:professor-mari-shell-sandbox
 pnpm smoke:ui
 ```
 
-La regresión de seguridad debe demostrar el control de dos pasos, la invalidación por hash exacto, la forma del worker de origen opaco, la validación y limpieza de las contribuciones del host, la eliminación de la inyección del mismo origen, la depuración del entorno, la denegación de sistema de archivos y red, el almacenamiento privado y la disponibilidad del sandbox que falla en estado cerrado (fail-closed).
+La regresión de seguridad debe demostrar el control de dos pasos, la invalidación por hash exacto, la forma del worker de origen opaco, las instantáneas de contexto acotadas y ligadas al hash, la validación y limpieza de las contribuciones del host, el enrutamiento y la confirmación de página completa solo para extensiones externas, la clasificación de los paquetes heredados, la depuración del entorno, la denegación de sistema de archivos y red, el almacenamiento privado y la disponibilidad del sandbox que falla en estado cerrado (fail-closed).

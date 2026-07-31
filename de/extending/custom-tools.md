@@ -179,6 +179,8 @@ Tools lassen sich zwischen Installationen umziehen.
 - Für alle Tools: klick im Bereich **Functions** auf **Export functions to ZIP**.
 - Zum Importieren: klick auf **Import functions from ZIP or JSON** und wähle eine `.json`- oder `.zip`-Datei. Eine Meldung nennt die Anzahl der importierten Tools.
 
+Importierte Webhook-Tools speichert Marinara immer deaktiviert und mit ausgeschaltetem **Include hidden chat context** – selbst wenn die Datei eine dieser Berechtigungen verlangt. Nach dem Import zeigt Marinara den Zielserver des Webhooks und die Berechtigungen, die die Datei angefordert hat. Öffne jeden importierten Webhook und prüfe die komplette Webadresse sowie die Einstellung für den verborgenen Kontext. Aktiviere ihn erst, wenn du dem Ziel vertraust. Static- und Script-Tools behalten ihren importierten Aktivierungszustand.
+
 Beim Import bleiben Tools außen vor, deren Name mit einem vorhandenen oder einem eingebauten Tool kollidiert. Agenten-Pakete enthalten keine eigenen Tools und importieren auch keine: exportiere vertrauenswürdige Funktionen separat, prüfe sie unter **Function Calls** und hänge sie nach dem Import des Agenten ausdrücklich an.
 
 ## Reservierte Namen

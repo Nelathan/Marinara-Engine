@@ -179,6 +179,8 @@ Narzędzia da się przenosić między instalacjami.
 - Żeby wyeksportować wszystkie narzędzia, kliknij przycisk **Export functions to ZIP** w sekcji **Functions**.
 - Żeby zaimportować, kliknij przycisk **Import functions from ZIP or JSON** i wskaż plik `.json` albo `.zip`. Komunikat pokazuje, ile narzędzi udało się zaimportować.
 
+Zaimportowane narzędzia typu **Webhook** zapisują się zawsze wyłączone i z wyłączonym przełącznikiem **Include hidden chat context**, nawet jeśli plik prosi o którekolwiek z tych uprawnień. Po imporcie Marinara pokazuje domenę docelową webhooka oraz uprawnienia, o które prosił plik. Otwórz każdy zaimportowany webhook, sprawdź jego pełny adres URL i ustawienie ukrytego kontekstu, a potem włącz go tylko wtedy, gdy ufasz miejscu docelowemu. Narzędzia typu **Static** i **Script** zachowują stan włączenia zapisany w pliku importu.
+
 Import pomija każde narzędzie, którego nazwa koliduje z istniejącym narzędziem albo z nazwą narzędzia wbudowanego. Pakiety agentów nie zawierają własnych narzędzi ani ich nie importują: zaufane funkcje eksportuj osobno, przejrzyj je w sekcji **Function Calls**, a po zaimportowaniu agenta przypnij je do niego ręcznie.
 
 ## Nazwy zastrzeżone

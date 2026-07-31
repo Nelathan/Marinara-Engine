@@ -116,6 +116,8 @@ Das Wort `localhost` (auch Loopback genannt) meint denselben Rechner, auf dem Ma
 
 Läuft der Bildserver auf einem anderen Rechner im Heimnetzwerk, musst du lokale Netzwerkadressen in der Serverkonfiguration freigeben. Wie das geht, steht in der [Referenz zur Serverkonfiguration](../CONFIGURATION.md).
 
+Liefert ein Anbieter statt der Bilddaten eine URL, lädt Marinara öffentliche CDN-URLs über die üblichen Sicherheitsprüfungen für ausgehende Anfragen herunter. Eine private oder Loopback-URL akzeptiert Marinara nur, wenn Schema, Hostname und Port exakt zum eingerichteten Bildanbieter passen. Weiterleitungen von dieser privaten Adresse dürfen nicht zu einem anderen lokalen Dienst springen. Legt ein lokaler Proxy die Ergebnisse auf einer anderen privaten Adresse ab, richte ihn so ein, dass er diese Dateien über dieselbe Adresse wie seine Bild-API ausliefert.
+
 ## ComfyUI-Workflow-JSON und RunPod
 
 Bei **ComfyUI** und **RunPod Serverless (ComfyUI)** erscheint das Feld **ComfyUI Workflow**. Füge dort ein Workflow-JSON ein, das du in ComfyUI über **Save (API Format)**, **Export (API)** oder **Export to API** exportiert hast – je nach Version des Frontends. Bei **ComfyUI** ist das Feld als Optional markiert, bei **RunPod Serverless (ComfyUI)** als Required.

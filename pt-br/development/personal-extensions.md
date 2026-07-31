@@ -7,7 +7,7 @@ As Personal Extensions vêm desativadas por padrão. São código aprovado por h
 Estas propriedades precisam continuar valendo:
 
 1. Criar ou importar sempre gera um rascunho desativado e sem aprovação.
-2. A aprovação exige o hash de conteúdo `sha256:` exato e atual, mais um reconhecimento explícito de que o código roda em sandbox.
+2. A aprovação exige o hash de conteúdo `sha256:` exato e atual, mais um reconhecimento explícito de que o código será executado. O acesso completo à página exige ainda outro reconhecimento explícito.
 3. Qualquer mudança no código executável desativa a extensão e limpa o `approvedHash`.
 4. A reversão restaura um rascunho desativado.
 5. O backup e a importação de perfil limpam a aprovação e o estado de ativação.
@@ -15,10 +15,13 @@ Estas propriedades precisam continuar valendo:
 7. Toda origem diferente de `professor_mari` é externa, incluindo `external`, `local`, `legacy`, `profile_import` e valores desconhecidos, que são normalizados para `legacy`.
 8. Registros externos não aparecem nas respostas de gerenciamento nem de execução, a menos que `ENABLE_EXTERNAL_EXTENSIONS=true` e a permissão salva na seção **Danger Zone** (zona de perigo) também esteja marcada.
 9. Fechar qualquer uma das duas autorizações desativa os registros externos armazenados e encerra os processos ativos no servidor. A verificação periódica do ambiente do navegador remove os workers ativos no navegador.
-10. Código de navegador nunca é executado no documento do Marinara. Código de servidor nunca é executado no processo do servidor do Marinara.
+10. Código de navegador em sandbox nunca é executado no documento do Marinara. Só uma Browser Extension externa com `full_page_access` aprovado por hash exato pode usar o ambiente de página separado. Código de servidor nunca é executado no processo do servidor do Marinara.
 11. Não existe instalador por URL, catálogo remoto nem atualizador automático.
 12. As contribuições ao host são descritores simples e validados. Marcação, estilos, URLs, componentes e callbacks da extensão nunca entram na árvore React do Marinara.
 13. O registro, a ativação, os eventos, as atualizações e a remoção de contribuições continuam presos ao hash de conteúdo exato e aprovado da extensão ativada.
+14. Os snapshots de contexto do navegador trazem, na base, apenas o ID do chat ativo e os IDs dos personagens. As permissões opcionais `read_active_characters` e `read_active_persona` podem acrescentar campos delimitados, que passam por lista de permissões, vindos só dos registros ativos naquele chat. Elas nunca expõem mensagens, bibliotecas inteiras, campos não declarados, metadados nem acesso ao aplicativo.
+15. As permissões solicitadas fazem parte do hash executável. Qualquer mudança de permissão desativa a extensão e exige uma nova aprovação por hash exato.
+16. A permissão `full_page_access` é exclusiva de extensões externas, exige as duas autorizações de External Extension e nunca fica disponível para os rascunhos da Professor Mari. Ela é um modo de confiança explícito, não uma promessa de sandbox.
 
 As autorizações são aplicadas nas rotas e nos serviços de execução. Esconder controles não é uma barreira de segurança. Um registro externo adicionado manualmente, restaurado, herdado de versões antigas ou vindo por fora precisa continuar invisível e inexecutável enquanto qualquer uma das duas autorizações estiver fechada.
 
@@ -43,9 +46,9 @@ A superfície de gerenciamento fica em `/api/personal-extensions`:
 - `POST /:id/rollback` restaura uma revisão anterior desativada.
 - `DELETE /:id` exclui a extensão e as configurações privadas dela.
 
-Os metadados do ambiente de navegador aprovado são lidos em `GET /runtime/client`. O documento executável é servido por `GET /:id/sandbox.html?hash=...` somente enquanto aquele hash exato estiver ativado, aprovado e permitido pela política.
+Os metadados do ambiente de navegador aprovado são lidos em `GET /runtime/client`. O código em sandbox é servido por `GET /:id/sandbox.html?hash=...`. O código e o CSS de página completa são servidos por `GET /:id/page-runtime.js?hash=...` e `GET /:id/page-style.css?hash=...`. Todas as rotas exigem que o hash exato continue ativado, aprovado e permitido pela política; as rotas de página exigem ainda uma origem externa e a permissão `full_page_access`.
 
-## Ambiente de execução no navegador
+## Ambiente de execução em sandbox no navegador
 
 O arquivo `PersonalExtensionInjector.tsx` cria um iframe oculto com `sandbox="allow-scripts"` e sem `allow-same-origin`. Com isso, o iframe tem origem opaca e não consegue acessar o DOM, os cookies, o armazenamento nem as APIs de mesma origem do Marinara.
 
@@ -57,8 +60,31 @@ O worker recebe apenas:
 - armazenamento privado da extensão, intermediado pelo pai;
 - temporizadores gerenciados;
 - registro de limpeza;
+- identificadores somente leitura do chat ativo e dos personagens, através de `marinara.context`;
+- campos delimitados dos cards de personagem ativos e da persona selecionada, apenas através de capacidades aprovadas separadamente;
 - uma janela de iframe restrita, através de `marinara.ui.showWindow(...)`;
 - espaços confiáveis de contribuição ao host, através de `marinara.ui.registerContribution(...)`.
+
+A versão 5 da API de Browser Extension acrescenta `marinara.context.get()` e `marinara.context.subscribe(listener)`. O snapshot é imutável e tem este formato:
+
+```ts
+{
+  chatId: string | null;
+  characterId: string | null;
+  characterIds: readonly string[];
+  personaId: string | null;
+  characters: readonly PersonalExtensionCharacterSnapshot[];
+  persona: PersonalExtensionPersonaSnapshot | null;
+}
+```
+
+O cliente monta o snapshot a partir da store `useChatStore` e o envia quando muda o chat ativo, a lista de personagens dele ou a persona selecionada. Os IDs são strings não vazias, com no máximo 256 caracteres; a lista de personagens é deduplicada e limitada a 256 entradas. O iframe só aceita uma atualização de contexto vinda do pai e apenas quando o `contentHash` dele corresponde à revisão exata da extensão; depois disso, o Worker normaliza e congela a carga de novo. A inicialização da extensão espera pelo primeiro snapshot do host, com um recurso alternativo de contexto nulo após um segundo, para que uma ponte com falha não trave o Worker para sempre.
+
+O campo `characterId` é uma conveniência para chats individuais e continua `null` em chats em grupo; o campo `characterIds` traz todos os participantes ativos. O campo `personaId` só fica disponível com a permissão `read_active_persona`. Sem chat ativo, os campos `chatId`, `characterId`, `personaId` e `persona` ficam `null`, enquanto `characterIds` e `characters` ficam vazios. As extensões podem usar os identificadores com segurança como chaves no próprio armazenamento privado.
+
+A permissão `read_active_characters` deixa o campo `characters` conter apenas os valores `id`, `name`, `description`, `personality`, `scenario`, `firstMessage`, `exampleDialogue`, `creator`, `characterVersion`, `tags`, `backstory`, `appearance`, `aboutMe` e `conversationDisplayName` dos cards ativos. A permissão `read_active_persona` deixa o campo `persona` conter apenas `id`, `name`, `description`, `personality`, `scenario`, `backstory`, `appearance`, `tags`, `aboutMe` e `conversationDisplayName`. O servidor monta os dois conjuntos a partir do chat ativo, aplica limites por campo e no total, e nunca aceita um ID de registro enviado pelo cliente como prova de escopo.
+
+As capacidades são declaradas na carga da extensão, salvas em toda revisão, exibidas na seção **Settings** (Configurações) e na caixa de diálogo de aprovação, e incluídas no hash executável. O host envia primeiro o snapshot só com IDs e depois o enriquece através do intermediário aprovado para aquela extensão. O Worker, por conta própria, descarta registros não declarados, recusa registros de personagem cujos IDs não estejam em `characterIds`, aplica os limites de novo e congela o resultado.
 
 A chamada `marinara.ui.showWindow({ title, elements, onEvent, onClose })` devolve um handle com `update({ title?, elements? })` e `close()`. O worker só envia descritores; o bootstrap confiável do iframe monta cada elemento com APIs de DOM e `textContent` (nunca `innerHTML`). O host revela o iframe da sandbox, normalmente oculto, apenas enquanto uma janela está aberta, e volta a escondê-lo quando ela fecha.
 
@@ -74,11 +100,17 @@ O cliente valida cada descritor por conta própria antes de adicioná-lo ao arma
 
 Não existe auxiliar de DOM, requisição à API do Marinara, acesso a eventos do pai nem capacidade de rede arbitrária. O iframe valida as mensagens e limita a frequência delas. Um watchdog de heartbeat encerra o worker que não responde ou que entra em laço infinito.
 
-## Compatibilidade com extensões complexas
+## Ambiente de compatibilidade de página completa
 
-O protocolo de contribuições foi feito para dar conta de ferramentas reais, cheias de configurações, e de fluxos com várias etapas – não só de botões decorativos. Uma extensão complexa pode substituir os elementos de um painel aos poucos e manter o próprio estado no armazenamento privado da extensão.
+O protocolo de contribuições continua sendo o caminho preferido para ferramentas cheias de configurações e para fluxos com várias etapas. Uma extensão complexa pode substituir os elementos de um painel aos poucos e manter o próprio estado no armazenamento privado da extensão.
 
-Pacotes antigos que inserem botões usando seletores do host, percorrem as estruturas internas do React, escrevem sobreposições arbitrárias ou chamam rotas `/api` de mesma origem não funcionam sem alterações no ambiente seguro. Faça a portabilidade trocando a interface deles por descritores de contribuição. Quando uma funcionalidade precisar de dados do aplicativo Marinara ou de efeitos visuais no nível da cena, ela deve usar uma capacidade intermediária separada, de escopo restrito e aprovada pelo usuário, quando existir uma. Nunca devolva acesso bruto ao DOM ou autoridade irrestrita sobre a API como atalho de compatibilidade.
+Pacotes antigos que inserem botões usando seletores do host, percorrem as estruturas internas do React, escrevem sobreposições arbitrárias ou chamam rotas `/api` de mesma origem não funcionam sem alterações no ambiente seguro. Prefira fazer a portabilidade deles para descritores de contribuição e capacidades intermediárias restritas.
+
+Quando a compatibilidade realmente exigir a página do host, uma External Extension pode solicitar a permissão `full_page_access`. O arquivo `PersonalExtensionInjector.tsx` carrega aquela revisão aprovada exata através de um elemento de script de mesma origem e de uma folha de estilo opcional. O código roda dentro de uma função assíncrona, com um pequeno objeto `marinara` de compatibilidade para identidade, log, armazenamento privado, temporizadores gerenciados e registro de limpeza. Os globais da página continuam disponíveis, porque é exatamente essa a autoridade solicitada.
+
+O carregador de página confere o `id`, o nome e o hash de conteúdo contra os metadados de execução antes de invocar o código. O servidor verifica separadamente o hash exato, o estado de ativação, a origem externa, a permissão e a política das duas autorizações a cada requisição de script ou de folha de estilo. Fechar uma autorização desativa o registro; a verificação periódica remove então os nós inseridos e faz uma limpeza de melhor esforço. Isso não desfaz os efeitos colaterais arbitrários que o código de página com confiança total já criou, então o fluxo mostrado ao usuário avisa que pode ser necessário recarregar a página.
+
+Importações antigas com `kind: "marinara.extension"` e sem declaração explícita de `capabilities` recebem a permissão `full_page_access`. As exportações modernas sempre gravam o campo de capacidades, mesmo vazio, para que pacotes seguros não sejam reclassificados ao serem importados de novo.
 
 ## Ambiente de execução no servidor
 
@@ -102,4 +134,4 @@ pnpm regression:professor-mari-shell-sandbox
 pnpm smoke:ui
 ```
 
-A regressão de segurança precisa comprovar a autorização em duas etapas, a invalidação por hash exato, o formato de worker com origem opaca, a validação e a limpeza das contribuições ao host, a remoção da inserção de mesma origem, a limpeza do ambiente, a negação de sistema de arquivos e rede, o armazenamento privado e a disponibilidade da sandbox com falha segura.
+A regressão de segurança precisa comprovar a autorização em duas etapas, a invalidação por hash exato, o formato de worker com origem opaca, os snapshots de contexto delimitados e presos ao hash, a validação e a limpeza das contribuições ao host, o roteamento de página completa exclusivo para extensões externas e o respectivo reconhecimento, a classificação dos pacotes antigos, a limpeza do ambiente, a negação de sistema de arquivos e rede, o armazenamento privado e a disponibilidade da sandbox com falha segura.

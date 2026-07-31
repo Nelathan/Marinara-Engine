@@ -1,6 +1,6 @@
 # World Maps: Configuración, creación y viajes
 
-> **Compatibilidad actual:** Esta guía corresponde a World Maps **1.2.0** en
+> **Compatibilidad actual:** Esta guía corresponde a World Maps **1.2.1** en
 > Marinara Engine **2.3.5**. El paquete admite Roleplay y chats de juegos.
 
 World Maps agrega un estado mundial persistente a Roleplay y al juego. en lugar de
@@ -21,24 +21,28 @@ la tradición puede fundamentar la siguiente respuesta. Los mapas también puede
 viaje a un lugar conocido o agregue un lugar recién descubierto cuando la historia realmente
 llega allí.
 
-Cada chat recibe su propia copia de trabajo de un mapa. Las plantillas para toda la cuenta le permiten
-Prepare un mundo original o fandom una vez y luego agregue una copia limpia a cualquier
-Roleplay o chat de juego.
+Los mapas pueden ser independientes en cada chat o estar vinculados a un mundo
+compartido propiedad de la cuenta. Las plantillas crean copias limpias que pueden
+divergir. Un mundo compartido, en cambio, mantiene una sola jerarquía canónica y
+un solo conjunto de ilustraciones, mientras cada chat vinculado conserva su
+propia ubicación actual, historial de viajes, instantáneas y enlaces del juego.
 
 ## Descripción general de funciones
 
-World Maps 1.2.0 proporciona:
+World Maps 1.2.1 proporciona:
 
 - regiones, asentamientos, lugares, edificios, pisos y habitaciones anidados;
 - rutas de navegación y una ubicación autorizada de la historia actual;
 - vistas de lista, mapa posicionado y capas ordenadas para ubicaciones secundarias;
 - viajes entre padres e hijos, enlaces directos y planificación de rutas de múltiples vueltas;
 - movimiento validado a partir de la narración completa y descubrimiento de nuevas ubicaciones;
+- mundos compartidos propiedad de la cuenta que se pueden vincular entre chats Roleplay y de juego;
+- borradores revisados por chat con controles de publicación, descarte, conflicto y bifurcación independiente;
 - plantillas de mapas para toda la cuenta creadas manualmente, con IA o mediante importación;
 - Borradores y expansiones de mapas asistidos por IA basados ​​en la configuración o la historia seleccionada;
 - descripciones de ubicaciones públicas, memoria de modelos privada y conocimientos sobre ubicaciones exactas;
-- una imagen de referencia Gallery opcional para cada ubicación;
-- un fondo Gallery separado para cada mapa secundario colocado;
+- una imagen de referencia opcional del chat o de Global Gallery para cada ubicación;
+- un fondo separado del chat o de Global Gallery para cada mapa secundario colocado;
 - Se revisó la generación de lotes para detectar obras de arte de ubicación faltantes;
 - una anulación del mensaje de arte de Maps global y basado en variables;
 - soporte de referencia de ubicación para ilustraciones Roleplay y Game Storyboards;
@@ -78,7 +82,7 @@ catálogo ofrece **Update**, instálalo también. Sigue la indicación de reinic
 antes de usar el paquete.
 
 La página World Maps informa la versión y preparación del paquete instalado,
-ofrece la biblioteca de plantillas para toda la cuenta y muestra el mapa del chat actual
+ofrece la biblioteca de mapas mundiales para toda la cuenta y muestra el mapa del chat actual
 estado. La instalación del paquete lo hace disponible pero no lo habilita en
 cada charla.
 
@@ -88,11 +92,12 @@ cada charla.
 2. Abra **Chat Settings** con el botón de engranaje.
 3. Encienda **Enable Agents**.
 4. En **Tracker Agents**, habilite **World Maps**.
-5. Abra **Edit world map** o la biblioteca **Map templates**.
+5. Abra **Edit world map** o la **World map library**.
 
-La biblioteca de plantillas se comporta igual si se abre desde los Agentes principales
-página o desde Roleplay Configuración de chat. Utilice **Add to chat** para copiar una plantilla en
-el chat activo.
+La biblioteca se comporta igual si se abre desde la página principal de Agentes o
+desde Roleplay Configuración de chat. Utilice **Add to chat** para obtener una
+copia independiente de la plantilla, o **Link to chat** para un mundo compartido
+duradero.
 
 ### Juego
 
@@ -130,9 +135,55 @@ Cada aplicación crea una copia de trabajo independiente. Ediciones posteriores 
 La plantilla no cambia los chats que ya la copiaron, y las ediciones del chat no
 cambiar la plantilla.
 
-Las plantillas no copian la obra de arte Gallery del chat. Los ID de imagen pertenecen a la fuente
-el chat es Gallery y no sería portátil. Agregar o generar los chats de trabajo.
-referencias de ubicación y fondos de mapas después de aplicar la plantilla.
+Las plantillas conservan las referencias de ilustraciones de Global Gallery para
+toda la cuenta. Cuando usas **Save as template** desde un chat, Maps promueve las
+ilustraciones del chat referenciadas a Global Gallery y reutiliza una imagen
+compartida idéntica cuando ya existe. Cada chat que aplica la plantilla apunta
+entonces a la misma ilustración compartida, sin crear otra copia en Gallery.
+
+Solo se comparten las ilustraciones. Cada definición de mapa aplicada sigue
+siendo una copia de trabajo independiente; editar la plantilla no actualiza los
+mapas ya agregados a los chats.
+
+## Vincular chats a un mundo compartido
+
+Utilice **Shared worlds** en la World map library cuando varios chats Roleplay o
+de juego deban leer la misma jerarquía canónica. Cree un mundo compartido en
+blanco, importe uno, promueva una plantilla existente con **Make shared**, o abra
+un mapa de chat guardado y elija **Make shared**. Esta última opción promueve sus
+ilustraciones de chat referenciadas a Global Gallery, crea el mundo propiedad de
+la cuenta y vincula el chat original con él.
+
+Elija **Link to chat** para adjuntar un chat abierto. La ubicación actual y todos
+los ID de ubicación que ya use el historial de la campaña deben existir en el
+mundo compartido. De lo contrario, use **Independent copy** o migre primero el
+mapa actual del chat a un mundo compartido nuevo.
+
+Los chats vinculados comparten solo la definición del mapa y las ilustraciones de
+Global Gallery. No comparten mensajes, ubicaciones actuales, instantáneas de
+viaje, estado del juego, enlaces de mapas de juego, conexiones de proveedor ni
+credenciales.
+
+Las ediciones y los descubrimientos hechos dentro de un chat vinculado se guardan
+como un borrador sin publicar de ese chat. No cambian el mundo canónico ni los
+demás chats hasta que elijas **Publish changes**. También puedes **Discard** el
+borrador o usar **Fork independent** para separar el chat conservando su versión
+actual. Si el mundo canónico cambia mientras hay un borrador pendiente, Maps
+informa un conflicto y exige una bifurcación o un descarte en lugar de
+sobrescribir en silencio cualquiera de las versiones.
+
+Editar un mundo compartido desde la biblioteca actualiza la definición canónica
+directamente. Las ubicaciones que usan los chats vinculados no se pueden
+eliminar; archívalas para que sus ID estables sigan disponibles. Un mundo
+compartido tampoco se puede eliminar hasta que todos los chats vinculados se
+bifurquen o se vuelvan a vincular.
+
+Los mundos compartidos y las plantillas conservan las referencias de
+ilustraciones de Global Gallery sin copiar el archivo de imagen a cada chat.
+Marinara bloquea la eliminación de una imagen de Global Gallery mientras una
+plantilla guardada, un mundo compartido, un mapa de chat independiente o el
+borrador de un chat vinculado siga haciendo referencia a ella. Quita primero los
+enlaces a la ilustración cuando quieras eliminar el recurso en sí.
 
 ## Entender el editor de mapas
 
@@ -359,7 +410,7 @@ reutilice la misma imagen Gallery.
 
 | Obra de arte | Propósito | ¿Enviado a generación de imágenes?                                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Location reference image** | Ancla la identidad visual del lugar actual exacto. Elija entre Gallery o cree con IA.                          | Sí, cuando **Use for Roleplay illustrations and Game storyboards** está habilitado y la solicitud es elegible. |
+| **Location reference image** | Ancla la identidad visual del lugar actual exacto. Elija ilustraciones del chat o de Global Gallery compartida, o cree con IA.    | Sí, cuando **Use for Roleplay illustrations and Game storyboards** está habilitado y la solicitud es elegible. |
 | **Child map background** | Aparece detrás de ubicaciones secundarias móviles para un padre que usa la presentación de mapa. Cada capa del mapa puede tener su propio fondo. | No. Es sólo de visualización.                                                                                   |
 
 Las referencias de carácter o persona preservan quién está presente; la referencia de ubicación
@@ -370,7 +421,7 @@ La canalización de imágenes agrega esta instrucción cuando se encuentra una r
 adjunto:
 
 > Manejo de ubicación: está disponible una imagen de referencia de ubicación adjunta. Úselo
-> to set the scene location.
+> para establecer la ubicación de la escena.
 
 Los proveedores tienen sus propios límites de imágenes de referencia. Referencias de solicitudes explícitas
 y las referencias de personajes pueden reducir la cantidad de referencias automáticas que caben.
@@ -379,7 +430,8 @@ y las referencias de personajes pueden reducir la cantidad de referencias autom�
 
 Seleccione una ubicación en el editor y abra **Location reference image**.
 
-- **Choose from Gallery** asigna una imagen revisada existente.
+- **Choose artwork** asigna una imagen revisada del chat actual o de la
+  Global Gallery compartida. El selector etiqueta cada origen.
 - **Create with AI** abre un mensaje de imagen de establecimiento editable y guarda el
   resultado a Gallery antes de decidir si usarlo.
 - **Use for Roleplay illustrations and Game storyboards** controla si el
@@ -476,7 +528,7 @@ o desprendido.
 
 La página principal **Agents → World Maps** posee dos sistemas de avisos globales:
 
-- **Generation prompt** es una biblioteca de juegos/Marikeep0001MARI llamada para borradores de mapas de IA y
+- **Generation prompt** es una biblioteca Roleplay/Game con nombre para borradores de mapas de IA y
   expansiones. Cada chat puede seleccionar una opción de forma independiente. El resuelto
   La vista previa utiliza la configuración en vivo, los personajes, la historia y el contexto del mapa sin hacer un
   solicitud de modelo.
@@ -495,15 +547,20 @@ variables y utilizar las vistas previas resueltas antes de guardar.
 
 ## Importar, exportar y archivar de forma segura
 
-Utilice **Export** para descargar la jerarquía de trabajo como un archivo `.world-map.json`.
+Utilice **Export** desde un chat, una plantilla o el editor de un mundo compartido
+para descargar la jerarquía de trabajo como un archivo `.world-map.json`.
 Deje **Include map artwork** habilitado para agrupar imágenes de ubicaciones referenciadas y
 fondos de mapas secundarios en el mismo archivo. Desactívala cuando quieras un tamaño más pequeño,
 copia de seguridad de sólo definición. Los archivos `.hierarchical-map.json` más antiguos siguen siendo importables.
 
-Utilice **Import** para cargar una jerarquía en la copia de trabajo. Las ilustraciones incluidas son
-se restaura al Gallery del chat de destino y sus enlaces de imágenes se reasignan.
-Revise el resultado y haga clic en **Save** para que tenga autoridad. La importación no
-guardar inmediatamente.
+Utilice **Import** para cargar una jerarquía en una copia de trabajo de chat, una
+plantilla independiente o un mundo compartido. Las ilustraciones incluidas se
+restauran y sus enlaces de imágenes se reasignan. Las ilustraciones propiedad del
+chat vuelven al Gallery del chat de destino. Las ilustraciones compartidas se
+reutilizan desde Global Gallery cuando la misma imagen ya existe, o se agregan
+allí una vez cuando una plantilla o una referencia compartida las necesita.
+Revise el resultado y haga clic en **Save** para que tenga autoridad. La
+importación no guarda inmediatamente.
 
 Una vez que el historial de la campaña hace referencia a un mapa, los cambios importados deben conservar los existentes.
 ID de ubicación. Agregue o actualice ubicaciones en lugar de reemplazar la jerarquía con

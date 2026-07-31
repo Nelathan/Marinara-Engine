@@ -1,6 +1,6 @@
 # World Maps: Einrichtung, Erstellung und Reise
 
-> **Aktuelle Kompatibilität:** Dieser Leitfaden entspricht World Maps **1.2.0** auf
+> **Aktuelle Kompatibilität:** Dieser Leitfaden entspricht World Maps **1.2.1** auf
 > Marinara Engine **2.3.5**. Das Paket unterstützt Roleplay und Game-Chats.
 
 World Maps fügt Roleplay und Game einen dauerhaften Weltzustand hinzu. Statt
@@ -21,24 +21,29 @@ Breadcrumb, genaue Standortdetails, Ziele in der Nähe und geeignete Links
 Reisen Sie zu einem bekannten Ort oder fügen Sie einen neu entdeckten Ort hinzu, wenn die Geschichte wahr ist
 kommt dort an.
 
-Jeder Chat erhält eine eigene Arbeitskopie einer Karte. Mit kontoweiten Vorlagen können Sie
-Bereiten Sie einmal eine Original- oder Fandom-Welt vor und fügen Sie dann einer beliebigen Welt eine saubere Kopie hinzu
-Roleplay oder Game-Chat.
+Karten können pro Chat unabhängig sein oder mit einer gemeinsamen Welt verknüpft
+werden, die dem Konto gehört. Vorlagen erzeugen saubere Kopien, die sich
+auseinanderentwickeln dürfen. Eine gemeinsame Welt hält dagegen eine einzige
+maßgebliche Hierarchie samt Grafiken bereit, während jeder verknüpfte Chat den
+eigenen aktuellen Ort, die eigene Reisehistorie, die eigenen Snapshots und die
+eigenen Game-Bindungen behält.
 
 ## Funktionsübersicht
 
-World Maps 1.2.0 bietet:
+World Maps 1.2.1 bietet:
 
 - verschachtelte Regionen, Siedlungen, Orte, Gebäude, Stockwerke und Räume;
 - Brotkrümel und ein maßgeblicher aktueller Story-Standort;
 - Listen-, positionierte Karten- und geordnete Ebenenansichten für untergeordnete Standorte;
 - Eltern-Kind-Reisen, Direktverbindungen und Routenplanung mit mehreren Abzweigungen;
 - validierte Bewegung aus abgeschlossener Erzählung und Entdeckung neuer Orte;
+- kontoeigene gemeinsame Welten, die sich über Roleplay- und Game-Chats hinweg verknüpfen lassen;
+- geprüfte Entwürfe pro Chat mit Steuerung für Veröffentlichen, Verwerfen, Konflikte und unabhängige Forks;
 - Kontoweite Kartenvorlagen, die manuell, mit KI oder durch Import erstellt wurden;
 - KI-gestützte Kartenentwürfe und -erweiterungen basierend auf dem Setup oder ausgewählten Überlieferungen;
 - öffentliche Standortbeschreibungen, privater Modellspeicher und genaue Standortinformationen;
-- ein optionales Gallery-Referenzbild für jeden Standort;
-- ein separater Gallery-Hintergrund für jede positionierte untergeordnete Karte;
+- ein optionales Referenzbild pro Standort aus der Chat- oder Global Gallery;
+- ein eigener Hintergrund aus der Chat- oder Global Gallery für jede positionierte untergeordnete Karte;
 - Batch-Generierung für fehlende Standortgrafiken überprüft;
 - eine globale, variablenbasierte Überschreibung der Eingabeaufforderung für Maps-Grafiken;
 - Standortreferenzunterstützung für Roleplay-Illustrationen und Game Storyboards;
@@ -78,7 +83,7 @@ Katalog anschließend **Update** anbietet, installiere auch dieses. Folge der
 Neustart-Aufforderung, bevor du das Paket verwendest.
 
 Die Seite World Maps meldet die installierte Paketversion und -bereitschaft.
-Bietet die kontoweite Vorlagenbibliothek und zeigt die Karte des aktuellen Chats an
+Bietet die kontoweite Weltkarten-Bibliothek und zeigt die Karte des aktuellen Chats an
 Status. Durch die Installation des Pakets wird es verfügbar gemacht, aber nicht aktiviert
 bei jedem Chat.
 
@@ -88,11 +93,12 @@ bei jedem Chat.
 2. Öffnen Sie **Chat Settings** mit der Zahnradtaste.
 3. Schalten Sie **Enable Agents** ein.
 4. Aktivieren Sie unter **Tracker Agents** **World Maps**.
-5. Öffnen Sie **Edit world map** oder die Bibliothek **Map templates**.
+5. Öffnen Sie **Edit world map** oder die **World map library**.
 
-Die Vorlagenbibliothek verhält sich gleich, unabhängig davon, ob sie von den Hauptagenten aus geöffnet wird
-Seite oder in den Roleplay Chat-Einstellungen. Verwenden Sie **Add to chat**, um eine Vorlage hinein zu kopieren
-der aktive Chat.
+Die Bibliothek verhält sich gleich, egal ob du sie über die Hauptseite Agents
+oder über die Roleplay-Chat-Einstellungen öffnest. Verwende **Add to chat** für
+eine unabhängige Vorlagenkopie oder **Link to chat** für eine dauerhafte
+gemeinsame Welt.
 
 ### Spiel
 
@@ -130,9 +136,58 @@ Jede Anwendung erstellt eine unabhängige Arbeitskopie. Spätere Änderungen an 
 Die Vorlage ändert keine Chats, die sie bereits kopiert haben, und Chat-Änderungen tun dies nicht
 Ändern Sie die Vorlage.
 
-Vorlagen kopieren keine Chat Gallery-Grafiken. Bild-IDs gehören zur Quelle
-Der Chat lautet Gallery und wäre nicht portierbar. Fügen Sie die funktionierenden Chats hinzu oder generieren Sie sie
-Standortreferenzen und Kartenhintergründe nach Anwendung der Vorlage.
+Vorlagen behalten kontoweite Grafikverweise auf die Global Gallery. Wenn du in
+einem Chat **Save as template** verwendest, verschiebt Maps die referenzierten
+Chat-Grafiken in die Global Gallery und nutzt ein identisches gemeinsames Bild
+erneut, sofern es bereits vorhanden ist. Jeder Chat, der die Vorlage anwendet,
+verweist danach auf dieselbe gemeinsame Grafik, ohne eine weitere Kopie in der
+Gallery anzulegen.
+
+Gemeinsam sind nur die Grafiken. Jede angewendete Kartendefinition bleibt eine
+unabhängige Arbeitskopie: Änderungen an der Vorlage aktualisieren keine Karten,
+die bereits in Chats liegen.
+
+## Chats mit einer gemeinsamen Welt verknüpfen
+
+Nutze **Shared worlds** in der World map library, wenn mehrere Roleplay- oder
+Game-Chats dieselbe maßgebliche Hierarchie lesen sollen. Lege eine leere
+gemeinsame Welt an, importiere eine, mache eine vorhandene Vorlage mit **Make
+shared** gemeinsam nutzbar oder öffne eine gespeicherte Chat-Karte und wähle
+**Make shared**. Die letzte Variante verschiebt die referenzierten Chat-Grafiken
+in die Global Gallery, erstellt die kontoeigene Welt und verknüpft den
+ursprünglichen Chat wieder mit ihr.
+
+Wähle **Link to chat**, um einen offenen Chat anzuhängen. Der aktuelle Ort und
+alle Standort-IDs, die der Kampagnenverlauf bereits nutzt, müssen in der
+gemeinsamen Welt vorhanden sein. Andernfalls nimm **Independent copy** oder
+überführe die aktuelle Karte des Chats zuerst in eine neue gemeinsame Welt.
+
+Verknüpfte Chats teilen sich nur die Kartendefinition und die Grafiken der
+Global Gallery. Nicht geteilt werden Nachrichten, aktuelle Orte,
+Reise-Snapshots, Spielzustand, Game-Kartenbindungen, Anbieterverbindungen und
+Zugangsdaten.
+
+Änderungen und Entdeckungen innerhalb eines verknüpften Chats speichert Maps als
+unveröffentlichten Entwurf für genau diesen Chat. Die maßgebliche Welt und
+andere Chats bleiben unberührt, bis du **Publish changes** wählst. Alternativ
+verwirfst du den Entwurf mit **Discard** oder löst den Chat mit **Fork
+independent** ab und behältst seinen aktuellen Stand. Ändert sich die maßgebliche
+Welt, während ein Entwurf offen ist, meldet Maps einen Konflikt und verlangt
+einen Fork oder ein Verwerfen, statt still eine der beiden Fassungen zu
+überschreiben.
+
+Bearbeitest du eine gemeinsame Welt aus der Bibliothek heraus, ändert das die
+maßgebliche Definition direkt. Orte, die verknüpfte Chats nutzen, lassen sich
+nicht löschen; archiviere sie, damit ihre stabilen IDs verfügbar bleiben. Auch
+eine gemeinsame Welt lässt sich erst löschen, wenn alle verknüpften Chats
+geforkt oder neu verknüpft sind.
+
+Gemeinsame Welten und Vorlagen behalten Grafikverweise auf die Global Gallery,
+ohne die Bilddatei in jeden Chat zu kopieren. Marinara blockiert das Löschen
+eines Bildes aus der Global Gallery, solange eine gespeicherte Vorlage, eine
+gemeinsame Welt, eine unabhängige Chat-Karte oder der Entwurf eines verknüpften
+Chats darauf verweist. Löse zuerst die Grafikverweise, wenn du die Datei selbst
+löschen willst.
 
 ## Den Karteneditor verstehen
 
@@ -359,7 +414,7 @@ Verwenden Sie dasselbe Gallery-Bild erneut.
 
 | Kunstwerk | Zweck | Zur Bildgenerierung gesendet?                                                                                 |
 | ------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **Location reference image** | Verankert die visuelle Identität des genauen aktuellen Ortes. Wählen Sie aus Gallery oder erstellen Sie mit KI.                          | Ja, wenn **Use for Roleplay illustrations and Game storyboards** aktiviert ist und die Anfrage berechtigt ist. |
+| **Location reference image** | Verankert die visuelle Identität des genauen aktuellen Ortes. Wähle Grafiken aus dem Chat oder der gemeinsamen Global Gallery oder erstelle sie mit KI.                          | Ja, wenn **Use for Roleplay illustrations and Game storyboards** aktiviert ist und die Anfrage berechtigt ist. |
 | **Child map background** | Erscheint hinter verschiebbaren untergeordneten Standorten für ein übergeordnetes Element, das die Kartendarstellung verwendet. Jede Kartenebene kann einen eigenen Hintergrund haben. | Nein. Es dient nur der Anzeige.                                                                                   |
 
 Charakter- oder Persona-Referenzen bewahren, wer anwesend ist; die Standortreferenz
@@ -379,7 +434,8 @@ und Zeichenreferenzen können die Anzahl der automatischen Referenzen reduzieren
 
 Wählen Sie im Editor einen Speicherort aus und öffnen Sie **Location reference image**.
 
-- **Choose from Gallery** weist ein vorhandenes überprüftes Bild zu.
+- **Choose artwork** weist ein geprüftes Bild aus dem aktuellen Chat oder der
+  gemeinsamen Global Gallery zu. Die Auswahl zeigt zu jedem Bild die Quelle an.
 - **Create with AI** öffnet eine bearbeitbare Eingabeaufforderung zum Erstellen eines Bildes und speichert die
   Geben Sie das Ergebnis an Gallery weiter, bevor Sie entscheiden, ob Sie es verwenden möchten.
 - **Use for Roleplay illustrations and Game storyboards** steuert, ob die
@@ -495,15 +551,20 @@ Variablen und verwenden Sie die aufgelösten Vorschauen vor dem Speichern.
 
 ## Sicher importieren, exportieren und archivieren
 
-Verwenden Sie **Export**, um die Arbeitshierarchie als `.world-map.json`-Datei herunterzuladen.
+Verwende **Export** in einem Chat, einer Vorlage oder im Editor einer gemeinsamen
+Welt, um die Arbeitshierarchie als `.world-map.json`-Datei herunterzuladen.
 Lassen Sie **Include map artwork** aktiviert, um referenzierte Standortbilder und zu bündeln
 Untergeordnete Kartenhintergründe in derselben Datei. Deaktivieren Sie es, wenn Sie eine kleinere,
 Nur-Definition-Backup. Ältere `.hierarchical-map.json`-Dateien bleiben weiterhin importierbar.
 
-Verwenden Sie **Import**, um eine Hierarchie in die Arbeitskopie zu laden. Gebündelte Kunstwerke sind
-Die Datei wird im Gallery des Ziel-Chats wiederhergestellt und die Bildlinks werden neu zugeordnet.
-Überprüfen Sie das Ergebnis und klicken Sie auf **Save**, um es verbindlich zu machen. Beim Import geht das nicht
-sofort speichern.
+Verwende **Import**, um eine Hierarchie in eine Chat-Arbeitskopie, eine
+unabhängige Vorlage oder eine gemeinsame Welt zu laden. Gebündelte Grafiken
+werden wiederhergestellt und ihre Bildlinks neu zugeordnet. Chat-eigene Grafiken
+landen wieder in der Gallery des Ziel-Chats. Gemeinsame Grafiken werden aus der
+Global Gallery wiederverwendet, wenn dasselbe Bild dort schon liegt, oder einmal
+dort ergänzt, sobald eine Vorlage oder ein gemeinsamer Verweis sie braucht.
+Überprüfe das Ergebnis und klicke auf **Save**, um es verbindlich zu machen. Beim
+Import wird nicht sofort gespeichert.
 
 Sobald sich der Kampagnenverlauf auf eine Karte bezieht, müssen importierte Änderungen beibehalten werden
 Standort-IDs. Fügen Sie Standorte hinzu oder aktualisieren Sie sie, anstatt die Hierarchie durch zu ersetzen
