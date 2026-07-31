@@ -12,7 +12,7 @@ Ten plan traktuje orientację przestrzenną jako wąsko zakrojoną funkcję prod
 
 Powstaje system map hierarchicznych i orientacji przestrzennej, a nie uniwersalny silnik scenariuszy w stylu Voxta. Z Voxta zapożyczamy jeden przydatny wzorzec: trwały stan wybiera niewielki, adekwatny kontekst promptu. Na początku nie dochodzą flagi, zmienne, zdarzenia, skrypty, liczniki czasu ani osobny model wnioskujący o akcjach.
 
-Obsługiwane tryby właściciela to Roleplay i Game. Dawna wartość `visual_novel` w wyliczeniu to pozostałość po zgodności wstecznej i nie jest obsługiwanym trybem produktu.
+Obsługiwane tryby właściciela to Roleplay i Game.
 
 Plan opiera się na pięciu wyraźnie rozdzielonych warstwach:
 

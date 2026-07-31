@@ -113,7 +113,7 @@ Rozmiar obrazka bierze się z ustawienia rozmiaru **Portraits** w ustawieniach g
 
 Zakładka **Advanced** zbiera ustawienia promptu dla zaawansowanych. Przy zwykłej postaci wszystkie mogą zostać puste.
 
-Te ustawienia promptu, zapisane w karcie postaci, działają w trybach Conversation, Roleplay, Visual Novel i Game. Wybrany preset trybu Conversation albo Game zmienia otaczający prompt, ale nie wyłącza pól **Post-History Instructions** ani **Depth Prompt** danej postaci.
+Te ustawienia promptu, zapisane w karcie postaci, działają w trybach Conversation, Roleplay i Game. Wybrany preset trybu Conversation albo Game zmienia otaczający prompt, ale nie wyłącza pól **Post-History Instructions** ani **Depth Prompt** danej postaci.
 
 - **System Prompt**. Instrukcje dla konkretnej postaci, dodawane przez blok postaci w aktywnym presecie, kontekst postaci w trybie Conversation albo kartę postaci lub GM w trybie Game, zależnie od sytuacji. Nie zastępuje głównego promptu systemowego czatu.
 - **Post-History Instructions**. Tekst umieszczany blisko końca promptu, tuż przed generowaniem. Typowe zastosowanie to krótkie przypomnienie w rodzaju "Stay in character".

@@ -113,7 +113,7 @@ Die Bildgröße stammt aus der Einstellung **Portraits** in den Einstellungen zu
 
 Der Tab **Advanced** enthält Prompt-Steuerungen für fortgeschrittene Nutzende. Für einen normalen Charakter dürfen alle Felder leer bleiben.
 
-Diese vom Charakter mitgebrachten Prompt-Steuerungen greifen in den Modi Conversation, Roleplay, Visual Novel und Game. Ein gewähltes Conversation- oder Game-Preset ändert zwar den umgebenden Prompt, schaltet die Post-History Instructions oder den Depth Prompt des Charakters aber nicht ab.
+Diese vom Charakter mitgebrachten Prompt-Steuerungen greifen in den Modi Conversation, Roleplay und Game. Ein gewähltes Conversation- oder Game-Preset ändert zwar den umgebenden Prompt, schaltet die Post-History Instructions oder den Depth Prompt des Charakters aber nicht ab.
 
 - **System Prompt**. Charakterspezifische Anweisungen, die je nach Situation über den Charakterblock des aktiven Presets, den Conversation-Charakterkontext oder die Game-Charakter- bzw. GM-Karte hinzukommen. Der Haupt-System-Prompt des Chats wird dadurch nicht ersetzt.
 - **Post-History Instructions**. Text, der nahe am Ende des Prompts steht, also kurz vor der Generierung. Üblich ist eine kurze Erinnerung wie „Stay in character“.

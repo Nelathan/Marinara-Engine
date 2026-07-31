@@ -113,7 +113,7 @@ AI 아바타 기능은 이미지 생성 연결이 하나 이상 설정되어 있
 
 **Advanced** 탭에는 숙련자를 위한 프롬프트 제어 항목이 있습니다. 평범한 캐릭터라면 전부 비워 두어도 괜찮습니다.
 
-여기서 캐릭터가 직접 지정하는 프롬프트 제어는 Conversation(대화), Roleplay(롤플레이), Visual Novel, Game Mode(게임 모드)에서 모두 적용됩니다. Conversation이나 Game 프리셋을 고르면 둘러싼 프롬프트가 달라지지만, 캐릭터의 Post-History Instructions나 Depth Prompt가 꺼지지는 않습니다.
+여기서 캐릭터가 직접 지정하는 프롬프트 제어는 Conversation(대화), Roleplay(롤플레이), Game Mode(게임 모드)에서 모두 적용됩니다. Conversation이나 Game 프리셋을 고르면 둘러싼 프롬프트가 달라지지만, 캐릭터의 Post-History Instructions나 Depth Prompt가 꺼지지는 않습니다.
 
 - **System Prompt**(시스템 프롬프트). 캐릭터별 지시문입니다. 상황에 따라 현재 프리셋의 캐릭터 블록, Conversation의 캐릭터 컨텍스트, Game의 캐릭터/GM 카드를 통해 들어갑니다. 채팅의 주 시스템 프롬프트를 대체하지는 않습니다.
 - **Post-History Instructions**(대화 이후 지시사항). 프롬프트 끝부분, 생성 직전에 가깝게 놓이는 글입니다. "Stay in character"처럼 짧게 상기시키는 문구를 많이 씁니다.

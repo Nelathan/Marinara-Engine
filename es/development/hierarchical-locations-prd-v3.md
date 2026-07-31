@@ -12,7 +12,7 @@ Este plan trata la orientación espacial como una capacidad de producto enfocada
 
 La función es un sistema de mapas jerárquicos y orientación espacial, no un motor de escenarios genérico al estilo de Voxta. Toma prestado un patrón útil de Voxta: un estado persistente selecciona un contexto de prompt pequeño y relevante. En un principio no agrega flags, variables, eventos, scripts, temporizadores ni un modelo aparte de inferencia de acciones.
 
-Los modos propietarios admitidos son Roleplay y Game. El valor de enumeración heredado `visual_novel` es residuo de compatibilidad y no es un modo de producto admitido.
+Los modos propietarios admitidos son Roleplay y Game.
 
 El plan tiene cinco capas enfocadas:
 
@@ -143,7 +143,7 @@ La pila de coherencia prevista es:
 ```text
 chat image style profile  -> shared rendering language
 current location refs     -> stable architecture and place identity
-character/persona refs     -> stable people and appearance
+character/persona refs    -> stable people and appearance
 scene prompt              -> current action, framing, weather, and lighting
 ```
 

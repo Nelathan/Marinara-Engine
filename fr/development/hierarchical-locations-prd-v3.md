@@ -12,7 +12,7 @@ Ce plan traite l'orientation spatiale comme une capacité produit ciblée, avec 
 
 La fonctionnalité est un système de carte hiérarchique et d'orientation spatiale, pas un moteur de scénarios générique à la Voxta. Elle emprunte un seul motif utile à Voxta : un état persistant sélectionne un contexte de prompt réduit et pertinent. Au départ, elle n'ajoute ni drapeaux, ni variables, ni événements, ni scripts, ni minuteurs, ni modèle séparé d'inférence d'action.
 
-Les modes propriétaires pris en charge sont Roleplay et Game. La valeur d'énumération historique `visual_novel` est un résidu de compatibilité et n'est pas un mode produit pris en charge.
+Les modes propriétaires pris en charge sont Roleplay et Game.
 
 Le plan comporte cinq couches ciblées :
 

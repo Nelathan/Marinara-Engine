@@ -43,8 +43,8 @@
     },
     {
       "path": "agents/built-in-agents.md",
-      "sha256": "494b58d4cff113db6d3fc18868b2b07a00d4ac75064706a32942fbe42604a7f0",
-      "bytes": 20973
+      "sha256": "32c76a984d09069792b1645d8a381e21483c5dd3772027bb2288d87da1714b83",
+      "bytes": 20904
     },
     {
       "path": "agents/custom-agents.md",
@@ -108,8 +108,8 @@
     },
     {
       "path": "characters/creating-and-editing-characters.md",
-      "sha256": "c1c20d4eeb70f840b0104a329e6bbe692178c827156a229714316853633a7ebe",
-      "bytes": 12677
+      "sha256": "1407ae357cf6a91d6e7e3b6fcf77e628d03f7a3683744c10b4893305ef53ee62",
+      "bytes": 12663
     },
     {
       "path": "characters/galleries.md",
@@ -303,8 +303,8 @@
     },
     {
       "path": "development/hierarchical-locations-prd-v3.md",
-      "sha256": "afed7a4a820ce2f217756223ca7d51ced1b41f9d3426ebdea2b2cb65b842f8f9",
-      "bytes": 104400
+      "sha256": "15c3c4b833f8d612fe7c0d7e5b95b04861a3668936e0e56a9fb8504748249617",
+      "bytes": 104289
     },
     {
       "path": "development/ios-pwa-safe-area.md",
@@ -613,8 +613,8 @@
     },
     {
       "path": "settings/settings-overview.md",
-      "sha256": "b0b4d2ad4dc1d165803333d1ebec77bd2cc542d16d926d3335d6e66bdacdbc61",
-      "bytes": 13216
+      "sha256": "6f6cdbdbb084afd9be7d04d34ba927dc144791720bc9a8761938564b9e247feb",
+      "bytes": 13202
     }
   ]
 }

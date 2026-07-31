@@ -31,7 +31,7 @@
 **General** 탭은 항목 6개로 나뉩니다. 이 페이지에서 전부 다루는 것은 **App Behavior**(앱 동작)와 **Text Rules** 두 가지입니다. 나머지는 여기서 요점만 소개하고, 자세한 내용은 각각의 가이드에서 설명합니다.
 
 - **App Behavior**: 언어, 삭제 시 안전 확인, 표시/숨김 토글. 아래에서 설명합니다.
-- **Notifications**(알림): 알림음과 브라우저용, Android 앱용 개별 설정. **Custom sound**(사용자 지정 소리)에는 MP3, WAV, OGG, M4A/MP4, WebM 형식의 파일을 10 MB까지 올릴 수 있고, 이 서버에 연결된 모든 기기에서 Marinara 기본 알림음 대신 이 소리가 울립니다. 미리 듣기, 교체, 제거는 언제든 할 수 있습니다. 읽을 수 없는 파일을 올리면 기본 알림음으로 돌아가고, 올린 파일은 백업과 프로필 내보내기에도 함께 들어갑니다. **Background Notifications**(백그라운드 알림)는 Conversation(대화)의 자율 메시지를 알려 주고, **Generation Completion Notifications**(생성 완료 알림)는 Conversation, Roleplay(롤플레이), Visual Novel, Game 모드에서 직접 시작한 응답을 알려 줍니다. 둘 다 Marinara를 열어 둔 채 다른 창을 보고 있을 때 작동하며, 메시지 내용은 표시하지 않습니다.
+- **Notifications**(알림): 알림음과 브라우저용, Android 앱용 개별 설정. **Custom sound**(사용자 지정 소리)에는 MP3, WAV, OGG, M4A/MP4, WebM 형식의 파일을 10 MB까지 올릴 수 있고, 이 서버에 연결된 모든 기기에서 Marinara 기본 알림음 대신 이 소리가 울립니다. 미리 듣기, 교체, 제거는 언제든 할 수 있습니다. 읽을 수 없는 파일을 올리면 기본 알림음으로 돌아가고, 올린 파일은 백업과 프로필 내보내기에도 함께 들어갑니다. **Background Notifications**(백그라운드 알림)는 Conversation(대화)의 자율 메시지를 알려 주고, **Generation Completion Notifications**(생성 완료 알림)는 Conversation, Roleplay(롤플레이), Game 모드에서 직접 시작한 응답을 알려 줍니다. 둘 다 Marinara를 열어 둔 채 다른 창을 보고 있을 때 작동하며, 메시지 내용은 표시하지 않습니다.
 - **Responses**(응답): 응답을 스트리밍하고 저장하고 페이지로 나누는 방식. [메시지 보내기와 스트리밍](../chats/sending-and-streaming.md)을 참고하세요.
 - **Input & Editing**(입력 및 편집): 메시지 입력란과 빠른 편집 기능. [메시지 조작](../chats/messages.md)을 참고하세요.
 - **Text Rules**: 채팅 글에 적용되는 서식. 아래에서 설명합니다.

@@ -113,7 +113,7 @@ La taille de l'image vient du réglage de taille **Portraits**, dans les réglag
 
 L'onglet **Advanced** regroupe des réglages de prompt destinés aux utilisateurs avancés. Pour un personnage classique, tu peux tout laisser vide.
 
-Ces réglages de prompt définis dans la fiche s'appliquent aux modes Conversation, Roleplay, Visual Novel et Game. Un preset Conversation ou Game sélectionné – un preset étant un modèle de prompt enregistré – modifie le prompt qui l'entoure, mais ne désactive ni les Post-History Instructions ni le Depth Prompt du personnage.
+Ces réglages de prompt définis dans la fiche s'appliquent aux modes Conversation, Roleplay et Game. Un preset Conversation ou Game sélectionné – un preset étant un modèle de prompt enregistré – modifie le prompt qui l'entoure, mais ne désactive ni les Post-History Instructions ni le Depth Prompt du personnage.
 
 - **System Prompt**. Des instructions propres au personnage, ajoutées via le bloc de personnage du preset actif, le contexte de personnage en mode Conversation, ou la fiche de personnage/GM en Game Mode, selon le cas. Cela ne remplace pas le prompt système principal du chat.
 - **Post-History Instructions**. Un texte placé vers la fin du prompt, juste avant la génération. Usage courant : un bref rappel du type "Stay in character".

@@ -113,7 +113,7 @@ El tamaño de la imagen viene del ajuste de tamaño de imagen **Portraits** en l
 
 La pestaña **Advanced** contiene controles de prompt para usuarios avanzados. Puedes dejarlos todos vacíos para un personaje normal.
 
-Estos controles de prompt escritos por el autor del personaje se aplican en los modos Conversation, Roleplay, Visual Novel y Game. Un preset de Conversation o Game seleccionado cambia el prompt que lo rodea, pero no desactiva las Post-History Instructions ni el Depth Prompt del personaje.
+Estos controles de prompt escritos por el autor del personaje se aplican en los modos Conversation, Roleplay y Game. Un preset de Conversation o Game seleccionado cambia el prompt que lo rodea, pero no desactiva las Post-History Instructions ni el Depth Prompt del personaje.
 
 - **System Prompt**. Instrucciones específicas del personaje que se añaden a través del bloque de personaje del preset activo, el contexto de personaje de Conversation, o la tarjeta de personaje/GM de Game, según corresponda. Esto no reemplaza el prompt de sistema principal del chat.
 - **Post-History Instructions**. Texto colocado cerca del final del prompt, próximo a la generación. Un uso común es un recordatorio corto como "Stay in character".

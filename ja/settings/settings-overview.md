@@ -31,7 +31,7 @@
 **General**タブは6つのセクションに分かれています。このページで全体を扱うのは**App Behavior**(アプリの動作)と**Text Rules**(テキストルール)の2つです。残りはここで要点だけ紹介し、詳細はそれぞれのガイドで説明します。
 
 - **App Behavior**: 言語、削除時の安全確認、表示・非表示のトグルの設定です。以下で説明します。
-- **Notifications**: 通知音と、ブラウザーおよびAndroidアプリ向けの個別の設定です。**Custom sound**にはMP3、WAV、OGG、M4A/MP4、WebM形式のファイル(10 MBまで)をアップロードでき、このサーバーに接続しているすべてのデバイスで、Marinara標準の通知音の代わりに鳴ります。試聴、差し替え、削除はいつでもできます。読み込めないファイルを指定した場合は標準の通知音に戻り、アップロードしたファイルはバックアップとプロファイルのエクスポートにも含まれます。**Background Notifications**はConversationの自動メッセージが対象で、**Generation Completion Notifications**はConversation、Roleplay、Visual Novel、Game Modeで自分から始めた返信が対象です。どちらもMarinaraを開いたまま別の画面を操作しているときに動作し、メッセージの中身は表示しません。
+- **Notifications**: 通知音と、ブラウザーおよびAndroidアプリ向けの個別の設定です。**Custom sound**にはMP3、WAV、OGG、M4A/MP4、WebM形式のファイル(10 MBまで)をアップロードでき、このサーバーに接続しているすべてのデバイスで、Marinara標準の通知音の代わりに鳴ります。試聴、差し替え、削除はいつでもできます。読み込めないファイルを指定した場合は標準の通知音に戻り、アップロードしたファイルはバックアップとプロファイルのエクスポートにも含まれます。**Background Notifications**はConversationの自動メッセージが対象で、**Generation Completion Notifications**はConversation、Roleplay、Game Modeで自分から始めた返信が対象です。どちらもMarinaraを開いたまま別の画面を操作しているときに動作し、メッセージの中身は表示しません。
 - **Responses**: 返信のストリーミング、保存、ページ送りに関する設定です。[メッセージの送信とストリーミング](../chats/sending-and-streaming.md)を参照してください。
 - **Input & Editing**: メッセージの入力欄とすばやい編集の設定です。[メッセージの操作](../chats/messages.md)を参照してください。
 - **Text Rules**: チャットの文章に適用される整形ルールです。以下で説明します。

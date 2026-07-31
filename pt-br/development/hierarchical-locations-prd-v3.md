@@ -12,7 +12,7 @@ Este plano trata a orientação espacial como um recurso de produto bem delimita
 
 O recurso é um sistema de mapa hierárquico e orientação espacial, não um motor genérico de cenários no estilo Voxta. Ele pega emprestado um padrão útil do Voxta: um estado persistente seleciona um contexto de prompt pequeno e relevante. De início, ele não acrescenta flags, variáveis, eventos, scripts, temporizadores nem um modelo separado de inferência de ações.
 
-Os modos proprietários compatíveis são Roleplay e Game. O valor legado `visual_novel` do enum é resíduo de compatibilidade e não é um modo de produto com suporte.
+Os modos proprietários compatíveis são Roleplay e Game.
 
 O plano tem cinco camadas bem definidas:
 

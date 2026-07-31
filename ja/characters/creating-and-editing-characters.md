@@ -113,7 +113,7 @@ AIアバターの項目は、画像生成用の接続を1つ以上設定して�
 
 **Advanced**タブには、上級者向けのプロンプト設定があります。普通のキャラクターなら、いずれも空欄のままでかまいません。
 
-ここで設定するキャラクター側のプロンプトは、Conversation、Roleplay、Visual Novel、Game Modeのどのモードでも適用されます。ConversationやGameのプリセットを選ぶと周囲のプロンプトは変わりますが、キャラクターのPost-History InstructionsやDepth Promptが無効になることはありません。
+ここで設定するキャラクター側のプロンプトは、Conversation、Roleplay、Game Modeのどのモードでも適用されます。ConversationやGameのプリセットを選ぶと周囲のプロンプトは変わりますが、キャラクターのPost-History InstructionsやDepth Promptが無効になることはありません。
 
 - **System Prompt**(システムプロンプト)。有効なプリセットのキャラクターブロック、Conversationのキャラクターコンテキスト、Gameのキャラクターカードまたはゲームマスター(GM)カードのうち、状況に応じた場所に追加されるキャラクター固有の指示です。チャット本体のシステムプロンプトを置き換えるものではありません。
 - **Post-History Instructions**(履歴の後に置く指示)。プロンプトの終わり近く、生成の直前に置かれる文章です。「Stay in character」のような短い念押しによく使われます。

@@ -12,7 +12,7 @@ Dieser Plan behandelt räumliche Orientierung als eng umrissene Produktfunktion 
 
 Die Funktion ist ein System für hierarchische Karten und räumliche Orientierung, keine generische Szenario-Engine im Stil von Voxta. Ein nützliches Muster übernimmt sie von Voxta: Dauerhafter Zustand wählt einen kleinen, passenden Prompt-Kontext aus. Flags, Variablen, Events, Skripte, Timer oder ein eigenes Modell zur Aktionserkennung kommen zunächst nicht dazu.
 
-Unterstützte Owner-Modi sind Roleplay und Game. Der alte Enum-Wert `visual_novel` ist ein Kompatibilitätsrest und kein unterstützter Produktmodus.
+Unterstützte Owner-Modi sind Roleplay und Game.
 
 Der Plan besteht aus fünf klar getrennten Ebenen:
 
