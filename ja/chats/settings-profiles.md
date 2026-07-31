@@ -1,0 +1,82 @@
+# 設定プロファイル
+
+設定プロファイルとは、繰り返し使うチャットの設定に名前を付けてまとめたものです。チャットの接続、プロンプトプリセット、エージェント、ツール、翻訳、記憶機能の呼び出し、詳細パラメーター、そのほかチャットごとの設定を保存できます。同じ設定をもう一度作り直さなくても、プロファイルをほかのチャットに適用するだけで済みます。
+
+プロファイルの操作欄は**Chat Settings**(チャット設定)の上部にあります。使えるのはConversationモードとRoleplayモードで、Game Modeでは表示しません。
+
+## 設定プロファイルとプロンプトプリセットの違い
+
+Marinaraでは、**preset**という言葉はプロンプトの雛形だけを指します。
+
+- **プロンプトプリセット**はシステムプロンプトの構成と生成パラメーターを決めるものです。編集する場所は**Presets**パネルです。[Preset Editorとプロンプトの管理](../prompts/presets.md)を参照してください。
+- **設定プロファイル**はもっと広い範囲の設定をまとめたものです。選択中のプロンプトプリセットに加えて、接続、エージェント、そのほかのチャット設定も含められます。
+
+つまり、プロンプトプリセットは設定プロファイルの中の1項目という位置づけです。
+
+## プロファイルに含まれるもの
+
+プロファイルには、チャットがAIとやり取りする方法が保存されます。
+
+- 接続
+- プロンプトプリセット(Conversationモードではプロンプトの供給元)
+- エージェントとツール
+- 翻訳
+- Memory Recall
+- Advanced Parameters
+- そのほかの再利用できるチャット設定
+
+一方で、キャラクター、ペルソナ、ロアブック、スプライト、要約、タグ、シーンのプロンプトのように、チャット自身が持つ内容はプロファイルでは置き換わりません。チャットの履歴も含みません。
+
+## プロファイルを適用する
+
+プロファイルのドロップダウンは**Chat Settings**の上部にあります。ツールチップには**Apply a settings profile to this chat**と表示します。
+
+1. 変更したいチャットを開きます。
+2. **Chat Settings**を開きます。
+3. **Profile**(プロファイル)ドロップダウンを開きます。
+4. プロファイルを名前で選びます。
+
+チャットの設定はすぐに切り替わります。今の設定が保存済みのどのプロファイルとも一致しない場合、ドロップダウンには**Custom settings profile**と表示します。以前に適用したプロファイルがすでに存在しない場合は**Missing profile - choose a profile**と表示します。
+
+## プロファイルを保存する
+
+ドロップダウンの下にあるアイコンの列から、次の操作ができます。
+
+| ボタン | ツールチップ | 動作 |
+|---|---|---|
+| Save | **Save current chat settings into this profile** | 選択中のプロファイルの保存内容を上書きします |
+| Rename | **Rename profile** | 選択中のプロファイルの名前を変更します |
+| Save As | **Save current chat settings as a new profile** | 今のチャットから別のプロファイルを作ります |
+| Import | **Import settings profile (.json)** | プロファイルのファイルを読み込みます |
+| Export | **Export settings profile (.json)** | 選択中のプロファイルをダウンロードします |
+| Delete | **Delete profile** | 選択中のプロファイルを完全に削除します |
+
+最初のプロファイルを作るには、チャットの設定を整えてから**Save current chat settings as a new profile**を選びます。後から内容を更新するときは、プロファイルを適用し、チャットの設定を変えてから**Save current chat settings into this profile**を選びます。
+
+## デフォルトのプロファイルを決める
+
+ドロップダウンの横にある星印は、そのモードで新しいチャットを始めたときに自動で使うプロファイルを示します。デフォルトにできるのは、1つのモードにつき1つのプロファイルだけです。
+
+ツールチップは今の状態に応じて変わります。
+
+- **Mark this profile as default for new chats in this mode**
+- **This profile is the default for new chats in this mode**
+- **Select a profile to mark it as default**
+
+## プロファイルをインポート、エクスポートする
+
+**Export settings profile (.json)**を選ぶと`.marinara-settings-profile.json`ファイルをダウンロードします。バックアップとして保管したり、ほかの人に渡したりできます。**Import settings profile (.json)**は、対応するファイルから新しいプロファイルを作る操作で、既存のプロファイルを上書きしません。古い形式で書き出したプロファイルも読み込めます。
+
+プロファイルに保存されるのは設定だけで、プロバイダーの秘密情報は含みません。
+
+## Defaultプロファイル
+
+ConversationモードとRoleplayモードには、それぞれ最初から**Default**(デフォルト)プロファイルが用意されています。これを適用すると、プロファイルが管理する設定がそのモードのMarinaraの初期状態に戻ります。
+
+**Default**プロファイルは名前の変更も、上書き保存も、削除もできません。操作できないボタンには、その理由として**Cannot save into the Default profile**、**Cannot rename the Default profile**、**Cannot delete the Default profile**と表示します。
+
+## 関連ガイド
+
+- [Chat Settingsの概要](chat-settings.md)
+- [Preset Editorとプロンプトの管理](../prompts/presets.md)
+- [生成パラメーター](../prompts/generation-parameters.md)
