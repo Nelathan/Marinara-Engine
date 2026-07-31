@@ -1,7 +1,7 @@
 # World Maps: konfiguracja, tworzenie map i podróże
 
 > **Aktualna zgodność:** Ten przewodnik opisuje pakiet World Maps w wersji
-> **1.2.0** na aplikacji Marinara Engine **2.3.5**. Pakiet obsługuje czaty Roleplay i Game.
+> **1.2.1** na aplikacji Marinara Engine **2.3.5**. Pakiet obsługuje czaty Roleplay i Game.
 
 World Maps dodaje trwały stan świata do trybów Roleplay i Game. Zamiast
 jednego pola tekstowego z miejscem akcji świat opisują zagnieżdżone lokalizacje:
@@ -21,24 +21,28 @@ pasująca wiedza o świecie stanowią podstawę kolejnej odpowiedzi. Mapa potraf
 podążyć za opisaną i zakończoną podróżą do znanego miejsca albo dodać nowo
 odkryte miejsce, gdy fabuła naprawdę tam dociera.
 
-Każdy czat dostaje własną kopię roboczą mapy. Szablony zapisane na koncie
-pozwalają przygotować autorski świat lub świat z fandomu raz, a potem dodać jego
-czystą kopię do dowolnego czatu Roleplay lub Game.
+Mapy mogą działać osobno w każdym czacie albo być podpięte do jednego wspólnego
+świata zapisanego na koncie. Szablony tworzą czyste kopie, które z czasem mogą
+się rozejść. Wspólny świat działa inaczej: trzyma jedną wiążącą hierarchię i jeden
+zestaw grafik, a każdy podpięty czat zachowuje własną lokalizację bieżącą,
+historię podróży, migawki i powiązania z mapami Game.
 
 ## Przegląd możliwości
 
-World Maps 1.2.0 daje:
+World Maps 1.2.1 daje:
 
 - zagnieżdżone regiony, osady, miejsca, budynki, piętra i pomieszczenia;
 - ścieżki nawigacji oraz jedną wiążącą lokalizację bieżącą fabuły;
 - widok listy, mapy z pozycjami i uporządkowanych warstw dla lokalizacji podrzędnych;
 - podróż w górę i w dół hierarchii, bezpośrednie przejścia i trasy na wiele tur;
 - zweryfikowany ruch na podstawie zakończonej narracji i odkrywanie nowych lokalizacji;
+- wspólne światy zapisane na koncie, które da się podpiąć do czatów Roleplay i Game;
+- sprawdzane szkice osobne dla każdego czatu, ze sterowaniem publikacją, odrzuceniem, konfliktem i odłączeniem niezależnej kopii;
 - szablony map na koncie, tworzone ręcznie, przez AI albo z importu;
 - szkice i rozbudowy map tworzone przez AI na podstawie konfiguracji lub wybranej wiedzy o świecie;
 - jawne opisy lokalizacji, prywatną pamięć modelu oraz wiedzę o świecie przypisaną do dokładnego miejsca;
-- jeden opcjonalny obraz referencyjny z galerii dla każdej lokalizacji;
-- osobne tło z galerii dla każdej mapy z pozycjami;
+- jeden opcjonalny obraz referencyjny dla każdej lokalizacji, z galerii czatu albo z Global Gallery;
+- osobne tło dla każdej mapy z pozycjami, z galerii czatu albo z Global Gallery;
 - zbiorcze generowanie brakujących grafik lokalizacji z podglądem przed wysłaniem;
 - globalne nadpisanie promptu grafik map, oparte na zmiennych;
 - obsługę referencji lokalizacji w ilustracjach Roleplay i storyboardach Game;
@@ -79,7 +83,7 @@ także tę aktualizację. Zanim zaczniesz korzystać z pakietu, wykonaj poleceni
 ponownego uruchomienia.
 
 Strona World Maps pokazuje zainstalowaną wersję pakietu i jego gotowość,
-udostępnia bibliotekę szablonów przypisaną do konta oraz stan mapy w bieżącym
+udostępnia bibliotekę map świata przypisaną do konta oraz stan mapy w bieżącym
 czacie. Instalacja pakietu tylko go udostępnia, ale nie włącza go w każdym
 czacie.
 
@@ -89,11 +93,12 @@ czacie.
 2. Otwórz panel **Chat Settings** przyciskiem z zębatką.
 3. Włącz przełącznik **Enable Agents**.
 4. W sekcji **Tracker Agents** włącz pakiet **World Maps**.
-5. Otwórz edytor **Edit hierarchical map** albo bibliotekę **Map templates**.
+5. Otwórz edytor **Edit world map** albo bibliotekę **World map library**.
 
-Biblioteka szablonów działa tak samo niezależnie od tego, czy otworzysz ją na
-głównej stronie **Agents**, czy w panelu Chat Settings czatu Roleplay. Przyciskiem
-**Add to chat** skopiujesz szablon do aktywnego czatu.
+Biblioteka działa tak samo niezależnie od tego, czy otworzysz ją na głównej
+stronie **Agents**, czy w panelu Chat Settings czatu Roleplay. Przycisk **Add to
+chat** tworzy niezależną kopię szablonu, a przycisk **Link to chat** podpina
+trwały wspólny świat.
 
 ### Game
 
@@ -133,9 +138,52 @@ Każde zastosowanie tworzy niezależną kopię roboczą. Późniejsze zmiany w s
 nie zmieniają czatów, które go już skopiowały, a zmiany w czacie nie zmieniają
 szablonu.
 
-Szablony nie kopiują grafik z galerii czatu. Identyfikatory obrazów należą do
-galerii czatu źródłowego i nie dałoby się ich przenieść. Referencje lokalizacji
-i tła map w czacie roboczym dodaj albo wygeneruj po zastosowaniu szablonu.
+Szablony zachowują odwołania do grafik z Global Gallery, wspólnej dla całego
+konta. Po użyciu przycisku **Save as template** w czacie World Maps przenosi
+wskazane grafiki czatu do Global Gallery, a gdy identyczny wspólny obraz już tam
+jest, korzysta z niego ponownie. Każdy czat, w którym zastosujesz szablon,
+wskazuje potem tę samą wspólną grafikę, bez tworzenia kolejnej kopii w galerii.
+
+Wspólne są tylko grafiki. Każda zastosowana definicja mapy nadal jest niezależną
+kopią roboczą, a edycja szablonu nie zmienia map dodanych wcześniej do czatów.
+
+## Podpięcie czatów do jednego wspólnego świata
+
+Kiedy kilka czatów Roleplay lub Game ma czytać tę samą wiążącą hierarchię,
+skorzystaj z sekcji **Shared worlds** (wspólne światy) w bibliotece World map
+library. Utwórz pusty wspólny świat, zaimportuj gotowy, awansuj istniejący
+szablon przyciskiem **Make shared** albo otwórz zapisaną mapę czatu i wybierz
+**Make shared**. Ta ostatnia droga przenosi wskazane grafiki czatu do Global
+Gallery, tworzy świat zapisany na koncie i podpina do niego pierwotny czat.
+
+Przyciskiem **Link to chat** podepniesz otwarty czat. Lokalizacja bieżąca oraz
+wszystkie identyfikatory lokalizacji używane już przez historię kampanii muszą
+istnieć we wspólnym świecie. W przeciwnym razie użyj opcji **Independent copy**
+albo najpierw przenieś bieżącą mapę czatu do nowego wspólnego świata.
+
+Podpięte czaty dzielą wyłącznie definicję mapy i grafiki z Global Gallery. Nie
+dzielą wiadomości, lokalizacji bieżących, migawek podróży, stanu gry, powiązań
+z mapami Game, połączeń z dostawcami ani danych logowania.
+
+Zmiany i odkrycia z podpiętego czatu zapisują się jako nieopublikowany szkic tego
+czatu. Nie zmieniają wiążącego świata ani innych czatów, dopóki nie klikniesz
+przycisku **Publish changes**. Szkic można też odrzucić przyciskiem **Discard**
+albo odłączyć czat przyciskiem **Fork independent**, zachowując jego bieżącą
+wersję. Jeśli wiążący świat zmieni się w czasie, gdy szkic czeka na publikację,
+World Maps zgłasza konflikt i wymaga odłączenia albo odrzucenia, zamiast po cichu
+nadpisać którąkolwiek wersję.
+
+Edycja wspólnego świata z poziomu biblioteki zmienia wiążącą definicję od razu.
+Lokalizacji używanych przez podpięte czaty nie da się usunąć, więc archiwizuj je,
+aby ich stałe identyfikatory pozostały dostępne. Samego wspólnego świata też nie
+da się usunąć, dopóki wszystkie podpięte czaty nie zostaną odłączone albo
+podpięte gdzie indziej.
+
+Wspólne światy i szablony zachowują odwołania do grafik z Global Gallery, bez
+kopiowania pliku obrazu do każdego czatu. Marinara blokuje usunięcie obrazu
+z Global Gallery, dopóki odwołuje się do niego zapisany szablon, wspólny świat,
+niezależna mapa czatu albo szkic podpiętego czatu. Jeśli chcesz usunąć sam plik,
+najpierw skasuj odwołania do grafiki.
 
 ## Jak działa edytor map
 
@@ -370,7 +418,7 @@ korzystają z tego samego obrazu z galerii.
 
 | Grafika                      | Do czego służy                                                                                                                          | Czy trafia do generowania obrazów?                                                                                |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Location reference image** | Ustala wizualną tożsamość dokładnego bieżącego miejsca. Wybierz obraz z galerii albo utwórz go przez AI.                                 | Tak, jeśli włączona jest opcja **Use for Roleplay illustrations and Game storyboards**, a żądanie się kwalifikuje. |
+| **Location reference image** | Ustala wizualną tożsamość dokładnego bieżącego miejsca. Wybierz grafikę z galerii czatu albo ze wspólnej Global Gallery, albo utwórz ją przez AI. | Tak, jeśli włączona jest opcja **Use for Roleplay illustrations and Game storyboards**, a żądanie się kwalifikuje. |
 | **Child map background**     | Wyświetla się za przesuwalnymi lokalizacjami podrzędnymi przy prezentacji Map. Każda warstwa mapy może mieć własne tło.                  | Nie. Służy wyłącznie do wyświetlania.                                                                             |
 
 Referencje postaci i persony pilnują tego, kto jest obecny, a referencja
@@ -392,7 +440,8 @@ automatycznie.
 
 Zaznacz lokalizację w edytorze i otwórz sekcję **Location reference image**.
 
-- **Choose from Gallery** przypisuje istniejący, sprawdzony obraz.
+- **Choose artwork** przypisuje sprawdzony obraz z bieżącego czatu albo ze
+  wspólnej Global Gallery. Okno wyboru opisuje każde źródło.
 - **Create with AI** otwiera prompt obrazu ustanawiającego scenę do edycji
   i zapisuje wynik w galerii, zanim zdecydujesz, czy go użyć.
 - **Use for Roleplay illustrations and Game storyboards** decyduje o tym, czy
@@ -514,16 +563,20 @@ i przed zapisem korzystaj z rozwiniętych podglądów.
 
 ## Bezpieczny import, eksport i archiwizowanie
 
-Przyciskiem **Export** pobierzesz roboczą hierarchię jako plik
-`.world-map.json`. Pozostaw opcję **Include map artwork** włączoną, aby w tym
+Przyciskiem **Export** w edytorze czatu, szablonu albo wspólnego świata pobierzesz
+roboczą hierarchię jako plik `.world-map.json`.
+Pozostaw opcję **Include map artwork** włączoną, aby w tym
 samym pliku umieścić referencje grafik lokalizacji i tła map lokalizacji
 podrzędnych. Wyłącz ją, jeśli potrzebujesz mniejszej kopii zawierającej tylko
 definicję. Starsze pliki `.hierarchical-map.json` nadal można importować.
 
-Przyciskiem **Import** wczytasz hierarchię do kopii roboczej. Dołączone grafiki
-zostaną odtworzone w Gallery czatu docelowego, a ich odwołania zostaną
-przypisane ponownie. Sprawdź wynik i kliknij przycisk **Save**, żeby stał się
-wiążący. Import nie zapisuje mapy od razu.
+Przyciskiem **Import** wczytasz hierarchię do kopii roboczej czatu, niezależnego
+szablonu albo wspólnego świata. Dołączone grafiki zostają
+odtworzone, a ich odwołania przypisane ponownie. Grafiki należące do czatu wracają
+do galerii czatu docelowego. Wspólne grafiki są używane ponownie z Global Gallery,
+jeśli ten sam obraz już tam jest, albo trafiają tam raz, gdy potrzebuje ich
+szablon lub wspólne odwołanie. Sprawdź wynik i kliknij przycisk **Save**, żeby
+stał się wiążący. Import nie zapisuje mapy od razu.
 
 Kiedy historia kampanii odwołuje się już do mapy, importowane zmiany muszą
 zachować dotychczasowe identyfikatory lokalizacji. Dodawaj i aktualizuj

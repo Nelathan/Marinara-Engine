@@ -88,7 +88,7 @@ Si no puedes acceder a Marinara desde un teléfono, una tableta u otra computado
 - Vincula el servidor a una dirección accesible. El servidor escucha en `127.0.0.1` (loopback, solo tu propia máquina) de forma predeterminada. Los lanzadores de shell fijan `HOST=0.0.0.0` por ti. Si iniciaste con `pnpm start` a mano, fija primero `HOST=0.0.0.0` en tu archivo `.env`.
 - Confirma que ambos dispositivos están en la misma red Wi-Fi.
 - Confirma que ningún firewall bloquea el puerto. El puerto predeterminado es `7860`, o el que hayas fijado como `PORT`.
-- Configura el control de acceso. Para clientes de red normales o públicos, fija `BASIC_AUTH_USER` y `BASIC_AUTH_PASS` en `.env`. Loopback se queda sin contraseña. El tráfico por Tailscale y por el puente Docker del mismo host o la puerta de enlace de contenedor detectada es de confianza de forma predeterminada.
+- Configura el control de acceso. Para clientes de red normales o públicos, fija `BASIC_AUTH_USER` y `BASIC_AUTH_PASS` en `.env`. Loopback se queda sin contraseña. El tráfico directo por Tailscale y por el puente Docker del mismo host o la puerta de enlace de contenedor detectada es de confianza de forma predeterminada; el tráfico de Docker reenviado por proxy requiere autorización normal salvo que fijes explícitamente `REQUIRE_AUTH_FOR_DOCKER_PROXY=false`.
 - Para acciones privilegiadas desde ese dispositivo (copias de seguridad, borrado de datos, actualizaciones), fija `ADMIN_SECRET` en el `.env` del servidor. Luego pega el mismo valor en **Settings** > **Advanced** > **Admin Access** en ese dispositivo y haz clic en **Save**.
 - Si usas un dominio público o de proxy inverso y ves **Untrusted request host**, añade su nombre de host exacto a `TRUSTED_HOSTS` en `.env`. Las direcciones IP directas que usan teléfonos, computadoras de la LAN y pares de Tailscale se siguen aceptando automáticamente.
 
@@ -128,6 +128,17 @@ El **Local Model** (Modelo local) es un modelo de IA que se ejecuta en tu propia
 
 - Si instalar un runtime falla con **Sidecar runtime install is disabled**, el servidor tiene esa acción desactivada por seguridad. En tu propia máquina, fija `SIDECAR_RUNTIME_INSTALL_ENABLED=true` en `.env`. Desde otro dispositivo, pega primero tu admin secret en **Settings** > **Advanced** > **Admin Access**.
 - Si la descarga o la configuración del modelo falla desde otro dispositivo (una dirección de red o Docker), también puede necesitar el admin secret. En tu propia máquina no hace falta ningún admin secret. Revisa el punto anterior para saber dónde pegar el secreto.
+- Si una comprobación del llama.cpp incluido, de MLX, de uv o del bloqueo de dependencias de MLX informa de un desajuste de tamaño de archivo o de SHA-256, Marinara ya lo descartó o lo rechazó antes de extraerlo o instalarlo. Actualiza o reinstala Marinara y vuelve a intentarlo; no ejecutes, descomprimas, edites ni eludas manualmente el artefacto rechazado.
+
+### Mantenedores: actualizar los runtimes locales fijados
+
+No está garantizado que los archivos de código fuente generados por GitHub sigan siendo estables byte a byte, aunque el contenido de su commit no cambie. Nunca "arregles" el desajuste de un usuario aceptando los bytes que se ven en su máquina ni debilitando la verificación. Vuelve a fijar las entradas de runtime solo dentro de un cambio revisado del Engine:
+
+1. Elige una revisión ascendente inmutable o un recurso de release y revisa los cambios ascendentes.
+2. Descarga el artefacto en una carpeta temporal, anota su número exacto de bytes y calcula su resumen SHA-256 de forma independiente.
+3. Actualiza `runtime-integrity-manifest.ts` con la revisión, la URL, el tamaño y el resumen. Para MLX, vuelve a generar `packages/server/src/assets/mlx-runtime-requirements.lock` desde su archivo `.in` con la versión fijada de uv en Apple Silicon/Python 3.12, revisa cada cambio de dependencia y actualiza `requirementsLockSha256`.
+4. Ejecuta `pnpm regression:runtime-integrity`, `pnpm check` y una instalación limpia y real del runtime en la plataforma afectada.
+5. Publica la actualización revisada del Engine antes de pedir a los usuarios que vuelvan a intentarlo. No ofrezcas una anulación manual de la suma de verificación.
 
 Para la configuración completa, revisa [Configuración del Local Model](connections/local-model.md).
 
@@ -310,6 +321,14 @@ La sección está oculta a propósito hasta que se abran ambas puertas de seguri
 Si el interruptor de Danger Zone está desactivado, la marca del host sigue siendo falsa o la app no ha observado el cambio. Confirma que editaste la ruta `.env` activa descrita en [Configuración del servidor](CONFIGURATION.md). En Docker, esa normalmente es `/app/data/.env`.
 
 Cuando alguna de las puertas está cerrada, los registros de extensiones externas, heredadas, importadas de perfil, almacenadas manualmente y de origen desconocido no aparecen ni pueden ejecutarse. Reabrir las puertas no las vuelve a activar automáticamente.
+
+### Una extensión de navegador importada aparece pero no funciona
+
+Abre la extensión en **Settings → Addons → External Extensions** e inspecciona **Requested access**. Los paquetes antiguos que usan el formato `marinara.extension` v1 sin declaración de capacidades deberían mostrar **Full page access**. Aprueba solo el hash exacto que inspeccionaste y en el que confías.
+
+Si un paquete antiguo se volvió a exportar con una lista de capacidades vacía explícita, Marinara lo trata como una extensión de sandbox segura; ahí no funcionará el código que depende del DOM. Añade `full_page_access` a su manifiesto solo si entiendes que el código obtendrá acceso a toda la página de Marinara, al almacenamiento del navegador, a las APIs de red y a la sesión del mismo origen.
+
+Después de desactivar una extensión con acceso a toda la página, recarga Marinara si queda algún elemento de la barra de herramientas, una capa superpuesta, un listener o un cambio visual. La limpieza se hace en la medida de lo posible, porque el código de la página puede crear efectos secundarios fuera de la API de compatibilidad que Marinara rastrea.
 
 ### Una Server Extension dice que no hay ningún sandbox compatible disponible
 

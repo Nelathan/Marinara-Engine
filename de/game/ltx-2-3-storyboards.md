@@ -101,27 +101,22 @@ Ersetze die entsprechenden Werte im API-Export durch die Marinara-Platzhalter in
 | `%reference_image_name%` | Das erste Bild, das nach ComfyUI hochgeladen wurde |
 | `%duration_seconds%` | Die Clip-Dauer des Storyboards in Sekunden |
 | `%length%` | Die Dauer, umgerechnet auf Marinaras Bildraten-Vertrag von 16 FPS |
+| `%fps%` | Die Bildrate, die Marinara für den Clip verwendet |
 | `%width%`, `%height%` | Maße aus Auflösung und Seitenverhältnis der Videoverbindung |
 | `%seed%` | Ein neuer Zufalls-Seed für die Anfrage |
 | `%model%` | Optionaler Modellwert aus der Verbindung, falls der Workflow sein Loader-Modell nicht fest verdrahtet |
 
-Das Referenzsegment in `timeline_data` des LTX Director sollte den hochgeladenen Dateinamen verwenden:
+Das Referenzbild gehört in das `segments`-Array von `timeline_data` des LTX Director. Im API-Workflow ist `timeline_data` ein serialisierter JSON-String. `%length%` hält die Clip-Länge über `normalDurationFrames` dynamisch; das Referenzbild-Segment bei Frame null behält bewusst seinen eigenen festen kurzen Wert `"length":16`:
 
 ```json
 {
-  "id": "marinara-reference",
-  "start": 0,
-  "length": 16,
-  "prompt": "",
-  "type": "image",
-  "imageFile": "%reference_image_name%",
-  "isEndFrame": false
+  "timeline_data": "{\"global_prompt\":\"\",\"normalStartFrame\":0,\"normalDurationFrames\":%length%,\"segments\":[{\"id\":\"marinara-reference\",\"start\":0,\"length\":16,\"prompt\":\"\",\"type\":\"image\",\"imageFile\":\"%reference_image_name%\",\"isEndFrame\":false}],\"motionSegments\":[],\"audioSegments\":[]}"
 }
 ```
 
-Mach außerdem die Timeline-Dauer mit `%length%` dynamisch. Falls die LTX-Director-Node Dauer-Eingänge in Sekunden anbietet, trag dort `%duration_seconds%` ein, statt einen festen Wert von fünf Sekunden stehen zu lassen.
+Setz `%reference_image_name%` nicht neben `timeline_data` und nicht in ein separates Bildfeld auf oberster Ebene. Halte Bildanzahl, Sekunden und Bildrate über `%length%`, `%duration_seconds%` und `%fps%` mit den externen Eingängen des Workflows verbunden; die Zahlenwerte in einem bearbeitbaren ComfyUI-Graphen sind keine Marinara-Standardwerte.
 
-Lass die Platzhalterwerte im lokalen ComfyUI-Workflow in Anführungszeichen. Marinara liest das JSON ein und wandelt rein numerische Platzhalter vor dem Absenden in Zahlen um.
+Lass String-Platzhalter wie `%reference_image_name%` in Anführungszeichen. Bei exakt numerischen Node-Eingängen dürfen `%length%`, `%duration_seconds%` und `%fps%` in Anführungszeichen stehen, weil Marinara sie in Zahlen umwandelt. Im serialisierten `timeline_data`-String bleibt `%length%` wie gezeigt ohne Anführungszeichen, damit der dekodierte Timeline-Wert numerisch ist.
 
 ### Nach jeder Änderung exportieren
 

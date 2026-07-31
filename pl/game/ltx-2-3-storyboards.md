@@ -101,27 +101,22 @@ W eksporcie API podmień odpowiednie wartości na symbole zastępcze aplikacji M
 | `%reference_image_name%` | Obraz pierwszej klatki wgrany do ComfyUI |
 | `%duration_seconds%` | Długość klipu storyboardu w sekundach |
 | `%length%` | Ta sama długość przeliczona na klatki według umowy 16 FPS w aplikacji Marinara Engine |
+| `%fps%` | Liczba klatek na sekundę, której Marinara używa dla klipu |
 | `%width%`, `%height%` | Wymiary wynikające z rozdzielczości i proporcji obrazu ustawionych w połączeniu wideo |
 | `%seed%` | Nowe losowe ziarno dla danego żądania |
 | `%model%` | Opcjonalna wartość modelu z połączenia, gdy workflow nie ma modelu wpisanego na stałe w węźle ładującym |
 
-Segment referencyjny wewnątrz `timeline_data` w węźle LTX Director powinien używać nazwy wgranego pliku:
+Obraz referencyjny należy do tablicy `segments` wewnątrz `timeline_data` w węźle LTX Director. W workflow API `timeline_data` jest tekstowym zapisem JSON. Symbol `%length%` utrzymuje dynamiczną długość klipu przez `normalDurationFrames`, a segment obrazu referencyjnego w klatce zerowej celowo zachowuje własną, krótką i sztywną wartość `"length":16`:
 
 ```json
 {
-  "id": "marinara-reference",
-  "start": 0,
-  "length": 16,
-  "prompt": "",
-  "type": "image",
-  "imageFile": "%reference_image_name%",
-  "isEndFrame": false
+  "timeline_data": "{\"global_prompt\":\"\",\"normalStartFrame\":0,\"normalDurationFrames\":%length%,\"segments\":[{\"id\":\"marinara-reference\",\"start\":0,\"length\":16,\"prompt\":\"\",\"type\":\"image\",\"imageFile\":\"%reference_image_name%\",\"isEndFrame\":false}],\"motionSegments\":[],\"audioSegments\":[]}"
 }
 ```
 
-Zadbaj też o to, żeby długość osi czasu była dynamiczna dzięki `%length%`. Jeśli węzeł LTX Director udostępnia wejścia czasu liczone w sekundach, wpisz tam `%duration_seconds%` zamiast zostawiać sztywne pięć sekund.
+Nie wpisuj `%reference_image_name%` obok `timeline_data` ani w osobnym polu obrazu na najwyższym poziomie. Liczbę klatek, sekundy i liczbę klatek na sekundę powiąż z zewnętrznymi wejściami workflow przez `%length%`, `%duration_seconds%` i `%fps%`. Wartości liczbowe pokazywane w edytowalnym grafie ComfyUI nie są wartościami domyślnymi aplikacji Marinara Engine.
 
-W lokalnym workflow ComfyUI symbole zastępcze zostaw w cudzysłowach. Marinara przetwarza plik JSON i przed wysłaniem zamienia dokładne symbole liczbowe na liczby.
+Tekstowe symbole zastępcze, takie jak `%reference_image_name%`, zostaw w cudzysłowach. Dokładne liczbowe wejścia węzłów mogą mieć `%length%`, `%duration_seconds%` i `%fps%` w cudzysłowach, bo Marinara zamienia je na liczby. Wewnątrz tekstowego zapisu `timeline_data` zostaw `%length%` bez cudzysłowów, dokładnie tak jak wyżej, żeby po odczytaniu osi czasu wartość była liczbą.
 
 ### Eksport po każdej zmianie
 

@@ -88,7 +88,7 @@ Erreichst du Marinara nicht von Handy, Tablet oder einem anderen Rechner im Netz
 - Binde den Server an eine erreichbare Adresse. Standardmäßig lauscht er auf `127.0.0.1` (Loopback, also nur auf dem eigenen Rechner). Die Shell-Launcher setzen `HOST=0.0.0.0` automatisch für dich. Hast du von Hand mit `pnpm start` gestartet, trag zuerst `HOST=0.0.0.0` in der `.env`-Datei ein.
 - Prüf, ob beide Geräte im selben WLAN hängen.
 - Prüf, ob eine Firewall den Port blockiert. Der Standard-Port ist `7860` oder der Wert, den du unter `PORT` gesetzt hast.
-- Richte eine Zugriffskontrolle ein. Für gewöhnliche Clients im Netzwerk oder aus dem Internet setzt du `BASIC_AUTH_USER` und `BASIC_AUTH_PASS` in der `.env`. Loopback bleibt ohne Passwort. Datenverkehr über Tailscale sowie über die Docker-Bridge auf demselben Host oder ein erkanntes Container-Gateway gilt standardmäßig als vertrauenswürdig.
+- Richte eine Zugriffskontrolle ein. Für gewöhnliche Clients im Netzwerk oder aus dem Internet setzt du `BASIC_AUTH_USER` und `BASIC_AUTH_PASS` in der `.env`. Loopback bleibt ohne Passwort. Direkter Datenverkehr über Tailscale sowie über die Docker-Bridge auf demselben Host oder ein erkanntes Container-Gateway gilt standardmäßig als vertrauenswürdig; über einen Proxy weitergeleiteter Docker-Verkehr braucht dagegen die normale Autorisierung, sofern du nicht ausdrücklich `REQUIRE_AUTH_FOR_DOCKER_PROXY=false` setzt.
 - Für privilegierte Aktionen von diesem Gerät aus (Backups, Daten löschen, Updates) setzt du `ADMIN_SECRET` in der `.env` des Servers. Denselben Wert fügst du dann auf dem Gerät unter **Settings** > **Advanced** > **Admin Access** ein und klickst auf **Save**.
 - Nutzt du eine öffentliche Domain oder einen Reverse-Proxy und siehst **Untrusted request host**, trag den exakten Hostnamen in `TRUSTED_HOSTS` in der `.env` ein. Direkte IP-Adressen von Handys, LAN-Rechnern und Tailscale-Peers bleiben automatisch akzeptiert.
 
@@ -128,6 +128,17 @@ Das **Local Model** ist ein KI-Modell, das ohne API-Key direkt auf deinem Rechne
 
 - Schlägt die Installation einer Laufzeit mit **Sidecar runtime install is disabled** fehl, hat der Server diese Aktion aus Sicherheitsgründen deaktiviert. Auf dem eigenen Rechner setzt du dafür `SIDECAR_RUNTIME_INSTALL_ENABLED=true` in der `.env`. Von einem anderen Gerät aus fügst du zuerst dein Admin-Secret unter **Settings** > **Advanced** > **Admin Access** ein.
 - Schlägt der Modell-Download oder die Einrichtung von einem anderen Gerät aus fehl (Netzwerkadresse oder Docker), kann ebenfalls das Admin-Secret nötig sein. Auf dem eigenen Rechner brauchst du keines. Wo du das Secret einfügst, steht im Punkt darüber.
+- Meldet die Prüfung von mitgeliefertem llama.cpp, MLX, uv oder der MLX-Abhängigkeitssperre eine abweichende Dateigröße oder SHA-256-Prüfsumme, hat Marinara die Datei schon vor dem Entpacken oder Installieren verworfen oder abgelehnt. Aktualisier Marinara oder installier es neu und versuch es dann noch einmal. Führ die abgelehnte Datei keinesfalls selbst aus, entpack sie nicht, bearbeite sie nicht und umgeh die Prüfung nicht.
+
+### Für Maintainer: gepinnte lokale Laufzeiten aktualisieren
+
+Von GitHub erzeugte Quellcode-Archive bleiben nicht garantiert Byte für Byte gleich, selbst wenn sich der Inhalt des Commits nicht ändert. „Repariere“ eine Abweichung bei Nutzenden deshalb nie, indem du die Bytes von deren Rechner übernimmst oder die Prüfung aufweichst. Laufzeit-Eingaben werden ausschließlich in einer geprüften Engine-Änderung neu gepinnt:
+
+1. Wähl eine unveränderliche Upstream-Revision oder ein Release-Asset und sieh die Änderungen im Upstream durch.
+2. Lad die Datei in einen temporären Ordner herunter, notier ihre exakte Byte-Anzahl und berechne die SHA-256-Prüfsumme unabhängig davon.
+3. Trag Revision, URL, Größe und Prüfsumme in `runtime-integrity-manifest.ts` ein. Für MLX erzeugst du `packages/server/src/assets/mlx-runtime-requirements.lock` aus der zugehörigen `.in`-Datei neu – mit der gepinnten uv-Version auf Apple Silicon und Python 3.12. Prüf danach jede geänderte Abhängigkeit und aktualisier `requirementsLockSha256`.
+4. Führ `pnpm regression:runtime-integrity`, `pnpm check` und eine echte, saubere Laufzeit-Installation auf der betroffenen Plattform aus.
+5. Veröffentlich das geprüfte Engine-Update, bevor du Nutzende um einen neuen Versuch bittest. Biete keine Möglichkeit an, die Prüfsumme von Hand zu übergehen.
 
 Die vollständige Einrichtung beschreibt [Local Model einrichten](connections/local-model.md).
 
@@ -310,6 +321,14 @@ Der Abschnitt bleibt absichtlich verborgen, bis beide Sicherheitsschranken offen
 Lässt sich der Schalter in der Danger Zone nicht bedienen, steht das Host-Flag noch auf false oder die App hat die Änderung noch nicht bemerkt. Prüf, ob du wirklich die aktive `.env` bearbeitet hast, wie sie unter [Server-Konfiguration](CONFIGURATION.md) beschrieben ist. Unter Docker ist das normalerweise `/app/data/.env`.
 
 Solange eine der beiden Schranken zu ist, tauchen externe, veraltete, per Profil importierte und manuell abgelegte Erweiterungs-Einträge ebenso wenig auf wie solche unbekannter Herkunft – und laufen auch nicht. Werden die Schranken wieder geöffnet, aktiviert Marinara sie nicht automatisch erneut.
+
+### Eine importierte Browser Extension erscheint, funktioniert aber nicht
+
+Öffne die Erweiterung unter **Settings → Addons → External Extensions** und sieh dir **Requested access** (angeforderte Zugriffsrechte) an. Ältere Pakete im Format `marinara.extension` v1 ohne Capabilities-Angabe sollten dort **Full page access** (Zugriff auf die gesamte Seite) zeigen. Bestätige nur genau den Hash, den du geprüft hast und dem du vertraust.
+
+Wurde ein älteres Paket erneut mit einer ausdrücklich leeren Capabilities-Liste exportiert, behandelt Marinara es als sichere Sandbox-Erweiterung. Code, der auf das DOM zugreift, läuft dort nicht. Ergänze `full_page_access` nur dann im Manifest, wenn dir klar ist: Der Code erhält damit Zugriff auf die gesamte Marinara-Seite, auf den Browser-Speicher, auf Netzwerk-APIs und auf die Sitzung derselben Herkunft.
+
+Bleibt nach dem Deaktivieren einer Erweiterung mit Zugriff auf die gesamte Seite ein Eintrag in der Symbolleiste, ein Overlay, ein Listener oder eine sichtbare Änderung zurück, lad Marinara neu. Das Aufräumen erfolgt nach bestem Bemühen, denn Seiten-Code kann Nebenwirkungen außerhalb der von Marinara überwachten Kompatibilitäts-API hinterlassen.
 
 ### Eine Server Extension meldet, es gebe keine unterstützte Sandbox
 

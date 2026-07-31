@@ -57,6 +57,8 @@ Jeśli to jeszcze nie czas na dokończenie, kliknij przycisk **Skip for Now**. G
 
 Instalacja i ponowna instalacja środowiska uruchomieniowego to działanie chronione. W instalacjach jednym kliknięciem na Windows włącza się automatycznie. Na macOS, Linux i w kontenerze Docker trzeba je czasem dopuścić samodzielnie. Zobacz sekcję **Rozwiązywanie problemów** poniżej.
 
+Marinara pobiera tylko te wersje llama.cpp, MLX i uv, które zatwierdzono dla zainstalowanego wydania aplikacji Marinara Engine. Przed rozpakowaniem lub uruchomieniem czegokolwiek sprawdza dokładny rozmiar pliku i sumę kontrolną SHA-256. Zestaw zależności Python dla środowiska MLX ma zablokowane wersje i też przechodzi weryfikację sum kontrolnych. Sprawdzone źródło mlx-lm instaluje się dopiero potem, bez doinstalowywania dodatkowych pakietów. Nowe wersje środowiska uruchomieniowego przychodzą więc ze sprawdzonymi aktualizacjami aplikacji Marinara Engine, a nie po cichu z najnowszej kompilacji "latest" z zewnątrz.
+
 ## Pobieranie modelu
 
 Okno konfiguracji daje dwie drogi do zdobycia modelu.
@@ -189,6 +191,8 @@ SIDECAR_RUNTIME_INSTALL_ENABLED=true
 Druga opcja: wpisz raz sekret Admin Access w **Settings -> Advanced -> Admin Access** i spróbuj ponownie. Zobacz [Konfiguracja serwera](../CONFIGURATION.md).
 
 **Środowisko uruchomieniowe nie wystartowało.** Okno konfiguracji pokazuje ramkę o tytule **Local runtime failed to start**, a w niej treść błędu i ścieżkę do pliku z logami. Kliknij przycisk **Retry Startup**. Jeśli to nie pomoże, kliknij przycisk **Reinstall Runtime** albo wypróbuj inny **Runtime Target**. Przycisk **Continue Without Local AI** pozwala korzystać z aplikacji Marinara Engine bez modelu Local Model. Karta w panelu Connections sygnalizuje ten sam problem napisem **Local runtime unavailable**.
+
+**Pobieranie środowiska uruchomieniowego zgłasza niezgodny rozmiar albo sumę kontrolną SHA-256.** Marinara odrzuciła pobrany plik jeszcze przed rozpakowaniem. Zaktualizuj najpierw aplikację Marinara Engine, a potem spróbuj ponownie, żeby zatwierdzona lista środowisk i pobierany plik znów się zgadzały. Jeśli to samo wydanie dalej zawodzi, nie rozpakowuj ani nie uruchamiaj archiwum ręcznie – zgłoś opiekunom projektu wybrane środowisko uruchomieniowe i treść błędu.
 
 **Wyszukiwanie w lorebooku zgłasza, że model lokalny nie jest włączony.** Włącz na karcie Local Model przełącznik **Use for tracker agents (roleplay)** albo **Use for game scene analysis**, a potem ponów wektoryzację.
 

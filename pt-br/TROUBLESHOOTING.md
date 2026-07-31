@@ -88,7 +88,7 @@ Se você não consegue acessar o Marinara pelo celular, pelo tablet ou por outro
 - Vincule o servidor a um endereço acessível. Por padrão, o servidor escuta em `127.0.0.1` (loopback, ou seja, só a própria máquina). Os inicializadores de shell já definem `HOST=0.0.0.0` para você. Se você iniciou manualmente com `pnpm start`, defina antes `HOST=0.0.0.0` no arquivo `.env`.
 - Confirme que os dois dispositivos estão na mesma rede Wi-Fi.
 - Confirme que nenhum firewall está bloqueando a porta. A porta padrão é `7860`, ou o valor definido na variável `PORT`.
-- Configure o controle de acesso. Para clientes comuns da rede ou públicos, defina `BASIC_AUTH_USER` e `BASIC_AUTH_PASS` no arquivo `.env`. O loopback continua sem senha. Marinara confia por padrão no tráfego que vem do Tailscale e da ponte Docker do mesmo host, ou de um gateway de contêiner detectado.
+- Configure o controle de acesso. Para clientes comuns da rede ou públicos, defina `BASIC_AUTH_USER` e `BASIC_AUTH_PASS` no arquivo `.env`. O loopback continua sem senha. Marinara confia por padrão no tráfego direto que vem do Tailscale e da ponte Docker do mesmo host, ou de um gateway de contêiner detectado. Já o tráfego Docker encaminhado por proxy exige a autorização normal, a menos que você defina explicitamente `REQUIRE_AUTH_FOR_DOCKER_PROXY=false`.
 - Para ações privilegiadas a partir daquele dispositivo (backups, limpeza de dados, atualizações), defina `ADMIN_SECRET` no arquivo `.env` do servidor. Depois cole o mesmo valor em **Settings** > **Advanced** > **Admin Access** no dispositivo e clique em **Save**.
 - Se você usa um domínio público ou um proxy reverso e vê a mensagem **Untrusted request host**, adicione o nome de host exato à variável `TRUSTED_HOSTS` no arquivo `.env`. Endereços IP diretos usados por celulares, computadores da rede local e pares do Tailscale continuam aceitos automaticamente.
 
@@ -128,6 +128,17 @@ O **Local Model** (modelo local) é um modelo de IA que roda na sua própria má
 
 - Se a instalação de um runtime falhar com **Sidecar runtime install is disabled**, o servidor está com essa ação desativada por segurança. Na sua própria máquina, defina `SIDECAR_RUNTIME_INSTALL_ENABLED=true` no arquivo `.env`. A partir de outro dispositivo, cole antes o segredo de administrador em **Settings** > **Advanced** > **Admin Access**.
 - Se o download ou a configuração do modelo falhar a partir de outro dispositivo (um endereço de rede ou o Docker), o segredo de administrador também pode ser necessário. Na sua própria máquina, ele não é exigido. Veja no item anterior onde colar o segredo.
+- Se a verificação do llama.cpp, do MLX ou do uv integrados, ou do arquivo de dependências fixadas do MLX, apontar diferença de tamanho de arquivo ou de SHA-256, Marinara já descartou ou recusou o arquivo antes de extrair ou instalar. Atualize ou reinstale o Marinara e tente de novo. Nunca execute, descompacte, edite nem contorne o artefato recusado por conta própria.
+
+### Para mantenedores: como atualizar os runtimes locais fixados
+
+Os arquivos compactados de código-fonte gerados pelo GitHub não têm estabilidade garantida byte a byte, mesmo quando o conteúdo do commit não muda. Nunca "conserte" a diferença encontrada na máquina de um usuário aceitando os bytes que apareceram lá, nem enfraqueça a verificação. Refaça a fixação das entradas de runtime somente em uma alteração revisada do Engine:
+
+1. Escolha uma revisão imutável do upstream ou um arquivo de release e revise as mudanças do upstream.
+2. Baixe o artefato em uma pasta temporária, anote a contagem exata de bytes e calcule o digest SHA-256 por conta própria.
+3. Atualize `runtime-integrity-manifest.ts` com a revisão, a URL, o tamanho e o digest. No caso do MLX, gere de novo o arquivo `packages/server/src/assets/mlx-runtime-requirements.lock` a partir do arquivo `.in` dele, com a versão fixada do uv em Apple Silicon/Python 3.12. Revise cada mudança de dependência e atualize `requirementsLockSha256`.
+4. Rode `pnpm regression:runtime-integrity`, `pnpm check` e uma instalação limpa de verdade do runtime na plataforma afetada.
+5. Publique a atualização revisada do Engine antes de pedir que os usuários tentem de novo. Não ofereça uma forma manual de sobrepor a soma de verificação.
 
 Para a configuração completa, veja [Como configurar o Local Model](connections/local-model.md).
 
@@ -310,6 +321,14 @@ A seção fica escondida de propósito até que as duas travas de segurança sej
 Se o botão liga/desliga da Danger Zone estiver desativado, a variável do host ainda está como falsa ou o aplicativo ainda não percebeu a mudança. Confirme que você editou o arquivo `.env` ativo, no caminho descrito em [Configuração do servidor](CONFIGURATION.md). No Docker, esse caminho normalmente é `/app/data/.env`.
 
 Enquanto uma das travas estiver fechada, os registros de extensões externas, legadas, importadas de perfil, guardadas manualmente e de origem desconhecida não aparecem nem podem rodar. Abrir as travas de novo não reativa essas extensões automaticamente.
+
+### Uma Browser Extension importada aparece, mas não funciona
+
+Abra a extensão em **Settings → Addons → External Extensions** e veja o campo **Requested access** (acesso solicitado). Pacotes antigos, no formato `marinara.extension` v1 e sem declaração de capacidades, devem mostrar **Full page access**. Aprove apenas o hash exato que você inspecionou e considera confiável.
+
+Se um pacote antigo foi exportado de novo com uma lista de capacidades explicitamente vazia, Marinara o trata como uma extensão segura de sandbox. Nesse caso, o código que depende do DOM não funciona. Acrescente `full_page_access` ao manifesto dele só se você entende que o código passa a ter acesso à página inteira do Marinara, ao armazenamento do navegador, às APIs de rede e à sessão da mesma origem.
+
+Depois de desativar uma extensão com acesso à página inteira, recarregue o Marinara se sobrar algum item da barra de ferramentas, alguma sobreposição, algum listener ou alguma mudança visual. A limpeza é feita da melhor forma possível, porque o código da página pode criar efeitos colaterais fora da API de compatibilidade que Marinara acompanha.
 
 ### Uma Server Extension diz que não há sandbox compatível
 

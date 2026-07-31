@@ -124,14 +124,14 @@ Istnieje też szersza flaga `ALLOW_UNAUTHENTICATED_REMOTE=true`, która otwiera 
 
 ## Pominięcie dla sieci Tailscale i kontenerów Docker
 
-Dwie flagi pozwalają ruchowi z sieci Tailscale i z kontenerów Docker pominąć zarówno listę dozwolonych adresów IP, jak i Basic Auth, dokładnie tak samo jak robi to loopback. Obie flagi są domyślnie włączone. Dlatego świeża instalacja jest od razu dostępna przez sieć Tailscale i z kontenerów Docker, bez żadnej konfiguracji:
+Dwie flagi pozwalają bezpośredniemu ruchowi z sieci Tailscale i z kontenerów Docker pominąć zarówno listę dozwolonych adresów IP, jak i Basic Auth, dokładnie tak samo jak robi to loopback. Obie flagi są domyślnie włączone. Dlatego świeża instalacja jest od razu dostępna przez sieć Tailscale i bezpośrednio z kontenerów Docker, bez żadnej konfiguracji:
 
 ```env
 BYPASS_AUTH_TAILSCALE=true
 BYPASS_AUTH_DOCKER=true
 ```
 
-Te wartości domyślne są bezpieczne. Urządzenie w sieci Tailscale musiało wcześniej zalogować się na twoje konto Tailscale, żeby do niej dołączyć. Adresy mostka Docker i brama wykryta wewnątrz kontenera wskazują ten sam komputer z Docker. Nawet przy włączonym Basic Auth klienty z sieci Tailscale i z kontenerów Docker nie widzą pytania o hasło. Reszta sieci musi się zalogować.
+Te wartości domyślne zakładają, że każde urządzenie w sieci Tailscale należy do zaufanego użytkownika aplikacji Marinara Engine. Adresy mostka Docker i brama wykryta wewnątrz kontenera wskazują ten sam komputer z Docker. Nawet przy włączonym Basic Auth klienty łączące się bezpośrednio z sieci Tailscale i z kontenerów Docker nie widzą pytania o hasło. Jeśli w twojej sieci Tailscale są też mniej zaufane urządzenia, ustaw `BYPASS_AUTH_TAILSCALE=false`.
 
 Ustaw flagę na false, jeśli ci klienci też mają podawać hasło. Są dwa rzadsze powody, żeby wyłączyć jedną z nich.
 
@@ -147,11 +147,13 @@ Zwykła sieć LAN może używać adresów `172.16.x.x`. Wtedy wyłącz pominięc
 BYPASS_AUTH_DOCKER=false
 ```
 
-Aplikacja Marinara Engine bywa też ustawiona za kontenerem z odwrotnym proxy na mostku Docker albo na wykrytej bramie. Żeby własne kontrole dostępu aplikacji Marinara Engine obejmowały klientów przekazywanych przez proxy, ustaw:
+Aplikacja Marinara Engine bywa też ustawiona za kontenerem z odwrotnym proxy albo z tunelem, działającym na mostku Docker lub na wykrytej bramie. Nagłówki przekazywania (`Forwarded`, `X-Forwarded-For`, `X-Real-IP`, `X-Forwarded-Host` lub `X-Forwarded-Proto`) oznaczają, że klient Docker reprezentuje inne urządzenie, więc Marinara domyślnie stosuje wtedy zwykłe kontrole Basic Auth i listy dozwolonych adresów IP:
 
 ```env
 REQUIRE_AUTH_FOR_DOCKER_PROXY=true
 ```
+
+Żeby przywrócić dawne pominięcie, ustaw tę flagę na `false`. Rób to tylko wtedy, gdy każdy klient zdolny dotrzeć do proxy jest zaufany, bo przekazywani klienci odziedziczą bezhasłowy status ruchu Docker.
 
 Przy pierwszym żądaniu przepuszczonym przez takie pominięcie serwer zapisuje w logach ostrzeżenie `[auth-bypass]`. To potwierdzenie, że pominięcie działa.
 

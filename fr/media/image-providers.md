@@ -116,6 +116,8 @@ Le mot `localhost` (aussi appelé loopback) désigne l'ordinateur qui fait tourn
 
 Si le serveur d'images tourne sur un autre ordinateur de ton réseau domestique, tu dois autoriser les adresses du réseau local dans la configuration du serveur. La marche à suivre est décrite dans la [référence de configuration du serveur](../CONFIGURATION.md).
 
+Certains fournisseurs renvoient une URL au lieu des données de l'image. Marinara télécharge alors les URL de CDN publiques en appliquant ses contrôles de sécurité habituels sur les requêtes sortantes. Une URL de résultat privée ou en loopback demande une correspondance exacte. Son schéma, son nom d'hôte et son port doivent être ceux du fournisseur d'images configuré. Depuis cette origine privée, les redirections ne peuvent pas basculer vers un autre service local. Un proxy local range parfois les résultats sur une autre origine privée. Dans ce cas, règle-le pour qu'il serve ces fichiers depuis la même origine que son API d'images.
+
 ## JSON de workflow ComfyUI et RunPod
 
 Pour **ComfyUI** et **RunPod Serverless (ComfyUI)**, un champ **ComfyUI Workflow** apparaît. Colles-y un JSON de workflow exporté depuis ComfyUI avec **Save (API Format)**, **Export (API)** ou **Export to API**, selon la version de l'interface. Le champ est marqué Optional pour **ComfyUI** et Required pour **RunPod Serverless (ComfyUI)**.

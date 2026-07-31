@@ -57,6 +57,8 @@ Si aún no quieres terminar, haz clic en **Skip for Now**. Una vez que exista un
 
 Instalar o reinstalar el runtime es una acción protegida. En las instalaciones de un clic de Windows se activa por ti automáticamente. En macOS, Linux y Docker puede que necesites permitirlo. Consulta la sección **Troubleshooting** (Solución de problemas) más abajo.
 
+Marinara solo descarga las versiones de llama.cpp, MLX y uv aprobadas para tu versión del Engine. Verifica el tamaño exacto del archivo y la suma de verificación SHA-256 antes de extraer o ejecutar cualquier cosa. El conjunto de dependencias de Python de MLX también tiene la versión fijada y el hash verificado antes de instalar el código revisado de mlx-lm sin resolver paquetes extra. Por eso las actualizaciones del runtime llegan mediante actualizaciones revisadas de Marinara, y no siguiendo en silencio una compilación "latest" de origen.
+
 ## Descargar un modelo
 
 La ventana de configuración ofrece dos maneras de obtener un modelo.
@@ -189,6 +191,8 @@ SIDECAR_RUNTIME_INSTALL_ENABLED=true
 O introduce tu secreto de Admin Access una vez en **Settings -> Advanced -> Admin Access**, luego inténtalo de nuevo. Consulta [Referencia de configuración del servidor](../CONFIGURATION.md).
 
 **El runtime no logró iniciarse.** La ventana de configuración muestra un recuadro titulado **Local runtime failed to start** con el error y una ruta de archivo de registro. Haz clic en **Retry Startup**. Si eso falla, haz clic en **Reinstall Runtime**, o prueba un **Runtime Target** distinto. Puedes hacer clic en **Continue Without Local AI** para seguir usando Marinara sin el Local Model. La tarjeta de Connections muestra el mismo problema como **Local runtime unavailable**.
+
+**La descarga del runtime informa de una discrepancia de tamaño o de SHA-256.** Marinara descartó la descarga antes de extraerla. Actualiza Marinara primero, luego inténtalo de nuevo para que el manifiesto del runtime aprobado y la descarga coincidan. Si la misma versión sigue fallando, no extraigas ni ejecutes el archivo comprimido a mano; informa del runtime target y del error a los mantenedores.
 
 **La búsqueda de lorebooks dice que el modelo local no está activado.** Activa **Use for tracker agents (roleplay)** o **Use for game scene analysis** en la tarjeta del Local Model, luego intenta la vectorización de nuevo.
 

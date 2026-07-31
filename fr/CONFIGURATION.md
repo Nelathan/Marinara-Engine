@@ -62,6 +62,8 @@ La variable d'environnement est l'autorisation de la personne qui exploite le se
 
 Les brouillons de Professor Mari restent disponibles sans cet indicateur. Ils sont créés désactivés et exigent malgré tout l'approbation de leur empreinte de code exacte.
 
+Le mode Sandboxed Browser Extensions (extensions de navigateur isolées) reste celui par défaut. Certains anciens paquets tiers portent la mention **Full page access** (accès complet à la page) parce qu'ils dépendent du DOM de Marinara. Dans ce mode, le code approuvé s'exécute tel quel à l'intérieur de la page de Marinara et peut accéder au contenu de la page, au stockage du navigateur, aux API réseau et à la session en cours de même origine. Il n'est proposé qu'aux External Extensions une fois les deux barrières ouvertes, et il exige une acceptation d'avertissement distincte. Désactive-le et recharge la page si l'extension laisse derrière elle des changements visuels ou de comportement.
+
 ## Où se trouve le fichier .env
 
 La configuration se trouve dans un fichier nommé `.env`. C'est un fichier texte simple, avec un réglage par ligne, sous la forme `KEY=value`. Les lignes qui commencent par `#` sont des commentaires et le serveur les ignore.
@@ -129,7 +131,7 @@ Voici les principaux réglages de contrôle d'accès :
 | `TRUSTED_PRIVATE_NETWORKS`              | valeurs internes  | Remplace les plages de réseau privé par défaut. Pense à inclure celles que tu veux conserver.                                                              |
 | `BYPASS_AUTH_TAILSCALE`                 | `true`            | Laisse le trafic Tailscale passer outre la connexion et la liste d'autorisation.                                                                           |
 | `BYPASS_AUTH_DOCKER`                    | `true`            | Laisse le trafic du pont Docker et la passerelle par défaut exacte détectée dans Docker passer outre la connexion et la liste d'autorisation.              |
-| `REQUIRE_AUTH_FOR_DOCKER_PROXY`         | `false`           | Impose la connexion normale au trafic Docker qui semble passer par un proxy inverse.                                                                       |
+| `REQUIRE_AUTH_FOR_DOCKER_PROXY`         | `true`            | Impose les vérifications normales de connexion et de liste d'autorisation au trafic Docker transmis par un proxy. Ne mets `false` que si tous les clients en amont sont de confiance. |
 | `TRUSTED_HOSTS`                         | vide              | Noms d'hôte publics ou de proxy inverse supplémentaires auxquels Marinara peut répondre. L'IP directe, localhost, `.local`, `.home.arpa` et les noms LAN à étiquette unique fonctionnent automatiquement. |
 | `SSL_CERT`                              | vide              | Chemin vers un fichier de certificat TLS. À définir avec `SSL_KEY` pour servir directement en HTTPS.                                                       |
 | `SSL_KEY`                               | vide              | Chemin vers le fichier de clé privée TLS.                                                                                                                 |
@@ -250,7 +252,7 @@ Active uniquement l'interrupteur dont tu as besoin pour un service auto-héberg�
 | Variable                      | Par défaut | Ce que ça fait                                                                       |
 | ----------------------------- | ---------- | ------------------------------------------------------------------------------------ |
 | `PROVIDER_LOCAL_URLS_ENABLED` | `false`    | Autorise les URL de fournisseur d'IA à atteindre des adresses privées ou du réseau local. Activé par défaut sur Android. |
-| `IMAGE_LOCAL_URLS_ENABLED`    | `false`    | Autorise les URL de fournisseur d'images à atteindre des adresses privées ou du réseau local. |
+| `IMAGE_LOCAL_URLS_ENABLED`    | `false`    | Autorise les URL de fournisseur d'images à atteindre des adresses privées ou du réseau local. L'URL de résultat d'une image générée privée doit malgré tout correspondre exactement à l'origine du fournisseur configuré. |
 | `TTS_LOCAL_URLS_ENABLED`      | `false`    | Autorise les URL de Text to Speech (synthèse vocale) à atteindre des adresses privées ou du réseau local. |
 | `DEEPLX_LOCAL_URLS_ENABLED`   | `false`    | Autorise les URL de traduction DeepLX à atteindre des adresses privées ou du réseau local. |
 | `WEBHOOK_LOCAL_URLS_ENABLED`  | `false`    | Autorise les webhooks d'outils personnalisés à atteindre des adresses privées ou du réseau local. |

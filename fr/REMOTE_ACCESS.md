@@ -124,14 +124,14 @@ Il existe aussi un indicateur plus large, `ALLOW_UNAUTHENTICATED_REMOTE=true`, q
 
 ## Contournement Tailscale et Docker
 
-Deux indicateurs permettent au trafic Tailscale et Docker de contourner à la fois la liste d'autorisation d'IP et Basic Auth, exactement comme le fait loopback. Les deux sont activés par défaut. C'est pour ça qu'une installation neuve est déjà accessible via Tailscale ou depuis tes conteneurs Docker, sans rien configurer :
+Deux indicateurs permettent au trafic Tailscale et Docker direct de contourner à la fois la liste d'autorisation d'IP et Basic Auth, exactement comme le fait loopback. Les deux sont activés par défaut. C'est pour ça qu'une installation neuve est déjà accessible via Tailscale ou directement depuis tes conteneurs Docker, sans rien configurer :
 
 ```env
 BYPASS_AUTH_TAILSCALE=true
 BYPASS_AUTH_DOCKER=true
 ```
 
-Ces valeurs par défaut sont sûres. Un pair Tailscale s'est déjà identifié sur ton compte Tailscale pour rejoindre le réseau. Les adresses du pont Docker et la passerelle exacte détectée depuis l'intérieur du conteneur désignent le même hôte Docker. Même avec Basic Auth activé, tes clients Tailscale et Docker évitent la demande de mot de passe. Le reste du réseau doit s'identifier.
+Ces valeurs par défaut partent du principe que chaque pair Tailscale est un utilisateur de Marinara de confiance. Les adresses du pont Docker et la passerelle exacte détectée depuis l'intérieur du conteneur désignent le même hôte Docker. Même avec Basic Auth activé, les clients Tailscale et Docker directs évitent la demande de mot de passe. Si ton tailnet compte des pairs moins fiables, mets `BYPASS_AUTH_TAILSCALE=false`.
 
 Mets un indicateur à false si tu veux exiger un mot de passe de ces clients aussi. Il y a deux raisons, plus rares, d'en désactiver un.
 
@@ -147,11 +147,13 @@ Ton LAN habituel utilise peut-être des adresses `172.16.x.x`. Dans ce cas, dés
 BYPASS_AUTH_DOCKER=false
 ```
 
-Marinara peut aussi se trouver derrière un conteneur reverse proxy, sur le pont Docker ou sur la passerelle détectée. Pour que les contrôles d'accès de Marinara s'appliquent aux clients transmis par le proxy, définis :
+Marinara peut aussi se trouver derrière un conteneur reverse proxy ou tunnel, sur le pont Docker ou sur la passerelle détectée. Les en-têtes de transmission (`Forwarded`, `X-Forwarded-For`, `X-Real-IP`, `X-Forwarded-Host` ou `X-Forwarded-Proto`) signalent que le pair Docker représente un autre client : Marinara applique donc par défaut ses contrôles habituels, Basic Auth et liste d'autorisation d'IP :
 
 ```env
 REQUIRE_AUTH_FOR_DOCKER_PROXY=true
 ```
+
+Pour rétablir l'ancien contournement, mets ce réglage à `false`. Ne le fais que si tous les clients capables d'atteindre le proxy sont de confiance, car les clients transmis héritent alors du statut sans mot de passe de Docker.
 
 Le serveur écrit un avertissement `[auth-bypass]` dans les logs la première fois qu'un de ces contournements laisse passer une requête. Cet avertissement confirme que le contournement est actif.
 

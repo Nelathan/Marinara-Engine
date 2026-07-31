@@ -116,6 +116,8 @@ Słowo `localhost` (nazywane też pętlą zwrotną) oznacza ten sam komputer, na
 
 Jeśli serwer obrazów działa na innym komputerze w sieci domowej, w konfiguracji serwera trzeba zezwolić na adresy z sieci lokalnej. Sposób opisuje dokument [Konfiguracja serwera](../CONFIGURATION.md).
 
+Bywa, że dostawca zwraca adres URL zamiast samych danych obrazu. Publiczne adresy sieci CDN Marinara pobiera przez zwykłe kontrole bezpieczeństwa ruchu wychodzącego. Adres wyniku z sieci prywatnej lub z pętli zwrotnej Marinara przyjmuje tylko wtedy, gdy protokół, nazwa hosta i port zgadzają się dokładnie z ustawionym dostawcą obrazów. Przekierowanie z takiego prywatnego pochodzenia nie może prowadzić do innej usługi lokalnej. Jeśli lokalne proxy trzyma wyniki pod innym prywatnym pochodzeniem, ustaw je tak, żeby udostępniało te pliki spod tego samego pochodzenia, co jego interfejs API do obrazów.
+
 ## Plik JSON z workflow ComfyUI a RunPod
 
 Przy usługach **ComfyUI** oraz **RunPod Serverless (ComfyUI)** pojawia się pole **ComfyUI Workflow**. Wklej do niego plik JSON z workflow wyeksportowany z programu ComfyUI opcją **Save (API Format)**, **Export (API)** albo **Export to API**, zależnie od wersji interfejsu. Dla usługi **ComfyUI** pole jest oznaczone jako Optional, a dla **RunPod Serverless (ComfyUI)** jako Required.

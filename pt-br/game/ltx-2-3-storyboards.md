@@ -101,27 +101,22 @@ Substitua os valores correspondentes na exportação de API pelos marcadores do 
 | `%reference_image_name%` | A imagem do primeiro quadro enviada ao ComfyUI |
 | `%duration_seconds%` | A duração do clipe do Storyboard, em segundos |
 | `%length%` | A duração convertida para o contrato de 16 FPS do Marinara |
+| `%fps%` | A taxa de quadros que Marinara usa no clipe |
 | `%width%`, `%height%` | As dimensões escolhidas a partir da resolução e da proporção de tela da conexão de vídeo |
 | `%seed%` | Uma nova semente aleatória para a requisição |
 | `%model%` | Valor opcional de modelo vindo da conexão, quando o workflow não fixa o modelo no nó de carregamento |
 
-O segmento de referência dentro do `timeline_data` do LTX Director deve usar o nome do arquivo enviado:
+A imagem de referência fica dentro do array `segments` do `timeline_data` do LTX Director. No workflow de API, `timeline_data` é uma string JSON serializada. O marcador `%length%` mantém a duração do clipe dinâmica por meio de `normalDurationFrames`. Já o segmento de imagem de referência no quadro zero mantém de propósito o próprio valor curto e fixo `"length":16`:
 
 ```json
 {
-  "id": "marinara-reference",
-  "start": 0,
-  "length": 16,
-  "prompt": "",
-  "type": "image",
-  "imageFile": "%reference_image_name%",
-  "isEndFrame": false
+  "timeline_data": "{\"global_prompt\":\"\",\"normalStartFrame\":0,\"normalDurationFrames\":%length%,\"segments\":[{\"id\":\"marinara-reference\",\"start\":0,\"length\":16,\"prompt\":\"\",\"type\":\"image\",\"imageFile\":\"%reference_image_name%\",\"isEndFrame\":false}],\"motionSegments\":[],\"audioSegments\":[]}"
 }
 ```
 
-Deixe também a duração da linha do tempo dinâmica, com `%length%`. Se o nó LTX Director expuser entradas de duração em segundos, use `%duration_seconds%` ali, em vez de manter um valor fixo de cinco segundos.
+Não coloque o marcador `%reference_image_name%` ao lado de `timeline_data` nem em um campo de imagem separado no nível superior. Mantenha a contagem de quadros, os segundos e a taxa de quadros ligados às entradas externas do workflow, com `%length%`, `%duration_seconds%` e `%fps%`. Os valores numéricos que aparecem em um grafo editável do ComfyUI não são padrões do Marinara.
 
-Mantenha os valores dos marcadores entre aspas em um workflow local do ComfyUI. Marinara interpreta o JSON e converte em números os marcadores numéricos exatos antes de enviá-lo.
+Mantenha entre aspas os marcadores de texto, como `%reference_image_name%`. Entradas numéricas exatas de nós podem colocar `%length%`, `%duration_seconds%` e `%fps%` entre aspas, porque Marinara converte esses valores em números. Dentro da string serializada de `timeline_data`, deixe o marcador `%length%` sem aspas, como no exemplo, para que o valor decodificado da linha do tempo seja numérico.
 
 ### Exporte a cada edição
 

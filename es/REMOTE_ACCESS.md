@@ -124,14 +124,14 @@ También hay un indicador más amplio, `ALLOW_UNAUTHENTICATED_REMOTE=true`, que 
 
 ## Bypass de Tailscale y Docker
 
-Dos indicadores permiten que el tráfico de Tailscale y Docker se salte tanto la lista de IP permitidas como Basic Auth, igual que hace loopback. Ambos indicadores están activados de forma predeterminada. Por eso una instalación nueva ya es accesible por Tailscale o desde tus contenedores de Docker sin configuración:
+Dos indicadores permiten que el tráfico directo de Tailscale y Docker se salte tanto la lista de IP permitidas como Basic Auth, igual que hace loopback. Ambos indicadores están activados de forma predeterminada. Por eso una instalación nueva ya es accesible por Tailscale o directamente desde tus contenedores de Docker sin configuración:
 
 ```env
 BYPASS_AUTH_TAILSCALE=true
 BYPASS_AUTH_DOCKER=true
 ```
 
-Estos valores predeterminados son seguros. Un par de Tailscale ya inició sesión en tu cuenta de Tailscale para unirse. Las direcciones de puente de Docker y la puerta de enlace exacta detectada desde dentro del contenedor representan el mismo host de Docker. Incluso con Basic Auth activado, tus clientes de Tailscale y Docker siguen saltándose el aviso. El resto de tu red debe iniciar sesión.
+Estos valores predeterminados dan por hecho que todo par de Tailscale es un usuario de confianza de Marinara. Las direcciones de puente de Docker y la puerta de enlace exacta detectada desde dentro del contenedor representan el mismo host de Docker. Incluso con Basic Auth activado, los clientes directos de Tailscale y Docker siguen saltándose el aviso. Si tu tailnet incluye pares de menor confianza, configura `BYPASS_AUTH_TAILSCALE=false`.
 
 Configura un indicador en falso si quieres una contraseña también de esos clientes. Hay dos razones menos comunes para desactivar uno.
 
@@ -147,11 +147,13 @@ Puede que tu LAN normal use direcciones `172.16.x.x`. En ese caso, desactiva el 
 BYPASS_AUTH_DOCKER=false
 ```
 
-Puede que Marinara también esté detrás de un contenedor de proxy inverso en el puente de Docker o en la puerta de enlace detectada. Para que las propias comprobaciones de acceso de Marinara se apliquen a los clientes que el proxy reenvía, configura:
+Puede que Marinara también esté detrás de un contenedor de proxy inverso o de túnel en el puente de Docker o en la puerta de enlace detectada. Los encabezados de reenvío (`Forwarded`, `X-Forwarded-For`, `X-Real-IP`, `X-Forwarded-Host` o `X-Forwarded-Proto`) indican que el par de Docker representa a otro cliente, así que Marinara aplica sus comprobaciones normales de Basic Auth y de lista de IP permitidas de forma predeterminada:
 
 ```env
 REQUIRE_AUTH_FOR_DOCKER_PROXY=true
 ```
+
+Para restaurar el bypass antiguo, configura esto en `false`. Hazlo solo cuando todo cliente que pueda llegar al proxy sea de confianza, porque los clientes reenviados heredarán el estado sin contraseña de Docker.
 
 El servidor registra una advertencia `[auth-bypass]` la primera vez que uno de estos bypasses deja pasar una solicitud. Esa advertencia confirma que el bypass está activo.
 

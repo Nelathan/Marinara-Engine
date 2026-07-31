@@ -57,6 +57,8 @@ Se você não quiser terminar agora, clique em **Skip for Now**. Depois que exis
 
 Instalar ou reinstalar o runtime é uma ação protegida. Nas instalações de um clique do Windows, ela já vem liberada. No macOS, no Linux e no Docker, pode ser preciso liberar na mão. Veja a seção **Solução de problemas**, abaixo.
 
+Marinara baixa apenas as versões de llama.cpp, MLX e uv aprovadas para a sua versão do Engine. Antes de extrair ou executar qualquer coisa, Marinara confere o tamanho exato do arquivo e a soma de verificação SHA-256. O conjunto de dependências Python do MLX também tem versão fixa e hash verificado, e o código revisado do mlx-lm é instalado sem resolver pacotes extras. Assim, as atualizações do runtime chegam por atualizações revisadas do Marinara, em vez de seguir em silêncio uma build "latest" do projeto original.
+
 ## Como baixar um modelo
 
 A janela de configuração oferece dois caminhos para conseguir um modelo.
@@ -189,6 +191,8 @@ SIDECAR_RUNTIME_INSTALL_ENABLED=true
 Ou informe uma vez o segredo de Admin Access em **Settings -> Advanced -> Admin Access** e tente de novo. Veja [Referência de configuração do servidor](../CONFIGURATION.md).
 
 **O runtime não iniciou.** A janela de configuração mostra uma caixa com o título **Local runtime failed to start**, o erro e o caminho do arquivo de log. Clique em **Retry Startup**. Se não resolver, clique em **Reinstall Runtime** ou tente outro **Runtime Target**. Você pode clicar em **Continue Without Local AI** para continuar usando Marinara sem o Local Model. O card em Connections mostra o mesmo problema como **Local runtime unavailable**.
+
+**O download do runtime acusa divergência de tamanho ou de SHA-256.** Marinara descartou o download antes de extrair. Atualize o Marinara primeiro e tente de novo, para que o manifesto de runtime aprovado e o download combinem. Se a mesma versão continuar falhando, não extraia nem execute o arquivo compactado na mão. Informe aos mantenedores qual runtime target você usava e qual foi o erro.
 
 **A busca em lorebooks diz que o modelo local não está ativado.** Ative **Use for tracker agents (roleplay)** ou **Use for game scene analysis** no card **Local Model** e tente a vetorização de novo.
 

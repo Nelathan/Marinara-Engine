@@ -124,14 +124,14 @@ Existe também uma chave mais ampla, `ALLOW_UNAUTHENTICATED_REMOTE=true`, que li
 
 ## Liberação para Tailscale e Docker
 
-Duas chaves permitem que o tráfego Tailscale e Docker pule tanto a lista de IPs permitidos quanto Basic Auth, do mesmo jeito que o loopback faz. As duas chaves vêm ativadas por padrão. É por isso que uma instalação nova já está acessível pelo Tailscale ou a partir dos seus contêineres Docker, sem configuração:
+Duas chaves permitem que o tráfego direto de Tailscale e Docker pule tanto a lista de IPs permitidos quanto Basic Auth, do mesmo jeito que o loopback faz. As duas chaves vêm ativadas por padrão. É por isso que uma instalação nova já está acessível pelo Tailscale ou diretamente a partir dos seus contêineres Docker, sem configuração:
 
 ```env
 BYPASS_AUTH_TAILSCALE=true
 BYPASS_AUTH_DOCKER=true
 ```
 
-Esses padrões são seguros. Um par Tailscale já fez login na sua conta Tailscale para entrar na rede. Os endereços de bridge do Docker e o gateway exato detectado de dentro do contêiner representam o mesmo host Docker. Mesmo com Basic Auth ativo, os seus clientes Tailscale e Docker continuam pulando o pedido de senha. O resto da rede precisa fazer login.
+Esses padrões partem do princípio de que todo par Tailscale é um usuário confiável do Marinara. Os endereços de bridge do Docker e o gateway exato detectado de dentro do contêiner representam o mesmo host Docker. Mesmo com Basic Auth ativo, os clientes diretos de Tailscale e Docker continuam pulando o pedido de senha. Se a sua tailnet tem pares menos confiáveis, defina `BYPASS_AUTH_TAILSCALE=false`.
 
 Coloque uma chave em false se você quiser senha também para esses clientes. Há dois motivos menos comuns para desativar uma delas.
 
@@ -147,11 +147,13 @@ A sua LAN comum pode usar endereços `172.16.x.x`. Nesse caso, desative a libera
 BYPASS_AUTH_DOCKER=false
 ```
 
-Marinara também pode estar atrás de um contêiner de proxy reverso na bridge do Docker ou no gateway detectado. Para que as verificações de acesso do Marinara valham para os clientes encaminhados pelo proxy, defina:
+Marinara também pode estar atrás de um contêiner de proxy reverso ou de túnel na bridge do Docker ou no gateway detectado. Os cabeçalhos de encaminhamento (`Forwarded`, `X-Forwarded-For`, `X-Real-IP`, `X-Forwarded-Host` ou `X-Forwarded-Proto`) indicam que o par Docker representa outro cliente. Por isso, o Marinara aplica por padrão as verificações normais de Basic Auth e da lista de IPs permitidos:
 
 ```env
 REQUIRE_AUTH_FOR_DOCKER_PROXY=true
 ```
+
+Para voltar ao comportamento antigo de liberação, defina essa chave como `false`. Faça isso apenas quando todo cliente capaz de alcançar o proxy for confiável, porque os clientes encaminhados herdam o acesso sem senha do Docker.
 
 O servidor registra um aviso `[auth-bypass]` no log na primeira vez que uma dessas liberações deixa uma requisição passar. Esse aviso confirma que a liberação está ativa.
 
