@@ -53,8 +53,8 @@
     },
     {
       "path": "agents/hierarchical-maps.md",
-      "sha256": "5866819d1961ad87fa572f0af4a8ac3b54ff656aecff1926e370138c1a4b3716",
-      "bytes": 37355
+      "sha256": "6c09eb5ef8e2ee02376a717962706ea4e707c0d58116bfe5c9665a8846643e57",
+      "bytes": 47648
     },
     {
       "path": "agents/knowledge-sources.md",
@@ -213,8 +213,8 @@
     },
     {
       "path": "connections/organizing-connections.md",
-      "sha256": "45ea075a66620d07faaf417981994cf9cf0a2c8ad92001153948da8e164cf866",
-      "bytes": 6908
+      "sha256": "c22026b4396889a02908bb07a55bf80722bb474fd49e51fa301f73ed7a7497f1",
+      "bytes": 6905
     },
     {
       "path": "connections/providers-reference.md",
@@ -248,8 +248,8 @@
     },
     {
       "path": "conversation/schedules.md",
-      "sha256": "3eb25b25d15421dfaae32d3143c03b4f0d0b963b509deac0edffccce34790a09",
-      "bytes": 11014
+      "sha256": "f8b727a9dc61e3c3f65a7ef3045fb895d7fb20ef8cf8792caf0dfa80573d427e",
+      "bytes": 11733
     },
     {
       "path": "conversation/selfies.md",
@@ -285,6 +285,11 @@
       "path": "development/architecture-map.md",
       "sha256": "a26f17e233413d224488d6cb50bd379629385072fcd96e4633cd6aed2e8be373",
       "bytes": 19385
+    },
+    {
+      "path": "development/chat-resource-drag-drop-plan.md",
+      "sha256": "af6932cc120e99d358770632f9f4db0181f4c834a0b712638c17b1eaf3ed47a1",
+      "bytes": 25924
     },
     {
       "path": "development/code-cleanup-audit.md",

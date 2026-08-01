@@ -24,7 +24,7 @@ Pour supprimer un dossier, clique sur l'icône de corbeille sur sa ligne. S'il c
 
 ## Recherche et tri
 
-Le champ **Search connections...** filtre la liste au fil de la saisie. La recherche porte sur le nom de la connexion, le fournisseur, le modèle, l'URL de base, le service d'images ou de vidéos, et le modèle d'embedding. Quand rien ne correspond, tu vois "No connections match your search".
+Le champ **Search connections** filtre la liste au fil de la saisie. La recherche porte sur le nom de la connexion, le fournisseur, le modèle, l'URL de base, le service d'images ou de vidéos, et le modèle d'embedding. Quand rien ne correspond, tu vois "No connections match your search".
 
 Le menu déroulant **Sort order** (ordre de tri), à côté du champ de recherche, change l'ordre de la liste. Il propose cinq options :
 

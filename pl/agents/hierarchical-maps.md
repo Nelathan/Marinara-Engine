@@ -1,7 +1,8 @@
 # World Maps: konfiguracja, tworzenie map i podróże
 
 > **Aktualna zgodność:** Ten przewodnik opisuje pakiet World Maps w wersji
-> **1.2.1** na aplikacji Marinara Engine **2.3.5**. Pakiet obsługuje czaty Roleplay i Game.
+> **1.2.5** na aplikacji Marinara Engine **2.3.5 lub nowszej**. Pakiet obsługuje
+> czaty Roleplay i Game.
 
 World Maps dodaje trwały stan świata do trybów Roleplay i Game. Zamiast
 jednego pola tekstowego z miejscem akcji świat opisują zagnieżdżone lokalizacje:
@@ -17,9 +18,10 @@ The Shattered Coast
 
 Marinara pilnuje jednej wiążącej lokalizacji bieżącej w tej hierarchii. Aktualna
 ścieżka nawigacji, szczegóły dokładnego miejsca, pobliskie cele podróży i
-pasująca wiedza o świecie stanowią podstawę kolejnej odpowiedzi. Mapa potrafi też
-podążyć za opisaną i zakończoną podróżą do znanego miejsca albo dodać nowo
-odkryte miejsce, gdy fabuła naprawdę tam dociera.
+pasująca wiedza o świecie mogą stanowić podstawę kolejnej odpowiedzi. Mapa
+potrafi też podążyć za wyraźnym ruchem albo odkryciem, które ustala ostatnia
+wiadomość użytkownika. Widoczna narracja AI może opisać wynik, ale sama nie
+przenosi mapy ani nie wymyśla lokalizacji.
 
 Mapy mogą działać osobno w każdym czacie albo być podpięte do jednego wspólnego
 świata zapisanego na koncie. Szablony tworzą czyste kopie, które z czasem mogą
@@ -29,15 +31,15 @@ historię podróży, migawki i powiązania z mapami Game.
 
 ## Przegląd możliwości
 
-World Maps 1.2.1 daje:
+World Maps 1.2.5 daje:
 
 - zagnieżdżone regiony, osady, miejsca, budynki, piętra i pomieszczenia;
 - ścieżki nawigacji oraz jedną wiążącą lokalizację bieżącą fabuły;
 - widok listy, mapy z pozycjami i uporządkowanych warstw dla lokalizacji podrzędnych;
 - podróż w górę i w dół hierarchii, bezpośrednie przejścia i trasy na wiele tur;
-- zweryfikowany ruch na podstawie zakończonej narracji i odkrywanie nowych lokalizacji;
+- zweryfikowany ruch i odkrycia ustalane przez ostatnią wiadomość użytkownika;
 - wspólne światy zapisane na koncie, które da się podpiąć do czatów Roleplay i Game;
-- sprawdzane szkice osobne dla każdego czatu, ze sterowaniem publikacją, odrzuceniem, konfliktem i odłączeniem niezależnej kopii;
+- sprawdzane szkice osobne dla każdego czatu, ze sterowaniem publikacją, odrzuceniem, konfliktem i odłączeniem;
 - szablony map na koncie, tworzone ręcznie, przez AI albo z importu;
 - szkice i rozbudowy map tworzone przez AI na podstawie konfiguracji lub wybranej wiedzy o świecie;
 - jawne opisy lokalizacji, prywatną pamięć modelu oraz wiedzę o świecie przypisaną do dokładnego miejsca;
@@ -47,26 +49,47 @@ World Maps 1.2.1 daje:
 - globalne nadpisanie promptu grafik map, oparte na zmiennych;
 - obsługę referencji lokalizacji w ilustracjach Roleplay i storyboardach Game;
 - import, eksport, archiwizowanie, edycję świadomą historii oraz powiązania z mapami Game;
-- globalne biblioteki promptów do budowania map przez AI i do wstawki o lokalizacji w trakcie gry.
+- globalne biblioteki promptów do budowania map przez AI i do wstawki o lokalizacji podczas zwykłych tur.
 
 Dostępne cele podróży trafiają do kontekstu modelu. Dzięki temu przy włączonych
 wyborach CYOA model może zaproponować lokalizacje podrzędne albo połączone
 miejsca jako kolejne opcje. Same treści wyborów nadal tworzy model.
+
+## Wybór właściwego powiązania mapy
+
+Biblioteka zawiera dwa zasoby wielokrotnego użytku zapisane na koncie, a każdy
+czat trzyma własną lokalizację bieżącą i własną historię. Nazwa zasobu nie jest
+jego tożsamością: World Maps 1.2.5 dopisuje **(copy)** albo numer, gdy nowo
+zapisany zasób miałby taką samą nazwę jak istniejący.
+
+| Zasób albo stan                    | Właściciel                              | Kiedy wybrać                                                                        | Na co wpływają późniejsze zmiany                     |
+| ---------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Niezależna mapa czatu**          | Jeden czat Roleplay albo Game           | Ta fabuła ma mieć własny świat                                                      | Tylko ten czat                                       |
+| **Niezależny szablon**             | Twoje konto                             | Potrzebny jest punkt wyjścia do wielokrotnego użytku                                | Tylko nowe kopie; istniejące czaty się nie zmieniają |
+| **Wiążący wspólny świat**          | Twoje konto                             | Kilka czatów ma korzystać z jednej utrzymywanej hierarchii                          | Wspólną definicję, z której korzystają podpięte czaty |
+| **Szkic podpiętego czatu**         | Jeden podpięty czat, aż do publikacji   | Podpięta fabuła coś odkryła albo zmieniła i może to należeć do wspólnego świata     | Żaden inny czat, dopóki nie klikniesz przycisku **Publish** |
+| **Odłączona niezależna kopia**     | Jeden wcześniej podpięty czat           | Ta fabuła ma zachować bieżącą mapę, ale przestać dostawać zmiany ze wspólnego świata | Tylko odłączony czat                                 |
+
+Kopiowanie to nie podpięcie. Przyciski **Use template**, **Add to chat**
+i **Independent copy** tworzą osobne mapy. Przycisk **Use shared world** podczas
+konfiguracji trybu Game oraz **Link to chat** w bibliotece podpinają czat do
+wiążącego wspólnego świata.
 
 ## Szybki start
 
 1. Otwórz sekcję **Agents** (Agenci), kliknij przycisk **Download Agents** (pobranie agentów) i zainstaluj pakiet **World Maps**.
 2. Uruchom aplikację Marinara Engine ponownie, gdy pojawi się prośba. Pakiet zawiera kod serwera.
 3. Otwórz czat Roleplay lub Game.
-4. Otwórz **Agents → World Maps** i włącz pakiet dla bieżącego czatu.
-   Da się to zrobić także w sekcji **Chat Settings → Agents** (ustawienia czatu) tego czatu.
+4. Otwórz osobną ikonę globusa **World Maps**, jeśli aplikacja ją udostępnia,
+   albo przejdź do **Agents → World Maps**, a potem włącz pakiet dla bieżącego
+   czatu. Da się to zrobić także w sekcji **Chat Settings → Agents** (ustawienia czatu) tego czatu.
 5. Utwórz mapę przyciskiem **Use template**, **Create with AI** albo **Build
    manually**. Do istniejącego czatu można też zaimportować plik mapy.
 6. Sprawdź roboczą hierarchię, wybierz lokalizację początkową, włącz mapę
    i kliknij przycisk **Save** (zapisanie).
 7. W trakcie czatu otwórz panel **Story map**. Wybierz osiągalny cel podróży
-   i wyślij kolejną turę albo opisz podróż naturalnie i pozwól odpowiedzi
-   zmienić lokalizację, kiedy podróż się zakończy.
+   i wyślij kolejną turę albo wprost ustal ruch drużyny we własnej wiadomości,
+   żeby pakiet mógł zweryfikować i zapisać dotarcie na miejsce.
 8. Opcjonalnie przypisz lokalizacjom grafiki z galerii albo skorzystaj z sekcji
    **Location artwork**, żeby przejrzeć i wygenerować brakujące obrazy.
 
@@ -79,13 +102,13 @@ i zapisana.
 Otwórz sekcję **Agents** z zakładki Sparkles na prawym pasku bocznym. Kliknij
 przycisk **Download Agents**, wybierz pakiet **World Maps** i kliknij
 przycisk **Install**. Jeśli katalog zaproponuje potem **Update**, zainstaluj
-także tę aktualizację. Zanim zaczniesz korzystać z pakietu, wykonaj polecenie
-ponownego uruchomienia.
+także tę aktualizację. Zanim zaczniesz korzystać z pakietu, uruchom aplikację
+ponownie zgodnie z komunikatem.
 
 Strona World Maps pokazuje zainstalowaną wersję pakietu i jego gotowość,
-udostępnia bibliotekę map świata przypisaną do konta oraz stan mapy w bieżącym
-czacie. Instalacja pakietu tylko go udostępnia, ale nie włącza go w każdym
-czacie.
+udostępnia bibliotekę map świata przypisaną do konta, nazywa bieżący czat
+docelowy oraz pokazuje stan mapy w tym czacie. Instalacja pakietu tylko go
+udostępnia, ale nie włącza go w każdym czacie.
 
 ### Roleplay
 
@@ -94,6 +117,9 @@ czacie.
 3. Włącz przełącznik **Enable Agents**.
 4. W sekcji **Tracker Agents** włącz pakiet **World Maps**.
 5. Otwórz edytor **Edit world map** albo bibliotekę **World map library**.
+   W nowszych wydaniach aplikacji tę samą bibliotekę otwiera ikona globusa
+   na górnym pasku na komputerze, a na telefonie – globus w panelu bocznym
+   **Chats**.
 
 Biblioteka działa tak samo niezależnie od tego, czy otworzysz ją na głównej
 stronie **Agents**, czy w panelu Chat Settings czatu Roleplay. Przycisk **Add to
@@ -106,23 +132,29 @@ Podczas konfiguracji trybu Game wybierz World Maps, a następnie jedną
 z dróg konfiguracji:
 
 - **Create with AI** przygotowuje wygenerowaną hierarchię do sprawdzenia.
-- **Use template** otwiera wybór szablonu jeszcze przed utworzeniem gry.
+- **Use template** otwiera bibliotekę światów jeszcze przed utworzeniem gry.
 - **Build manually** zaczyna od pustej hierarchii do edycji.
 
-Po wybraniu opcji **Use template** wskaż konkretny szablon i potwierdź wybór.
-Konfiguracja tworzy kopię roboczą należącą do gry i przeznaczoną do sprawdzenia;
-szablon na koncie nigdy nie jest zmieniany. Lokalizacje z wybranego szablonu
-stają się hierarchicznym światem początkowym. Zwykła mapa Game nie jest wtedy
-awansowana na jej miejsce.
+Po wybraniu opcji **Use template** okno wyboru pokazuje najpierw sekcję
+**Shared worlds**, a pod nią **Independent templates**:
+
+- **Use shared world** podpina nową grę do wiążącego świata zapisanego na
+  koncie. Gra i tak zachowuje własną lokalizację bieżącą, historię, migawki,
+  powiązania oraz nieopublikowane odkrycia.
+- **Use template** tworzy kopię roboczą należącą do gry i przeznaczoną do
+  sprawdzenia. Szablon na koncie nigdy nie jest zmieniany.
+
+Lokalizacje z wybranego zasobu stają się hierarchicznym światem początkowym.
+Zapasowa zwykła mapa Game nie jest wtedy awansowana na jej miejsce.
 
 World Maps da się też dodać do istniejącej gry później, w sekcji **Chat
 Settings → Agents**.
 
 ## Tworzenie szablonów map i korzystanie z nich
 
-Otwórz **Agents → World Maps → Open map templates**. Szablony należą do
+Otwórz **World Maps → Open world library**. Szablony należą do
 konta, a nie do pojedynczego czatu, więc dobrze sprawdzają się przy światach
-z fandomów, ustawieniach kampanii, lochach, miastach i własnych mapach
+z fandomów, realiach kampanii, lochach, miastach i własnych mapach
 startowych.
 
 W bibliotece można:
@@ -156,10 +188,11 @@ szablon przyciskiem **Make shared** albo otwórz zapisaną mapę czatu i wybierz
 **Make shared**. Ta ostatnia droga przenosi wskazane grafiki czatu do Global
 Gallery, tworzy świat zapisany na koncie i podpina do niego pierwotny czat.
 
-Przyciskiem **Link to chat** podepniesz otwarty czat. Lokalizacja bieżąca oraz
-wszystkie identyfikatory lokalizacji używane już przez historię kampanii muszą
-istnieć we wspólnym świecie. W przeciwnym razie użyj opcji **Independent copy**
-albo najpierw przenieś bieżącą mapę czatu do nowego wspólnego świata.
+Przyciskiem **Link to chat** podepniesz czat, który biblioteka pokazuje jako
+docelowy. Lokalizacja bieżąca oraz wszystkie identyfikatory lokalizacji używane
+już przez historię kampanii muszą istnieć we wspólnym świecie. W przeciwnym
+razie użyj opcji **Independent copy** albo najpierw przenieś bieżącą mapę czatu
+do nowego wspólnego świata.
 
 Podpięte czaty dzielą wyłącznie definicję mapy i grafiki z Global Gallery. Nie
 dzielą wiadomości, lokalizacji bieżących, migawek podróży, stanu gry, powiązań
@@ -167,23 +200,49 @@ z mapami Game, połączeń z dostawcami ani danych logowania.
 
 Zmiany i odkrycia z podpiętego czatu zapisują się jako nieopublikowany szkic tego
 czatu. Nie zmieniają wiążącego świata ani innych czatów, dopóki nie klikniesz
-przycisku **Publish changes**. Szkic można też odrzucić przyciskiem **Discard**
-albo odłączyć czat przyciskiem **Fork independent**, zachowując jego bieżącą
-wersję. Jeśli wiążący świat zmieni się w czasie, gdy szkic czeka na publikację,
-World Maps zgłasza konflikt i wymaga odłączenia albo odrzucenia, zamiast po cichu
-nadpisać którąkolwiek wersję.
+przycisku **Publish**. Szkic można też odrzucić przyciskiem **Discard** albo
+przerwać współdzielenie przyciskiem **Detach and keep copy**, zachowując bieżącą
+wersję czatu. Jeśli wiążący świat zmieni się w czasie, gdy szkic czeka na
+publikację, World Maps zgłasza konflikt i wymaga odłączenia albo odrzucenia,
+zamiast po cichu nadpisać którąkolwiek wersję.
 
 Edycja wspólnego świata z poziomu biblioteki zmienia wiążącą definicję od razu.
-Lokalizacji używanych przez podpięte czaty nie da się usunąć, więc archiwizuj je,
-aby ich stałe identyfikatory pozostały dostępne. Samego wspólnego świata też nie
-da się usunąć, dopóki wszystkie podpięte czaty nie zostaną odłączone albo
-podpięte gdzie indziej.
+Edytor wspólnego świata nie pozwala trwale usuwać lokalizacji, więc archiwizuj
+je, aby ich stałe identyfikatory pozostały dostępne. Podpięty czat też nie usunie
+trwale żadnej lokalizacji, dopóki nie wybierzesz opcji **Detach and keep copy**.
+Samego wspólnego świata nie da się usunąć, dopóki wszystkie podpięte czaty nie
+zostaną odłączone albo podpięte gdzie indziej.
 
 Wspólne światy i szablony zachowują odwołania do grafik z Global Gallery, bez
 kopiowania pliku obrazu do każdego czatu. Marinara blokuje usunięcie obrazu
 z Global Gallery, dopóki odwołuje się do niego zapisany szablon, wspólny świat,
 niezależna mapa czatu albo szkic podpiętego czatu. Jeśli chcesz usunąć sam plik,
 najpierw skasuj odwołania do grafiki.
+
+## Odłączenie, wymiana i zaczynanie od nowa
+
+Każde z tych działań odpowiada na inne pytanie:
+
+- Żeby przerwać współdzielenie, ale zachować bieżącą hierarchię podpiętego
+  czatu, zapisz albo odrzuć oczekujące zmiany w edytorze, a potem wybierz
+  **Detach and keep copy**. Czat staje się niezależny i przestaje dostawać
+  wiążące aktualizacje.
+- Żeby dalej współdzielić mapę, ale z innym wiążącym światem, otwórz bibliotekę
+  światów dla wskazanego czatu docelowego i kliknij przycisk **Link to chat**
+  przy nowym świecie. Kontrola zgodności z historią nadal obowiązuje.
+- Żeby wymienić niezależną mapę czatu, otwórz jej edytor i wybierz **Replace /
+  start over**. Można najpierw zapisać szablon albo wyeksportować kopię
+  zapasową, a potem wybrać **Create with AI**, **Use template or shared world**,
+  **Import map file** albo **Start blank**.
+- Żeby dać czatowi zupełnie niepowiązaną mapę, skorzystaj z tej samej drogi
+  wymiany. Usunięcie i ponowne dodanie agenta nie resetuje mapy.
+
+Wymiana pozostaje kopią roboczą do momentu kliknięcia przycisku **Save**. Zapis
+wymiany kasuje zakolejkowany cel podróży albo trasę. Kiedy historia wiadomości
+odwołuje się już do identyfikatorów lokalizacji, World Maps może odrzucić
+niepowiązaną wymianę, żeby zachować dotychczasowe ścieżki nawigacji. W takim
+wypadku zostań przy niezależnej kopii i rozbuduj albo zarchiwizuj istniejącą
+mapę.
 
 ## Jak działa edytor map
 
@@ -312,9 +371,12 @@ modelu, a nie licz na samo krótkie podsumowanie.
 
 ## Poruszanie się w trakcie fabuły
 
-World Maps obsługuje jawną podróż, zaplanowane trasy i zweryfikowane
-dotarcie opisane w narracji. Ruch zapisuje się razem z turą, więc lokalizacja
-podąża za wybraną historią wiadomości i wybranym swipe'em.
+World Maps obsługuje zakolejkowaną podróż, zaplanowane trasy i zweryfikowane
+dotarcie prowadzone przez użytkownika. Ruch zapisuje się razem z turą, więc
+lokalizacja podąża za wybraną historią wiadomości i wybranym swipe'em. Ponowne
+uruchomienie aplikacji Marinara Engine nie resetuje celowo lokalizacji bieżącej,
+a przełączenie na inną gałąź wiadomości albo inny swipe przywraca migawkę
+przestrzenną zapisaną razem z tą historią.
 
 ### Kolejkowanie wskazanego celu
 
@@ -338,36 +400,61 @@ Wybierz odległą aktywną lokalizację na mapie świata. Jeśli w grafie zależ
 nadrzędna-podrzędna oraz dostępnych przejść istnieje droga, World Maps
 pokazuje najkrótszą trasę i proponuje przycisk **Plan route**.
 
-Trasa kolejkuje swój pierwszy krok. Każda kolejna tura zatwierdza jeden krok
-i kolejkuje następny, aż do osiągnięcia celu. Trasę da się anulować w każdej
-chwili. Jeśli mapa albo bieżąca lokalizacja zmieni się nieoczekiwanie, trasa
-dostaje status **Needs review** zamiast zgadywać nową drogę.
+Trasa kolejkuje swój pierwszy krok. Każda kolejna wysłana tura użytkownika
+zatwierdza jeden krok i kolejkuje następny, aż do osiągnięcia celu; nie ma
+osobnego przycisku przejścia dalej. Trasę da się anulować w każdej chwili. Jeśli
+mapa albo bieżąca lokalizacja zmieni się nieoczekiwanie, trasa dostaje status
+**Needs review** zamiast zgadywać nową drogę.
 
 Na przykład podróż z piętra Floor 1 do równorzędnego piętra Floor 25 zajmuje
 zwykle jedną turę na wyjście do wieży i drugą na wejście na Floor 25.
 Bezpośrednie przejście skraca taką drogę do jednego kroku.
 
-### Podróż opisana w narracji i odkrywanie nowych miejsc
+### Podróż prowadzona przez użytkownika i odkrywanie nowych miejsc
 
-Model dostaje zabezpieczone instrukcje dotyczące zakończonego dotarcia na miejsce:
+O automatycznych zmianach mapy decyduje ostatnia wiadomość użytkownika:
 
-- Jeśli odpowiedź naprawdę doprowadza do znanej aktywnej lokalizacji,
-  World Maps może przenieść tam lokalizację bieżącą. Jeśli fabuła
-  odsłoniła nową drogę, zapisuje bezpośrednie dostępne połączenie.
-- Jeśli odpowiedź naprawdę doprowadza do nieznanego, trwałego miejsca,
-  World Maps może dodać je jako lokalizację podrzędną albo połączoną,
-  przenieść tam fabułę i zachować drogę powrotną.
-- Zamiary, wzmianki, nieudana lub nieukończona podróż, tymczasowe obozy, korytarze
-  i pojazdy nie tworzą lokalizacji ani nie przesuwają znacznika.
+- Bezpośredni ruch drużyny w czasie teraźniejszym albo w trybie rozkazującym
+  ustala dotarcie na miejsce. Zdania "We go to the Kitchen" oraz "She moves into
+  the outdoor section; we follow her" mogą przenieść fabułę do pasujących
+  znanych lokalizacji.
+- Wyraźne dotarcie do ważnego, nazwanego i trwałego miejsca, do którego da się
+  wrócić, albo odkrycie takiego miejsca może dodać je do świata. Zdanie "We
+  discover a hidden room" może utworzyć taką lokalizację i przenieść tam fabułę.
+- Widoczna odpowiedź może opisać skutek, ale sama narracja AI nigdy nie zezwala
+  na ruch ani na utworzenie nowej lokalizacji.
+- Przyszłe zamiary, nieudana lub nieukończona podróż, wzmianki, ruch samych
+  postaci NPC, miejsca wyobrażone, tymczasowe obozy, korytarze, pojazdy i inne
+  przejściowe szczegóły nie tworzą lokalizacji ani nie przesuwają znacznika.
 
-Na przykład po zdaniu użytkownika "Let's get quests from the Quest Hall"
-odpowiedź, która doprowadza postacie na miejsce, może przenieść kolejny stan
-fabuły do Quest Hall. Zdanie "We should visit the Quest Hall later" powinno
-zostawić bieżącą lokalizację bez zmian.
+Model nadal musi zinterpretować sformułowanie użytkownika i wysłać ukrytą
+dyrektywę pakietu, którą aplikacja weryfikuje. Różne modele językowe radzą sobie
+z niejednoznaczną prozą różnie. Kiedy kolejna tura ma przenieść fabułę na pewno,
+użyj przycisku **Set destination**, a do poprawienia już zapisanego stanu –
+opcji **Set current story location**.
 
-Aplikacja weryfikuje takie zachowanie, ale to model musi rozpoznać, że dotarcie
-naprawdę nastąpiło. Kiedy potrzebny jest pewny ruch, użyj przycisku **Set
-destination**.
+Zweryfikowane dotarcie prowadzone przez użytkownika może pominąć wymóg
+osiągalności w jednym kroku: World Maps zapisuje wtedy w razie potrzeby dostępne
+bezpośrednie przejście z lokalizacji bieżącej. Jeśli cel był już zakolejkowany,
+ten ruch zapisuje się najpierw razem z wiadomością użytkownika, a dotarcie
+prowadzone przez użytkownika staje się końcową lokalizacją wygenerowanej
+odpowiedzi; jednorazowa kolejka zostaje wyczyszczona. Na zaplanowanej trasie
+dotarcie do następnego zaplanowanego kroku przesuwa trasę normalnie. Dotarcie
+gdzie indziej, w tym przeskok do dalszego kroku trasy, ustawia trasie status
+**Needs review**, żeby pakiet nie przepisał planu po cichu. Anuluj taką trasę
+albo zaplanuj ją ponownie z lokalizacji, w której fabuła się znalazła.
+
+### Lokalizacja startowa a bieżąca lokalizacja fabuły
+
+**Lokalizacja startowa** to miejsce domyślne na początku nowej fabuły. **Bieżąca
+lokalizacja fabuły** to miejsce, w którym ten konkretny czat jest teraz. Zmiana
+lokalizacji startowej nie naprawia bieżącej pozycji w istniejącym czacie.
+
+Żeby poprawić zapisany stan, zaznacz aktywną lokalizację w panelu **Details**
+edytora i wybierz **Set current story location**. To poprawka administracyjna,
+a nie podróż opisana w narracji. Zaczyna działać po kliknięciu przycisku
+**Save**, kasuje zakolejkowany cel podróży albo trasę i nie zmienia
+wcześniejszych wiadomości.
 
 ### Podróż w trybie Roleplay
 
@@ -387,10 +474,10 @@ Game Mode dodaje **Hierarchical world map**. Napis **You are here** oznacza
 bieżącą lokalizację fabuły. Przeglądanie, centrowanie i oglądanie szczegółów nie
 przenoszą drużyny. Zakolejkuj cel albo trasę, a potem wyślij kolejną turę gry.
 
-Wygenerowana odpowiedź w trybie Game potrafi też zmienić lokalizację
-w hierarchii po zakończonym dotarciu opisanym w narracji. Szczegóły bieżącej
-lokalizacji stanowią wtedy podstawę dla postaci GM, drużyny, grafiki sceny
-i pasującej referencji dla storyboardu.
+Kiedy ostatnia wiadomość użytkownika ustala dotarcie drużyny na miejsce,
+wygenerowana odpowiedź w trybie Game może wysłać ukrytą komendę zmieniającą
+lokalizację w hierarchii. Szczegóły bieżącej lokalizacji stanowią wtedy podstawę
+dla postaci GM, drużyny, grafiki sceny i pasującej referencji dla storyboardu.
 
 ## Hierarchical world map a zwykła mapa Game
 
@@ -433,7 +520,7 @@ dodaje taką instrukcję:
 > to set the scene location.
 
 Każdy dostawca ma własne limity obrazów referencyjnych. Referencje podane wprost
-w żądaniu oraz referencje postaci zmniejszają liczbę referencji dodawanych
+w żądaniu oraz referencje postaci mogą zmniejszyć liczbę referencji dodawanych
 automatycznie.
 
 ### Ustawienie jednej referencji lokalizacji
@@ -458,7 +545,7 @@ Sekcja **Location artwork** w edytorze wyszukuje lokalizacje bez referencji albo
 bez tła mapy podrzędnej.
 
 1. Kliknij przycisk **Review requests**.
-2. Sprawdź liczbę żądań, zanim zużyjesz żądania u dostawcy.
+2. Sprawdź liczbę żądań, zanim zużyjesz je u dostawcy.
 3. Potwierdź połączenie do generowania obrazów, model, styl Engine, stan stylu
    grafik kampanii, zapisane instrukcje obrazu i rozmiar wyniku.
 4. W razie potrzeby popraw każdy prompt pozytywny i negatywny.
@@ -525,9 +612,14 @@ World Maps korzysta z wiedzy o świecie na dwa sposoby:
 1. Generator AI może czytać wybrane lorebooki podczas szkicowania i rozbudowy.
 2. Zapisana lokalizacja może aktywować wpisy, dopóki jest lokalizacją bieżącą.
 
-Żeby dołączyć wiedzę o świecie działającą w trakcie gry, zaznacz lokalizację,
+Żeby dołączyć wiedzę o świecie działającą w trakcie czatu, zaznacz lokalizację,
 otwórz sekcję **Linked lore**, przeszukaj dostępne wpisy, dołącz wybrane
 i zapisz zmiany.
+
+Otwarcie powiązanego wpisu lorebooka wyprowadza z edytora map. Jeśli inne
+oczekujące zmiany mają przetrwać, najpierw zapisz mapę albo świadomie potwierdź,
+że da się je odrzucić. World Maps 1.2.5 ostrzega, zanim to działanie odrzuci
+niezapisane zmiany mapy.
 
 Dołączone wpisy nie przechodzą z lokalizacji nadrzędnej na podrzędną. Wiedza
 dołączona do Brinewatch nie aktywuje się w Tideglass Inn, o ile nie zostanie
@@ -551,7 +643,7 @@ promptów:
 - **Turn prompt insert** steruje globalnym tekstem systemowym dla trybów Roleplay
   i Game, który przedstawia bieżącą lokalizację podczas zwykłych tur. Marinara
   zachowuje wokół niego własne opakowanie `<spatial_context>` i wymagane zmienne
-  nadrzędne.
+  wiążące.
 
 Pole **Connection Override** na tej samej stronie wpływa na szkice i rozbudowy
 map tworzone przez AI. Zostaw je puste, żeby korzystać z połączenia bieżącego
@@ -566,7 +658,7 @@ i przed zapisem korzystaj z rozwiniętych podglądów.
 Przyciskiem **Export** w edytorze czatu, szablonu albo wspólnego świata pobierzesz
 roboczą hierarchię jako plik `.world-map.json`.
 Pozostaw opcję **Include map artwork** włączoną, aby w tym
-samym pliku umieścić referencje grafik lokalizacji i tła map lokalizacji
+samym pliku umieścić powiązane grafiki lokalizacji i tła map lokalizacji
 podrzędnych. Wyłącz ją, jeśli potrzebujesz mniejszej kopii zawierającej tylko
 definicję. Starsze pliki `.hierarchical-map.json` nadal można importować.
 
@@ -587,9 +679,25 @@ Archiwizowanie chroni stare odwołania. Zanim zarchiwizujesz lokalizację:
 
 - przenieś albo zarchiwizuj jej aktywne lokalizacje podrzędne;
 - w razie potrzeby wybierz inną aktywną lokalizację startową;
-- wybierz aktywne zastępstwo, jeśli jest to bieżąca lokalizacja w grze.
+- wybierz aktywne zastępstwo, jeśli jest to bieżąca lokalizacja fabuły.
 
-Zarchiwizowane lokalizacje da się przywrócić z panelu Details.
+Zarchiwizowane lokalizacje da się przywrócić z panelu Details. World Maps 1.2.5
+udostępnia też opcję **Delete permanently** dla zarchiwizowanej lokalizacji albo
+w pełni zarchiwizowanej gałęzi, o ile jej usunięcie jest bezpieczne. Edytor
+wyłącza to działanie, gdy lokalizacja jest zapisaną lokalizacją startową albo
+bieżącą lokalizacją fabuły, występuje w historii wiadomości, ma powiązanie
+z mapą Game, bierze udział w zakolejkowanym celu podróży lub w trasie albo należy
+do czatu wciąż podpiętego do wspólnego świata. Edytor wspólnego świata i edytor
+szablonu w ogóle nie pozwalają trwale usuwać lokalizacji. Najpierw rozwiąż
+wskazaną zależność, w razie potrzeby odłącz podpięty czat albo zostaw lokalizację
+w archiwum.
+
+Trwałe usunięcie kasuje lokalizację ze szkicu roboczego i porządkuje odwołania
+w hierarchii oraz w bezpośrednich przejściach dopiero po kliknięciu przycisku
+**Save**. Zamknięcie edytora bez zapisu nadal odrzuca takie usunięcie. Usunięte
+lokalizacje nie trafiają już do eksportu, a chronione lokalizacje z archiwum
+nadal w nim są, żeby ich stałe identyfikatory wspierały historię i powiązane
+dane. Nie edytuj wyeksportowanego pliku JSON, żeby obejść te zabezpieczenia.
 
 ## Rozwiązywanie problemów
 
@@ -600,18 +708,28 @@ uruchomiona ponownie. Aktywny czat musi być typu Roleplay albo Game. Włącz
 przełącznik **Enable Agents**, a potem pakiet **World Maps** w sekcji
 **Tracker Agents**.
 
-### Brakuje przycisku Add to chat w bibliotece szablonów
+### Brakuje przycisku Add to chat albo Link to chat w bibliotece światów
 
 Zanim otworzysz bibliotekę, otwórz obsługiwany czat Roleplay albo Game.
-Biblioteka pokazuje przycisk **Add to chat** zarówno z głównej strony
-World Maps, jak i z ustawień danego czatu. Podczas konfiguracji trybu Game
-odpowiednikiem jest **Use template**.
+Biblioteka nazywa czat docelowy i pokazuje przycisk **Add to chat** przy
+szablonach oraz **Link to chat** przy wspólnych światach. Podczas konfiguracji
+trybu Game odpowiednikami są **Use template** i **Use shared world**.
+
+Jeśli podczas konfiguracji trybu Game biblioteka wymienia wspólne światy, ale nie
+pokazuje przycisku **Use shared world**, przeglądarka może nadal korzystać ze
+starszej wersji pakietu sprzed aktualizacji. W każdym otwartym edytorze map
+zapisz mapę albo świadomie odrzuć jej szkic, a potem zamknij edytor. Zapisz
+niezwiązaną pracę, raz odśwież aplikację Marinara Engine z pominięciem pamięci
+podręcznej i otwórz konfigurację gry ponownie. Nowsze wydania aplikacji wprost
+informują, kiedy aktualizacja pakietu wymaga takiego odświeżenia.
 
 ### Konfiguracja gry użyła złych albo zapasowych lokalizacji
 
-Wybierz **Use template**, wskaż konkretny szablon i potwierdź go przed
-zakończeniem konfiguracji gry. Sprawdź kopię roboczą należącą do gry i zapisz ją.
-Szablon na koncie pozostaje bez zmian.
+Wybierz **Use template**, a potem – przed zakończeniem konfiguracji gry –
+potwierdź opcję **Use template** dla niezależnej kopii albo **Use shared world**
+dla podpięcia do wiążącego świata. Sprawdź i zapisz mapę gry. Szablon pozostaje
+bez zmian, a podpięta gra trzyma zmiany jako nieopublikowane, dopóki nie
+klikniesz przycisku **Publish**.
 
 ### Nie da się włączyć mapy
 
@@ -629,16 +747,43 @@ i niewykluczony lorebook.
 
 ### Bieżąca lokalizacja nie zmieniła się po wiadomości
 
-Automatyczny ruch wymaga tego, żeby wygenerowana odpowiedź faktycznie kończyła
-podróż i zawierała poprawną ukrytą dyrektywę pakietu. Zamiar, rozmowa, nieudana
-podróż i miejsca przejściowe nie przesuwają znacznika. Kiedy kolejna tura ma
-przenieść fabułę na pewno, użyj przycisku **Set destination**.
+Automatyczny ruch wymaga tego, żeby ostatnia wiadomość użytkownika wprost
+ustaliła dotarcie drużyny na miejsce, a model wysłał poprawną ukrytą dyrektywę
+pakietu. Sama narracja AI, zamiar, dyskusja, nieudana podróż, ruch samych postaci
+NPC i miejsca przejściowe nie przesuwają znacznika. Spróbuj wprost, na przykład
+"We go to the Kitchen." Kiedy kolejna tura ma przenieść fabułę na pewno, użyj
+przycisku **Set destination**.
+
+### Bieżąca lokalizacja zmieniła się po ponownym otwarciu czatu
+
+Sprawdź, która gałąź wiadomości i który swipe są wybrane: lokalizacja bieżąca
+podąża za migawką przestrzenną zapisaną razem z tą historią. Jeśli wybrana
+historia jest właściwa, a znacznik nie, otwórz edytor map, zaznacz właściwą
+aktywną lokalizację, wybierz **Set current story location** i kliknij przycisk
+**Save**.
 
 ### Cel albo trasa ma status Needs review
 
 Po zakolejkowaniu ruchu zmieniła się wersja mapy albo bieżąca lokalizacja.
 Otwórz mapę fabuły, sprawdź aktualną ścieżkę i wybierz cel albo trasę jeszcze
-raz.
+raz. Jeśli pokazany cel nadal jest zakolejkowany, anuluj go przed ponownym
+wyborem.
+
+### Zaplanowana trasa nie przesuwa się dalej
+
+Każda tura użytkownika powinna zatwierdzić pokazany następny krok i zakolejkować
+kolejny. Nie ma osobnej kontrolki przejścia dalej. Jeśli jedna ukończona tura nie
+przesuwa trasy, anuluj ją i zaplanuj ponownie z bieżącej lokalizacji. Jeśli
+zapisana lokalizacja jest już błędna, użyj opcji **Set current story location**
+i kliknij przycisk **Save**; ta poprawka administracyjna kasuje nieaktualną trasę.
+
+### Ten czat ma korzystać z zupełnie innej mapy
+
+Otwórz edytor map i wybierz **Replace / start over**. W razie potrzeby najpierw
+zachowaj szablon albo eksport, a potem utwórz, zaimportuj, skopiuj albo podepnij
+mapę zastępczą. Jeśli czat jest podpięty i ma zachować bieżącą hierarchię,
+najpierw użyj opcji **Detach and keep copy**. Usunięcie i ponowne dodanie pakietu
+World Maps nie kasuje jego mapy.
 
 ### Nie da się wybrać odległej lokalizacji
 

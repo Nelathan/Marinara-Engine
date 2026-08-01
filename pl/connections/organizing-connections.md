@@ -24,7 +24,7 @@ Aby usunąć folder, kliknij ikonę kosza w jego wierszu. Jeśli w folderze wci�
 
 ## Wyszukiwanie i sortowanie
 
-Pole **Search connections...** filtruje listę w trakcie pisania. Dopasowanie obejmuje nazwę połączenia, dostawcę, model, bazowy adres URL, usługę obrazów lub wideo oraz model embeddingu. Gdy nic nie pasuje, widać komunikat "No connections match your search".
+Pole **Search connections** filtruje listę w trakcie pisania. Dopasowanie obejmuje nazwę połączenia, dostawcę, model, bazowy adres URL, usługę obrazów lub wideo oraz model embeddingu. Gdy nic nie pasuje, widać komunikat "No connections match your search".
 
 Lista rozwijana **Sort order** (kolejność sortowania) obok pola wyszukiwania zmienia kolejność listy. Ma pięć opcji:
 

@@ -24,7 +24,7 @@ Zum Löschen klickst du auf das Papierkorb-Symbol in der Ordnerzeile. Liegen noc
 
 ## Suche und Sortierung
 
-Das Feld **Search connections...** (Verbindungen durchsuchen) filtert die Liste beim Tippen. Gesucht wird in Name, Anbieter, Modell, Basis-URL, Bild- oder Video-Dienst und Embedding-Modell der Verbindung. Passt nichts, erscheint „No connections match your search“.
+Das Feld **Search connections** (Verbindungen durchsuchen) filtert die Liste beim Tippen. Gesucht wird in Name, Anbieter, Modell, Basis-URL, Bild- oder Video-Dienst und Embedding-Modell der Verbindung. Passt nichts, erscheint „No connections match your search“.
 
 Das Dropdown-Menü **Sort order** (Sortierung) neben dem Suchfeld ändert die Reihenfolge der Liste. Es hat fünf Optionen:
 

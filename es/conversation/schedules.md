@@ -108,6 +108,12 @@ El estado del bloque cambia lo que hace un personaje cuando llega la hora del sa
 
 Cuando termines, haz clic en **Save schedule**. **Cancel** cierra el editor sin guardar.
 
+### Mueve un horario entre personajes o instalaciones
+
+Usa **Export schedule** (Exportar horario), al final del editor, para descargar el borrador actual como un archivo JSON. La exportación incluye los bloques semanales, el resumen de la rutina, la locuacidad, los momentos de saludo y los ajustes de tiempos avanzados.
+
+Abre el editor de horarios de otro personaje y elige **Import schedule** (Importar horario) para cargar ese archivo. Marinara valida el archivo antes de reemplazar el borrador del editor, y mueve la rutina importada a la semana actual. La importación no se guarda sola: elige **Save schedule** para conservarla, o **Cancel** para dejar el horario del personaje sin cambios.
+
 ### Schedule generation preferences
 
 De vuelta en **Chat Settings**, el cuadro **Schedule generation preferences** (Preferencias de generación de horarios) contiene indicaciones de texto libre sobre cómo se escriben las rutinas. Este ajuste es global. Se aplica a cada chat de Conversation la próxima vez que se generen horarios, a mano o por la app. Por ejemplo:

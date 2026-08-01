@@ -24,7 +24,7 @@ Para borrar una carpeta, haz clic en el icono de papelera de la fila de la carpe
 
 ## Búsqueda y orden
 
-La casilla **Search connections...** (Buscar conexiones...) filtra la lista a medida que escribes. Busca coincidencias en el nombre de la conexión, el proveedor, el modelo, la URL base, el servicio de imagen o video y el modelo de embedding. Cuando no hay coincidencias, ves "No connections match your search" (Ninguna conexión coincide con tu búsqueda).
+La casilla **Search connections** (Buscar conexiones) filtra la lista a medida que escribes. Busca coincidencias en el nombre de la conexión, el proveedor, el modelo, la URL base, el servicio de imagen o video y el modelo de embedding. Cuando no hay coincidencias, ves "No connections match your search" (Ninguna conexión coincide con tu búsqueda).
 
 El menú desplegable **Sort order** (Orden) junto a la casilla de búsqueda cambia el orden de la lista. Tiene cinco opciones:
 

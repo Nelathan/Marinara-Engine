@@ -108,6 +108,12 @@ O status do bloco muda o que o personagem faz quando chega a hora do contato. O 
 
 Ao terminar, clique em **Save schedule**. O botão **Cancel** fecha o editor sem salvar.
 
+### Mover uma agenda entre personagens ou instalações
+
+Use o botão **Export schedule** (exportar a agenda), no fim do editor, para baixar o rascunho atual como um arquivo JSON. A exportação inclui os blocos semanais, o resumo da rotina, a sociabilidade, os momentos de contato e as configurações de **Advanced timing**.
+
+Abra o editor de agenda de outro personagem e escolha **Import schedule** (importar a agenda) para abrir esse arquivo. Marinara valida o arquivo antes de substituir o rascunho do editor e move a rotina importada para a semana atual. A importação não é salva sozinha: clique em **Save schedule** para manter a agenda, ou em **Cancel** para deixar a agenda do personagem como estava.
+
 ### Schedule generation preferences
 
 De volta à seção **Chat Settings**, a caixa **Schedule generation preferences** (preferências de geração das agendas) guarda orientações em texto livre sobre como as rotinas devem ser escritas. Essa configuração é global. Ela vale para todos os chats do Conversation Mode na próxima geração de agendas, feita por você ou pelo aplicativo. Por exemplo:

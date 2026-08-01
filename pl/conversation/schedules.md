@@ -108,6 +108,12 @@ Status bloku decyduje o tym, co postać zrobi, gdy nadejdzie pora odezwania się
 
 Na koniec kliknij przycisk **Save schedule**. Przycisk **Cancel** zamyka edytor bez zapisywania.
 
+### Przenoszenie harmonogramu między postaciami i instalacjami
+
+Przycisk **Export schedule** (eksport harmonogramu) na dole edytora pobiera bieżący szkic jako plik JSON. W eksporcie znajdują się bloki tygodniowe, podsumowanie rutyny, gadatliwość, pory odezwania się oraz zaawansowane ustawienia czasu.
+
+Otwórz edytor harmonogramu innej postaci i wybierz **Import schedule** (import harmonogramu), żeby wczytać ten plik. Marinara sprawdza plik, zanim podmieni szkic w edytorze, i przenosi zaimportowaną rutynę na bieżący tydzień. Import nie zapisuje się sam: kliknij przycisk **Save schedule**, żeby go zachować, albo przycisk **Cancel**, żeby zostawić dotychczasowy harmonogram postaci bez zmian.
+
 ### Schedule generation preferences
 
 W panelu **Chat Settings** pole **Schedule generation preferences** przyjmuje dowolny tekst ze wskazówkami, jak mają powstawać rutyny. To ustawienie globalne. Obejmuje każdy czat w trybie Conversation przy następnym generowaniu harmonogramów, ręcznym albo automatycznym. Na przykład:

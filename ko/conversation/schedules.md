@@ -108,6 +108,12 @@ make weekdays more nocturnal, keep weekends social
 
 다 마쳤으면 **Save schedule**을 클릭하세요. **Cancel**(취소)을 누르면 저장하지 않고 편집기를 닫습니다.
 
+### 스케줄을 다른 캐릭터나 다른 설치 환경으로 옮기기
+
+편집기 아래쪽의 **Export schedule**(스케줄 내보내기)을 클릭하면 현재 초안을 JSON 파일로 다운로드합니다. 내보낸 파일에는 요일별 블록, 루틴 요약, 수다스러움, 체크인 시점, 고급 타이밍 설정이 들어 있습니다.
+
+다른 캐릭터의 스케줄 편집기를 열고 **Import schedule**(스케줄 가져오기)을 선택하면 그 파일을 불러옵니다. Marinara는 편집기 초안을 바꾸기 전에 파일을 검사하고, 가져온 생활 패턴을 이번 주로 옮깁니다. 가져오기만으로는 저장되지 않습니다. 가져온 내용을 남기려면 **Save schedule**을, 캐릭터의 기존 스케줄을 그대로 두려면 **Cancel**을 클릭하세요.
+
 ### Schedule generation preferences
 
 다시 **Chat Settings**로 돌아오면, **Schedule generation preferences**(스케줄 생성 설정) 상자에 생활 패턴을 어떻게 쓸지에 대한 지침을 자유롭게 적을 수 있습니다. 이 설정은 전역 설정입니다. 직접 만들든 앱이 만들든, 다음번에 스케줄을 생성할 때 모든 Conversation 채팅에 적용됩니다. 예를 들면 다음과 같습니다.

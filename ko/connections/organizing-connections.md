@@ -24,7 +24,7 @@
 
 ## 검색과 정렬
 
-**Search connections...** 입력란에 입력하면 목록이 바로 걸러집니다. 연결 이름, 제공자, 모델, 기본 URL, 이미지 또는 동영상 서비스, 임베딩 모델이 검색 대상입니다. 일치하는 항목이 없으면 "No connections match your search"가 표시됩니다.
+**Search connections** 입력란에 입력하면 목록이 바로 걸러집니다. 연결 이름, 제공자, 모델, 기본 URL, 이미지 또는 동영상 서비스, 임베딩 모델이 검색 대상입니다. 일치하는 항목이 없으면 "No connections match your search"가 표시됩니다.
 
 검색 입력란 옆의 **Sort order**(정렬 순서) 드롭다운으로 목록 순서를 바꿉니다. 선택지는 5가지입니다.
 

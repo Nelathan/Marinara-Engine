@@ -108,6 +108,12 @@ Der Status eines Blocks entscheidet, was der Charakter tut, wenn der Zeitpunkt z
 
 Zum Schluss klick auf **Save schedule**. **Cancel** schließt den Editor, ohne zu speichern.
 
+### Einen Zeitplan zwischen Charakteren oder Installationen übertragen
+
+Über **Export schedule** (Zeitplan exportieren) ganz unten im Editor lädst du den aktuellen Entwurf als JSON-Datei herunter – JSON ist ein schlichtes Textformat. Der Export enthält die Blöcke der Woche, die Zusammenfassung der Routine, die Gesprächigkeit, die **Check-in moments** und die Einstellungen unter **Advanced timing**.
+
+Öffne den Zeitplan-Editor eines anderen Charakters und wähle dort **Import schedule** (Zeitplan importieren), um diese Datei zu laden. Marinara prüft die Datei, bevor sie den Entwurf im Editor ersetzt, und schiebt die importierte Routine auf die aktuelle Woche. Gespeichert wird der Import nicht automatisch: Mit **Save schedule** behältst du ihn, mit **Cancel** bleibt der bisherige Zeitplan des Charakters unverändert.
+
 ### Schedule generation preferences
 
 Zurück in den **Chat Settings**: Das Feld **Schedule generation preferences** (Vorgaben für die Zeitplan-Erstellung) nimmt frei formulierte Hinweise dazu auf, wie die Abläufe geschrieben werden. Diese Einstellung gilt global. Sie greift in jedem Conversation-Chat, sobald das nächste Mal Zeitpläne entstehen – von Hand oder durch die App. Zum Beispiel:

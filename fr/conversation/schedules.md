@@ -108,6 +108,12 @@ Le statut du bloc change ce que fait un personnage quand l'heure d'une prise de 
 
 Quand tu as terminé, clique sur **Save schedule**. Le bouton **Cancel** ferme l'éditeur sans rien enregistrer.
 
+### Déplacer un emploi du temps d'un personnage ou d'une installation à l'autre
+
+Le bouton **Export schedule** (exporter l'emploi du temps), en bas de l'éditeur, télécharge le brouillon en cours sous forme de fichier JSON. L'export contient les blocs de la semaine, le résumé de routine, le niveau de bavardage, les prétextes de prise de nouvelles et les réglages de minutage avancé.
+
+Ouvre l'éditeur d'emploi du temps d'un autre personnage, puis choisis **Import schedule** (importer un emploi du temps) pour charger ce fichier. Marinara vérifie le fichier avant de remplacer le brouillon de l'éditeur, et replace la routine importée sur la semaine en cours. L'import n'est pas enregistré automatiquement : clique sur **Save schedule** pour le conserver, ou sur **Cancel** pour laisser l'emploi du temps du personnage inchangé.
+
 ### Schedule generation preferences
 
 De retour dans les **Chat Settings**, le champ **Schedule generation preferences** (préférences de génération des emplois du temps) accueille des consignes libres sur la manière d'écrire les routines. Ce réglage est global. Il s'applique à tous les chats en mode Conversation, dès la prochaine génération d'emplois du temps, à la main ou par l'application. Par exemple :

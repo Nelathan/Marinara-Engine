@@ -24,7 +24,7 @@ Para excluir uma pasta, clique no ícone de lixeira na linha dela. Se ainda houv
 
 ## Busca e ordenação
 
-A caixa **Search connections...** filtra a lista conforme você digita. A busca considera o nome da conexão, o provedor, o modelo, a URL base, o serviço de imagem ou vídeo e o modelo de embedding (representação numérica do texto). Quando nada corresponde, aparece "No connections match your search".
+A caixa **Search connections** filtra a lista conforme você digita. A busca considera o nome da conexão, o provedor, o modelo, a URL base, o serviço de imagem ou vídeo e o modelo de embedding (representação numérica do texto). Quando nada corresponde, aparece "No connections match your search".
 
 O menu suspenso **Sort order** (ordem da lista), ao lado da caixa de busca, muda a ordem das conexões. São cinco opções:
 

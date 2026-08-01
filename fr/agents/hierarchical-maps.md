@@ -1,7 +1,8 @@
 # World Maps : installation, création et déplacements
 
-> **Compatibilité actuelle :** ce guide correspond à World Maps **1.2.1**
-> sur Marinara Engine **2.3.5**. Le package fonctionne avec les chats Roleplay et Game.
+> **Compatibilité actuelle :** ce guide correspond à World Maps **1.2.5**
+> sur Marinara Engine **2.3.5 ou version ultérieure**. Le package fonctionne
+> avec les chats Roleplay et Game.
 
 World Maps donne à Roleplay et Game un état du monde persistant. Au lieu
 de garder un seul lieu en texte libre, il représente le monde comme des lieux imbriqués :
@@ -17,9 +18,11 @@ The Shattered Coast
 
 Marinara conserve dans cette hiérarchie un lieu actuel qui fait autorité. Le fil
 d'Ariane du moment, les détails exacts du lieu, les destinations proches et le
-lore éligible qui y est rattaché peuvent ancrer la réponse suivante. Les cartes
-peuvent aussi suivre un voyage narré jusqu'au bout vers un lieu connu, ou ajouter
-un lieu tout juste découvert quand l'histoire y arrive vraiment.
+lore éligible qui y est rattaché peuvent ancrer la réponse suivante. Maps peut
+aussi suivre un déplacement explicite ou une découverte établis par le dernier
+message de l'utilisateur. La narration visible de l'IA peut en décrire le
+résultat, mais elle ne peut ni déplacer la carte ni inventer des lieux toute
+seule.
 
 Les cartes peuvent être indépendantes dans chaque chat, ou reliées à un même
 monde partagé appartenant au compte. Les modèles créent des copies propres qui
@@ -30,15 +33,15 @@ liaisons avec Game.
 
 ## Ce que propose la fonctionnalité
 
-World Maps 1.2.1 apporte :
+World Maps 1.2.5 apporte :
 
 - des régions, agglomérations, lieux, bâtiments, étages et pièces imbriqués ;
 - des fils d'Ariane et un lieu d'histoire actuel qui fait autorité ;
 - des vues en liste, en carte positionnée et en couches ordonnées pour les lieux enfants ;
 - les déplacements parent/enfant, les liens directs et la planification d'itinéraires sur plusieurs tours ;
-- des déplacements validés à partir de la narration achevée et la découverte de nouveaux lieux ;
+- des déplacements et des découvertes validés, établis par le dernier message de l'utilisateur ;
 - des mondes partagés appartenant au compte, reliables à plusieurs chats Roleplay et Game ;
-- des brouillons par chat, avec revue, et des commandes de publication, d'abandon, de conflit et de séparation indépendante ;
+- des brouillons par chat, avec revue, et des commandes de publication, d'abandon, de conflit et de détachement ;
 - des modèles de carte valables pour tout le compte, créés à la main, avec l'IA ou par import ;
 - des brouillons et extensions de carte assistés par l'IA, ancrés dans la configuration ou le lore sélectionné ;
 - des descriptions de lieu publiques, une mémoire privée pour le modèle et du lore attaché au lieu exact ;
@@ -55,21 +58,45 @@ choix CYOA sont activés, le modèle peut donc proposer comme options suivantes 
 enfants du lieu actuel ou les lieux connectés. Les choix exacts, eux, restent
 générés par le modèle.
 
+## Choisir la bonne relation de carte
+
+La bibliothèque contient deux ressources réutilisables appartenant au compte,
+tandis que chaque chat garde son propre lieu et son propre historique à
+l'exécution. Le nom lisible d'une ressource n'est pas son identité : World Maps
+1.2.5 ajoute **(copy)** ou un numéro quand une ressource tout juste enregistrée
+porterait sinon le même nom.
+
+| Ressource ou état                     | Appartient à                          | À choisir quand                                                                                     | Ce que les modifications ultérieures touchent                     |
+| ------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Carte de chat indépendante**        | Un seul chat Roleplay ou Game         | Cette histoire doit avoir son propre monde                                                          | Ce chat uniquement                                                 |
+| **Modèle indépendant**                | Ton compte                            | Tu veux un point de départ réutilisable                                                             | Les nouvelles copies seulement ; les chats existants ne changent pas |
+| **Monde partagé canonique**           | Ton compte                            | Plusieurs chats doivent lire une même hiérarchie entretenue                                         | La définition partagée que lisent les chats reliés                 |
+| **Brouillon de chat relié**           | Un chat relié, jusqu'à la publication | Une histoire reliée a découvert ou modifié quelque chose qui a peut-être sa place dans le monde partagé | Aucun autre chat tant que tu n'as pas choisi **Publish** (publier) |
+| **Copie indépendante détachée**       | Un chat autrefois relié               | Cette histoire doit garder sa carte actuelle sans recevoir les modifications du monde partagé       | Le chat détaché uniquement                                         |
+
+Copier n'est pas relier. Les commandes **Use template**, **Add to chat** et
+**Independent copy** créent des cartes distinctes. **Use shared world**
+(utiliser un monde partagé) pendant la configuration de Game et **Link to chat**
+dans la bibliothèque rattachent le chat au monde partagé canonique.
+
 ## Démarrage rapide
 
-1. Ouvre **Agents** (Agents), clique sur **Download Agents** (télécharger des agents) et installe **World Maps**.
+1. Ouvre la page **Agents**, clique sur **Download Agents** (télécharger des agents) et installe **World Maps**.
 2. Redémarre Marinara quand l'application te le demande. Le package contient du code serveur.
 3. Ouvre un chat Roleplay ou Game.
-4. Ouvre **Agents → World Maps** et active-le pour le chat en cours. Tu
-   peux aussi l'activer depuis la section **Chat Settings → Agents** (réglages du chat) de ce chat.
+4. Ouvre le globe **World Maps** dédié si ta version de Marinara Engine le
+   propose, ou passe par **Agents → World Maps**, puis active-le pour le chat en
+   cours. Tu peux aussi l'activer depuis la section **Chat Settings → Agents**
+   (réglages du chat) de ce chat.
 5. Crée la carte avec **Use template** (utiliser un modèle), **Create with AI**
    (créer avec l'IA) ou **Build manually** (construire à la main). Les chats
    existants peuvent aussi importer un fichier de carte.
 6. Vérifie la hiérarchie de travail, choisis un lieu de départ, active la carte
    et clique sur **Save** (enregistrer).
 7. Ouvre la **Story map** (carte de l'histoire) pendant le chat. Sélectionne une
-   destination accessible et envoie le tour suivant, ou décris le voyage
-   naturellement et laisse la réponse mettre le lieu à jour une fois l'arrivée accomplie.
+   destination accessible et envoie le tour suivant, ou établis directement le
+   déplacement de l'équipe dans ton message : Maps peut alors valider et
+   appliquer l'arrivée.
 8. Si tu veux, attribue des illustrations de la galerie aux lieux, ou utilise
    **Location artwork** (illustrations de lieu) pour vérifier et générer les images manquantes.
 
@@ -86,9 +113,9 @@ jour), installe cette mise à jour aussi. Effectue le redémarrage demandé avan
 d'utiliser le package.
 
 La page World Maps indique la version installée du package et son état de
-disponibilité, donne accès à la bibliothèque de cartes du monde du compte et affiche
-l'état de la carte du chat en cours. Installer le package le rend disponible,
-mais ne l'active pas dans tous les chats.
+disponibilité, donne accès à la bibliothèque de cartes du monde du compte, nomme
+le chat actuellement ciblé et affiche l'état de la carte de ce chat. Installer le
+package le rend disponible, mais ne l'active pas dans tous les chats.
 
 ### Roleplay
 
@@ -97,7 +124,10 @@ mais ne l'active pas dans tous les chats.
 3. Active **Enable Agents** (activer les agents).
 4. Sous **Tracker Agents** (agents de suivi), active **World Maps**.
 5. Ouvre **Edit world map** (modifier la carte du monde) ou la
-   bibliothèque **World map library** (bibliothèque de cartes du monde).
+   bibliothèque **World map library** (bibliothèque de cartes du monde). Sur les
+   versions de Marinara Engine compatibles, le globe de la barre supérieure sur
+   ordinateur ouvre la même bibliothèque ; sur mobile, sers-toi du globe dans le
+   panneau latéral **Chats**.
 
 La bibliothèque se comporte de la même façon, qu'elle soit ouverte depuis la
 page **Agents** principale ou depuis les **Chat Settings** du Roleplay. Utilise
@@ -110,22 +140,29 @@ Pendant la configuration de Game, choisis World Maps, puis sélectionne
 l'une de ses voies de configuration :
 
 - **Create with AI** prépare une hiérarchie générée, prête à être vérifiée.
-- **Use template** ouvre le sélecteur de modèles avant la création de la partie Game.
+- **Use template** ouvre la bibliothèque de mondes avant la création de la partie Game.
 - **Build manually** démarre sur une hiérarchie vierge et modifiable.
 
-Après avoir choisi **Use template**, sélectionne un modèle précis et confirme-le.
-La configuration crée une copie de travail appartenant à la partie Game pour que
-tu la vérifies ; elle ne modifie jamais le modèle du compte. Les lieux du modèle
-sélectionné deviennent le monde de départ hiérarchique. Aucune carte de Game
-classique de repli ne vient prendre sa place.
+Après avoir choisi **Use template**, le sélecteur affiche d'abord
+**Shared worlds**, puis **Independent templates** (modèles indépendants) :
+
+- **Use shared world** relie la nouvelle partie Game à ce monde canonique
+  appartenant au compte. La partie Game garde malgré tout son propre lieu
+  actuel, son historique, ses instantanés, ses liaisons et ses découvertes non
+  publiées.
+- **Use template** crée une copie de travail appartenant à la partie Game, pour
+  que tu la vérifies. Elle ne modifie jamais le modèle du compte.
+
+Les lieux de la ressource sélectionnée deviennent le monde de départ
+hiérarchique. Aucune carte de Game classique de repli ne vient prendre sa place.
 
 Autre option : ajouter World Maps plus tard à une partie Game existante
 depuis **Chat Settings → Agents**.
 
 ## Créer et réutiliser des modèles de carte
 
-Ouvre **Agents → World Maps → Open map templates** (ouvrir les modèles de
-carte). Les modèles appartiennent au compte et non à un seul chat : ils
+Ouvre **World Maps → Open world library** (ouvrir la bibliothèque de mondes).
+Les modèles appartiennent au compte et non à un seul chat : ils
 conviennent donc aux univers de fandom réutilisables, aux cadres de campagne,
 aux donjons, aux villes ou à tes cartes de départ personnelles.
 
@@ -162,11 +199,11 @@ enregistrée et choisis **Make shared**. Cette dernière option fait passer les
 illustrations du chat référencées dans la galerie globale, crée le monde
 appartenant au compte, puis y relie le chat d'origine.
 
-Choisis **Link to chat** pour y rattacher un chat ouvert. Le lieu actuel et tous
-les identifiants de lieu déjà utilisés par l'historique de campagne doivent
-exister dans le monde partagé. Sinon, utilise **Independent copy** (copie
-indépendante), ou commence par migrer la carte actuelle du chat vers un nouveau
-monde partagé.
+Choisis **Link to chat** pour y rattacher le chat indiqué par la bibliothèque
+comme chat ciblé. Le lieu actuel et tous les identifiants de lieu déjà utilisés
+par l'historique de campagne doivent exister dans le monde partagé. Sinon,
+utilise **Independent copy** (copie indépendante), ou commence par migrer la
+carte actuelle du chat vers un nouveau monde partagé.
 
 Les chats reliés ne partagent que la définition de la carte et les illustrations
 de la galerie globale. Ils ne partagent ni les messages, ni les lieux actuels,
@@ -175,18 +212,20 @@ carte de Game, ni les connexions aux fournisseurs, ni les identifiants.
 
 Les modifications et les découvertes faites dans un chat relié sont enregistrées
 comme un brouillon non publié, propre à ce chat. Elles ne changent ni le monde
-canonique ni les autres chats tant que tu n'as pas choisi **Publish changes**
-(publier les modifications). Autre option : **Discard** (abandonner) jette le
-brouillon, et **Fork independent** (se séparer en copie indépendante) détache le
-chat en lui laissant sa version du moment. Si le monde canonique change alors
-qu'un brouillon est en attente, Maps signale un conflit et impose une séparation
-ou un abandon, plutôt que d'écraser une version en silence.
+canonique ni les autres chats tant que tu n'as pas choisi **Publish**. Autre
+option : **Discard** (abandonner) jette le brouillon, et **Detach and keep copy**
+(détacher en gardant une copie) met fin au partage en laissant au chat sa version
+du moment. Si le monde canonique change alors qu'un brouillon est en attente,
+Maps signale un conflit et impose un détachement ou un abandon, plutôt que
+d'écraser une version en silence.
 
 Modifier un monde partagé depuis la bibliothèque met à jour directement la
-définition canonique. Les lieux utilisés par des chats reliés ne peuvent pas
-être supprimés : archive-les pour que leurs identifiants stables restent
-disponibles. Un monde partagé ne peut pas non plus être supprimé tant que tous
-les chats reliés ne sont pas séparés ou reliés ailleurs.
+définition canonique. L'éditeur de monde partagé ne propose pas de suppression
+définitive des lieux : archive-les pour que leurs identifiants stables restent
+disponibles. Un chat relié ne peut pas non plus supprimer définitivement un lieu
+tant que tu n'as pas choisi **Detach and keep copy**. Un monde partagé lui-même
+ne peut pas être supprimé tant que tous les chats reliés ne sont pas détachés ou
+reliés ailleurs.
 
 Les mondes partagés et les modèles conservent des références vers les
 illustrations de la galerie globale, sans copier le fichier image dans chaque
@@ -195,14 +234,41 @@ qu'un modèle enregistré, un monde partagé, une carte de chat indépendante ou
 brouillon d'un chat relié y renvoie encore. Retire d'abord ces liens quand tu
 veux vraiment supprimer le fichier lui-même.
 
+## Détacher, remplacer ou repartir de zéro
+
+Ces actions répondent à des questions différentes :
+
+- Pour mettre fin au partage en conservant la hiérarchie actuelle du chat relié,
+  enregistre ou abandonne les modifications en cours dans l'éditeur, puis
+  choisis **Detach and keep copy**. Le chat devient indépendant et ne reçoit
+  plus les mises à jour canoniques.
+- Pour rester en partage tout en changeant de monde canonique, ouvre la
+  bibliothèque de mondes pour le chat ciblé indiqué, puis choisis
+  **Link to chat** sur le monde de remplacement. Les vérifications de
+  compatibilité avec l'historique s'appliquent toujours.
+- Pour remplacer la carte d'un chat indépendant, ouvre son éditeur et choisis
+  **Replace / start over** (remplacer ou repartir de zéro). Tu peux d'abord
+  enregistrer un modèle ou exporter une sauvegarde, puis choisir
+  **Create with AI**, **Use template or shared world**, **Import map file** ou
+  **Start blank**.
+- Pour donner à un chat une carte sans rapport, utilise le même parcours de
+  remplacement. Retirer puis remettre l'agent ne réinitialise pas la carte.
+
+Un remplacement reste une copie de travail tant que tu n'as pas cliqué sur
+**Save**. Enregistrer un remplacement annule la destination ou l'itinéraire en
+attente. Dès que l'historique des messages renvoie à des identifiants de lieu,
+Maps peut refuser un remplacement sans rapport pour préserver les fils d'Ariane
+historiques. Dans ce cas, garde une copie indépendante et étends ou archive la
+carte existante.
+
 ## Comprendre l'éditeur de carte
 
 Sur ordinateur, l'éditeur affiche trois panneaux. Sur un écran étroit, passe
 d'un onglet à l'autre entre **Hierarchy** (hiérarchie), **Local** (local) et
 **Details** (détails).
 
-- **Hierarchy** affiche l'arbre complet. Sélectionner un lieu ouvre sa
-  modification. Le bouton **Enter** (entrer) change la partie de la hiérarchie
+- **Hierarchy** affiche l'arbre complet. Sélectionner un lieu permet de le
+  modifier. Le bouton **Enter** (entrer) change la partie de la hiérarchie
   affichée ; il ne déplace pas l'histoire.
 - **Local** affiche les enfants immédiats du lieu actuel, sous forme de liste,
   de carte positionnée ou de couches ordonnées.
@@ -241,8 +307,8 @@ Les liens directs peuvent relier n'importe quels lieux valides de la hiérarchie
 un ferry entre deux villes, un escalier entre certains étages, un portail entre
 deux mondes ou un passage secret entre des pièces de bâtiments différents.
 
-Pour une tour de 25 étages, modélise normalement les étages comme des frères et
-sœurs sous une même tour, plutôt qu'en une chaîne de parents profonde de 25
+Pour une tour de 25 étages, modélise normalement les étages comme des lieux
+frères sous une même tour, plutôt qu'en une chaîne de parents profonde de 25
 niveaux. Les cartes acceptent jusqu'à 500 lieux et 20 niveaux de hiérarchie.
 
 ## Rédiger ou étendre une carte avec l'IA
@@ -288,11 +354,11 @@ complet par des données sans rapport.
 
 ## Construire ou modifier une carte à la main
 
-Sur une carte vide, clique sur **Build manually**. Maps crée un premier lieu
-large. Sélectionne-le dans la hiérarchie, puis utilise :
+Sur une carte vide, clique sur **Build manually**. Maps crée un premier lieu de
+départ très général. Sélectionne-le dans la hiérarchie, puis utilise :
 
 - **Add child** (ajouter un enfant) pour un lieu situé à l'intérieur du lieu sélectionné ;
-- **Add sibling** (ajouter un voisin) pour un lieu placé à côté, sous le même parent ;
+- **Add sibling** (ajouter un frère) pour un lieu placé à côté, sous le même parent ;
 - **Duplicate** (dupliquer) pour copier un sous-arbre de lieux avant de le modifier ;
 - **Archive** (archiver) pour retirer un lieu sans effacer les références historiques.
 
@@ -327,13 +393,16 @@ et non une mémoire qui se met à jour toute seule. Sers-t'en pour les secrets,
 l'ambiance, les dangers permanents, les règles locales ou les faits qui ne
 doivent être actifs qu'à cet endroit précis. Place ce qui doit absolument
 parvenir au modèle dans la description publique ou dans la mémoire privée pour
-le modèle, plutôt que de compter sur le seul résumé de conscience du lieu.
+le modèle, plutôt que de compter sur ce seul résumé.
 
 ## Se déplacer pendant une histoire
 
-Maps prend en charge les voyages explicites, les itinéraires planifiés et les
-arrivées narrées validées. Le déplacement est enregistré avec le tour : le lieu
-suit donc l'historique de messages sélectionné et le swipe.
+Maps prend en charge les voyages mis en attente, les itinéraires planifiés et
+les arrivées validées menées par l'utilisateur. Le déplacement est enregistré
+avec le tour : le lieu suit donc l'historique de messages sélectionné et le
+swipe. Redémarrer Marinara n'est pas censé réinitialiser le lieu actuel ; passer
+à une autre branche de messages ou à un autre swipe restaure l'instantané
+spatial enregistré avec cet historique sélectionné.
 
 ### Mettre une destination explicite en attente
 
@@ -359,37 +428,65 @@ relations parent/enfant et des liens disponibles contient un chemin, Maps
 affiche l'itinéraire le plus court et propose **Plan route** (planifier
 l'itinéraire).
 
-Un itinéraire met son premier pas en attente. Chaque tour suivant valide un pas
-et met le suivant en attente, jusqu'à la cible. Tu peux annuler l'itinéraire à
-tout moment. Si la carte ou le lieu actuel change de façon inattendue,
-l'itinéraire passe en **Needs review** au lieu de deviner un nouveau chemin.
+Un itinéraire met son premier pas en attente. Chaque tour que tu envoies ensuite
+valide un pas et met le suivant en attente, jusqu'à la cible ; il n'existe pas
+de bouton d'avance séparé. Tu peux annuler l'itinéraire à tout moment. Si la
+carte ou le lieu actuel change de façon inattendue, l'itinéraire passe en
+**Needs review** au lieu de deviner un nouveau chemin.
 
-Par exemple, aller de Floor 1 à Floor 25, son voisin, demande normalement un
+Par exemple, aller de Floor 1 à Floor 25, son lieu frère, demande normalement un
 tour pour sortir vers la tour et un autre pour entrer dans Floor 25. Un lien
 direct peut réduire ce trajet à un seul pas.
 
-### Suivre un voyage narré et découvrir de nouveaux lieux
+### Suivre les déplacements menés par l'utilisateur et découvrir de nouveaux lieux
 
-Le modèle reçoit des instructions encadrées pour les arrivées accomplies :
+Le dernier message de l'utilisateur fait autorité pour les changements
+automatiques de carte :
 
-- Si la réponse arrive réellement dans un lieu connu et actif, Maps peut y
-  déplacer le lieu actuel. Si l'histoire a révélé un nouveau chemin, Maps
-  enregistre une connexion directe disponible.
-- Si la réponse arrive réellement dans un lieu durable encore inconnu, Maps peut
-  l'ajouter comme enfant ou comme lieu connecté, s'y déplacer et conserver le
-  chemin du retour.
-- Les intentions, les simples mentions, les voyages ratés ou inachevés, les
-  campements temporaires, les couloirs et les véhicules ne créent pas de lieu et
-  ne déplacent pas le marqueur.
+- Un déplacement direct de l'équipe suivie par l'histoire, au présent ou à
+  l'impératif, établit l'arrivée. "We go to the Kitchen" ou "She moves into the
+  outdoor section; we follow her" peuvent mener vers les lieux connus
+  correspondants.
+- L'arrivée explicite dans un lieu marquant, nommé, durable et où l'on peut
+  revenir, ou sa découverte, peut l'ajouter au monde. "We discover a hidden
+  room" peut créer ce lieu et y entrer.
+- La réponse visible peut en raconter la conséquence, mais la narration de l'IA
+  seule n'autorise jamais un déplacement ni un nouveau lieu.
+- Les intentions futures, les voyages ratés ou inachevés, les simples mentions,
+  les déplacements de PNJ seuls, les lieux imaginaires, les campements
+  temporaires, les couloirs, les véhicules et les autres détails passagers ne
+  créent ni ne déplacent aucun lieu.
 
-Par exemple, après un message de l'utilisateur disant "Let's get quests from the
-Quest Hall", une réponse qui mène l'arrivée à son terme peut faire passer l'état
-suivant de l'histoire à Quest Hall. "We should visit the Quest Hall later" doit
-laisser le lieu actuel inchangé.
+Le modèle doit encore interpréter la formulation de l'utilisateur et produire
+une directive Maps cachée, que l'application valide. Les modèles de langage ne
+réagissent pas tous pareil à une prose ambiguë. Utilise **Set destination**
+(définir la destination) pour un déplacement certain au tour suivant, ou
+**Set current story location** (définir le lieu d'histoire actuel) pour corriger
+un état déjà enregistré.
 
-Ce comportement est validé par l'application, mais c'est encore au modèle
-d'identifier que l'arrivée a bien eu lieu. Utilise **Set destination** (définir
-la destination) quand tu as besoin d'un déplacement certain.
+Une arrivée validée menée par l'utilisateur peut contourner la règle du pas
+unique : Maps enregistre au besoin un lien direct disponible depuis le lieu
+actuel. Si une destination était déjà en attente, ce déplacement est d'abord
+enregistré avec le message de l'utilisateur, puis l'arrivée menée par
+l'utilisateur devient le lieu final sur la réponse de l'assistant ; la
+destination à usage unique est effacée. Sur un itinéraire planifié, une arrivée
+au pas prévu fait avancer l'itinéraire normalement. Une arrivée ailleurs, y
+compris un saut vers un pas plus lointain, place l'itinéraire en
+**Needs review** : Maps ne réécrit pas le plan en silence. Annule ou replanifie
+cet itinéraire depuis le lieu actuel qui en résulte.
+
+### Lieu de départ ou lieu d'histoire actuel
+
+Le **lieu de départ** est le lieu par défaut au début d'une nouvelle histoire.
+Le **lieu d'histoire actuel** est l'endroit où se trouve ce chat précis en ce
+moment. Changer le lieu de départ ne répare pas la position actuelle d'un chat
+existant.
+
+Pour corriger un état enregistré, sélectionne un lieu actif dans le panneau
+**Details** de l'éditeur et choisis **Set current story location**. C'est une
+correction administrative, pas un voyage narré. Elle prend effet quand tu
+cliques sur **Save**, annule la destination ou l'itinéraire en attente, et ne
+réécrit pas les messages précédents.
 
 ### Voyager en Roleplay
 
@@ -411,10 +508,10 @@ La mention **You are here** (tu es ici) signale le lieu d'histoire actuel.
 Parcourir, recentrer et examiner ne déplacent pas l'équipe. Mets une destination
 ou un itinéraire en attente, puis envoie le tour de Game suivant.
 
-La réponse générée par Game peut elle aussi mettre à jour le lieu hiérarchique
-après une arrivée narrée jusqu'au bout. Les détails du lieu actuel ancrent alors
-le GM (le maître du jeu), l'équipe, l'art de la scène et la référence de
-Storyboard éligible.
+Quand le dernier message de l'utilisateur établit l'arrivée de l'équipe, la
+réponse générée par Game peut émettre la commande cachée qui met à jour le lieu
+hiérarchique. Les détails du lieu actuel ancrent alors le GM (le maître du jeu),
+l'équipe, les illustrations de la scène et la référence de Storyboard éligible.
 
 ## Carte hiérarchique du monde ou carte de Game classique
 
@@ -445,7 +542,7 @@ indépendants, même quand ils réutilisent la même image de la galerie.
 | Illustration                 | Rôle                                                                                                                    | Envoyée à la génération d'images ?                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **Location reference image** | Ancre l'identité visuelle du lieu actuel exact. Choisis une illustration du chat ou de la galerie globale partagée, ou crée-la avec l'IA. | Oui, quand **Use for Roleplay illustrations and Game storyboards** est activé et que la demande est éligible. |
-| **Child map background**     | Apparaît derrière les lieux enfants déplaçables d'un parent en présentation Map. Chaque couche de carte a le sien.      | Non. Uniquement pour l'affichage.                                                                          |
+| **Child map background**     | Apparaît derrière les lieux enfants déplaçables d'un parent en présentation Map. Chaque couche de carte peut avoir le sien. | Non. Uniquement pour l'affichage.                                                                          |
 
 Les références de personnage ou de persona conservent qui est présent ; la
 référence de lieu conserve où se déroule la scène. Quand le fournisseur le
@@ -495,9 +592,9 @@ référence ou d'arrière-plan de carte d'enfants.
 6. Examine les illustrations générées dans la carte de travail et clique sur **Save**.
 
 Chaque image manquante représente une requête distincte chez le fournisseur. Les
-grands mondes peuvent être lents ou coûteux : la revue reste donc défilable et
-garde le nombre de demandes sous les yeux. Une illustration existante est
-réutilisée sans nouvelle requête quand c'est possible. Une nouvelle image
+grands mondes peuvent être lents ou coûteux : la revue peut donc défiler
+entièrement et garde le nombre de demandes sous les yeux. Une illustration
+existante est réutilisée sans nouvelle requête quand c'est possible. Une image
 devient la référence du lieu, ainsi que l'arrière-plan de la carte d'enfants
 quand cette carte en a besoin.
 
@@ -545,10 +642,11 @@ Personnalisations fréquentes :
   modèle intégré.
 
 Le profil de style **Engine** et les réglages d'image positifs et négatifs
-globaux s'appliquent après ce modèle. Ils restent liés au workflow d'images et
-d'illustration partagé, ce ne sont pas des réglages propres à Maps. S'il reste
-du texte inattendu dans le prompt négatif, examine le réglage d'image négatif
-global ainsi que le champ modifiable de la revue.
+globaux s'appliquent après ce modèle. Ils font partie du workflow partagé de
+l'agent **Illustrator** et de la génération d'images, ce ne sont pas des
+réglages propres à Maps. S'il reste du texte inattendu dans le prompt négatif,
+examine le réglage d'image négatif global ainsi que le champ modifiable de la
+revue.
 
 ## Rattacher du lore aux lieux
 
@@ -562,11 +660,17 @@ Pour rattacher du lore à l'exécution, sélectionne le lieu, ouvre **Linked lor
 (lore rattaché), cherche parmi les entrées disponibles, rattache celles que tu
 veux et enregistre.
 
+Ouvrir une entrée de lorebook rattachée fait quitter l'éditeur de carte.
+Enregistre d'abord la carte si tu veux garder les autres modifications en cours,
+ou confirme en connaissance de cause qu'elles peuvent être abandonnées. World
+Maps 1.2.5 prévient avant que cette action ne fasse perdre des modifications de
+carte non enregistrées.
+
 Les entrées rattachées ne passent pas du parent à l'enfant. Le lore rattaché à
 Brinewatch ne s'active pas à Tideglass Inn s'il n'y est pas rattaché lui aussi.
 
 Le lore du lieu actuel n'a pas besoin d'une correspondance de mot-clé, mais il
-ne contourne pas pour autant les réglages des lorebooks. Les livres et les
+ne contourne pas pour autant les réglages des lorebooks. Les lorebooks et les
 entrées désactivés ou exclus du chat restent indisponibles, et les conditions,
 le moment, la probabilité et les budgets de tokens des entrées continuent de
 s'appliquer. Les références manquantes restent visibles dans l'éditeur, ce qui
@@ -593,7 +697,7 @@ utiliser la connexion du chat en cours. Ces réglages ne remplacent pas la
 redéfinition **Maps location artwork**, distincte, qui se trouve dans les
 réglages de génération globaux.
 
-Ces contrôles s'adressent à la personnalisation avancée. Conserve les variables
+Ces réglages sont réservés à la personnalisation avancée. Conserve les variables
 obligatoires et sers-toi des aperçus résolus avant d'enregistrer.
 
 ## Importer, exporter et archiver sans risque
@@ -624,7 +728,24 @@ L'archivage préserve les anciennes références. Avant d'archiver un lieu :
 - choisis un autre lieu de départ actif si nécessaire ;
 - choisis un remplaçant actif s'il s'agit du lieu actuel à l'exécution.
 
-Les lieux archivés se restaurent depuis le panneau **Details**.
+Les lieux archivés se restaurent depuis le panneau **Details**. World Maps 1.2.5
+propose aussi **Delete permanently** (supprimer définitivement) pour un lieu
+archivé ou une branche entièrement archivée, quand le retrait ne pose pas de
+risque. L'éditeur désactive cette action quand le lieu est le lieu de départ ou
+le lieu d'histoire actuel enregistré, qu'il apparaît dans l'historique des
+messages, qu'il porte une liaison avec la carte de Game, qu'il fait partie d'une
+destination ou d'un itinéraire en attente, ou qu'il appartient à un chat encore
+relié à un monde partagé. Les éditeurs de monde partagé et de modèle ne
+proposent pas la suppression définitive des lieux. Résous d'abord la dépendance
+signalée, détache le chat relié quand c'est pertinent, ou laisse le lieu archivé.
+
+La suppression définitive retire le lieu du brouillon de travail et nettoie ses
+références de hiérarchie et de liens directs quand tu cliques sur **Save**.
+Fermer sans enregistrer annule quand même la suppression. Les lieux supprimés
+n'apparaissent plus dans les exports ; les lieux archivés qui restent protégés
+continuent d'être exportés, pour que leurs identifiants stables puissent
+soutenir l'historique et les données liées. Ne modifie pas le JSON exporté pour
+contourner ces protections.
 
 ## Dépannage
 
@@ -634,18 +755,29 @@ Vérifie que le package est installé et que Marinara a bien été redémarré. 
 chat actif doit être un chat Roleplay ou Game. Active **Enable Agents**, puis
 active **World Maps** sous **Tracker Agents**.
 
-### Add to chat n'apparaît pas dans la bibliothèque de modèles
+### Add to chat ou Link to chat n'apparaît pas dans la bibliothèque de mondes
 
 Ouvre un chat Roleplay ou Game pris en charge avant d'ouvrir la bibliothèque. La
-bibliothèque affiche **Add to chat** aussi bien depuis la page World Maps
-principale que depuis les réglages de ce chat. Pendant la configuration de Game,
-l'action équivalente est **Use template**.
+bibliothèque nomme le chat ciblé et affiche **Add to chat** pour les modèles ou
+**Link to chat** pour les mondes partagés. Pendant la configuration de Game, les
+actions équivalentes sont **Use template** et **Use shared world**.
+
+Si la bibliothèque liste des mondes partagés pendant la configuration de Game
+sans afficher **Use shared world**, le navigateur fait peut-être encore tourner
+un client de package antérieur à la mise à jour. Dans chaque éditeur de carte
+ouvert, enregistre la carte ou abandonne son brouillon en connaissance de cause,
+puis ferme l'éditeur. Enregistre le travail en cours ailleurs, actualise Marinara
+une fois en vidant le cache, puis rouvre la configuration de Game. Les versions
+récentes de Marinara Engine signalent explicitement quand une mise à jour de
+package impose cette actualisation.
 
 ### La configuration de Game a utilisé les mauvais lieux ou des lieux de repli
 
-Choisis **Use template**, sélectionne un modèle concret dans le sélecteur et
-confirme-le avant de terminer la configuration de Game. Vérifie la copie de
-travail appartenant à la partie Game et enregistre-la. Le modèle du compte reste inchangé.
+Choisis **Use template**, puis confirme soit **Use template** pour une copie
+indépendante, soit **Use shared world** pour un lien canonique, avant de terminer
+la configuration de Game. Vérifie la carte de Game et enregistre-la. Un modèle
+reste inchangé ; une partie Game reliée garde ses modifications non publiées tant
+que tu n'as pas choisi **Publish**.
 
 ### La carte ne peut pas être activée
 
@@ -662,16 +794,44 @@ lore, sélectionne au moins un lorebook activé et non exclu.
 
 ### Le lieu actuel n'a pas suivi un message
 
-Le déplacement automatique exige que la réponse générée mène une arrivée à son
-terme et produise une directive Maps cachée valide. Une intention, une
-discussion, un voyage raté ou un lieu de passage ne déplacent pas le marqueur.
-Utilise **Set destination** pour un déplacement certain au tour suivant.
+Le déplacement automatique exige que le dernier message de l'utilisateur
+établisse directement l'arrivée de l'équipe suivie par l'histoire, et que le
+modèle produise une directive Maps cachée valide. La narration de l'IA seule,
+une intention, une discussion, un voyage raté, un déplacement de PNJ seul ou un
+lieu de passage ne déplacent pas le marqueur. Essaie une formule directe, par
+exemple "We go to the Kitchen." Utilise **Set destination** pour un déplacement
+certain au tour suivant.
+
+### Le lieu actuel a changé après la réouverture du chat
+
+Vérifie quelle branche de messages et quel swipe sont sélectionnés : le lieu
+actuel suit l'instantané spatial enregistré avec cet historique. Si l'historique
+sélectionné est le bon mais que le marqueur ne l'est pas, ouvre l'éditeur de
+carte, sélectionne le lieu actif correct, choisis **Set current story location**
+et clique sur **Save**.
 
 ### Une destination ou un itinéraire affiche Needs review
 
 La révision de la carte ou le lieu actuel a changé après la mise en attente du
 déplacement. Ouvre la carte de l'histoire, vérifie le chemin actuel et
-sélectionne à nouveau la destination ou l'itinéraire.
+sélectionne à nouveau la destination ou l'itinéraire. Si la destination affichée
+est toujours en attente, annule-la avant de la sélectionner de nouveau.
+
+### Un itinéraire planifié n'avance pas
+
+Chaque tour envoyé doit valider le pas suivant affiché et mettre en attente celui
+d'après. Il n'existe pas de commande d'avance séparée. Si un tour terminé ne fait
+pas avancer l'itinéraire, annule-le et replanifie-le depuis le lieu actuel. Si le
+lieu enregistré est déjà faux, utilise **Set current story location** puis
+**Save** : cette correction administrative efface l'itinéraire périmé.
+
+### Ce chat doit utiliser une carte complètement différente
+
+Ouvre l'éditeur de carte et choisis **Replace / start over**. Conserve d'abord un
+modèle ou un export si nécessaire, puis crée, importe, copie ou relie la carte de
+remplacement. Si le chat est relié et doit garder sa hiérarchie actuelle,
+commence par **Detach and keep copy**. Retirer puis remettre World Maps n'efface
+pas sa carte.
 
 ### Un lieu éloigné ne peut pas être sélectionné
 
@@ -732,4 +892,4 @@ l'entrée et le lorebook sont activés, et que le lorebook n'est pas exclu du ch
 - [Lorebooks](../lorebooks/overview.md)
 - [Mode Roleplay : premiers pas](../roleplay/getting-started.md)
 - [Game Mode : premiers pas](../game/getting-started.md)
-- [Game Mode : carte, temps et météo](../game/map-time-weather.md)
+- [Game Mode : carte, heure et météo](../game/map-time-weather.md)
