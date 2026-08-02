@@ -159,7 +159,7 @@ Extrahiert dauerhafte Erinnerungen aus Chat-Zusammenfassungen, Charakteraufzeich
 - **Wo es funktioniert**: Conversation, Roleplay und Game.
 - **Wichtige Einstellungen**: Aktivierung, Token-Budget für den Abruf (128–16.384), Höchstzahl abgerufener Abschnitte (1–100), Bewertungsschwelle, Kontext der letzten Nachrichten (1–20), Abrufstil sowie semantische, lexikalische, Graph- und Schlüsselwortgewichtung, Einbeziehung erledigter Erinnerungen, Abruf-Präambel, Reasoning und Ausführlichkeit der Extraktion, Generierungsgrenzen, Quellengrenzen, Prompt-Vorlagen, KI-Schlüsselwortextraktion und Extraktion im Game Mode.
 - **Datenlebenszyklus**: Mit den Backup-Bedienelementen unter Memory Settings exportierst oder ersetzt du Speicher, Entwürfe und Einstellungen. Delete all data löscht Erinnerungen, Entwürfe, Aktivität und abgeleitete Indizes dauerhaft, behält aber die Einstellungen. Beim Deinstallieren bleibt der Long-Term-Memory-Speicher für eine spätere Neuinstallation erhalten. Installation, Aktualisierung und Entfernung erfordern einen Neustart von Marinara.
-- **Kompatibilität**: Engine `2.3.3` bis ausschließlich `2.4.0`. Das Paket verwendet die Berechtigungen `agent-runtime`, `chat-read`, `routes`, `storage` und `ui`.
+- **Kompatibilität**: Engine `2.3.5` bis ausschließlich `4.0.0`. Das Paket verwendet die Berechtigungen `agent-runtime`, `chat-read`, `chat-write`, `routes`, `storage` und `ui`.
 
 ### Illustrator
 
@@ -216,6 +216,15 @@ Hängt nach jeder Antwort anklickbare „Was tust du?“-Schaltflächen an – S
 - **Phase**: Post-Processing.
 - **Wo er funktioniert**: Roleplay.
 - **Wichtige Einstellungen**: **Edit** schreibt die Auswahlmöglichkeiten um, **Re-roll** erzeugt neue.
+
+### Storyboard
+
+Plant Storyboards als Standbilder oder Animationen – aus abgeschlossenen Roleplay-Wortwechseln und aus der Erzählung im Game Mode. Planung und anbieterabhängige Formatierung laufen getrennt. So bleiben Chronologie der Vorlage, Identität der Charaktere und der gewählte Bildstil über alle erzeugten Keyframes und Videos hinweg erhalten.
+
+- **Integration**: Agent-Paket; Game und Roleplay greifen über die Storyboard-Integration der Engine auf die Prompt-Vorlagen und Einstellungen des installierten Pakets zu.
+- **Wo es funktioniert**: Roleplay und Game.
+- **Wichtige Einstellungen**: Planer für Standbild oder Animation, Bild- und Video-Verbindungen, Anzahl der Keyframes, Dauer, Anzeigemodus, Umgang mit Charakterreferenzen, Episoden- und Stilvorlagen für Roleplay sowie Illustrations- und Videovorlagen für Game.
+- **Kompatibilität**: Engine `2.3.5` bis ausschließlich `4.0.0`. Das Paket verwendet die Berechtigungen `agent-runtime`, `chat-read`, `prompt-context`, `storage` und `ui` und braucht keinen Neustart.
 
 ### Calls
 

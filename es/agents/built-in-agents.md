@@ -159,7 +159,7 @@ Extrae recuerdos duraderos de los resúmenes del chat, los registros de personaj
 - **Dónde funciona**: Conversation, Roleplay y Game.
 - **Ajustes clave**: activación, presupuesto de tokens de recuperación (128–16.384), cantidad máxima de fragmentos recuperados (1–100), umbral de puntuación, contexto de mensajes recientes (1–20), estilo de recuperación y pesos semántico, léxico, de grafo y de palabras clave, inclusión de recuerdos resueltos, preámbulo de recuperación, razonamiento y nivel de detalle de la extracción, límites de generación, límites de fuentes, plantillas de prompt, extracción de palabras clave mediante IA y extracción en Game Mode.
 - **Ciclo de vida de los datos**: usa los controles de copia de seguridad de Memory Settings para exportar o sustituir el almacén, los borradores y los ajustes. Delete all data elimina de forma permanente los recuerdos, los borradores, la actividad y los índices derivados, pero conserva los ajustes. Al desinstalar el paquete se conserva el almacén de Long-Term Memory para una instalación posterior. Instalarlo, actualizarlo o eliminarlo requiere reiniciar Marinara.
-- **Compatibilidad**: Engine `2.3.3` hasta antes de `2.4.0`. El paquete usa los permisos `agent-runtime`, `chat-read`, `routes`, `storage` y `ui`.
+- **Compatibilidad**: Engine `2.3.5` hasta antes de `4.0.0`. El paquete usa los permisos `agent-runtime`, `chat-read`, `chat-write`, `routes`, `storage` y `ui`.
 
 ### Illustrator
 
@@ -216,6 +216,15 @@ Añade botones de elección "What will you do?" (¿qué harás?) en los que pued
 - **Fase**: Post-Processing.
 - **Dónde funciona**: Roleplay.
 - **Ajustes clave**: **Edit** (editar) para reescribir las elecciones y **Re-roll** (volver a generar) para generar unas nuevas.
+
+### Storyboard
+
+Planifica storyboards (secuencias de viñetas) visuales fijos o animados a partir de intercambios de Roleplay ya terminados y de la narración de Game. La planificación y el formato adaptado a cada proveedor van por separado, y así se conservan la cronología de la fuente, la identidad de los personajes y el estilo visual elegido en los fotogramas clave y los videos generados.
+
+- **Integración**: paquete de agente; Game y Roleplay usan las plantillas de prompt y los ajustes del paquete instalado a través de la integración anfitriona de Storyboard del Engine.
+- **Dónde funciona**: Roleplay y Game.
+- **Ajustes clave**: elegir planificadores de imagen fija o de animación, conexiones de imagen y de video, cantidad de fotogramas clave, duración, modo de visualización, manejo de las referencias de personaje, plantillas de episodio y de estilo de Roleplay, y plantillas de ilustración y de video de Game.
+- **Compatibilidad**: Engine `2.3.5` hasta antes de `4.0.0`. El paquete usa los permisos `agent-runtime`, `chat-read`, `prompt-context`, `storage` y `ui`, y no requiere reiniciar.
 
 ### Calls
 

@@ -43,8 +43,8 @@
     },
     {
       "path": "agents/built-in-agents.md",
-      "sha256": "3e992eaea3a0e0fce56fd44279aeeda530e26e098c7b0af488a90fa6a35086c5",
-      "bytes": 21071
+      "sha256": "6ef3967a8a8a835da1f3293cf6a5dd600c652f775eb4b319d10c12175fc89631",
+      "bytes": 22150
     },
     {
       "path": "agents/custom-agents.md",
@@ -413,7 +413,7 @@
     },
     {
       "path": "home/professor-mari.md",
-      "sha256": "80b69cce3393c1e297970bfd370bfe59d0e414ea979e017bb0446934c71a8359",
+      "sha256": "5c01ac60f3a443e83a01d08914391e8fcf58d80be26677605c04486f7a24930f",
       "bytes": 14792
     },
     {

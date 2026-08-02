@@ -159,7 +159,7 @@ Wyciąga trwałe wspomnienia ze streszczeń czatu, zapisów o postaciach i loreb
 - **Gdzie działa**: Conversation, Roleplay i Game.
 - **Najważniejsze ustawienia**: włączenie, limit tokenów przywołania (128-16,384), maksymalna liczba przywołanych fragmentów (1-100), próg oceny, kontekst ostatnich wiadomości (1-20), styl przywołania oraz wagi semantyczna, leksykalna, grafowa i słów kluczowych, dołączanie rozstrzygniętych wspomnień, wstęp do przywołania, rozumowanie i szczegółowość wyciągania danych, limity generowania, limity źródeł, szablony promptów, wyciąganie słów kluczowych przez AI oraz wyciąganie danych w trybie Game.
 - **Cykl życia danych**: do eksportu lub zastąpienia skarbca, wersji roboczych i ustawień służą przyciski kopii zapasowej w sekcji Memory Settings. Usunięcie wszystkich danych trwale kasuje wspomnienia, wersje robocze, aktywność i indeksy pochodne, ale zachowuje ustawienia. Odinstalowanie pakietu zachowuje skarbiec Long-Term Memory na wypadek ponownej instalacji. Instalacja, aktualizacja i usunięcie wymagają ponownego uruchomienia aplikacji Marinara Engine.
-- **Zgodność**: silnik od wersji `2.3.3` do wersji sprzed `2.4.0`. Pakiet korzysta z uprawnień `agent-runtime`, `chat-read`, `routes`, `storage` i `ui`.
+- **Zgodność**: silnik od wersji `2.3.5` do wersji sprzed `4.0.0`. Pakiet korzysta z uprawnień `agent-runtime`, `chat-read`, `chat-write`, `routes`, `storage` i `ui`.
 
 ### Illustrator
 
@@ -216,6 +216,15 @@ Dodaje po każdej odpowiedzi klikalne przyciski wyboru w stylu "What will you do
 - **Faza**: Post-Processing.
 - **Gdzie działa**: Roleplay.
 - **Najważniejsze ustawienia**: przycisk **Edit** przepisuje wybory, a **Re-roll** generuje nowe.
+
+### Storyboard
+
+Planuje statyczne albo animowane storyboardy na podstawie zakończonych wymian w trybie Roleplay i narracji w trybie Game. Osobne planowanie i formatowanie dopasowane do dostawcy pilnują chronologii źródła, tożsamości postaci oraz wybranego stylu wizualnego w generowanych klatkach kluczowych i filmach.
+
+- **Integracja**: pakiet agenta – tryb Game i Roleplay korzystają z szablonów promptów i ustawień zainstalowanego pakietu przez wbudowaną integrację Storyboard w silniku.
+- **Gdzie działa**: Roleplay i Game.
+- **Najważniejsze ustawienia**: wybór planera obrazów statycznych albo animacji, połączenia do obrazów i wideo, liczba klatek kluczowych, czas trwania, tryb wyświetlania, obsługa odniesień do postaci, szablony odcinka i stylu dla trybu Roleplay oraz szablony ilustracji i wideo dla trybu Game.
+- **Zgodność**: silnik od wersji `2.3.5` do wersji sprzed `4.0.0`. Pakiet korzysta z uprawnień `agent-runtime`, `chat-read`, `prompt-context`, `storage` i `ui`, a jego instalacja nie wymaga ponownego uruchomienia.
 
 ### Calls
 

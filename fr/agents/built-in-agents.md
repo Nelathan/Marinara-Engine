@@ -159,7 +159,7 @@ Extrait des souvenirs durables depuis les résumés de chat, les fiches de perso
 - **Où ça marche** : Conversation, Roleplay et Game.
 - **Réglages clés** : activation, budget de tokens du rappel (128-16 384), nombre maximum de fragments rappelés (1-100), seuil de score, contexte des messages récents (1-20), style de rappel et pondérations sémantique, lexicale, graphe et mots-clés, inclusion des souvenirs résolus, préambule de rappel, raisonnement et verbosité de l'extraction, limites de génération, limites de sources, modèles de prompt, extraction de mots-clés par l'IA, et extraction en Game Mode.
 - **Cycle de vie des données** : les contrôles de sauvegarde de Memory Settings servent à exporter ou remplacer le coffre, les brouillons et les réglages. La suppression de toutes les données efface définitivement les souvenirs, les brouillons, l'activité et les index dérivés, mais conserve les réglages. Désinstaller le package préserve le coffre Long-Term Memory en vue d'une réinstallation. L'installer, le mettre à jour ou le retirer demande un redémarrage de Marinara.
-- **Compatibilité** : moteur `2.3.3` jusqu'à, mais sans inclure, `2.4.0`. Le package utilise les permissions `agent-runtime`, `chat-read`, `routes`, `storage` et `ui`.
+- **Compatibilité** : moteur `2.3.5` jusqu'à, mais sans inclure, `4.0.0`. Le package utilise les permissions `agent-runtime`, `chat-read`, `chat-write`, `routes`, `storage` et `ui`.
 
 ### Illustrator
 
@@ -216,6 +216,15 @@ Ajoute après chaque réponse des boutons de choix cliquables "What will you do?
 - **Phase** : **Post-Processing**.
 - **Où ça marche** : Roleplay.
 - **Réglages clés** : **Edit** pour réécrire les choix et **Re-roll** pour en générer de nouveaux.
+
+### Storyboard
+
+Prépare des storyboards visuels, fixes ou animés, à partir des échanges Roleplay terminés et de la narration en Game Mode. La planification et la mise en forme adaptée au fournisseur sont séparées : la chronologie de la source, l'identité des personnages et le style visuel choisi restent intacts sur les images-clés et les vidéos générées.
+
+- **Intégration** : package d'agent ; Game et Roleplay utilisent les modèles de prompt et les réglages du package installé, via l'intégration hôte Storyboard du moteur.
+- **Où ça marche** : Roleplay et Game.
+- **Réglages clés** : choisis les planificateurs image fixe ou animation, les connexions image et vidéo, le nombre d'images-clés, la durée, le mode d'affichage, la gestion des références de personnage, les modèles d'épisode et de style pour Roleplay, et les modèles d'illustration et de vidéo pour Game.
+- **Compatibilité** : moteur `2.3.5` jusqu'à, mais sans inclure, `4.0.0`. Le package utilise les permissions `agent-runtime`, `chat-read`, `prompt-context`, `storage` et `ui`, et ne demande aucun redémarrage.
 
 ### Calls
 

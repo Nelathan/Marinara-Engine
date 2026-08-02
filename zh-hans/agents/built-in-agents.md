@@ -159,7 +159,7 @@ Knowledge Retrieval 的省钱替代方案。它不做摘要，而是读取世界
 - **适用范围**：Conversation(对话模式)、Roleplay 和 Game。
 - **主要设置**：启用开关、召回 Token 预算（128 到 16,384）、最大召回片段数（1 到 100）、分数阈值、近期消息上下文（1 到 20）、召回风格以及语义、词法、图谱和关键词权重、是否纳入已解决的记忆、召回前言、提取推理与详细程度、生成上限、来源上限、提示词模板、AI 关键词提取，以及 Game Mode 提取。
 - **数据管理**：用 Memory Settings 里的备份功能导出或替换记忆库、草稿和设置。删除全部数据会永久清除记忆、草稿、活动记录和派生索引，但保留设置。卸载这个包时，Long-Term Memory 的记忆库会保留下来，方便以后重装。安装、更新或移除之后需要重启 Marinara。
-- **兼容性**：Engine `2.3.3` 起，`2.4.0` 之前。这个包使用 `agent-runtime`、`chat-read`、`routes`、`storage` 和 `ui` 权限。
+- **兼容性**：Engine `2.3.5` 起，`4.0.0` 之前。这个包使用 `agent-runtime`、`chat-read`、`chat-write`、`routes`、`storage` 和 `ui` 权限。
 
 ### Illustrator
 
@@ -216,6 +216,15 @@ Knowledge Retrieval 的省钱替代方案。它不做摘要，而是读取世界
 - **阶段**：Post-Processing。
 - **适用范围**：Roleplay。
 - **主要设置**：**Edit**(编辑) 用来改写选项，**Re-roll**(重掷) 用来生成一批新的。
+
+### Storyboard
+
+根据已完成的 Roleplay 往来对话和 Game 叙述，规划静态或动态的视觉分镜。规划和面向服务商的格式化分成两步进行，生成出来的关键帧和视频因此能保持原文的时间顺序、角色身份和选定的视觉风格。
+
+- **集成方式**：智能体包；Game 和 Roleplay 通过 Engine 的 Storyboard 宿主集成，使用已安装的这个包的提示词模板和设置。
+- **适用范围**：Roleplay 和 Game。
+- **主要设置**：选择静态或动画规划器、图像连接和视频连接、关键帧数量、时长、显示模式、角色参考图的处理方式、Roleplay 的分集模板和风格模板，以及 Game 的插图模板和视频模板。
+- **兼容性**：Engine `2.3.5` 起，`4.0.0` 之前。这个包使用 `agent-runtime`、`chat-read`、`prompt-context`、`storage` 和 `ui` 权限，不需要重启。
 
 ### Calls
 

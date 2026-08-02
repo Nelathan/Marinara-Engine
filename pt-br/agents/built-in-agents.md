@@ -159,7 +159,7 @@ Extrai lembranças duradouras de resumos de chat, registros de personagem e lore
 - **Onde funciona**: Conversation, Roleplay e Game.
 - **Configurações principais**: ativação, orçamento de tokens da recuperação (128-16.384), número máximo de trechos recuperados (1-100), limiar de pontuação, contexto de mensagens recentes (1-20), estilo de recuperação e pesos semântico, lexical, de grafo e de palavras-chave, inclusão de lembranças já resolvidas, preâmbulo da recuperação, raciocínio e nível de detalhe da extração, limites de geração, limites de fonte, modelos de prompt, extração de palavras-chave por IA e extração no Game Mode.
 - **Ciclo de vida dos dados**: use os controles de backup em Memory Settings para exportar ou substituir o cofre, os rascunhos e as configurações. A opção de excluir todos os dados remove em definitivo as lembranças, os rascunhos, a atividade e os índices derivados, mas mantém as configurações. Se você desinstalar o pacote, o cofre do Long-Term Memory continua guardado para uma reinstalação futura. Instalar, atualizar ou remover o pacote exige reiniciar Marinara.
-- **Compatibilidade**: Engine `2.3.3` até antes da versão `2.4.0`. O pacote usa as permissões `agent-runtime`, `chat-read`, `routes`, `storage` e `ui`.
+- **Compatibilidade**: Engine `2.3.5` até antes da versão `4.0.0`. O pacote usa as permissões `agent-runtime`, `chat-read`, `chat-write`, `routes`, `storage` e `ui`.
 
 ### Illustrator
 
@@ -216,6 +216,15 @@ Acrescenta botões de escolha clicáveis, no estilo "What will you do?", depois 
 - **Fase**: Post-Processing.
 - **Onde funciona**: Roleplay.
 - **Configurações principais**: **Edit** para reescrever as opções e **Re-roll** para gerar opções novas.
+
+### Storyboard
+
+Planeja storyboards visuais, estáticos ou animados, a partir de trocas já concluídas do Roleplay e da narração do Game. O planejamento separado e a formatação que leva em conta o provedor preservam a cronologia da origem, a identidade dos personagens e o estilo visual escolhido nos quadros-chave e nos vídeos gerados.
+
+- **Integração**: pacote de agente; o Game e o Roleplay usam os modelos de prompt e as configurações do pacote instalado por meio da integração de host do Storyboard no Engine.
+- **Onde funciona**: Roleplay e Game.
+- **Configurações principais**: a escolha entre os planejadores de imagem estática ou de animação, as conexões de imagem e de vídeo, o número de quadros-chave, a duração, o modo de exibição, o tratamento das referências de personagem, os modelos de episódio e de estilo do Roleplay e os modelos de ilustração e de vídeo do Game.
+- **Compatibilidade**: Engine `2.3.5` até antes da versão `4.0.0`. O pacote usa as permissões `agent-runtime`, `chat-read`, `prompt-context`, `storage` e `ui`, e não exige reiniciar Marinara.
 
 ### Calls
 
