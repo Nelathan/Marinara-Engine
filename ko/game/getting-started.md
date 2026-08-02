@@ -20,6 +20,7 @@ Game Mode에서는 AI 게임 마스터(GM)가 이야기를 진행합니다. 게�
 
 - **이미지 생성.** Game Mode의 화면은 배경과 캐릭터 그림이 들어가는 구성입니다. 이 자리를 채우려면 이미지 생성 연결이 필요합니다. 설정 마법사의 **Visual Generation**(비주얼 생성) 설정은 기본이 꺼짐이라 직접 켜야 합니다. 켜지 않아도 이야기, 상태 추적, 전투는 그대로 쓸 수 있고 그림 영역만 비어 있습니다.
 - **장면 효과용 Local Model.** Marinara는 사용 중인 컴퓨터에서 작은 모델을 직접 돌릴 수 있습니다. 화면에는 **Local Model (Gemma)**로 표시됩니다. 이 모델이 추가 비용 없이 배경과 음악을 제안합니다. 설정 마법사의 기본 선택이기도 합니다. [Local Model 설정](../connections/local-model.md)을 참고하세요.
+- **Storyboard 에이전트.** **Agents > Download Agents**에서 설치한 다음, 정지 이미지나 움직이는 스토리보드를 쓰려면 게임을 다 만든 뒤 **Chat Settings > Agents**에서 활성화하세요.
 - **동영상 생성 연결.** 장면 동영상이나 움직이는 스토리보드를 쓸 때만 필요합니다.
 - **음악.** **Music DJ** 에이전트가 게임 음악을 재생할 수 있습니다. Spotify나 로컬 음악 폴더가 필요하며 기본은 꺼짐입니다.
 
@@ -34,7 +35,7 @@ Game Mode 채팅을 만들면 **설정 마법사**가 열립니다. 단계는 7�
 3. **Party.** 직접 연기할 페르소나와 **Game Master Mode**(GM 모드), 함께할 파티원을 고르세요.
 4. **Goals.** 이 모험에서 무엇을 기대하는지 GM에게 알려 주세요.
 5. **Lorebooks.** GM이 사실로 다뤄야 할 로어북을 연결하세요. 로어북은 세계 설정을 모아 둔 것입니다. [로어북](../lorebooks/overview.md)을 참고하세요.
-6. **Features.** Visual Generation, 스토리보드, Music DJ, HUD 위젯 같은 선택 기능을 켜세요.
+6. **Features.** Visual Generation, Music DJ, HUD 위젯 같은 선택 기능을 켜세요. 설치해서 쓰는 에이전트는 게임을 만든 뒤 **Chat Settings**에서 활성화할 수 있습니다.
 7. **GM.** 연출 방식을 고르고, 세계가 만들어지기 전에 GM 고급 지시문을 검토하세요.
 
 다 마쳤으면 **Start Game**(게임 시작)을 클릭하세요.
@@ -52,17 +53,14 @@ Game Mode 채팅을 만들면 **설정 마법사**가 열립니다. 단계는 7�
 | Language | English | 게임 속 모든 글이 이 언어로 작성됩니다 |
 | Game Master Mode | Standalone GM | Standalone GM은 GM을 대신 만들어 주고, Character GM은 가지고 있는 캐릭터 카드를 GM으로 씁니다 |
 | Visual Generation | Off | 이미지를 쓰려면 켜세요. 이미지 생성 연결이 필요합니다 |
-| Automatic Storyboard Illustrations | On | Visual Generation을 켠 뒤에만 동작합니다 |
-| Automatic Storyboard Animations | Off | 동영상 생성 연결이 필요합니다 |
-| Keyframes per Turn | 3 | 스토리보드 일러스트와 함께 쓰며, 범위는 1에서 6까지입니다 |
-| Game Presentation | Standard | **Storyboard Optimized**는 Storyboard Game Prompt, Comic Page Animation 플래너, Storyboard Illustration, Comic Page Video 프롬프트를 함께 맞춥니다 |
+| Game Presentation | Standard | **Storyboard Optimized**는 Storyboard Game Prompt로 GM 서술을 다듬을 뿐, Storyboard 에이전트를 설치하거나 활성화하지는 않습니다 |
 | Music DJ | Off | Spotify나 로컬 음악 폴더가 필요합니다 |
 | Custom HUD Widgets | On | 새로 만든 세계에 맞춰 AI가 만든 상태 위젯을 씁니다 |
 | Start Muted | Off | 소리를 끈 상태로 게임을 시작합니다 |
 
 Game Mode가 처음이라면 **Game Master Mode**를 **Standalone GM**에 그대로 두세요. Marinara가 공정하면서 살짝 능청스러운 GM을 만들어 주므로, 직접 GM 카드를 쓰기 전에 이 모드의 감을 잡을 수 있습니다.
 
-GM 턴을 영상으로 찍을 수 있는 시각적 장면 단위로 쓰게 하려면 마지막 단계에서 **Storyboard Optimized**(스토리보드 최적화)를 고르세요. 이 선택은 내장 프리셋인 **Storyboard Game Prompt**, **Comic Page Animation** 플래너, **Storyboard Illustration**, **Comic Page Video**를 함께 지정합니다. Comic Page Animation은 클립 길이에 맞춰 시간순 컷의 개수를 제한하고, Storyboard Illustration은 계획된 키프레임을 이미지 모델용 형식으로 다듬으며, Comic Page Video는 그 컷들을 순서가 정해진 애니메이션 참고 자료로 다룹니다. 이미지 생성이나 동영상 생성을 대신 켜 주지는 않으며, 골라 둔 연결도 바꾸지 않습니다. GM은 마법사의 **Keyframes per Turn**(턴당 키프레임 수) 값을 인상적인 장면을 잡는 목표치로 삼지만, 짧은 대화에서는 더 적게 쓰고 이야기에 필요할 때는 서술 문단을 더 늘리기도 합니다.
+GM 턴을 영상으로 찍을 수 있는 시각적 장면 단위로 쓰게 하려면 마지막 단계에서 **Storyboard Optimized**(스토리보드 최적화)를 고르세요. 이 선택은 GM 서술에 쓰이는 내장 프리셋 **Storyboard Game Prompt**를 지정합니다. Storyboard 에이전트를 설치하거나 활성화하지 않고, 이미지 생성이나 동영상 생성을 켜 주지도 않으며, 골라 둔 연결이나 에이전트의 플래너와 포맷터 기본값도 바꾸지 않습니다. 게임을 만든 뒤에 Storyboard를 따로 설치하고 활성화한 다음, **Chat Settings > Agents > Storyboards**에서 키프레임, 플래너, 이미지, 동영상 설정을 지정하세요.
 
 설정을 마친 뒤에도 애니메이션풍 단일 컷 조합을 그대로 쓸 수 있습니다. Animation Planner에는 **Anime Episode Director**를, Storyboard Video Prompt에는 **Anime Game Video**를 고르세요.
 
@@ -120,7 +118,7 @@ Game Mode에서 가장 어려운 부분은 월드 생성입니다. 빠진 필드
 - [Game Mode: 주사위와 스킬 판정](dice-and-skill-checks.md)에서는 주사위 메뉴와 스킬 판정 규칙을 다룹니다.
 - [Game Mode: HUD 위젯](hud-widgets.md)에서는 화면에 표시되는 상태 위젯을 다룹니다.
 - [게임 에셋](game-assets.md)에서는 음악, 사운드, 스프라이트, 배경 라이브러리를 다룹니다.
-- [스토리보드 엔진 가이드](storyboard.md)에서는 GM 턴을 만화풍 키프레임으로 바꾸는 방법을 다룹니다.
+- [스토리보드 에이전트 가이드](storyboard.md)에서는 설치 방법과 Roleplay 및 Game Mode 스토리보드를 다룹니다.
 
 Author's Notes(작가 노트)는 다른 모드와 똑같이 동작합니다. [Roleplay Mode: 시작하기](../roleplay/getting-started.md)를 참고하세요.
 
@@ -151,7 +149,7 @@ Author's Notes(작가 노트)는 다른 모드와 똑같이 동작합니다. [Ro
 - [Game Mode: 주사위와 스킬 판정](dice-and-skill-checks.md)
 - [Game Mode: HUD 위젯](hud-widgets.md)
 - [게임 에셋](game-assets.md)
-- [스토리보드 엔진 가이드](storyboard.md)
+- [스토리보드 에이전트 가이드](storyboard.md)
 - [Roleplay Mode: 시작하기](../roleplay/getting-started.md)
 - [AI 제공자에 연결하기](../connections/connecting-to-a-provider.md)
 - [에이전트: 채팅을 도와주는 AI](../agents/agents-overview.md)

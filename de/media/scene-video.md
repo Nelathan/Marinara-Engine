@@ -132,7 +132,7 @@ Jeder Chat wählt seine eigene Videoverbindung. Das stellst du unter **Chat Sett
 - **Game Video Prompt**: die Prompt-Vorlage, die bestimmt, wie sich das Bild bewegt. Der eingebaute Standard heißt **Cinematic Scene Video**.
 - **Edit Video Presets**: eigene Kopien der Video-Prompt-Vorlage für diesen Chat anlegen und bearbeiten.
 
-Der **Game Video Prompt** steuert weiterhin die manuellen Videos aus Galerie und Game Assets im Game Mode. Galerie-Animationen im Roleplay nutzen stattdessen **Roleplay Gallery Animation Director**. Für Storyboard-Keyframe-Clips lässt sich unter **Chat Settings**, **Agents**, dann **Storyboards** ein abweichender **Storyboard Video Prompt** wählen. Ohne eigene Storyboard-Auswahl erben sie den Game Video Prompt.
+Der **Game Video Prompt** steuert weiterhin die manuellen Videos aus Galerie und Game Assets im Game Mode. Galerie-Animationen im Roleplay nutzen stattdessen **Roleplay Gallery Animation Director**. Der installierte Storyboard-Agent bringt einen eigenen Standard für den **Storyboard Video Prompt** mit, und jeder Roleplay- oder Game-Chat kann ihn unter **Chat Settings > Agents > Storyboards** überschreiben. Setzt du diese Auswahl zurück, gilt wieder der Standard des Storyboard-Agenten; den Prompt eines anderen Chats übernimmt der Chat dabei nicht.
 
 Beim Anlegen eines Game-Mode-Chats bietet auch der Einrichtungsassistent eine Auswahl **Video Generation Connection**. Sie steht im Schritt **Features** und erscheint, sobald du **Visual Generation** aktivierst.
 
@@ -150,9 +150,9 @@ Ebenfalls dort steht die Einstellung **Animated expression length**. Sie gehört
 
 ## Storyboards
 
-Der Game Mode kann außerdem ein Storyboard bauen: eine geordnete Folge von Keyframe-Bildern für einen Spielzug. Sind Storyboard-Animationen aktiv, animiert Marinara jedes Keyframe über die Videoverbindung und den **Storyboard Video Prompt** zu einem Clip. Solange du keine eigene Vorlage wählst, erbt er den **Game Video Prompt**. Ein Keyframe ist ein einzelnes Standbild in dieser geordneten Folge.
+Der herunterladbare Storyboard-Agent kann in Roleplay und Game Mode geordnete Keyframe-Bilder und Clips erzeugen. Im Game Mode nutzt er genau einen abgeschlossenen Zug des Game Masters (GM); im Roleplay fasst er abgeschlossene Wortwechsel zu einer eingebetteten Episode zusammen. Sind Animationen aktiv, animiert Marinara jedes erfolgreiche Keyframe über die gewählte Videoverbindung und den **Storyboard Video Prompt** des Agenten.
 
-Storyboards haben eigene Bedienelemente und eine eigene Anleitung. Einrichtung und Ablauf stehen komplett unter [Storyboards im Game Mode](../game/storyboard.md).
+Storyboards haben eigene Bedienelemente und eine eigene Anleitung. Installation und die Abläufe in beiden Modi stehen in der [Anleitung zum Storyboard-Agenten](../game/storyboard.md).
 
 ## Fehlerbehebung
 
@@ -179,7 +179,7 @@ Prüf, ob die Verbindung einen gültigen API-Key hat und ob dein Konto Videozugr
 ## Verwandte Anleitungen
 
 - [Animierte Gesichtsausdrücke](animated-expressions.md)
-- [Storyboards im Game Mode](../game/storyboard.md)
+- [Anleitung zum Storyboard-Agenten](../game/storyboard.md)
 - [LTX-2.3-Storyboards im Game Mode](../game/ltx-2-3-storyboards.md)
 - [Unterstützte KI-Anbieter](../connections/providers-reference.md)
 - [Referenz zur Serverkonfiguration](../CONFIGURATION.md)

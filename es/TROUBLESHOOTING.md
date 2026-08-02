@@ -191,6 +191,7 @@ Luego reinicia Marinara y haz clic en **Reapply Cleanup** en la ventana de gener
 
 Los Game Mode Storyboards (secuencias de viñetas) convierten una narración terminada del GM (director del juego) en imágenes de fotograma clave y clips opcionales. Los Roleplay Storyboards combinan intercambios terminados y muestran el resultado en línea, después de la respuesta del asistente.
 
+- Confirma que has instalado **Storyboard** desde **Agents** > **Download Agents** y luego activa **Enable Agents** (Activar agentes) y **Enable Storyboards** (Activar storyboards) para el chat.
 - Para un video de escena manual, genera o sube primero una imagen de **Gallery** y luego usa su acción **Video** o **Animate**. La **Gallery** separa **Images** y **Videos** en pestañas, así que revisa la pestaña **Videos**.
 - Para los Game Mode Storyboards automáticos, abre **Chat Settings** > **Agents** > **Storyboards** y confirma que **Automatic Storyboard Illustrations** está activado. Activa también **Automatic Storyboard Animations** si además quieres clips.
 - En Roleplay, añade el agente **Storyboard** al chat. Elige **Still images** o **Animations**, fija **Messages per episode** y selecciona la conexión de imagen del Storyboard. **Manual only** se ejecuta en su lugar desde **Create storyboard** en la Gallery.
@@ -198,7 +199,7 @@ Los Game Mode Storyboards (secuencias de viñetas) convierten una narración ter
 - Si un prompt personalizado funciona mejor con todos los personajes combinados, desactiva **Use NovelAI Character Prompts**.
 - Los proveedores lentos pueden alcanzar un tiempo de espera. Sube `IMAGE_GEN_TIMEOUT_MS` o `VIDEO_GEN_TIMEOUT_MS` en `.env` y luego reinicia Marinara. El servidor solo lee estos valores en el arranque.
 
-Revisa la [Guía del Storyboard Engine](game/storyboard.md) para ambos flujos de trabajo y [Game Mode: Primeros pasos](game/getting-started.md) para la configuración del Game.
+Revisa la [Guía del agente Storyboard](game/storyboard.md) para ambos flujos de trabajo y [Game Mode: Primeros pasos](game/getting-started.md) para la configuración del Game.
 
 ### La generación del mundo del Game Mode muestra un error de JSON
 

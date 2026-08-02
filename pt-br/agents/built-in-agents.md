@@ -224,7 +224,8 @@ Planeja storyboards visuais, estáticos ou animados, a partir de trocas já conc
 - **Integração**: pacote de agente; o Game e o Roleplay usam os modelos de prompt e as configurações do pacote instalado por meio da integração de host do Storyboard no Engine.
 - **Onde funciona**: Roleplay e Game.
 - **Configurações principais**: a escolha entre os planejadores de imagem estática ou de animação, as conexões de imagem e de vídeo, o número de quadros-chave, a duração, o modo de exibição, o tratamento das referências de personagem, os modelos de episódio e de estilo do Roleplay e os modelos de ilustração e de vídeo do Game.
-- **Compatibilidade**: Engine `2.3.5` até antes da versão `4.0.0`. O pacote usa as permissões `agent-runtime`, `chat-read`, `prompt-context`, `storage` e `ui`, e não exige reiniciar Marinara.
+- **Compatibilidade**: Engine `2.3.5` até antes da versão `3.0.0`. O pacote usa as permissões `agent-runtime`, `chat-read`, `prompt-context`, `storage` e `ui`, e não exige reiniciar Marinara.
+- **Guia completo**: [Agente Storyboard: Roleplay e Game Mode](../game/storyboard.md).
 
 ### Calls
 

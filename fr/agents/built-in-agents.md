@@ -224,7 +224,8 @@ Prépare des storyboards visuels, fixes ou animés, à partir des échanges Role
 - **Intégration** : package d'agent ; Game et Roleplay utilisent les modèles de prompt et les réglages du package installé, via l'intégration hôte Storyboard du moteur.
 - **Où ça marche** : Roleplay et Game.
 - **Réglages clés** : choisis les planificateurs image fixe ou animation, les connexions image et vidéo, le nombre d'images-clés, la durée, le mode d'affichage, la gestion des références de personnage, les modèles d'épisode et de style pour Roleplay, et les modèles d'illustration et de vidéo pour Game.
-- **Compatibilité** : moteur `2.3.5` jusqu'à, mais sans inclure, `4.0.0`. Le package utilise les permissions `agent-runtime`, `chat-read`, `prompt-context`, `storage` et `ui`, et ne demande aucun redémarrage.
+- **Compatibilité** : moteur `2.3.5` jusqu'à, mais sans inclure, `3.0.0`. Le package utilise les permissions `agent-runtime`, `chat-read`, `prompt-context`, `storage` et `ui`, et ne demande aucun redémarrage.
+- **Guide complet** : [Agent Storyboard : Roleplay et Game Mode](../game/storyboard.md).
 
 ### Calls
 

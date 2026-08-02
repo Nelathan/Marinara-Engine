@@ -191,6 +191,7 @@ Starte Marinara danach neu und klick im Fenster für die Sprite-Generierung auf 
 
 Game-Mode-Storyboards machen aus einer abgeschlossenen GM-Erzählung Keyframe-Bilder und optional kurze Clips. Roleplay-Storyboards fassen abgeschlossene Wortwechsel zusammen und zeigen das Ergebnis direkt hinter der Antwort im Chat.
 
+- Prüf, ob **Storyboard** über **Agents** > **Download Agents** installiert ist, und schalte dann **Enable Agents** (Agenten aktivieren) und **Enable Storyboards** (Storyboards aktivieren) für den Chat ein.
 - Für ein manuelles Szenenvideo generierst du zuerst ein Bild in der **Gallery** oder lädst eines hoch und nutzt dann dessen Aktion **Video** oder **Animate**. Die **Gallery** trennt **Images** und **Videos** in Tabs – sieh also im Tab **Videos** nach.
 - Für automatische Game-Mode-Storyboards öffnest du **Chat Settings** > **Agents** > **Storyboards** und prüfst, ob **Automatic Storyboard Illustrations** eingeschaltet ist. Willst du auch Clips, schalte zusätzlich **Automatic Storyboard Animations** ein.
 - Im Roleplay fügst du den Agenten **Storyboard** zum Chat hinzu. Wähl **Still images** oder **Animations**, leg **Messages per episode** fest und wähl die Bildverbindung für das Storyboard. **Manual only** startet stattdessen über **Create storyboard** in der Galerie.
@@ -198,7 +199,7 @@ Game-Mode-Storyboards machen aus einer abgeschlossenen GM-Erzählung Keyframe-Bi
 - Funktioniert ein eigener Prompt besser, wenn alle Charaktere zusammengefasst sind, schalte **Use NovelAI Character Prompts** aus.
 - Langsame Anbieter laufen leicht in ein Zeitlimit. Erhöh `IMAGE_GEN_TIMEOUT_MS` oder `VIDEO_GEN_TIMEOUT_MS` in der `.env` und starte Marinara neu. Der Server liest diese Werte nur beim Start.
 
-Beide Abläufe beschreibt die [Anleitung zur Storyboard-Engine](game/storyboard.md); die Einrichtung des Spiels beschreibt [Game Mode: Erste Schritte](game/getting-started.md).
+Beide Abläufe beschreibt die [Anleitung zum Storyboard-Agenten](game/storyboard.md); die Einrichtung des Spiels beschreibt [Game Mode: Erste Schritte](game/getting-started.md).
 
 ### Die Weltgenerierung im Game Mode zeigt einen JSON-Fehler
 

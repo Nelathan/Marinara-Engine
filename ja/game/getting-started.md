@@ -20,6 +20,7 @@ Game Modeでは、AIのゲームマスター(GM)が物語を進行します。�
 
 - **画像生成。** Game Modeには背景とキャラクターの絵を表示するビジュアルなレイアウトがあります。ここを埋めるには画像生成用の接続が必要です。設定ウィザードの**Visual Generation**はデフォルトでオフなので、自分でオンにしてください。オフのままでも、物語、状態の追跡、戦闘は問題なく動きますが、画像の領域は空のままになります。
 - **シーン演出用のローカルモデル。** Marinaraは自分のコンピューターで小さなモデルを動かせます。画面上の表記は**Local Model (Gemma)**です。追加費用なしで背景と音楽の提案を担当します。設定ウィザードではこれがデフォルトの選択肢です。[Local Modelのセットアップ](../connections/local-model.md)を参照してください。
+- **Storyboardエージェント。** **Agents > Download Agents**からインストールします。静止画または動く絵コンテを使いたいときは、ゲームができあがったあとに**Chat Settings > Agents**で有効にします。
 - **動画生成用の接続。** シーンの動画や動く絵コンテを使う場合にだけ必要です。
 - **音楽。** **Music DJ**エージェントはゲーム中の音楽を再生できます。Spotifyかローカルの音楽フォルダーが必要で、デフォルトではオフです。
 
@@ -34,7 +35,7 @@ Game Modeのチャットを作成すると、**設定ウィザード**が開き�
 3. **Party。** 自分が演じるペルソナ、**Game Master Mode**、パーティーメンバーを選びます。
 4. **Goals。** 冒険に何を求めるかをGMに伝えます。
 5. **Lorebooks。** GMが事実として扱うロアブックを添付します。ロアブックとは、世界の背景設定をまとめたものです。[ロアブック](../lorebooks/overview.md)を参照してください。
-6. **Features。** Visual Generation、絵コンテ、Music DJ、HUDウィジェットなど、任意の機能をオンにします。
+6. **Features。** Visual Generation、Music DJ、HUDウィジェットなど、任意の機能をオンにします。インストールして使うエージェントは、ゲームの作成後にChat Settingsから有効にできます。
 7. **GM。** 演出のスタイルを選び、世界が生成される前にGM向けの詳細な指示を確認します。
 
 入力が終わったら**Start Game**をクリックします。
@@ -52,17 +53,14 @@ Game Modeのチャットを作成すると、**設定ウィザード**が開き�
 | Language | English | ゲーム内のテキストはすべてこの言語で書かれます |
 | Game Master Mode | Standalone GM | Standalone GMはGMを自動で用意します。Character GMは手持ちのキャラクターカードをGMとして使います |
 | Visual Generation | Off | 画像を使うならオンにします。画像生成用の接続が必要です |
-| Automatic Storyboard Illustrations | On | Visual Generationがオンのときだけ働きます |
-| Automatic Storyboard Animations | Off | 動画生成用の接続が必要です |
-| Keyframes per Turn | 3 | 絵コンテのイラストと合わせて使います。範囲は1から6 |
-| Game Presentation | Standard | **Storyboard Optimized**はStoryboard Game Prompt、Comic Page Animationプランナー、Storyboard Illustration、Comic Page Videoの各プロンプトを組み合わせます |
+| Game Presentation | Standard | **Storyboard Optimized**はStoryboard Game PromptでGMの語り方を整えます。Storyboardエージェントのインストールや有効化は行いません |
 | Music DJ | Off | Spotifyかローカルの音楽フォルダーが必要です |
 | Custom HUD Widgets | On | 生成された世界に合わせてAIが作る状態ウィジェットを使います |
 | Start Muted | Off | 音声をミュートした状態でゲームを始めます |
 
 Game Modeが初めてなら、**Game Master Mode**は**Standalone GM**のままにしてください。Marinaraが公平で少し皮肉っぽいGMを用意するので、独自のGMカードを書く前にモードの雰囲気をつかめます。
 
-GMのターンを映像化しやすい見せ場として書かせたいときは、最後のステップで**Storyboard Optimized**を選びます。この設定は内蔵の**Storyboard Game Prompt**、**Comic Page Animation**プランナー、**Storyboard Illustration**、**Comic Page Video**の各プリセットを選択します。Comic Page Animationはクリップの長さをもとに時系列のコマ数を制限し、Storyboard Illustrationは計画された各キーフレームを画像モデル向けの形式に整え、Comic Page Videoはそれらのコマを順序付きのアニメーション参照として扱います。これで画像生成や動画生成がオンになるわけではなく、選択済みの接続も変わりません。GMは設定ウィザードの**Keyframes per Turn**の値を、印象的な視覚的節目の数の目安として使いますが、短いやり取りではこれより少なくすることも、物語に必要なら地の文の段落を増やすこともあります。
+GMのターンを映像化しやすい見せ場として書かせたいときは、最後のステップで**Storyboard Optimized**を選びます。この設定は、GMの語り用に内蔵の**Storyboard Game Prompt**を選びます。Storyboardエージェントのインストールや有効化は行いません。画像生成や動画生成がオンになることも、選択済みの接続が変わることも、エージェントのプランナーや整形処理のデフォルトが置き換わることもありません。ゲームができあがったら、Storyboardを別途インストールして有効にし、キーフレーム、プランナー、画像、動画の設定を**Chat Settings > Agents > Storyboards**で調整してください。
 
 アニメ調の1ショット構成も、設定の完了後に選べます。Animation Plannerに**Anime Episode Director**を、Storyboard Video Promptに**Anime Game Video**を選んでください。
 
@@ -120,7 +118,7 @@ Game Modeでもっとも難しいのは世界の生成です。項目の欠け�
 - [Game Mode: ダイスとスキル判定](dice-and-skill-checks.md)ではダイスのメニューとスキル判定のルールを説明します。
 - [Game Mode: HUDウィジェット](hud-widgets.md)では画面上の状態ウィジェットを説明します。
 - [ゲームアセット](game-assets.md)では音楽、効果音、スプライト、背景のライブラリーを説明します。
-- [絵コンテエンジンガイド](storyboard.md)ではGMのターンを漫画風のキーフレームに変える方法を説明します。
+- [Storyboardエージェントガイド](storyboard.md)ではインストール方法と、RoleplayとGame Modeの絵コンテを説明します。
 
 Author's Notesは、ほかのモードと同じように使えます。[Roleplayモード: はじめに](../roleplay/getting-started.md)を参照してください。
 
@@ -151,7 +149,7 @@ Author's Notesは、ほかのモードと同じように使えます。[Roleplay
 - [Game Mode: ダイスとスキル判定](dice-and-skill-checks.md)
 - [Game Mode: HUDウィジェット](hud-widgets.md)
 - [ゲームアセット](game-assets.md)
-- [絵コンテエンジンガイド](storyboard.md)
+- [Storyboardエージェントガイド](storyboard.md)
 - [Roleplayモード: はじめに](../roleplay/getting-started.md)
 - [AIプロバイダーへの接続](../connections/connecting-to-a-provider.md)
 - [エージェント: チャットを支えるAIヘルパー](../agents/agents-overview.md)

@@ -132,7 +132,7 @@ Game Mode에는 장면 동영상을 만들 수 있는 곳이 하나 더 있습�
 - **Game Video Prompt**(게임 동영상 프롬프트): 그림을 어떻게 움직이게 만들지 결정하는 프롬프트 틀입니다. 내장 기본값은 **Cinematic Scene Video**입니다.
 - **Edit Video Presets**: 이 채팅에서 쓸 동영상 프롬프트 틀의 사본을 직접 추가하고 편집합니다.
 
-Game Mode에서 **Gallery**와 **Game Assets**의 수동 동영상은 계속 **Game Video Prompt**가 관리합니다. Roleplay의 **Gallery** 애니메이션은 대신 **Roleplay Gallery Animation Director**를 씁니다. 스토리보드 키프레임 클립은 **Chat Settings**, **Agents**, **Storyboards**(스토리보드)에서 다른 **Storyboard Video Prompt**(스토리보드 동영상 프롬프트)를 고를 수 있습니다. 스토리보드용으로 따로 고르지 않으면 **Game Video Prompt**를 그대로 물려받습니다.
+Game Mode에서 **Gallery**와 **Game Assets**의 수동 동영상은 계속 **Game Video Prompt**가 관리합니다. Roleplay의 **Gallery** 애니메이션은 대신 **Roleplay Gallery Animation Director**를 씁니다. 설치한 Storyboard 에이전트는 자체 기본값으로 별도의 **Storyboard Video Prompt**(스토리보드 동영상 프롬프트)를 가지고 있으며, Roleplay 채팅과 Game 채팅마다 **Chat Settings > Agents > Storyboards**에서 이 값을 덮어쓸 수 있습니다. 이 선택을 초기화하면 Storyboard 에이전트의 기본값으로 돌아가며, 다른 채팅의 프롬프트를 물려받지는 않습니다.
 
 Game Mode 채팅을 처음 만들 때는 설정 마법사에도 **Video Generation Connection**(비디오 생성 연결) 선택기가 있습니다. **Features** 단계에 있으며, **Visual Generation**을 켜야 나타납니다.
 
@@ -150,9 +150,9 @@ Game Mode 채팅을 처음 만들 때는 설정 마법사에도 **Video Generati
 
 ## 스토리보드
 
-Game Mode에서는 스토리보드도 만들 수 있습니다. 스토리보드는 게임의 한 턴을 순서대로 담은 키프레임 그림 묶음입니다. 스토리보드 애니메이션을 켜면 Marinara가 동영상 연결과 **Storyboard Video Prompt**를 써서 각 키프레임을 클립으로 만듭니다. 틀을 따로 고르지 않으면 **Game Video Prompt**를 물려받습니다. 키프레임은 그 순서 묶음 안의 정지 프레임 한 장을 말합니다.
+다운로드해서 쓰는 Storyboard 에이전트는 Roleplay와 Game Mode에서 순서가 정해진 키프레임 이미지와 클립을 만들 수 있습니다. Game Mode는 완료된 게임 마스터(GM) 턴 하나를 쓰고, Roleplay는 완료된 대화를 모아 본문 안에 에피소드로 엮습니다. 애니메이션을 켜 두면 Marinara는 골라 둔 동영상 연결과 에이전트의 **Storyboard Video Prompt**를 써서 성공한 키프레임을 하나씩 움직이게 만듭니다.
 
-스토리보드에는 전용 컨트롤과 전용 가이드가 있습니다. 설정과 사용 흐름 전체는 [스토리보드 엔진 가이드](../game/storyboard.md)를 참고하세요.
+스토리보드에는 전용 컨트롤과 전용 가이드가 있습니다. 설치 방법과 두 모드의 사용 흐름은 [스토리보드 에이전트 가이드](../game/storyboard.md)를 참고하세요.
 
 ## 문제 해결
 
@@ -179,7 +179,7 @@ Seedance에는 그림에 접근할 공개 링크가 필요합니다. 로컬 서�
 ## 관련 가이드
 
 - [애니메이션 표정](animated-expressions.md)
-- [스토리보드 엔진 가이드](../game/storyboard.md)
+- [스토리보드 에이전트 가이드](../game/storyboard.md)
 - [Game Mode의 LTX 2.3 스토리보드](../game/ltx-2-3-storyboards.md)
 - [지원하는 AI 제공자](../connections/providers-reference.md)
 - [서버 설정 참고 문서](../CONFIGURATION.md)

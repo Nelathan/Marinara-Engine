@@ -191,6 +191,7 @@ pnpm backgroundremover:install
 
 Game Mode Storyboards는 완성된 GM 서술을 키프레임 이미지와 선택 사항인 클립으로 만들어 줍니다. Roleplay Storyboards는 주고받은 메시지를 묶어 어시스턴트 응답 뒤에 결과를 바로 보여 줍니다.
 
+- **Agents** > **Download Agents**에서 **Storyboard**를 설치했는지 확인한 다음, 해당 채팅에서 **Enable Agents**(에이전트 활성화)와 **Enable Storyboards**(스토리보드 활성화)를 켜세요.
 - 장면 동영상을 직접 만들려면 먼저 **Gallery**(갤러리) 이미지를 생성하거나 업로드한 다음 그 이미지의 **Video**(비디오) 또는 **Animate** 동작을 쓰세요. **Gallery**는 **Images**(이미지)와 **Videos**(동영상)를 탭으로 나누므로 **Videos** 탭을 확인하세요.
 - Game Mode Storyboards를 자동으로 쓰려면 **Chat Settings** > **Agents**(에이전트) > **Storyboards**(스토리보드)를 열고 **Automatic Storyboard Illustrations**(자동 스토리보드 일러스트)가 켜져 있는지 확인하세요. 클립까지 원한다면 **Automatic Storyboard Animations**(자동 스토리보드 애니메이션)도 켜세요.
 - Roleplay에서는 채팅에 **Storyboard** 에이전트를 추가하세요. **Still images**(정지 이미지)나 **Animations**(애니메이션)를 고르고 **Messages per episode**(에피소드당 메시지 수)를 설정한 다음 스토리보드용 이미지 연결을 선택하세요. **Manual only**로 두면 갤러리의 **Create storyboard**(스토리보드 만들기)에서 직접 실행합니다.
@@ -198,7 +199,7 @@ Game Mode Storyboards는 완성된 GM 서술을 키프레임 이미지와 선택
 - 모든 캐릭터를 한데 묶은 사용자 지정 프롬프트가 더 잘 맞는다면 **Use NovelAI Character Prompts**(NovelAI 캐릭터 프롬프트 사용)를 끄세요.
 - 느린 제공자에서는 시간 초과가 날 수 있습니다. `.env`의 `IMAGE_GEN_TIMEOUT_MS`나 `VIDEO_GEN_TIMEOUT_MS` 값을 늘린 다음 Marinara를 다시 시작하세요. 서버는 이 값을 시작할 때만 읽습니다.
 
-두 워크플로에 대한 설명은 [스토리보드 엔진 가이드](game/storyboard.md), 게임 준비 방법은 [Game Mode: 시작하기](game/getting-started.md)를 참고하세요.
+두 워크플로에 대한 설명은 [스토리보드 에이전트 가이드](game/storyboard.md), 게임 준비 방법은 [Game Mode: 시작하기](game/getting-started.md)를 참고하세요.
 
 ### Game Mode 세계 생성에서 JSON 오류가 날 때
 

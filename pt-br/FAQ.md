@@ -166,13 +166,13 @@ Professor Mari também consegue editar os arquivos de código comuns do Marinara
 
 Observação: em um endereço remoto comum, as ações da Professor Mari que alteram dados exigem Basic Auth e também um segredo de administrador. Rotas de rede confiáveis ou com IP na lista de permissões podem usar as liberações descritas em [Acesso remoto](REMOTE_ACCESS.md).
 
-## Como funcionam as animações de storyboard?
+## O que é o agente Storyboard e como usá-lo no Game Mode?
 
-Um **storyboard** transforma o texto já concluído da história em uma sequência curta de quadros-chave e pode acrescentar clipes animados. No **Game Mode**, ele acompanha um turno de narração já concluído do game master (o mestre do jogo). No **Roleplay**, o Storyboard Agent junta as trocas recém-concluídas em um episódio embutido depois de um número configurável de mensagens do usuário e da IA.
+O agente **Storyboard**, que você baixa à parte, transforma o texto já concluído da história em uma sequência ordenada de quadros-chave. Ele também pode transformar cada quadro-chave em um clipe curto animado. No **Game Mode**, ele monta o storyboard de um turno de narração já concluído do GM (o mestre do jogo) e mostra os quadros em um visualizador flutuante ou como plano de fundo do Game. No **Roleplay**, ele reúne as trocas recém-concluídas em um episódio embutido.
 
-Para criar um manualmente, abra a **Gallery** (galeria) e clique em **Create storyboard**. No Game Mode, o visualizador reabre com **View storyboard**; no Roleplay, o resultado aparece abaixo da resposta que encerra o episódio.
+Para usá-lo no Game Mode, instale o agente **Storyboard** em **Agents > Download Agents**. Abra o Game, abra a seção **Chat Settings > Agents**, ative **Enable Agents** e **Enable Storyboards** e defina uma conexão de imagem no Game ou na configuração global do Storyboard. Termine um turno de narração do GM, depois abra a **Gallery** (galeria) e clique em **Create storyboard**. Use **View storyboard** para reabrir o visualizador.
 
-Para criá-los automaticamente, abra **Chat Settings**, vá em **Agents** e encontre o card **Storyboards**. O Game Mode tem botões liga/desliga separados para as ilustrações e para as animações. O Roleplay oferece **Manual only**, **Still images** ou **Animations**, além de **Messages per episode**, que conta tanto as mensagens do usuário quanto as da IA. Os clipes de vídeo exigem uma conexão de geração de vídeos. Os dois fluxos estão no [Guia do Storyboard Engine](game/storyboard.md).
+Para os Storyboards automáticos do Game, ative **Automatic Storyboard Illustrations**. Quando quiser clipes, ative também **Automatic Storyboard Animations** e escolha uma conexão de geração de vídeos. A apresentação **Storyboard Optimized** do assistente de configuração do novo jogo só molda a narração do GM; ela não instala nem ativa o agente. A configuração no Game e no Roleplay, os prompts, os visualizadores, o comportamento na migração e a solução de problemas estão no [Guia do agente Storyboard](game/storyboard.md).
 
 ## Os personagens podem falar em voz alta em uma chamada?
 
@@ -182,7 +182,7 @@ Se você quiser responder pelo microfone e o reconhecimento de fala do próprio 
 
 ## Marinara consegue gerar imagens?
 
-Sim. Adicione uma conexão de geração de imagens, por exemplo **Pollinations** (dispensa chave) ou um provedor pago. Com isso, Marinara cria avatares de personagem, arte de cena, selfies e storyboards do Game Mode. Para adicionar uma conexão, veja [Conectando a um provedor de IA](connections/connecting-to-a-provider.md).
+Sim. Adicione uma conexão de geração de imagens, por exemplo **Pollinations** (dispensa chave) ou um provedor pago. Com isso, Marinara cria avatares de personagem, arte de cena, selfies e os quadros-chave do agente Storyboard no Roleplay ou no Game Mode. Para adicionar uma conexão, veja [Conectando a um provedor de IA](connections/connecting-to-a-provider.md).
 
 ## Como leio a documentação dentro do aplicativo?
 

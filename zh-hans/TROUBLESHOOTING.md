@@ -191,6 +191,7 @@ pnpm backgroundremover:install
 
 Game Mode 分镜会把一段完整的 GM 叙述变成关键帧图像和可选的短片。Roleplay 分镜则会把完整的往来对话合起来，在 Assistant 回复之后内嵌显示结果。
 
+- 确认已经从 **Agents** > **Download Agents** 装好 **Storyboard**，然后为这个聊天开启 **Enable Agents**(启用智能体) 和 **Enable Storyboards**(启用分镜)。
 - 手动做场景视频时，先生成或上传一张 **Gallery**(图库) 图像，再用它的 **Video** 或 **Animate** 操作。**Gallery** 把 **Images** 和 **Videos** 分成了两个选项卡，记得看 **Videos** 选项卡。
 - 想自动生成 Game Mode 分镜，打开 **Chat Settings** > **Agents**(智能体) > **Storyboards**，确认 **Automatic Storyboard Illustrations** 已开启。也想要短片的话，把 **Automatic Storyboard Animations** 一起打开。
 - 在 Roleplay 里，把 **Storyboard** 智能体加进聊天。选择 **Still images** 或 **Animations**，设置 **Messages per episode**，再选好分镜用的图像连接。选 **Manual only** 则改为从图库里的 **Create storyboard** 手动运行。
@@ -198,7 +199,7 @@ Game Mode 分镜会把一段完整的 GM 叙述变成关键帧图像和可选的
 - 如果自定义提示词在所有角色合并处理时效果更好，把 **Use NovelAI Character Prompts** 关掉。
 - 服务商太慢会超时。在 `.env` 里调大 `IMAGE_GEN_TIMEOUT_MS` 或 `VIDEO_GEN_TIMEOUT_MS`，然后重启 Marinara。服务器只在启动时读取这两个值。
 
-两种工作流见[分镜引擎指南](game/storyboard.md)，游戏本身的配置见 [Game Mode：入门](game/getting-started.md)。
+两种工作流见 [Storyboard 智能体指南](game/storyboard.md)，游戏本身的配置见 [Game Mode：入门](game/getting-started.md)。
 
 ### Game Mode 世界生成报 JSON 错误
 

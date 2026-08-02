@@ -24,7 +24,7 @@ Necesitas:
 2. El flujo de trabajo editable `ltx-director-simple`, o un grafo equivalente de imagen a video de LTX 2.3 que se complete correctamente dentro de ComfyUI.
 3. Su exportación en formato API `ltx-director-simple-api` para la conexión de Marinara.
 4. Una conexión de generación de imágenes de Marinara para las ilustraciones de primer fotograma.
-5. Un chat en Game Mode con soporte de Storyboard.
+5. El agente **Storyboard** instalado desde **Agents > Download Agents** (Agentes > Descargar agentes) y activado para el Game en **Chat Settings > Agents**.
 
 El flujo de trabajo editable de ComfyUI y su exportación en formato API son archivos distintos. Abre `ltx-director-simple` en ComfyUI, instala cada nodo personalizado que falte según ComfyUI Manager y prueba el grafo ahí. Importa `ltx-director-simple-api` en la conexión de Marinara. Después de cada cambio de nodo o modelo, vuelve a exportar el grafo en formato API y reemplaza el JSON guardado en la conexión. No pegues el flujo de trabajo normal del editor visual en Marinara.
 
@@ -142,7 +142,7 @@ Una prueba de conexión solo de texto no puede ejercitar `%reference_image_name%
 
 ## Configura el chat en Game Mode
 
-Abre el chat en Game Mode, luego abre **Chat Settings** (Ajustes del chat) y selecciona **Agents**.
+Abre el chat en Game Mode, luego abre **Chat Settings** (Ajustes del chat) y selecciona **Agents**. Activa **Enable Agents** (Activar agentes) y **Enable Storyboards** (Activar storyboards) antes de configurar las secciones de abajo. La presentación Storyboard Optimized del asistente de configuración de partida nueva no activa el agente.
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Usa este perfil de partida:
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3; usa cualquier valor de 1-6 que se ajuste al turno y al presupuesto de render |
+| **Keyframes per Turn** | 3 normalmente; empieza con 1 para la primera prueba de 8 GB de VRAM |
 | **Animation Clip Duration** | 6 segundos |
 | **Viewer Display** | Floating mientras haces pruebas |
 | **Illustration Planner** | **Still Keyframes**; se conserva como alternativa solo de imágenes fijas |
@@ -198,7 +198,7 @@ Usa este perfil de partida:
 
 **LTX Director Video** es intencionadamente pequeño. Pasa el `narrationBeat` completado del Animation Planner a través del contrato universal de prompt de video sin rodearlo de otro resumen de escena.
 
-Cada fotograma clave crea un trabajo de imagen de Krea y un trabajo de video local de LTX. Por lo tanto, tres fotogramas clave lanzan tres renders de primer fotograma y tres renders de video. Usa un fotograma clave para la primera ejecución de validación de 8 GB si quieres comprobar la conexión antes de comprometerte con la configuración completa de tres tomas.
+Cada fotograma clave crea un trabajo de imagen de Krea y un trabajo de video local de LTX. Por lo tanto, tres fotogramas clave lanzan tres renders de primer fotograma y tres renders de video. Para una GPU con 8 GB de VRAM, empieza con un fotograma clave a 480p. Cuando eso funcione, avanza hacia tres fotogramas clave y resoluciones más altas.
 
 ## Ejecuta la primera prueba
 
@@ -297,7 +297,7 @@ Para trazas detalladas del servidor, activa el registro de depuración y busca `
 
 ## Guías relacionadas
 
-- [Storyboard Engine Guide](storyboard.md)
+- [Guía del agente Storyboard](storyboard.md)
 - [ComfyUI Workflow Setup](../media/comfyui.md)
 - [Scene Video Generation](../media/scene-video.md)
 - [Game Mode: Getting Started](getting-started.md)

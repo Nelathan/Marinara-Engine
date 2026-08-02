@@ -132,7 +132,7 @@ Game Modeには、シーン動画を作る2つ目の場所として**Game Assets
 - **Game Video Prompt**: 画像をどう動かすかを決めるプロンプトのテンプレートです。組み込みのデフォルトは**Cinematic Scene Video**です。
 - **Edit Video Presets**: このチャット用に、動画プロンプトのテンプレートのコピーを追加したり編集したりします。
 
-**Game Video Prompt**は、Game ModeでGalleryとGame Assetsから手動で作る動画にも引き続き適用されます。RoleplayのGalleryのアニメーションでは、代わりに**Roleplay Gallery Animation Director**を使います。絵コンテのキーフレームから作るクリップには、**Chat Settings**、**Agents**、**Storyboards**で別の**Storyboard Video Prompt**を選べます。絵コンテ用に別途指定がない場合は、Game Video Promptを引き継ぎます。
+**Game Video Prompt**は、Game ModeでGalleryとGame Assetsから手動で作る動画にも引き続き適用されます。RoleplayのGalleryのアニメーションでは、代わりに**Roleplay Gallery Animation Director**を使います。インストールしたStoryboardエージェントは、独自のデフォルトの**Storyboard Video Prompt**を持ちます。RoleplayとGameのチャットごとに、**Chat Settings > Agents > Storyboards**で上書きできます。この選択をリセットするとStoryboardエージェントのデフォルトに戻り、ほかのチャットのプロンプトを引き継ぐことはありません。
 
 Game Modeのチャットを新規作成すると、設定ウィザードにも**Video Generation Connection**の選択肢があります。**Features**のステップにあり、**Visual Generation**をオンにすると表示されます。
 
@@ -150,9 +150,9 @@ Game Modeのチャットを新規作成すると、設定ウィザードにも**
 
 ## 絵コンテ
 
-Game Modeでは絵コンテも作れます。絵コンテとは、ゲームの1ターン分のキーフレーム画像を順番に並べたものです。絵コンテのアニメーションをオンにすると、Marinaraは動画接続と**Storyboard Video Prompt**を使って各キーフレームをクリップに変換します。別のテンプレートを選ばないかぎり、**Game Video Prompt**を引き継ぎます。キーフレームとは、その並びの中の1枚の静止フレームです。
+ダウンロードして使うStoryboardエージェントは、RoleplayとGame Modeで、順番に並んだキーフレーム画像とクリップを作れます。Game Modeは完了したGMの1ターンを使い、Roleplayは完了したやり取りをまとめてチャット内のエピソードにします。アニメーションを有効にすると、Marinaraは選択した動画接続とエージェントの**Storyboard Video Prompt**を使って、成功した各キーフレームを動かします。
 
-絵コンテには専用の操作と専用のガイドがあります。設定と使い方の全体は[絵コンテエンジンガイド](../game/storyboard.md)を参照してください。
+絵コンテには専用の操作と専用のガイドがあります。インストール方法と両モードの使い方は[Storyboardエージェントガイド](../game/storyboard.md)を参照してください。
 
 ## トラブルシューティング
 
@@ -179,7 +179,7 @@ Seedanceには画像への公開リンクが必要です。ローカルサーバ
 ## 関連ガイド
 
 - [アニメーション表情](animated-expressions.md)
-- [絵コンテエンジンガイド](../game/storyboard.md)
+- [Storyboardエージェントガイド](../game/storyboard.md)
 - [Game ModeのLTX 2.3絵コンテ](../game/ltx-2-3-storyboards.md)
 - [対応しているAIプロバイダー](../connections/providers-reference.md)
 - [サーバー設定リファレンス](../CONFIGURATION.md)

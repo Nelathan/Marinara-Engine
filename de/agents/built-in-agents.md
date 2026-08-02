@@ -224,7 +224,8 @@ Plant Storyboards als Standbilder oder Animationen – aus abgeschlossenen Rolep
 - **Integration**: Agent-Paket; Game und Roleplay greifen über die Storyboard-Integration der Engine auf die Prompt-Vorlagen und Einstellungen des installierten Pakets zu.
 - **Wo es funktioniert**: Roleplay und Game.
 - **Wichtige Einstellungen**: Planer für Standbild oder Animation, Bild- und Video-Verbindungen, Anzahl der Keyframes, Dauer, Anzeigemodus, Umgang mit Charakterreferenzen, Episoden- und Stilvorlagen für Roleplay sowie Illustrations- und Videovorlagen für Game.
-- **Kompatibilität**: Engine `2.3.5` bis ausschließlich `4.0.0`. Das Paket verwendet die Berechtigungen `agent-runtime`, `chat-read`, `prompt-context`, `storage` und `ui` und braucht keinen Neustart.
+- **Kompatibilität**: Engine `2.3.5` bis ausschließlich `3.0.0`. Das Paket verwendet die Berechtigungen `agent-runtime`, `chat-read`, `prompt-context`, `storage` und `ui` und braucht keinen Neustart.
+- **Vollständige Anleitung**: [Storyboard-Agent: Roleplay und Game Mode](../game/storyboard.md).
 
 ### Calls
 

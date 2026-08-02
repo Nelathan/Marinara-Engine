@@ -166,13 +166,13 @@ Professor Mari peut aussi modifier les fichiers source ordinaires de Marinara. E
 
 À noter : sur une adresse distante ordinaire, les actions de Professor Mari qui modifient des données exigent à la fois Basic Auth et un secret d'administration. Les routes réseau de confiance ou autorisées peuvent utiliser les contournements décrits dans [Accès à distance](REMOTE_ACCESS.md).
 
-## Comment fonctionnent les animations de storyboard ?
+## Qu'est-ce que l'agent Storyboard et comment l'utiliser en Game Mode ?
 
-Un **storyboard** transforme un texte d'histoire terminé en une courte séquence d'images-clés, et il peut y ajouter des clips animés. En **Game Mode**, il porte sur un tour de narration terminé du Game Master. En **Roleplay**, l'agent Storyboard réunit les échanges qui viennent de se terminer en un épisode affiché dans le fil, après un nombre réglable de messages, les tiens comme ceux de l'IA.
+L'agent **Storyboard**, à télécharger, transforme un texte d'histoire terminé en une séquence ordonnée d'images-clés, et il peut animer chaque image-clé en un court clip. En **Game Mode**, il traite un tour de narration terminé du Game Master (GM) et affiche les images dans une visionneuse flottante ou en arrière-plan du jeu. En **Roleplay**, il réunit les échanges qui viennent de se terminer en un épisode affiché dans le fil.
 
-Pour en créer un à la main, ouvre la **Gallery** (galerie) et clique sur **Create storyboard**. En Game Mode, le bouton **View storyboard** rouvre la visionneuse ; en Roleplay, le résultat s'affiche sous la réponse de l'IA qui clôt l'épisode.
+Pour t'en servir en Game Mode, installe **Storyboard** depuis **Agents > Download Agents**. Ouvre le jeu, va dans **Chat Settings > Agents**, active **Enable Agents** et **Enable Storyboards**, puis choisis une connexion d'images dans le jeu ou dans la configuration globale de Storyboard. Termine un tour de narration du GM, puis ouvre la **Gallery** (galerie) et clique sur **Create storyboard**. Le bouton **View storyboard** rouvre la visionneuse.
 
-Pour les générer automatiquement, ouvre **Chat Settings**, va dans **Agents** et trouve la carte **Storyboards**. En Game Mode, les illustrations et les animations ont chacune leur interrupteur. En Roleplay, tu choisis entre **Manual only**, **Still images** et **Animations**, plus le réglage **Messages per episode**, qui compte à la fois tes messages et ceux de l'IA. Les clips vidéo demandent une connexion de génération de vidéos. Pour les deux déroulés, voir [Guide du moteur de storyboard](game/storyboard.md).
+Pour des storyboards automatiques en Game Mode, active **Automatic Storyboard Illustrations**. Active aussi **Automatic Storyboard Animations** et choisis une connexion de génération de vidéos si tu veux des clips. Dans l'assistant de création de partie, la présentation **Storyboard Optimized** façonne seulement la narration du GM : elle n'installe pas l'agent et ne l'active pas. Pour la configuration en Game Mode et en Roleplay, les prompts, les visionneuses, le comportement à la migration et le dépannage, voir [Guide de l'agent Storyboard](game/storyboard.md).
 
 ## Les personnages peuvent-ils parler à voix haute pendant un appel ?
 
@@ -182,7 +182,7 @@ Si tu veux répondre au micro et que la reconnaissance vocale du navigateur manq
 
 ## Marinara peut-il générer des images ?
 
-Oui. Ajoute une connexion de génération d'images, par exemple **Pollinations** (aucune clé nécessaire) ou un fournisseur payant. Marinara peut alors créer des avatars de personnages, des illustrations de scène, des selfies et des storyboards de Game Mode. Voir [Se connecter à un fournisseur d'IA](connections/connecting-to-a-provider.md) pour en ajouter une.
+Oui. Ajoute une connexion de génération d'images, par exemple **Pollinations** (aucune clé nécessaire) ou un fournisseur payant. Marinara peut alors créer des avatars de personnages, des illustrations de scène, des selfies et les images-clés de l'agent Storyboard, en Roleplay comme en Game Mode. Voir [Se connecter à un fournisseur d'IA](connections/connecting-to-a-provider.md) pour en ajouter une.
 
 ## Comment lire la documentation dans l'application ?
 

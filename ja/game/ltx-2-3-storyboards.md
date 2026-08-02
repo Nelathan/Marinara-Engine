@@ -24,7 +24,7 @@ GM narration
 2. 編集可能な`ltx-director-simple`ワークフロー、またはComfyUI内で最後まで完走する同等のLTX 2.3 image-to-videoグラフ。
 3. Marinaraの接続用に書き出した、API形式の`ltx-director-simple-api`。
 4. 最初のフレームの挿絵を作るためのMarinaraの画像生成接続。
-5. 絵コンテに対応したGame Modeのチャット。
+5. **Agents > Download Agents**からインストールし、**Chat Settings > Agents**でゲームに対して有効にした**Storyboard**エージェント。
 
 編集可能なComfyUIワークフローと、そのAPI書き出しは別々のファイルです。ComfyUIで`ltx-director-simple`を開き、ComfyUI Managerが不足を報告したカスタムノードをすべてインストールしてから、その場でグラフを試します。Marinaraの接続には`ltx-director-simple-api`を読み込みます。ノードやモデルを変更したときは、そのつどAPI形式で書き出し直し、接続に保存されているJSONを置き換えてください。通常のビジュアルエディター用ワークフローをMarinaraに貼り付けてはいけません。
 
@@ -142,7 +142,7 @@ API書き出しの該当する値を、引用符付きのMarinaraのプレース
 
 ## Game Modeのチャットを設定する
 
-Game Modeのチャットを開き、**Chat Settings**(チャット設定)から**Agents**を選びます。
+Game Modeのチャットを開き、**Chat Settings**(チャット設定)から**Agents**を選びます。以下のセクションを設定する前に、**Enable Agents**(エージェントを有効にする)と**Enable Storyboards**(絵コンテを有効にする)をオンにしてください。新規Gameの設定ウィザードにあるStoryboard Optimizedの演出では、エージェントは有効になりません。
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Animation Plannerは絵コンテのターンのキャラクターの外見情報
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3。ターンの内容とレンダリングにかけられる時間に応じて1から6までの値を使います |
+| **Keyframes per Turn** | 通常は3。最初の8 GB VRAMのテストでは1から始めます |
 | **Animation Clip Duration** | 6秒 |
 | **Viewer Display** | テスト中はFloating |
 | **Illustration Planner** | **Still Keyframes**。静止画だけのときの受け皿として残します |
@@ -198,7 +198,7 @@ Animation Plannerは絵コンテのターンのキャラクターの外見情報
 
 **LTX Director Video**は意図的に小さく作られています。Animation Plannerが仕上げた`narrationBeat`を、共通の動画プロンプトの受け渡し方に沿って渡すだけで、シーンの説明を重ねて付けることはありません。
 
-キーフレーム1枚につき、Kreaの画像ジョブが1件と、ローカルのLTX動画ジョブが1件走ります。キーフレームが3枚なら、最初のフレームのレンダリングが3回、動画のレンダリングも3回始まります。3カット構成に進む前に接続を確かめたいときは、最初の8 GB向け検証はキーフレーム1枚で実行してください。
+キーフレーム1枚につき、Kreaの画像ジョブが1件と、ローカルのLTX動画ジョブが1件走ります。キーフレームが3枚なら、最初のフレームのレンダリングが3回、動画のレンダリングも3回始まります。VRAMが8 GBのGPUでは、480pでキーフレーム1枚から始めてください。それが成功したら、キーフレーム3枚とより高い解像度へ進みます。
 
 ## 最初のテストを実行する
 
@@ -297,7 +297,7 @@ APIワークフローが、現在インストールされているグラフと�
 
 ## 関連ガイド
 
-- [絵コンテエンジンガイド](storyboard.md)
+- [Storyboardエージェントガイド](storyboard.md)
 - [ComfyUIワークフローの設定](../media/comfyui.md)
 - [シーン動画の生成](../media/scene-video.md)
 - [Game Mode: はじめに](getting-started.md)

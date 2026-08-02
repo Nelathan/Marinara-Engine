@@ -132,7 +132,7 @@ Game Mode में सीन वीडियो बनाने की एक �
 - **Game Video Prompt**: वह प्रॉम्प्ट टेम्पलेट जो तय करता है कि इमेज कैसे एनिमेट होगी। बिल्ट-इन डिफ़ॉल्ट **Cinematic Scene Video** है।
 - **Edit Video Presets**: इसी चैट के लिए वीडियो प्रॉम्प्ट टेम्पलेट की अपनी कॉपी जोड़ें और बदलें।
 
-Game Mode में Gallery और Game Assets से बनने वाले मैन्युअल वीडियो पर **Game Video Prompt** का ही नियंत्रण रहता है। Roleplay की Gallery एनिमेशन के लिए इसके बजाय **Roleplay Gallery Animation Director** चलता है। स्टोरीबोर्ड की कीफ़्रेम क्लिप के लिए **Chat Settings**, **Agents**, फिर **Storyboards** में अलग **Storyboard Video Prompt** चुना जा सकता है। स्टोरीबोर्ड के लिए अलग से कुछ न चुना हो, तो वे Game Video Prompt ही अपना लेती हैं।
+Game Mode में Gallery और Game Assets से बनने वाले मैन्युअल वीडियो पर **Game Video Prompt** का ही नियंत्रण रहता है। Roleplay की Gallery एनिमेशन के लिए इसके बजाय **Roleplay Gallery Animation Director** चलता है। इंस्टॉल किए हुए Storyboard एजेंट का अपना अलग डिफ़ॉल्ट **Storyboard Video Prompt** होता है, और हर Roleplay या Game चैट उसे **Chat Settings > Agents > Storyboards** में बदल सकती है। उस चुनाव को रीसेट करने पर Storyboard एजेंट का डिफ़ॉल्ट लौट आता है; किसी दूसरी चैट का प्रॉम्प्ट अपने आप नहीं आता।
 
 नई Game Mode चैट बनाते समय सेटअप विज़ार्ड में भी **Video Generation Connection** पिकर मिलता है। यह **Features** स्टेप पर होता है और **Visual Generation** चालू करने के बाद दिखता है।
 
@@ -150,9 +150,9 @@ Game Mode में Gallery और Game Assets से बनने वाले 
 
 ## स्टोरीबोर्ड
 
-Game Mode स्टोरीबोर्ड भी बना सकता है, यानी गेम के एक टर्न के लिए क्रम से लगी कीफ़्रेम इमेज का सेट। स्टोरीबोर्ड एनिमेशन चालू होने पर Marinara हर कीफ़्रेम को आपके वीडियो कनेक्शन और **Storyboard Video Prompt** की मदद से क्लिप में बदल देता है। अलग टेम्पलेट न चुनने पर यह **Game Video Prompt** ही अपना लेता है। कीफ़्रेम यानी उस क्रम में लगी एक स्थिर इमेज।
+डाउनलोड करके इंस्टॉल होने वाला Storyboard एजेंट Roleplay और Game Mode, दोनों में क्रम से लगी कीफ़्रेम इमेज और क्लिप बना सकता है। Game Mode इसके लिए GM (कहानी चलाने वाला AI) का एक पूरा हो चुका टर्न लेता है; Roleplay पूरी हो चुकी बातचीत को मिलाकर एक इनलाइन एपिसोड बनाता है। एनिमेशन चालू होने पर Marinara हर कामयाब कीफ़्रेम को चुने हुए वीडियो कनेक्शन और एजेंट के **Storyboard Video Prompt** से एनिमेट करता है।
 
-स्टोरीबोर्ड के अपने कंट्रोल हैं और अपनी गाइड भी। पूरे सेटअप और तरीके के लिए देखें [स्टोरीबोर्ड इंजन गाइड](../game/storyboard.md)।
+स्टोरीबोर्ड के अपने कंट्रोल हैं और अपनी गाइड भी। इंस्टॉलेशन और दोनों मोड के तरीकों के लिए देखें [Storyboard एजेंट गाइड](../game/storyboard.md)।
 
 ## समस्या-समाधान
 
@@ -179,7 +179,7 @@ Seedance को आपकी इमेज का सार्वजनिक ल
 ## मिलती-जुलती गाइड
 
 - [एनिमेटेड एक्सप्रेशन](animated-expressions.md)
-- [स्टोरीबोर्ड इंजन गाइड](../game/storyboard.md)
+- [Storyboard एजेंट गाइड](../game/storyboard.md)
 - [Game Mode में LTX 2.3 स्टोरीबोर्ड](../game/ltx-2-3-storyboards.md)
 - [समर्थित AI प्रोवाइडर](../connections/providers-reference.md)
 - [सर्वर कॉन्फ़िगरेशन रेफ़रेंस](../CONFIGURATION.md)

@@ -132,7 +132,7 @@ Czaty w trybie **Game Mode** pokazują kafelek **Scene Videos** z opisem "Genera
 - **Game Video Prompt**: szablon promptu decydujący o tym, jak animuje się obraz. Wbudowany domyślny szablon to **Cinematic Scene Video**.
 - **Edit Video Presets**: dodawanie i edycja własnych kopii szablonu promptu wideo dla tego czatu.
 
-Szablon **Game Video Prompt** nadal steruje ręcznymi filmami z panelu **Gallery** i **Game Assets** w trybie **Game Mode**. Animacje z panelu **Gallery** w trybie **Roleplay** korzystają zamiast tego z ustawienia **Roleplay Gallery Animation Director**. Klipy z klatek kluczowych storyboardu mogą korzystać z innego szablonu **Storyboard Video Prompt** w sekcji **Chat Settings**, **Agents**, następnie **Storyboards**. Bez osobnego wyboru dla storyboardu dziedziczą one szablon Game Video Prompt.
+Szablon **Game Video Prompt** nadal steruje ręcznymi filmami z panelu **Gallery** i **Game Assets** w trybie **Game Mode**. Animacje z panelu **Gallery** w trybie **Roleplay** korzystają zamiast tego z ustawienia **Roleplay Gallery Animation Director**. Zainstalowany agent Storyboard ma własny domyślny szablon **Storyboard Video Prompt**, a każdy czat w trybie Roleplay lub Game Mode może go nadpisać w **Chat Settings > Agents > Storyboards**. Wyczyszczenie tego wyboru przywraca wartość domyślną agenta Storyboard, a nie prompt z innego czatu.
 
 Przy pierwszym tworzeniu czatu w trybie **Game Mode** kreator konfiguracji też ma listę **Video Generation Connection**. Znajduje się w kroku **Features** i pojawia się po włączeniu opcji **Visual Generation**.
 
@@ -150,9 +150,9 @@ Ta sama sekcja zawiera ustawienie **Animated expression length**. Należy ono do
 
 ## Storyboardy
 
-Tryb **Game Mode** potrafi też zbudować storyboard, czyli uporządkowany zestaw obrazów klatek kluczowych dla jednej tury gry. Po włączeniu animacji storyboardu Marinara animuje każdą klatkę kluczową w klip, korzystając z twojego połączenia wideo i szablonu **Storyboard Video Prompt**. Bez wyboru osobnego szablonu dziedziczy on **Game Video Prompt**. Klatka kluczowa to jedna nieruchoma klatka w tym uporządkowanym zestawie.
+Agent Storyboard do pobrania buduje uporządkowane obrazy klatek kluczowych oraz klipy w trybach Roleplay i Game Mode. Tryb Game Mode korzysta z jednej zakończonej tury postaci GM, a tryb Roleplay łączy zakończone wymiany zdań w odcinek osadzony w czacie. Po włączeniu animacji Marinara animuje każdą udaną klatkę kluczową, korzystając z wybranego połączenia wideo i szablonu **Storyboard Video Prompt** należącego do agenta.
 
-Storyboardy mają własne kontrolki i własny przewodnik. Pełną konfigurację i sposób pracy opisuje [Przewodnik po silniku storyboardów](../game/storyboard.md).
+Storyboardy mają własne kontrolki i własny przewodnik. Instalację i sposób pracy w obu trybach opisuje [Przewodnik po agencie Storyboard](../game/storyboard.md).
 
 ## Rozwiązywanie problemów
 
@@ -179,7 +179,7 @@ Sprawdź, czy połączenie ma poprawny klucz API i czy konto ma dostęp do wideo
 ## Powiązane przewodniki
 
 - [Animowane wyrazy twarzy](animated-expressions.md)
-- [Przewodnik po silniku storyboardów](../game/storyboard.md)
+- [Przewodnik po agencie Storyboard](../game/storyboard.md)
 - [Storyboardy LTX 2.3 w Game Mode](../game/ltx-2-3-storyboards.md)
 - [Obsługiwani dostawcy AI](../connections/providers-reference.md)
 - [Konfiguracja serwera](../CONFIGURATION.md)

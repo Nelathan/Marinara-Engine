@@ -221,10 +221,11 @@ Añade botones de elección "What will you do?" (¿qué harás?) en los que pued
 
 Planifica storyboards (secuencias de viñetas) visuales fijos o animados a partir de intercambios de Roleplay ya terminados y de la narración de Game. La planificación y el formato adaptado a cada proveedor van por separado, y así se conservan la cronología de la fuente, la identidad de los personajes y el estilo visual elegido en los fotogramas clave y los videos generados.
 
-- **Integración**: paquete de agente; Game y Roleplay usan las plantillas de prompt y los ajustes del paquete instalado a través de la integración anfitriona de Storyboard del Engine.
+- **Integración**: paquete de agente; Game y Roleplay usan las plantillas de prompt y los ajustes del paquete instalado a través de la integración de Storyboard que aporta el Engine como aplicación anfitriona.
 - **Dónde funciona**: Roleplay y Game.
 - **Ajustes clave**: elegir planificadores de imagen fija o de animación, conexiones de imagen y de video, cantidad de fotogramas clave, duración, modo de visualización, manejo de las referencias de personaje, plantillas de episodio y de estilo de Roleplay, y plantillas de ilustración y de video de Game.
-- **Compatibilidad**: Engine `2.3.5` hasta antes de `4.0.0`. El paquete usa los permisos `agent-runtime`, `chat-read`, `prompt-context`, `storage` y `ui`, y no requiere reiniciar.
+- **Compatibilidad**: Engine `2.3.5` hasta antes de `3.0.0`. El paquete usa los permisos `agent-runtime`, `chat-read`, `prompt-context`, `storage` y `ui`, y no requiere reiniciar.
+- **Guía completa**: [El agente Storyboard: Roleplay y Game Mode](../game/storyboard.md).
 
 ### Calls
 

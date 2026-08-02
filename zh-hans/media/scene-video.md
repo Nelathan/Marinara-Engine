@@ -132,7 +132,7 @@ Game Mode 生成场景视频还有第二个入口，就是 **Game Assets** 面�
 - **Game Video Prompt**(游戏视频提示词)：决定图片如何动起来的提示词模板，内置默认值是 **Cinematic Scene Video**。
 - **Edit Video Presets**(编辑视频预设)：为这个聊天添加和编辑自己的视频提示词模板副本。
 
-在 Game Mode 里，Gallery 和 Game Assets 的手动视频依旧由 **Game Video Prompt** 控制。Roleplay 的 Gallery 动画则改由 **Roleplay Gallery Animation Director** 控制。分镜关键帧的短片可以在 **Chat Settings**、**Agents**、**Storyboards**(分镜) 里另选一个 **Storyboard Video Prompt**(分镜视频提示词)。没有单独选择时，分镜沿用 Game Video Prompt。
+在 Game Mode 里，Gallery 和 Game Assets 的手动视频依旧由 **Game Video Prompt** 控制。Roleplay 的 Gallery 动画则改由 **Roleplay Gallery Animation Director** 控制。已安装的 Storyboard 智能体自带一个默认的 **Storyboard Video Prompt**(分镜视频提示词)，每个 Roleplay 或 Game 聊天都可以在 **Chat Settings > Agents > Storyboards** 里另选一个把它覆盖掉。重置这个选择，用的就是 Storyboard 智能体的默认值，不会去沿用别的聊天的提示词。
 
 新建 Game Mode 聊天时，设置向导里也有 **Video Generation Connection**(视频生成连接) 选择器。它在 **Features**(功能) 这一步，开启 **Visual Generation**(视觉生成) 之后才会出现。
 
@@ -150,9 +150,9 @@ Game Mode 生成场景视频还有第二个入口，就是 **Game Assets** 面�
 
 ## 分镜
 
-Game Mode 还能生成分镜，也就是一个游戏回合对应的一组有序关键帧图片。开启分镜动画后，Marinara 会用你的视频连接和 **Storyboard Video Prompt** 把每一张关键帧变成短片。没有单独选模板时，它沿用 **Game Video Prompt**。关键帧指的是这组有序画面里的一张静帧。
+可下载的 Storyboard 智能体能在 Roleplay 和 Game Mode 里生成有序的关键帧图像和片段。Game Mode 用的是一轮已完成的 GM(游戏主持人) 回合，Roleplay 则把已完成的几轮往来合成一段内嵌的小剧集。开启动画之后，Marinara 会用选定的视频连接和这个智能体的 **Storyboard Video Prompt**，把每一张成功的关键帧变成片段。
 
-分镜有自己的一套控件和单独的指南。完整的设置步骤和工作流见[分镜引擎指南](../game/storyboard.md)。
+分镜有自己的一套控件和单独的指南。安装步骤和两种模式的工作流见 [Storyboard 智能体指南](../game/storyboard.md)。
 
 ## 故障排查
 
@@ -179,7 +179,7 @@ Seedance 需要图片的公网链接。本地服务器上，打开 Seedance 连�
 ## 相关指南
 
 - [动态表情](animated-expressions.md)
-- [分镜引擎指南](../game/storyboard.md)
+- [Storyboard 智能体指南](../game/storyboard.md)
 - [Game Mode 中的 LTX 2.3 分镜](../game/ltx-2-3-storyboards.md)
 - [支持的 AI 服务商](../connections/providers-reference.md)
 - [服务器配置参考](../CONFIGURATION.md)

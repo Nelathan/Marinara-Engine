@@ -1,243 +1,357 @@
-# 絵コンテエンジンガイド
+# Storyboardエージェントガイド
 
-このガイドでは、Marinara Engineの絵コンテについて説明します。絵コンテは、完成した物語の本文を数枚のキーフレーム画像に変換し、動画クリップを追加することもできる機能です。Game Modeの絵コンテは、終了したGMの1ターンを対象にします。Roleplayの絵コンテは、完了した複数のメッセージをまとめて1つのエピソードとしてチャット内に表示します。Conversationのチャットに絵コンテはありません。
+ダウンロードできる**Storyboard**エージェントは、完成した物語の本文を、順序の付いたキーフレーム画像に変換します。必要に応じて、image-to-videoによる短いクリップも作れます。対応するのは**Roleplay**と**Game Mode**です。Conversationのチャットで絵コンテは使えません。
 
-## 絵コンテとは
+現在の絵コンテは、このエージェントを軸にした仕組みで動きます。計画用のプロンプト、デフォルト値、チャットごとの設定項目はStoryboardパッケージが持ちます。メディアを生成し、Gallery(ギャラリー)に保存し、チャットやGameのビューアーに表示する部分はMarinara Engineが受け持ちます。
 
-Game Modeは、AIのゲームマスター(GM)がターン制の冒険を語るチャットモードです。GMが1ターン分の語りを終えると、絵コンテエンジンがそのターンだけを絵にします。Roleplayでは、Storyboardエージェントが、前回成功したエピソード以降の完了したユーザーのメッセージとAIの返信を読み取ります。
+## RoleplayとGame Modeの早見表
 
-MarinaraはGMの語りを読み取り、順序の付いた数枚のキーフレームに分割します。キーフレームは、そのターンのある瞬間を描いた1枚の絵です。1つの絵コンテに入るキーフレームは1枚から6枚で、デフォルトは3枚です。
+| | Roleplay | Game Mode |
+| --- | --- | --- |
+| 物語の元になる本文 | 前回成功したエピソード以降の、完了したユーザーとAIのメッセージ | 完了したGMの語り1ターン |
+| 自動生成の選択肢 | **Manual only**、**Still images**、**Animations**のいずれか | **Automatic Storyboard Illustrations**と**Automatic Storyboard Animations**の独立した2つのスイッチ |
+| 手動の操作 | 直近の完了したAIの返信に対する**Gallery > Create storyboard** | 直近の完了したGMのターンに対する**Gallery > Create storyboard** |
+| 表示 | エピソードを締めくくるAIの返信の直下にそのまま表示 | フローティングのビューアーかGameの背景。語りの進行に同期 |
+| 計画用のプロンプト | エピソードの取り決め、視覚スタイル、任意のアニメーション追加分、出力の取り決め | 静止画とアニメーションで別々のプランナー |
+| 共通の最終プロンプト | イラスト用の画像プロンプトとアニメーション用の動画プロンプト | イラスト用の画像プロンプトとアニメーション用の動画プロンプト |
 
-各キーフレームは、ターンの本文の一定の範囲と結び付いています。この本文の範囲をリーダーセクションと呼びます。ターンを読み進めると、小さなビューアーが今読んでいる位置に対応するキーフレームを表示します。
+どちらのモードでも、キーフレームの画像はGalleryの**Images**タブに、クリップは**Videos**タブに保存します。
 
-Marinaraは画像を計画する前に、ターンからGMコマンドタグを取り除きます。GMコマンドタグとは、ダイスロールや世界の状態の更新など、GMのメッセージに隠された指示用のタグです。絵に写り込まないように削除します。
+## エージェントのインストール
 
-キーフレームの静止画は**Gallery**(ギャラリー)の**Images**タブに保存します。キーフレームのクリップはシーン動画として**Videos**タブに保存します。通常の**Gallery**の項目と同じ扱いなので、キーフレーム1枚ごとにプレビュー、ダウンロード、ピン留め、プロンプトのコピーができます。
+1. Sparklesのアイコンから**Agents**(エージェント)パネルを開きます。
+2. **Download Agents**を選びます。
+3. **Storyboard**を開いて**Install**を選びます。
+4. RoleplayかGameのチャットを開き、**Chat Settings > Agents**(チャット設定 > エージェント)を開きます。
+5. **Enable Agents**をオンにし、Storyboardカードの**Enable Storyboards**をオンにします。
 
-## Roleplayの絵コンテのエピソード
+パッケージをインストールすると、対応するチャットで使えるようになります。ただし、すべてのチャットで勝手に有効になるわけではありません。現在のパッケージは、インストール後にMarinaraを再起動する必要はありません。
 
-Roleplayの絵コンテはIllustratorとは別の機能です。Illustratorはこれまでどおり単体の画像を作り続け、Storyboardはチャットの完了した区間から順序の付いた1枚以上のキーフレームを計画します。
+Chat SettingsにStoryboardが出てこないときは、パッケージがインストールされているか、チャットがRoleplayかGame Modeになっているかを確かめます。
 
-1. **Agents > Download Agents**から**Storyboard**をインストールします。
-2. Roleplayのチャットを開き、**Chat Settings > Agents**で**Storyboard**を追加します。
-3. **Storyboard**カードで**Manual only**、**Still images**、**Animations**のいずれかを選びます。
-4. プロンプト、画像、そして必要なら動画の接続を選びます。画像の接続は必須です。
-5. 手動でエピソードを作るときは、**Gallery**を開いて**Create storyboard**を選びます。自動のエピソードは、ユーザーとAIのメッセージが設定した件数だけたまり、AIの返信が完了した時点で実行します。
+## Storyboardエージェントの設定
 
-デフォルトの間隔は1なので、新しく完了したAIの返信ごとに自動のエピソードが現れることがあります。**Messages per episode**の値を大きくすると、セリフや掛け合いがたまってからエピソードを作れます。ユーザーとAIのどちらのメッセージも間隔を進めます。間隔に達すると、Marinaraは前回成功した絵コンテ以降のメッセージを、直近の一定範囲にかぎってまとめます。既存のチャットを開いても、古いメッセージをさかのぼって処理することはありません。エピソードが失敗した場合も、成功を基準にした間隔の起点は進みません。
+**Agents**パネルを開き、**Storyboard**を選んで設定画面を開きます。ここでの値は、独自の上書きを持たないチャットのデフォルトになります。
 
-Roleplayのキーフレームは、エピソードの区切りとなったAIの返信の直後にそのまま表示します。キーフレームが複数ある絵コンテでは、矢印でフレームを切り替えます。画像とクリップは**Gallery**にも保存します。
+### 生成とメディアのデフォルト
 
-Roleplayの計画には、全体設定の**Agents > Storyboard**にある編集できる4つの層があります。
+| 設定 | デフォルト | 役割 |
+| --- | --- | --- |
+| Agent connection | 選択中のAgent connection | LLMで絵コンテを計画します |
+| **Image connection** | Use the Game image connection | すべてのキーフレームを生成します。フォールバックの流れのどこかに画像の接続が必要です |
+| **Video connection** | Use the Game video connection | アニメーションが有効なときにクリップを生成します |
+| **Automatic generation** | Still images | 新しく有効にしたチャットで最初に使う自動生成の動作を決めます |
+| **Keyframes per turn** | 3(範囲は1から6) | 目標とするフレームの枚数を決めます |
+| **Clip seconds** | 6(範囲は1から15) | クリップ1本ごとに要求する長さを決めます |
+| **Viewer display** | Floating viewer | Game Modeのビューアーのデフォルトを決めます。Roleplayの絵コンテは常にチャット内にそのまま表示します |
+| **Default Roleplay episode interval** | 1(範囲は1から100) | 自動エピソードの間にRoleplayの新しい本文をどれだけためるかを決めます |
+| **Attach Card Appearance** | On | 該当するキャラクターの外見の情報を画像プロンプトに加えます |
+| **Send Avatar References** | On | 画像プロバイダーが参照画像に対応している場合に、該当するキャラクターとペルソナのアバターを送ります |
+| **Use the final image template** | On | 計画したフレームを、画像プロバイダーへ送る前に整形します |
+| **Use NovelAI character prompts** | On | 対応する公式NovelAI V4/V4.5の接続で、キャラクターごとの本来のプロンプト方式を使います |
 
-- **Episode contract**は、渡されたメッセージから完了した物語の見せ場を選びます。
-- **Visual style**は、通常とアニメ、NovelAI、漫画、カラー漫画、モノクロ漫画の選択肢を用意します。
-- **Animation addon**は、アニメーション付きの絵コンテのときだけ含まれます。イラストをT=0のフレームそのものとして扱い、単純な動き、カメラの挙動、元になるセリフ、効果音、環境音、終わりの静止を記述します。
-- **Output contract**は、計画するモデルが返すキーフレームのJSONを定義します。
+### Game prompt library(Gameのプロンプトライブラリー)
 
-これらのRoleplay向けのプロンプトは、最適化されたGame Modeのプランナー一式を置き換えるものではありません。画像と動画のプロバイダー向けの整形プロンプトは共通のまま選べます。アニメーションの計画はプロバイダーを選ばないので、Google Gemini Omni、LTX/ComfyUI、あるいはimage-to-videoのリクエストに対応する設定済みのVideo Generationの接続でも使えます。ただしプロバイダーの機能と出力の品質には差があります。
+Gameのライブラリーには、計画の系統が2つあります。どちらを使うかは、そのGameが静止画を作るのかクリップを作るのかで決まります。
+
+| 設定 | デフォルト | 役割 |
+| --- | --- | --- |
+| **Still planner** | Still Keyframes | 完了したGMの1ターンを、完成した静止画の見せ場に分割します |
+| **Animation planner** | Comic Page Animation | アニメーション向きの最初のフレームと、長さを考慮した動きの指示を作ります |
+
+パッケージにはこのほか、NovelAI、コミック、カラー漫画、白黒漫画、アニメのエピソード、LTX向けのプランナーも入っています。プランナーのプロンプト本文は、全体のエージェント設定で編集できます。Gameのチャットでは、**Chat Settings > Agents > Storyboards**にある静止画とアニメーションの選択肢から選びます。
+
+### Roleplay prompt library(Roleplayのプロンプトライブラリー)
+
+Roleplayでは、選んだ4つのプロンプトを組み合わせて1回分の計画リクエストを作ります。
+
+| 設定 | デフォルト | 役割 |
+| --- | --- | --- |
+| **Episode contract** | Completed Roleplay Episode | 本文に裏付けのある完了した見せ場を選び、メッセージの順序どおりに並べます |
+| **Visual style** | Normal / Anime | すべてのキーフレームの画づくりを決めます |
+| **Animation addon** | Simple Storyboard Motion | クリップのときだけ、動き、カメラ、元になるセリフと効果音、環境音、終わりの静止を加えます |
+| **Output contract** | Roleplay Keyframe JSON | プランナーが返すキーフレームの項目構成を定義します |
+
+各選択欄の下には、編集できる一覧があります。自作のプロンプトを足すときは**Add option**を使い、名前の変更、短い説明の追加、プロンプト本文の編集ができます。組み込みの選択肢は、パッケージのデフォルトに戻せます。
+
+### Shared provider formatters(共通のプロバイダー向け整形プロンプト)
+
+どちらのモードでも、フレームの計画が終わると、共通の整形プロンプトがプロバイダーへ送る最終的なリクエストを作ります。
+
+| 設定 | デフォルト | 役割 |
+| --- | --- | --- |
+| **Default image prompt** | Game Scene Illustration | 計画された各キーフレームを画像プロバイダー向けに整形します |
+| **Default video prompt** | Cinematic Scene Video | 最初のフレームの画像と動きの計画を動画プロバイダー向けに整形します |
+
+組み込みの画像側の選択肢には、ほかに**Storyboard Illustration**と**Storyboard First Frame**があります。動画側には**Anime Game Video**、**Comic Page Video**、**LTX Director Video**があります。GameとRoleplayのチャットは、土台となる共通のプロンプト一覧を変えずに、それぞれ別の整形プロンプトを選べます。
+
+### 全体のデフォルトとチャットごとの上書き
+
+チャットごとにエージェントのデフォルトを上書きできます。Chat Settingsでは、継承している値に**Using agent default**と表示され、上書きを作ると元に戻すためのボタンが現れます。
+
+接続の優先順位は、モードによって少し異なります。
+
+- Roleplayには、チャットごとのプロンプト、画像、動画の選択欄があります。**Use global default**を選ぶとStoryboardの設定を引き継ぎます。
+- Game Modeは、Game専用の計画、画像、動画の接続が設定されていればそれを使い、設定がなければStoryboardエージェントのデフォルトに戻ります。
+
+静止画には画像の接続が必要です。アニメーションには、キーフレーム画像の生成が成功していることと、動画の接続の両方が必要です。
+
+## Roleplayの絵コンテ
+
+Roleplayの絵コンテは、完了した一連のメッセージを1つの映像的なエピソードにまとめ、その区切りとなったAIの返信の下に表示します。
+
+### クイックスタート
+
+1. Storyboardをインストールし、Roleplayのチャットで有効にします。
+2. **Chat Settings > Agents > Storyboards**で**Prompt connection**と**Image connection**を選びます。全体の設定が済んでいれば**Use global default**のままでかまいません。
+3. **Automatic mode**を選びます。
+   - **Manual only**: 自動のエピソードは作りません。**Create storyboard**を押したときだけ静止画のエピソードを作ります。
+   - **Still images**: イラスト付きのエピソードを自動で作ります。
+   - **Animations**: キーフレーム画像と、フレームごとのクリップを自動で作ります。動画の接続が必要です。
+4. **Messages per episode**と**Keyframes per episode**を設定します。
+5. 新しいAIの返信を完了させるか、Galleryを開いて**Create storyboard**を選びます。
+
+キーフレームが複数ある絵コンテでは、矢印でフレームを切り替えます。アニメーション付きのフレームは、そのまま再生できるクリップを表示します。クリップが生成中か利用できない場合は画像を表示します。
+
+### エピソードの間隔の仕組み
+
+この間隔は、自動の絵コンテが成功してから次の絵コンテまでに、ユーザーとAIの新しいメッセージを何件ためるかを決めます。どちらの側のメッセージも間隔を進め、エピソードには新しいメッセージが時系列で入ります。
+
+デフォルトは1なので、次に完了したAIの返信ですぐエピソードを作れます。値を大きくすると、セリフや展開がたまってからになります。元になる本文は直近の20件、12,000文字までに制限されるため、古いチャットや非常に長いチャットでも計画リクエストが際限なく膨らむことはありません。
+
+間隔の起点が進むのは、絵コンテが完全に、または一部だけでも保存されたあとだけです。失敗したエピソードは元の本文を消費しません。既存のチャットを開いても、古い返信をさかのぼって処理することはありません。自動生成は、新しく完了したAIの返信を待ちます。
+
+### Roleplayのプロンプトの流れ
+
+Roleplayでは、共通の整形プロンプトに渡す前に、4つの計画の層を通します。
+
+1. **Episode contract**が、本文に裏付けのある完了した見せ場を選び、渡されたメッセージに結び付けます。
+2. **Visual style**が、Normal/Anime、NovelAI、Comic、Colored Manga、B&W Mangaのいずれかの画づくりを選びます。
+3. **Animation addon**は、アニメーション付きの絵コンテのときだけ加わります。実現できる動作を1つ、カメラの挙動、本文に裏付けのあるセリフと効果音、環境音、終わりの静止を記述します。
+4. **Output contract**が、プランナーの返すキーフレームの構造を定義します。
+
+続いて**Storyboard Illustration Prompt**が、計画された最初のフレームをそれぞれ画像プロバイダー向けに整形します。クリップを有効にしている場合は、**Storyboard Video Prompt**が動きの計画を動画プロバイダー向けに整形します。
+
+Roleplayのプロンプトライブラリーは、Gameのプランナーの一覧とは別物です。Roleplayの視覚スタイルを編集しても、Game Modeの静止画やアニメーションのプランナーは書き換わりません。
+
+### StoryboardとIllustratorの併用
+
+StoryboardはIllustratorとは別のエージェントです。Illustratorの手動操作やそのほかのIllustratorのメディアは、これまでどおり使えます。Roleplayの絵コンテを**Still images**か**Animations**にしていると、その完了した返信については、Marinaraが通常自動で作る前景のIllustrator画像を抑止します。2つのエージェントが返信後のメディアを重ねて作らないようにするためです。**Manual only**の場合、Illustratorの通常の動作はそのままです。
 
 ## Game Modeの絵コンテ
 
-この節では、Game Modeのターンに対する絵コンテの設定、生成、確認、アニメーション化のしかたを説明します。
+Game Modeの絵コンテは、完了したGMの語り1ターンだけを物語の元にします。隠されたGMコマンドタグを取り除き、順序の付いたフレームを計画し、各フレームをターン本文の該当する区間に結び付けます。ビューアーは、読み進めた位置に合わせてフレームを切り替えます。
 
-## 始める前に
+### クイックスタート
 
-絵コンテを生成するには、いくつか準備が必要です。
+1. Storyboardをインストールします。
+2. Game Modeのチャットを作るか、既存のものを開きます。
+3. **Chat Settings > Agents**を開き、**Enable Agents**をオンにしてから**Enable Storyboards**をオンにします。
+4. そのGameに画像の接続があるか、全体のStoryboardの設定が画像の接続を用意しているかを確かめます。
+5. GMの語りのターンを終わらせます。
+6. **Gallery**を開いて**Create storyboard**を選びます。
 
-1. Game Modeのチャット。以下の設定手順はGame Modeの流れに向けたものです。
-2. ゲームのイラスト担当が使える画像の接続。次のどちらかで設定します。どちらか一方だけで十分です。
-   - 既存のゲーム: **Chat Settings**(チャット設定)を開き、**Agents**(エージェント)から**Illustrator**カードへ進みます。**Game Illustrator**をオンにして**Image Connection**を選びます。
-   - 新しいゲーム: 設定ウィザードで**Visual Generation**をオンにして、**Image Generation Connection**を選びます。
-3. 性能の高い最近の画像モデルを推奨します。アプリは最新世代の画像モデル、またはGoogle Nano Banana 2 Lite相当のモデルを勧めます。
+閉じたGameのビューアーを開き直すには、Galleryで**View storyboard**を選びます。手動生成は現在のアニメーション設定に従うので、**Automatic Storyboard Animations**がオンなら、手動の絵コンテもクリップを要求します。
 
-動画クリップを使う場合は、動画の接続も必要です。下のアニメーションの手順を参照してください。
+### Gameの絵コンテの自動生成
 
-画像の接続が未設定のまま絵コンテを要求すると、次のメッセージが出て失敗します: 「Choose an Illustrator image connection in Game Settings first.」
+Storyboardカードには、自動生成のスイッチが2つあります。
 
-キーフレーム間でキャラクターの見た目をそろえたいときは、アバター付きのキャラクターカードを使い、**Illustrator**カードの**Send Avatar References**をオンにします。これで各キャラクターのアバターが参照画像として送られます。
+- **Automatic Storyboard Illustrations**は、GMのターンが完了したあとに静止画のキーフレームを作ります。
+- **Automatic Storyboard Animations**は、さらにキーフレームごとにクリップを作ります。アニメーションをオンにするとイラストも有効になり、イラストをオフにするとアニメーションも無効になります。
 
-## クイックスタート
+自動生成が動くのは、そのGameでStoryboardエージェントが有効なときだけです。すでに絵コンテのあるターンに対して、絵コンテを作り直すこともありません。直近のターンにもう1つ絵コンテが欲しいときは、Galleryの手動操作を使います。
 
-1. Game Modeのチャットを開くか、新しく作成します。
-2. 上の節のとおりに画像の接続を設定します。
-3. GMが1ターン分の語りを終えるまでプレイします。
-4. **Gallery**パネルを開きます。
-5. **Create storyboard**をクリックします。実行中はボタンがスピナー付きの**Creating...**に変わります。
-   - **Settings > Generation**で**Expose image prompts before sending**を有効にしている場合は、キーフレームごとに組み立て済みのプロンプトを確認して編集し、生成を確定します。
-6. そのままターンを読み進めます。フローティングのビューアーが現れ、読んでいる位置に合わせてキーフレームが切り替わります。
+Generationの設定で**Expose image prompts before sending**を有効にしていると、手動のGameの絵コンテでは、組み立て済みの画像プロンプトを確認できます。自動の絵コンテは確認のウィンドウを出さずに進むので、プレイが止まりません。
 
-ビューアーを閉じたあとで開き直すには、**Gallery**パネルの**View storyboard**をクリックします。
+### Gameの設定
 
-絵コンテの生成中、**Gallery**には次のバナーが出ます: 「Storyboard generation is running. Keyframes will appear in the game storyboard viewer when ready.」
+**Chat Settings > Agents > Storyboards**を開きます。
 
-## 自動生成と手動生成
-
-絵コンテは手動で作ることも、Marinaraに任せることもできます。
-
-手動での生成は、**Gallery**の**Create storyboard**ボタンです。クリックしたときだけ、直近の終了したGMの語りのターンに対して絵コンテを作ります。自動生成をオフにしていても、このボタンで現在のターンを作り直したり描き直したりできます。
-
-自動生成の設定はチャットごとです。設定項目は次のどちらかにあります。
-
-- 新しいゲーム: 設定ウィザードの**Visual Generation**にある**Storyboards**の小見出し。
-- 既存のゲーム: **Chat Settings**の**Agents**にある**Storyboards**カード。
-
-**Automatic Storyboard Illustrations**をオンにすると、GMのターンが終わるたびに静止画のキーフレームを自動で作ります。クリックは不要です。こちらのほうが費用を抑えられます。ウィザードから作った新しいゲームでは、**Visual Generation**を有効にすると自動的にオンになります。ただし**Game Illustrator**を設定するまでは何も起きません。
-
-自動生成では、ターン完了後の処理をプロンプト確認のために止めることはありません。**Expose image prompts before sending**を有効にしていて、最終的に組み立てられたキーフレームのプロンプトをすべて見て編集したいときは、手動の**Create storyboard**を使ってください。自動生成はウィンドウを出さずに進むので、チャットを離れていてもゲームが止まりません。
-
-**Automatic Storyboard Animations**をオンにすると、キーフレームごとにMP4のクリップも作ります。デフォルトはオフです。静止画のイラストに加えて動画の接続が必要です。アニメーションをオンにするとイラストも自動でオンになり、イラストをオフにするとアニメーションもオフになります。
-
-クリップを設定する手順は次のとおりです。
-
-1. **Settings**の**Connections**で**Video Generation**の接続を作成します。
-2. ウィザードの**Video Generation Connection**欄、または**Chat Settings**の**Agents**にある**Scene Videos**の**Video Connection**で選びます。
-3. **Automatic Storyboard Animations**をオンにします。
-
-動画の接続がないままアニメーションをオンにすると、ウィザードが次のように警告します: 「Choose a Video Generation connection below to save automatic storyboard animations.」
-
-絵コンテは通常、キーフレーム1枚につき1件、合わせて3件の画像ジョブを作ります。アニメーションをオンにしていると、さらに最大3件の動画ジョブを作ります。件数は**Keyframes per Turn**に従うので、5を選べば画像ジョブが5件、動画ジョブが最大5件になります。動画ジョブは処理がずっと遅く、費用も高くなります。まずは静止画のイラストから始めて、待ち時間と費用が許容できるチャットにだけアニメーションを足してください。
-
-## 絵コンテの設定
-
-以下はすべて**Storyboards**カードにあります。**Chat Settings**を開き、**Agents**から**Storyboards**へ進みます。
-
-| 設定 | デフォルト | 動作 |
+| 設定 | エージェントのデフォルト | 制御する内容 |
 | --- | --- | --- |
-| **Automatic Storyboard Illustrations** | ウィザードでVisual Generationを有効にした新規ゲームはOn、それ以外はOff | GMのターンごとに静止画のキーフレームを作ります |
-| **Automatic Storyboard Animations** | Off | キーフレームごとにMP4のクリップを追加します。動画の接続が必要です |
-| **Keyframes per Turn** | 3(範囲は1から6) | 1ターンあたりに計画するキーフレームの枚数 |
-| **Animation Clip Duration** | 6秒(範囲は1から15) | クリップ1本の長さ |
-| **Viewer Display** | Floating | フローティングパネルか、画面全体の背景か |
-| **Illustration Planner** | Still Keyframes | 完成した静止画のキーフレームと、その画像の説明を計画します |
-| **Animation Planner** | Comic Page Animation | アニメーション向きの元画像と動きの指示を計画します |
-| **Use Storyboard Template** | On | 計画したシーンを、選んだStoryboard Illustration Promptで整形します。NovelAI向けにタグをそのまま送りたいときはオフにします |
-| **Storyboard Illustration Prompt** | Game Scene Illustration | 計画された各キーフレームを画像モデル向けに整形します |
-| **Storyboard Video Prompt** | Game Video Promptと同じ | 絵コンテのキーフレームのクリップにだけ使う動きのプロンプト |
+| **Enable Storyboards** | チャットごとにOff | インストール済みのエージェントをこのGameで有効にします |
+| **Automatic Storyboard Illustrations** | Automatic generationから決まります | GMのターンが終わるたびに静止画のキーフレームを作ります |
+| **Automatic Storyboard Animations** | Automatic generationから決まります | キーフレームごとにMP4のクリップを作ります |
+| **Keyframes per Turn** | 3(範囲は1から6) | 目標とするフレームの枚数。ターンが短いと枚数が減ることがあります |
+| **Animation Clip Duration** | 6秒(範囲は1から15) | クリップ1本ごとに要求する長さ。プロバイダー側で短く丸められることがあります |
+| **Viewer Display** | Floating | ドラッグできるビューアーか、Game全体の背景か |
+| **Still Planner** | Still Keyframes | 完成した静止画のイラストを計画します |
+| **Animation Planner** | Comic Page Animation | アニメーション向きの最初のフレームと動きの指示を計画します |
+| **Use Storyboard Template** | On | 選んだ最終的なイラスト整形プロンプトを適用します |
+| **Storyboard Illustration Prompt** | Game Scene Illustration | 計画されたフレームを画像プロバイダー向けに整形します |
+| **Storyboard Video Prompt** | Cinematic Scene Video | 最初のフレームと動きの計画を動画プロバイダー向けに整形します |
 
-**Keyframes per Turn**はスライダーです。エンジンはこの枚数だけキーフレームを計画しようとします。ターンが短いと枚数が減ることがあります。6枚を超えることはありません。
+パッケージには、NovelAI、コミック、漫画、アニメ、LTX向けのプランナーも入っています。アニメーションのプランナーを選んだだけでは動画生成は有効になりません。**Automatic Storyboard Animations**と動画の接続がやはり必要です。
 
-**Animation Clip Duration**は秒数で指定します。**Automatic Storyboard Animations**がオフのあいだは操作できません。値を設定するまではデフォルトの6秒が使われ、**Storyboard default**のピルが表示されます。自分で値を設定すると、それを消すための**Use storyboard default**ボタンが現れます。動画プロバイダーによっては指定より短い上限に丸められるため、長さは厳密には保証されません。
+### Gameのプロンプトの流れ
 
-ビューアーが**Background**モードのときは、そのシーンの見せ場に切り替わった時点で各アニメーションが音声付きで1回だけ再生されます。再生中も語りは表示できますが、語りの自動再生はクリップの再生終了を待ちます。アニメーションは最後のフレームで停止したままになります。デスクトップでもモバイルでも、ゲームのツールバーから再生し直し、再生と一時停止、ミュートを操作できます。フローティング表示の絵コンテ動画も1回だけ再生され、繰り返し再生ではなく手動で再生し直す形になります。
+Game Modeは、静止画とアニメーションで別々のプランナーを使います。
 
-視覚的な構成を組み立てるのは2つのプランナーです。**Illustration Planner**は静止画の絵コンテに使います。**Animation Planner**は動画を生成するときに使い、アニメーション向きの画像の説明と、簡潔な動きの指示の両方を作ります。
+```text
+completed GM narration
+  -> Still Planner or Animation Planner
+  -> Storyboard Illustration Prompt
+  -> image connection
+  -> optional Storyboard Video Prompt
+  -> video connection
+```
 
-続いて**Storyboard Illustration Prompt**が、プランナーの作った画像の説明を、画像モデルへ送る最終的なリクエストに整形します。既存のチャットのデフォルトは**Game Scene Illustration**です。**Storyboard Illustration**はプランナーの結果を主役に保ちながら、キャラクターの参照情報、外見の補足、キャンペーンのアートディレクション、画像への指示を加えます。
+見せ場を選び、順序を決めるのはプランナーです。イラストのプロンプトはプロバイダー向けの整形役であり、2つ目の物語プランナーではありません。アニメーションを有効にすると、アニメーションのプランナーは最初のフレームの正確な描写と動きの指示の両方を作ります。動画のプロンプトは、その動きの指示を最終的なリクエストに変えます。
 
-**Storyboard Video Prompt**は、**Scene Videos**カードにある全体向けの**Game Video Prompt**とは別の設定です。生成されたキーフレーム、Animation Plannerの動きの指示、現在のシーンの状況を組み合わせて、動画モデルへ送る最終的なリクエストを作ります。全体向けのプロンプトを流用するなら継承のままにし、手動生成のGalleryやGame Assetsの動画を変えずにキーフレームのクリップだけ変えたいときは**Anime Game Video**を選びます。
+### 改訂したGame Modeのレシピ
 
-長さを考慮した漫画のページを元画像にするなら**Comic Page Animation**を選び、そのコマを1本のクリップ用の順序付き参考カットとして解釈させるために**Comic Page Video**を選びます。通常のイラスト用には従来どおり**Comic Page**も使えます。動画側を別に選んでも、継承された**Game Video Prompt**と、手動生成のGalleryやGame Assetsの動画には影響しません。
+以下のレシピは、パッケージが適用する絵コンテの流れと、残りのGameおよびプロバイダーの設定を組み合わせたものです。パッケージにその名前の流れがあれば適用し、なければ一覧の選択内容を手動で再現します。
 
-**Storyboard Optimized**の表示形式で作成した新しいゲームでは、**Storyboard Game Prompt**、**Comic Page Animation**プランナー、**Storyboard Illustration**、**Comic Page Video**が選ばれます。**Still Keyframe Animation**と**Anime Game Video**を選べば、いつでも1カット構成の組み合わせに切り替えられます。
+#### Googleでのコミック絵コンテ
 
-### LTX 2.3のimage-to-video
+パッケージが適用する流れは次のとおりです。
 
-ローカルのLTX 2.3 ComfyUIワークフローを使うときは、Animation Plannerに**LTX Simple Image-to-Video**、Storyboard Illustration Promptに**Storyboard First Frame**、Storyboard Video Promptに**LTX Director Video**を選ぶところから始めます。Animation Plannerは、自然言語によるT=0の画像プロンプトと、動きを記述した完全な段落の両方を作ります。Storyboard First FrameはT=0のシーンを最小限の装飾で自然言語の画像プロバイダーへ渡し、LTX Director Videoは動きの段落をワークフローの`%prompt%`入力へ送ります。**LTX Director Storyboard**はより詳細で、クリップの長さを考慮する代替案です。動画のプロンプトとワークフローの取り決めは同じものを使います。
+- **Illustration Planner**: Still Keyframes
+- **Animation Planner**: Comic Page Animation
+- **Storyboard Illustration Prompt**: Game Scene Illustration
+- **Storyboard Video Prompt**: Comic Page Video
+- **Use Storyboard Template**: On
 
-モデルの選び方、ComfyUIのプレースホルダー、Game設定の全体像、確認手順、トラブルシューティングについては[Game ModeのLTX 2.3絵コンテ](ltx-2-3-storyboards.md)を参照してください。
+Gameのチェックリストは次のとおりです。
 
-## スタイルのプリセット
+- **Visual Generation**: On
+- **Image Connection**: Google/Nano Banana
+- **Image Style**: Default
+- 初期設定で生成された画風はそのままにします。
+- **Automatic Storyboard Illustrations**: On
+- **Automatic Storyboard Animations**: Off
+- **Keyframes per Turn**: 3
+- **Video Connection**: None
 
-プランナーのプリセットは、各キーフレームの選び方と描写のしかたを決めます。選択欄は2つあります。
+これで通常の静止画の絵コンテを作れます。保存されたComic Pageのアニメーションの流れが働くのは、あとから動画の接続を選び、**Automatic Storyboard Animations**をオンにしたときだけです。
 
-- **Illustration Planner**は、動画なしで静止画のキーフレームを作るときに使います。デフォルトは**Still Keyframes**です。
-- **Animation Planner**は、**Automatic Storyboard Animations**がオンのときに使います。デフォルトは**Comic Page Animation**です。
+#### NovelAIへのタグの直接送信
 
-2つの選択欄はそれぞれ別のプリセット一覧を持ちます。イラスト用のプリセットは完成した静止画を記述し、読者向けの漫画やマンガの文字入れを含められます。アニメーション用のプリセットは、安定した最初のフレームと、長さを考慮した動きの指示を記述します。イラスト用のプリセットがAnimation Plannerのメニューに出ることはなく、アニメーション用のプリセットがIllustration Plannerのメニューに出ることもありません。
+パッケージが適用する流れは次のとおりです。
 
-| 系統 | プリセット | 向いている用途 |
-| --- | --- | --- |
-| イラスト | **Still Keyframes** | 通常の読書向け。コマ割り、吹き出し、キャプション、効果音の文字を使わない単一シーンのキーフレーム。 |
-| イラスト | **NovelAI Keyframes** | NovelAI V4およびV4.5に合わせた、静止画向けの簡潔なタグプロンプト。タグをそのまま送りたいときは**Use Storyboard Template**をオフにします。 |
-| イラスト | **Comic Page** | 2から6コマ、吹き出し、キャプション、文字入れを備えた完成度の高い漫画ページ。 |
-| イラスト | **Colored Manga** | セルシェーディング、スクリーントーン、吹き出し、効果音を使った完成度の高いカラー漫画の演出。 |
-| イラスト | **B&W Manga** | 白黒のペン入れ、スクリーントーン、ベタ、吹き出し、効果音による完成度の高いモノクロ漫画。 |
-| アニメーション | **Still Keyframe Animation** | 最初のフレームを厳密に指定した順序付きの単一カット。主となる動きは1つ、カメラの動きは単純、環境の動きと終わりの静止を伴います。 |
-| アニメーション | **Anime Episode Director** | 放送アニメ風の単一カット。最初のフレームの連続性、簡潔な動きの指示、プロバイダーの制限に配慮した演出を行います。 |
-| アニメーション | **NovelAI Keyframe Animation** | NovelAIのタグで書いた最初のフレーム。タイミングと動きは別のアニメーション指示に分けます。 |
-| アニメーション | **Comic Page Animation** | 長さを考慮した漫画の元ページ。時系列に並んだコマが1本のクリップの順序付き参考カットになります。 |
-| アニメーション | **Colored Manga Animation** | 文字を入れないカラー漫画の最初のフレーム。線画とセルシェーディングを保った動きを付けます。 |
-| アニメーション | **B&W Manga Animation** | 文字を入れないモノクロの最初のフレーム。ペン入れとスクリーントーンを保った動きを付けます。 |
+- **Illustration Planner**: NovelAI Keyframes
+- **Storyboard Illustration Prompt**: プロンプト本文が次の内容だけの自作の選択肢を作ります。
 
-**Still Keyframe Animation**は、**Still Keyframes**に対応する画風を選ばない動き用のプリセットです。**Anime Episode Director**はこれとは別の専用の選択肢で、放送アニメ風のカット構成が欲しいときに**Anime Game Video**と組み合わせて使います。激しい暴力は直接的に描かず、可能な範囲で予兆、遮蔽、反応、事後の描写として演出するため、GMの本来の物語を変えずにプロバイダー側の安全機構による拒否を減らせます。
+  ```text
+  ${scenePrompt}
+  ```
 
-**Comic Page Animation**は、アニメーションのクリップの長さでページの密度を調整します。6から7秒のクリップではデフォルトで2コマになり、それぞれ約2秒の単純な見せ場が3つある場合にかぎり3コマを許します。8から10秒では2から3コマ、それより長いクリップでも4コマまでです。アニメーション用のページは漫画の文字入れよりも視覚的なタイミングを優先し、各コマの焦点を絞り、終わりに短い静止を残します。コマは読む順に原因と結果が並びます。**Comic Page Video**は通常すぐ1コマ目に入ります。全体を見せる導入は、後の展開を先に見せてしまわない場合にかぎり、ごく短くだけ許されます。
+- **Use Storyboard Template**: On
+- Animation PlannerとStoryboard Video Promptは変更しません。
 
-**NovelAI Keyframes**は簡潔なDanbooruタグを書きます。Danbooruタグとは、一部のアニメ系画像モデルが前提としている、カンマ区切りの短いキーワードのタグです。アニメーション用、漫画用、マンガ用のプリセットを選んでも、それだけでアニメーションがオンになるわけではありません。クリップを作るには**Automatic Storyboard Animations**と動画の接続が必要です。
+Gameのチェックリストは次のとおりです。
 
-## キャンペーンの画風と画像スタイルのプロファイル
+- **Image Style**: Danbooru
+- **Use Campaign Art Style**: Off
+- **Attach Card Appearance**: Off
+- **Send Avatar References**: Off
+- **Use NovelAI Character Prompts**: Off
+- **Queue media generation requests**: On
+- Danbooruのプロファイルから、文章形式の**Style Text**を削除します。
+- ポジティブ、ネガティブ、イラストの各タグは必要に応じて調整します。
 
-ゲームの初期設定では、見た目を統一するためにキャンペーン全体の画風を生成します。既存のゲームでは**Chat Settings > Agents > Illustrator**を開くと、**Campaign art style**の下に表示されます。内容の編集、消去、初期設定で生成された文面への復元ができるほか、**Use Campaign Art Style**をオフにもできます。
+この自作のそのまま渡すテンプレートは、プランナーの作った簡潔なNovelAIのタグを、通常の文章形式のイラスト整形プロンプトで包まずに送ります。
 
-キャンペーンの画風と**Image Style**のプロファイルは、別々のプロンプトの層です。両方を有効にすると、Marinaraは両方を含めます。キャンペーンの画風をオフにしたり消したりしても、選んだImage Styleのプロファイルはそのまま残ります。この設定は絵コンテのキーフレームだけでなく、ゲームが生成する他の画像素材にも適用されます。
+#### ローカルのKrea 2 + LTX 2.3
 
-**Settings > Generation**で**Expose image prompts before sending**を有効にしていると、手動の**Create storyboard**では、計画されたすべてのキーフレームについて、組み立て済みのポジティブプロンプトとネガティブプロンプトがそのまま先に表示されます。この確認画面での変更はその絵コンテだけの一時的な上書きで、キャンペーンの画風やImage Styleのプロファイルの設定を置き換えるものではありません。
+パッケージが適用する流れは次のとおりです。
 
-## 絵コンテのプリセットを編集する
+- **Illustration Planner**: Still Keyframes(静止画だけの場合の受け皿)
+- **Animation Planner**: LTX Simple Image-to-Video
+- **Storyboard Illustration Prompt**: Storyboard First Frame
+- **Storyboard Video Prompt**: LTX Director Video
+- **Use Storyboard Template**: On
 
-組み込みのプリセットは読み取り専用です。自分用のものを作るには、**Storyboards**カード内の**Edit Illustration Planner Presets**、**Edit Animation Planner Presets**、**Edit Illustration Prompt Presets**、**Edit Video Prompt Presets**のいずれかを開きます。各セクションには、その段階の組み込みプリセットと自作のコピーだけが並びます。
+VRAMが8 GBのGPUでは、480pのキーフレーム1枚から始めます。それが問題なく完了したら、キーフレーム3枚やより高い解像度へ進めます。ComfyUIの接続、プレースホルダー、確認手順の全体は[Game ModeのLTX 2.3絵コンテ](ltx-2-3-storyboards.md)を参照してください。
 
-組み込みのプリセットを、そのチャットの中だけで編集できるテンプレートとしてコピーし、対応する選択欄でそのコピーを選びます。Illustration Plannerのコピーは、Animation Plannerとしては選べません。Animation Plannerのコピーも、Illustration Plannerとしては選べません。Storyboard Illustration Promptのコピーは絵コンテの画像にだけ影響します。動画のプロンプトのコピーは全体向けのGame Video Promptと共有されるため、どちらの動画の選択欄からも使えます。
+### Storyboard Optimizedの演出とエージェントのスイッチは別物
 
-自作のコピーには、名前、短い説明、編集できるプロンプト本文があります。ゴミ箱ボタンを押すと確認のウィンドウが出て、コピーを削除できます。これらのコピーはそのチャット1つに保存され、アプリ全体には共有されません。
+Gameの設定ウィザードにある**Storyboard Optimized**の演出は、GMの語りのプロンプトを変えて、絵にしやすい視覚的な手がかりがターンに多く含まれるようにします。ただし、Storyboardのインストールや有効化、メディアの自動生成の有効化、画像と動画の接続の選択は行いません。
 
-## 絵コンテのビューアー
+Storyboardエージェントは、StandardとStoryboard Optimizedのどちらの演出でも使えます。エージェントのインストールと有効化は別に行ってください。
 
-ビューアーは読んでいる位置を追いかけます。ターンの本文の現在位置に対応するリーダーセクションを持つキーフレームを表示する仕組みで、単に「Galleryの最新の画像」を出しているわけではありません。表示のしかたは2種類あり、**Viewer Display**で選びます。
+### Gameのビューアー
 
-デフォルトは**Floating**です。ゲームの上に、ドラッグできる小さなパネルが浮かびます。見出しは**Storyboard**です。キーフレームの動画が用意できていれば再生し、クリップが生成中か失敗している場合は画像を表示します。
+**Floating viewer**は、Gameの上に浮かぶ、ドラッグとリサイズができるパネルです。GMの語りを読んでいる位置を追いかけ、対応するフレームを表示します。動画は用意できていれば再生し、そうでなければフレームの画像を表示します。
 
-フローティングのビューアーには次の操作があります。
+**Game background**は、現在のフレームをGameの操作要素の後ろに敷きます。このモードのあいだは通常生成するシーンの背景を置き換えるため、いつもの**Generate background**は使えません。背景のクリップは1回だけ再生し、最後のフレームで停止します。再生し直し、再生と一時停止、ミュートの操作はGameの操作要素から行えます。
 
-- **Close storyboard viewer**は、現在のターンのあいだだけパネルを隠します。次のGMのターンが終わると再び表示されます。ページを再読み込みしても隠した状態は解除されます。
-- **Drag storyboard viewer**は見出し部分のつまみです。パネルを画面のどこへでもドラッグできます。
-- **Play storyboard video**と**Pause storyboard video**でクリップの再生を操作します。クリップはミュートの状態で始まります。
-- **Mute storyboard video**と**Unmute storyboard video**は、そのキーフレームのクリップが生成済みのときだけ表示されます。
-- **Change storyboard viewer size**は、小、中(デフォルト)、大の3段階の幅を順に切り替えます。
-- 隅のつまみをドラッグするとパネルを自由にリサイズでき、サイズの段階指定より優先されます。
+フローティングのビューアーを閉じると、現在のターンのあいだだけ隠れます。開き直すには**Gallery > View storyboard**を使います。
 
-**Background**は、浮かぶカードではなく、ゲームの画面全体を現在のキーフレームで埋めます。画像やクリップはゲームの操作要素の後ろに表示されます。読んでいる位置に追従する仕組みはフローティングのビューアーと同じです。
+## 画像プロンプトとキャラクターの一貫性
 
-Backgroundモードには引き換えの制約があります。Marinaraが通常生成するシーンの場所の背景がオフになります。このモードのあいだ、イラスト担当のポップオーバーにある**Generate background**ボタンは使えません。ボタンには次の注記が出ます: 「Storyboard background display is active, so scene background generation is disabled.」
+選んだプランナーと最終的な画像プロンプトは、役割が違います。
 
-## 結果を良くするために
+- プランナーは、どの瞬間を見せるかを決め、各フレームの視覚的な中身を書きます。
+- 最終的な画像テンプレートは、プロバイダー向けの構成、該当するキャラクターの外見、参照画像の扱い、場所の状況、キャンペーンのアートディレクション、画像への指示を加えます。
 
-絵コンテの分かりやすさは、読み取ったターンの分かりやすさで決まります。良いターンは、誰が動き、何が変わり、どこが山場なのかを明示します。「the fight continues」のような漠然としたターンは、具体的な動きや場所の描写があるターンに比べて、エンジンが描ける材料が少なくなります。
+プランナーが、画像プロバイダーへそのまま渡すべき形式のプロンプトをすでに返している場合は、`${scenePrompt}`のようなそのまま渡すテンプレートを使います。**Use the final image template**をオフにするのは、選んだ整形プロンプト自体を通さないと決めたときだけにしてください。必須の画像への指示はそれでも適用されます。
 
-安定した結果を得るには次の点に気を付けます。
+キャラクターを安定させるには、次の点に気を付けます。
 
-- 初期設定の段階で、ゲームの舞台、雰囲気、画風を具体的に決めておきます。
-- 細部まで描いたアバター付きのキャラクターカードを使い、**Send Avatar References**をオンにします。
-- 重要な衣装、傷、小道具、場所は語りの中ではっきり書きます。
-- 仕上がりの好みに合わせて画像スタイルのプロファイルを使います。
-- 通常の読書には**Still Keyframes**を使い、クリップをオンにするときは漫画かマンガのプリセットを使います。
+- キャラクターカードのAppearance欄を具体的に書き、内容を最新に保ちます。
+- 選んだプランナーが必要な外見の情報をすべて書き直している場合を除き、**Attach Card Appearance**はオンのままにします。
+- プロバイダーが参照画像を受け取れて、アバターが狙いどおりの見た目なら、**Send Avatar References**はオンのままにします。
+- 1フレームに登場させるキャラクターは人数を絞り、一人ひとりがはっきり見える状態にします。Storyboardが送る参照画像は、チャットのすべてのキャラクターではなく、その場面に映る該当のキャラクターとペルソナだけです。
 
-## NovelAI向けの設定
+**Use NovelAI character prompts**が変えるのは、対応する公式NovelAI V4/V4.5の接続で送るリクエストだけです。ほかのプロバイダーでは、スイッチをオンにしても共通のプロンプトの経路を使います。
 
-NovelAIへ簡潔なリクエストを送りたいときは、**Storyboards**カードで**NovelAI Keyframes**を選び、**Use Storyboard Template**をオフにします。これで計画されたシーンのプロンプトがそのまま送られ、外見、参照画像、画像への指示、スタイルの各設定は別に使えるまま残ります。
+## 費用と処理時間
 
-**Use NovelAI Character Prompts**をオンにすると、画面に登場する各キャラクターをNovelAI本来のAdd Characterのキャプションと配置として送ります。デフォルトはオンです。注意点として、これが効くのはnovelai.netの公式NovelAI接続でV4またはV4.5のモデルを使う場合だけです。それ以外のプロバイダーやモデルではトグルは何もせず、Marinaraは共通の従来型プロンプトを使います。
+キーフレーム1枚ごとに、画像ジョブが1件動きます。アニメーション付きの絵コンテでは、成功したキーフレーム1枚につき動画ジョブが1件増えます。3枚構成のアニメーション付きの絵コンテなら、画像のリクエストが3件、動画のリクエストが3件になります。
+
+新しいプロバイダーやローカルのワークフローを試すときは、静止画とキーフレーム1枚から始めます。フレームの枚数、クリップの長さ、自動生成の頻度を増やすのは、基本の流れが安定してからにします。
+
+## 旧来の絵コンテの仕組みで作った既存のGame
+
+Storyboardは現在ダウンロードできるエージェントですが、既存のGameのチャットには、Engineに内蔵されていた旧来の絵コンテのUIで設定した値が残っていることがあります。パッケージをインストールすると、Marinaraはその値をチャットごとの上書きとして保持します。動いているGameの設定を捨てることはありません。
+
+そのため、古いGameは現在のエージェントのデフォルトとは違う動きをすることがあります。ある欄をStoryboardエージェントのデフォルトに戻したいときは、**Chat Settings > Agents > Storyboards**を開いて、その欄のリセットボタンを使います。
+
+古い設定は移行用のデータであり、2つ目の絵コンテの実装ではありません。現在の生成には、そのGameでStoryboardパッケージがインストールされ、有効になっていることが必要です。
 
 ## トラブルシューティング
 
-**「Choose an Illustrator image connection in Game Settings first.」** **Chat Settings**を開き、**Agents**から**Illustrator**カードへ進みます。**Game Illustrator**をオンにして**Image Connection**を選びます。新しいゲームなら、設定ウィザードで**Visual Generation**を有効にして**Image Generation Connection**を選びます。
+### Chat SettingsにStoryboardが出てこない
 
-**「Storyboards can only be generated from GM narration turns.」** **Create storyboard**が動くのは、終了したGMの語りのターンに対してだけです。自分のプレイヤー側のメッセージには使えません。GMの返信が終わるのを待ってから、もう一度試してください。
+- **Agents > Download Agents**から**Storyboard**をインストールします。
+- RoleplayかGameのチャットで使います。Conversationは対象外です。
+- パッケージのバージョンが、インストール済みのEngineのバージョンに対応しているか確かめます。
 
-**「This GM turn has no narration to storyboard.」** そのターンには絵にできる物語の本文がありません。GMのターンが隠しコマンドタグだけで、語りを含まない場合に起こります。GMが物語の本文を書くターンまで進めてから、そのターンで絵コンテを作ってください。
+### Create storyboardは押せるのに生成が失敗する
 
-**画像は出るが動画が出ない。** 動画には**Automatic Storyboard Animations**がオンであることと、**Video Generation**の接続が選ばれていることの両方が必要です。アニメーションがオフのあいだ、絵コンテは静止画のキーフレームだけを作ります。
+- そのチャットで**Enable Agents**と**Enable Storyboards**をオンにします。
+- RoleplayのStoryboardカード、Gameの設定、全体のStoryboardの設定のいずれかで、有効な画像生成の接続を選びます。
+- AIかGMの返信が終わるのを待ってから、もう一度試します。
 
-**自動生成が動かない。** **Automatic Storyboard Illustrations**か**Automatic Storyboard Animations**がオンになっているか確かめます。画像の接続が設定されていること、GMのターンのストリーミングが終わっていることも確認します。Marinaraは、すでに絵コンテのあるターンに対して2つ目の絵コンテを作ることはありません。作り直したいときは、**Gallery**の**Create storyboard**から手動で実行できます。
+### Roleplayで自動のエピソードができない
 
-**絵コンテが途中までしかない、または止まったままになる。** たいていは画像か動画のジョブが1件以上、失敗するかタイムアウトするか、プロバイダーのレート制限に当たっています。禁止されている内容が原因でジョブが止まることもあります。プロバイダーの処理が遅い場合は、`.env`ファイルで画像生成と動画生成のタイムアウトを長くしてから、Marinaraを再起動してください。正確な変数名は[サーバー設定リファレンス](../CONFIGURATION.md)を参照してください。
+- **Manual only**ではなく、**Still images**か**Animations**を選びます。
+- 新しく完了したAIの返信を待ちます。チャットを開いても、古いメッセージをさかのぼって処理することはありません。
+- **Messages per episode**を確かめます。前回成功した起点から、ユーザーとAIの新しいメッセージが必要な件数だけたまる必要があります。
+- 失敗した実行では起点が進まないので、サーバーのログでプロバイダー側の元のエラーや解析エラーを調べます。
 
-さらに詳しく調べるには、ログレベルをdebugにしてサーバーのログを見てください。絵コンテのログ行には`[debug/game/storyboard-illustrator]`、`[debug/game/storyboard-image-preview]`、`[debug/game/storyboard-image-assets]`、`[debug/game/storyboard-video]`のタグが付きます。
+### 画像は出るのに動画が出ない
+
+- Roleplayでは**Animations**を選びます。Game Modeでは**Automatic Storyboard Animations**をオンにします。
+- Video Generationの接続を選びます。
+- その動画の接続がimage-to-videoの入力に対応しているか確かめます。
+- Galleryの**Videos**タブを確認します。クリップは、そのキーフレーム画像より遅れて仕上がることがあります。
+- LLMの失敗で計画が代替の処理に切り替わった場合、Marinaraは代替の画像を残したまま、その実行の動画を省くことがあります。
+
+### 絵コンテが途中までしかない、または止まったままになる
+
+プロバイダーのジョブが1件以上、失敗したか、タイムアウトしたか、レート制限や内容の制限に当たっている可能性があります。プロバイダーが正常でも遅い場合は、`.env`の`IMAGE_GEN_TIMEOUT_MS`か`VIDEO_GEN_TIMEOUT_MS`の値を大きくしてから、Marinaraを再起動します。これらの値は起動時に読み込まれるためです。
+
+プランナー、組み立て済みの画像プロンプト、参照画像の選択、動画のプロンプトを調べるには、Debugモードを有効にして、サーバーのログを`storyboard`で検索します。デバッグのログにはチャットの私的な本文やプロンプトが含まれることがあるので、共有する前に見せたくない部分を伏せてください。
 
 ## 関連ガイド
 
-- [シーン動画の生成](../media/scene-video.md)
-- [画像生成プロバイダー](../media/image-providers.md)
+- [エージェント: チャットを支えるAIヘルパー](../agents/agents-overview.md)
+- [ダウンロードできるエージェント一覧](../agents/built-in-agents.md)
 - [Game Mode: はじめに](getting-started.md)
+- [Roleplayモード: はじめに](../roleplay/getting-started.md)
+- [画像生成プロバイダーと設定](../media/image-providers.md)
+- [シーン動画の生成](../media/scene-video.md)
 - [Game ModeのLTX 2.3絵コンテ](ltx-2-3-storyboards.md)

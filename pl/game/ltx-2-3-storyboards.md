@@ -24,7 +24,7 @@ Potrzebne są:
 2. Edytowalny workflow `ltx-director-simple` albo równoważny graf LTX 2.3 obraz-do-wideo, który poprawnie kończy pracę w ComfyUI.
 3. Eksport tego samego grafu w formacie API, czyli `ltx-director-simple-api`, przeznaczony dla połączenia w aplikacji Marinara Engine.
 4. Połączenie generowania obrazów w aplikacji Marinara Engine, które tworzy ilustracje pierwszej klatki.
-5. Czat w trybie Game Mode z obsługą storyboardów.
+5. Agent **Storyboard** zainstalowany z **Agents > Download Agents** i włączony w grze w panelu **Chat Settings > Agents** (ustawienia czatu).
 
 Edytowalny workflow ComfyUI i jego eksport API to dwa różne pliki. Otwórz `ltx-director-simple` w ComfyUI, zainstaluj każdy brakujący węzeł zgłoszony przez ComfyUI Manager i przetestuj graf na miejscu. Do połączenia w aplikacji Marinara Engine zaimportuj `ltx-director-simple-api`. Po każdej zmianie węzła lub modelu wyeksportuj graf ponownie w formacie API i podmień plik JSON zapisany w połączeniu. Nie wklejaj do aplikacji Marinara Engine zwykłego workflow z edytora wizualnego.
 
@@ -142,7 +142,7 @@ Test połączenia oparty tylko na tekście nie sprawdzi symbolu `%reference_imag
 
 ## Konfiguracja czatu w trybie Game Mode
 
-Otwórz czat w trybie Game Mode, przejdź do **Chat Settings** (ustawienia czatu) i wybierz zakładkę **Agents**.
+Otwórz czat w trybie Game Mode, przejdź do **Chat Settings** i wybierz zakładkę **Agents**. Zanim zaczniesz konfigurować sekcje opisane niżej, włącz przełączniki **Enable Agents** i **Enable Storyboards**. Prezentacja Storyboard Optimized z kreatora nowej gry nie włącza agenta.
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Zacznij od takiego profilu:
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3; użyj dowolnej wartości z zakresu 1-6, dopasowanej do tury i do budżetu renderowania |
+| **Keyframes per Turn** | zwykle 3; w pierwszym teście na karcie z 8 GB pamięci VRAM zacznij od 1 |
 | **Animation Clip Duration** | 6 sekund |
 | **Viewer Display** | Floating na czas testów |
 | **Illustration Planner** | **Still Keyframes**; zostaje jako wariant zapasowy dla samych obrazów |
@@ -198,7 +198,7 @@ Ustawienie **Storyboard First Frame** przekazuje do Krea kompletną scenę T=0 w
 
 Ustawienie **LTX Director Video** jest celowo minimalne. Przekazuje gotowy `narrationBeat` z Animation Planner przez uniwersalną umowę promptu wideo, nie obudowując go kolejnym streszczeniem sceny.
 
-Każda klatka kluczowa uruchamia jedno zadanie obrazu w Krea i jedno lokalne zadanie wideo w LTX. Trzy klatki kluczowe to więc trzy renderowania pierwszej klatki i trzy renderowania wideo. Jeśli chcesz najpierw potwierdzić działanie połączenia, zanim uruchomisz pełny zestaw trzech ujęć, użyj jednej klatki kluczowej w pierwszym teście na karcie z 8 GB.
+Każda klatka kluczowa uruchamia jedno zadanie obrazu w Krea i jedno lokalne zadanie wideo w LTX. Trzy klatki kluczowe to więc trzy renderowania pierwszej klatki i trzy renderowania wideo. Na karcie z 8 GB pamięci VRAM zacznij od jednej klatki kluczowej w rozdzielczości 480p. Kiedy to się uda, przejdź do trzech klatek kluczowych i wyższych rozdzielczości.
 
 ## Pierwszy test
 
@@ -297,7 +297,7 @@ Po szczegółowe ślady z serwera włącz logowanie diagnostyczne i szukaj wpis�
 
 ## Powiązane przewodniki
 
-- [Przewodnik po silniku storyboardów](storyboard.md)
+- [Przewodnik po agencie Storyboard](storyboard.md)
 - [Konfiguracja workflow w ComfyUI](../media/comfyui.md)
-- [Generowanie wideo scen](../media/scene-video.md)
+- [Generowanie wideo sceny](../media/scene-video.md)
 - [Game Mode: pierwsze kroki](getting-started.md)

@@ -191,6 +191,7 @@ pnpm backgroundremover:install
 
 Game Modeの絵コンテは、そろったGMの語りをキーフレーム画像と、任意で短い動画に変換します。Roleplayの絵コンテは、そろったやり取りをまとめ、その結果をアシスタントの返信の下に表示します。
 
+- **Agents** > **Download Agents**から**Storyboard**をインストールしてあるか確かめ、そのチャットで**Enable Agents**(エージェントを有効にする)と**Enable Storyboards**(絵コンテを有効にする)をオンにします。
 - 手動でシーンの動画を作るには、先に**Gallery**(ギャラリー)の画像を生成またはアップロードし、その**Video**または**Animate**の操作を使います。**Gallery**は**Images**と**Videos**のタブに分かれているので、**Videos**タブを確認してください。
 - Game Modeの絵コンテを自動生成するには、**Chat Settings** > **Agents** > **Storyboards**を開き、**Automatic Storyboard Illustrations**がオンになっているか確かめます。短い動画も欲しい場合は**Automatic Storyboard Animations**もオンにします。
 - Roleplayでは、**Storyboard**エージェントをチャットに追加します。**Still images**か**Animations**を選び、**Messages per episode**を設定して、Storyboardの画像用の接続を選びます。**Manual only**の場合は、代わりにGalleryの**Create storyboard**から実行します。
@@ -198,7 +199,7 @@ Game Modeの絵コンテは、そろったGMの語りをキーフレーム画像
 - すべてのキャラクターをまとめたカスタムのプロンプトのほうが結果が良い場合は、**Use NovelAI Character Prompts**をオフにします。
 - 応答の遅いプロバイダーではタイムアウトになることがあります。`.env`の`IMAGE_GEN_TIMEOUT_MS`または`VIDEO_GEN_TIMEOUT_MS`を大きくしてから、Marinaraを再起動してください。サーバーはこれらの値を起動時にしか読み込みません。
 
-どちらの使い方も[絵コンテエンジンガイド](game/storyboard.md)で説明しています。Gameのセットアップは[Game Mode: はじめに](game/getting-started.md)を参照してください。
+どちらの使い方も[Storyboardエージェントガイド](game/storyboard.md)で説明しています。Gameのセットアップは[Game Mode: はじめに](game/getting-started.md)を参照してください。
 
 ### Game Modeの世界生成でJSONのエラーが出る
 

@@ -8,8 +8,8 @@
     },
     {
       "path": "FAQ.md",
-      "sha256": "d5b0c1caea10eba4193e1e9a7095151847c652991b0579272fc3db0bfd219121",
-      "bytes": 22039
+      "sha256": "f3ad486666c994d5e6a2a6a9997b8e0457756ac91657bbc71780479acb3656c3",
+      "bytes": 22480
     },
     {
       "path": "INSTALLATION.md",
@@ -23,8 +23,8 @@
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "9719e0194d139ee02eecd07b0b61a6201fe8d0ce7405d2bc87b568114b30e181",
-      "bytes": 32176
+      "sha256": "8801a1fc5a7218d52439ae319b17aa27c485e95928956578d4a248a5b1f808f9",
+      "bytes": 32371
     },
     {
       "path": "UPGRADING.md",
@@ -43,8 +43,8 @@
     },
     {
       "path": "agents/built-in-agents.md",
-      "sha256": "68afad117f36d619a2d4f8bf8517ac88429763cdfe227f8a7beff3460e64992a",
-      "bytes": 22794
+      "sha256": "90206c3f4f4dbb8e99c9ecbdad0664ce11f394387e0b11d2aee77d202f3d42aa",
+      "bytes": 22912
     },
     {
       "path": "agents/custom-agents.md",
@@ -373,8 +373,8 @@
     },
     {
       "path": "game/getting-started.md",
-      "sha256": "bba2343c24eedf7ba5f1465ab505ddb40f415f07b68e46174fe114a3409cc36a",
-      "bytes": 15581
+      "sha256": "15362446c458514a25b7d7c37f2ea0c401aaf985688d99ad010dc925704f034b",
+      "bytes": 15307
     },
     {
       "path": "game/hud-widgets.md",
@@ -383,8 +383,8 @@
     },
     {
       "path": "game/ltx-2-3-storyboards.md",
-      "sha256": "31aae8f31ee6ed407d559d2f3371598c31855591aba7c0d7bcc6dbab5a0e0805",
-      "bytes": 22954
+      "sha256": "3aca7a107398cae61b92b71550de8f6d64962506aadced87e0d4121b712d8355",
+      "bytes": 23272
     },
     {
       "path": "game/map-time-weather.md",
@@ -403,8 +403,8 @@
     },
     {
       "path": "game/storyboard.md",
-      "sha256": "00c7478b0ed15b21c4948f2b93fe15267a8dcf2404c5ab27a9d4f8c50cfe736c",
-      "bytes": 28932
+      "sha256": "5d3e6dbb9a531b72869ea3354e25fdd91f57461cca4bdaa95f9626d4f9af04ed",
+      "bytes": 27834
     },
     {
       "path": "home/achievements.md",
@@ -533,8 +533,8 @@
     },
     {
       "path": "media/scene-video.md",
-      "sha256": "e082cf14bb4e366157fb1a0683a0738ca5d2e1f835c26f7cea61a6c89b22f29b",
-      "bytes": 18818
+      "sha256": "bae0833360a7d42eb63e968260b8f0abe987c71d22b1647908fe3b1058eb4134",
+      "bytes": 18921
     },
     {
       "path": "media/style-profiles.md",

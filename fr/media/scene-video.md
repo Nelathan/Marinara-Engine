@@ -132,7 +132,7 @@ Les chats **Game Mode** affichent une carte **Scene Videos** décrite ainsi : "G
 - **Game Video Prompt** : le modèle de prompt qui décide de la façon dont l'image s'anime. Le modèle intégré par défaut est **Cinematic Scene Video**.
 - **Edit Video Presets** : ajoute et modifie tes propres copies du modèle de prompt vidéo pour ce chat.
 
-Le **Game Video Prompt** continue de piloter les vidéos manuelles de la galerie et de **Game Assets** en Game Mode. Les animations de la galerie en Roleplay passent, elles, par **Roleplay Gallery Animation Director**. Les clips d'images-clés du storyboard peuvent, eux, utiliser un **Storyboard Video Prompt** différent, sous **Chat Settings**, **Agents**, puis **Storyboards**. Sans choix distinct pour le storyboard, ils héritent du Game Video Prompt.
+Le **Game Video Prompt** continue de piloter les vidéos manuelles de la galerie et de **Game Assets** en Game Mode. Les animations de la galerie en Roleplay passent, elles, par **Roleplay Gallery Animation Director**. L'agent Storyboard installé possède son propre **Storyboard Video Prompt** par défaut, que chaque chat Roleplay ou Game Mode peut remplacer dans **Chat Settings > Agents > Storyboards**. Réinitialiser ce choix ramène à la valeur par défaut de l'agent Storyboard ; le chat n'hérite pas du prompt d'un autre chat.
 
 À la création d'un chat Game Mode, l'assistant de configuration propose lui aussi un sélecteur **Video Generation Connection**. Il se trouve à l'étape **Features** et apparaît une fois que tu as activé **Visual Generation**.
 
@@ -150,9 +150,9 @@ La même section propose un réglage **Animated expression length**. Il relève 
 
 ## Les storyboards
 
-Game Mode sait aussi construire un storyboard, c'est-à-dire une suite ordonnée d'images-clés pour un tour de jeu. Quand les animations de storyboard sont activées, Marinara anime chaque image-clé en un clip, à l'aide de ta connexion vidéo et du **Storyboard Video Prompt**. Celui-ci hérite du **Game Video Prompt**, sauf si tu choisis un modèle distinct. Une image-clé est une image fixe de cette suite ordonnée.
+L'agent Storyboard, à télécharger, sait construire des images-clés ordonnées et des clips, en Roleplay comme en Game Mode. En Game Mode, il part d'un tour terminé du Game Master (le maître du jeu) ; en Roleplay, il réunit des échanges terminés en un épisode dans le fil. Quand les animations sont activées, Marinara anime chaque image-clé réussie avec la connexion vidéo choisie et le **Storyboard Video Prompt** de l'agent.
 
-Les storyboards ont leurs propres commandes et leur propre guide. Voir [Les storyboards de Game Mode](../game/storyboard.md) pour la configuration et le déroulé complets.
+Les storyboards ont leurs propres commandes et leur propre guide. Voir [Guide de l'agent Storyboard](../game/storyboard.md) pour l'installation et le fonctionnement dans les deux modes.
 
 ## Dépannage
 
@@ -179,7 +179,7 @@ Vérifie que la connexion a une clé API valide et que ton compte a bien accès 
 ## Guides associés
 
 - [Expressions animées](animated-expressions.md)
-- [Les storyboards de Game Mode](../game/storyboard.md)
+- [Guide de l'agent Storyboard](../game/storyboard.md)
 - [Les storyboards LTX 2.3 en Game Mode](../game/ltx-2-3-storyboards.md)
 - [Les fournisseurs d'IA pris en charge](../connections/providers-reference.md)
 - [Référence de configuration du serveur](../CONFIGURATION.md)

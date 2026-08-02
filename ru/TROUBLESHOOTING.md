@@ -191,6 +191,7 @@ pnpm backgroundremover:install
 
 Раскадровки в Game Mode превращают завершенное повествование GM в ключевые кадры и, по желанию, в короткие клипы. Раскадровки в Roleplay объединяют завершенные обмены репликами и показывают результат прямо под ответом ИИ.
 
+- Проверьте, что агент **Storyboard** установлен через **Agents** > **Download Agents**, затем включите для чата **Enable Agents** (включить агентов) и **Enable Storyboards** (включить раскадровки).
 - Для видео сцены вручную сначала сгенерируйте или загрузите изображение в разделе **Gallery**, затем примените к нему действие **Video** или **Animate**. Раздел **Gallery** разделен на вкладки **Images** и **Videos**, поэтому смотрите на вкладке **Videos**.
 - Для автоматических раскадровок в Game Mode откройте **Chat Settings** > **Agents** > **Storyboards** и проверьте, что переключатель **Automatic Storyboard Illustrations** включен. Если нужны и клипы, включите также **Automatic Storyboard Animations**.
 - В режиме Roleplay добавьте в чат агента **Storyboard**. Выберите **Still images** или **Animations**, задайте значение **Messages per episode** и укажите подключение для изображений раскадровки. Вариант **Manual only** запускается иначе – кнопкой **Create storyboard** в разделе Gallery.
@@ -198,7 +199,7 @@ pnpm backgroundremover:install
 - Если ваш промпт работает лучше, когда все персонажи описаны вместе, выключите **Use NovelAI Character Prompts**.
 - У медленных провайдеров может истечь тайм-аут – это время, которое сервер ждет медленную задачу. Увеличьте `IMAGE_GEN_TIMEOUT_MS` или `VIDEO_GEN_TIMEOUT_MS` в `.env`, затем перезапустите Marinara. Сервер читает эти значения только при запуске.
 
-Оба сценария работы разбирает [Руководство по движку раскадровки](game/storyboard.md), а настройку игры – [Game Mode: начало работы](game/getting-started.md).
+Оба сценария работы разбирает [Руководство по агенту Storyboard](game/storyboard.md), а настройку игры – [Game Mode: начало работы](game/getting-started.md).
 
 ### Генерация мира в Game Mode выдает ошибку JSON
 

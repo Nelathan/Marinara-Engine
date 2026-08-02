@@ -166,13 +166,13 @@ Professor Mari는 평범한 Marinara 소스 파일도 편집할 수 있습니다
 
 참고: 일반적인 원격 주소에서는 Professor Mari가 데이터를 바꾸는 작업에 Basic Auth와 관리자 시크릿이 모두 필요합니다. 신뢰하는 네트워크나 허용 목록에 있는 경로에서는 [원격 접근](REMOTE_ACCESS.md)에서 설명하는 우회 설정을 쓸 수 있습니다.
 
-## 스토리보드 애니메이션은 어떻게 동작하나요?
+## Storyboard 에이전트는 무엇이고 Game Mode에서 어떻게 쓰나요?
 
-**스토리보드**는 완성된 이야기 텍스트를 짧은 키프레임 이미지 연속으로 바꾸고, 움직이는 클립을 더할 수도 있습니다. **Game Mode**에서는 게임 마스터의 서술 턴이 하나 끝난 뒤에 이어집니다. **Roleplay**에서는 Storyboard Agent가 새로 오간 대화를 모아, 정해 둔 사용자 메시지와 어시스턴트 메시지 수마다 본문 안에 에피소드를 만듭니다.
+다운로드해서 쓰는 **Storyboard** 에이전트는 완성된 이야기 텍스트를 순서가 정해진 키프레임 이미지로 바꾸고, 키프레임마다 짧은 클립으로 움직이게 만들 수도 있습니다. **Game Mode**에서는 완료된 게임 마스터(GM) 서술 턴 하나를 스토리보드로 엮어 플로팅 뷰어나 게임 배경에 프레임을 보여 줍니다. **Roleplay**에서는 새로 오간 대화를 모아 본문 안에 에피소드로 엮습니다.
 
-직접 만들려면 **Gallery**(갤러리)를 열고 **Create storyboard**(스토리보드 만들기)를 클릭하세요. Game Mode에서는 **View storyboard**(스토리보드 보기)로 뷰어를 다시 열 수 있고, Roleplay에서는 에피소드를 마무리한 어시스턴트 응답 아래에 결과가 표시됩니다.
+Game Mode에서 쓰려면 **Agents > Download Agents**에서 **Storyboard**를 설치하세요. 게임을 열고 **Chat Settings > Agents**로 이동해 **Enable Agents**(에이전트 활성화)와 **Enable Storyboards**(스토리보드 활성화)를 켠 다음, 해당 게임이나 전역 Storyboard 설정에서 이미지 연결을 지정하세요. GM 서술 턴을 하나 끝낸 뒤 **Gallery**(갤러리)를 열고 **Create storyboard**(스토리보드 만들기)를 클릭하세요. 뷰어를 다시 열 때는 **View storyboard**(스토리보드 보기)를 쓰세요.
 
-자동으로 만들려면 **Chat Settings**를 열고 **Agents**로 이동해 **Storyboards**(스토리보드) 카드를 찾으세요. Game Mode에는 삽화 토글과 애니메이션 토글이 따로 있습니다. Roleplay에서는 **Manual only**, **Still images**(정지 이미지), **Animations**(애니메이션) 중에서 고르고 **Messages per episode**(에피소드당 메시지 수)도 지정합니다. 이 값은 사용자 메시지와 어시스턴트 메시지를 함께 셉니다. 동영상 클립을 만들려면 Video Generation 연결이 필요합니다. 두 방식 모두 [스토리보드 엔진 가이드](game/storyboard.md)에서 설명합니다.
+Game 스토리보드를 자동으로 만들려면 **Automatic Storyboard Illustrations**(자동 스토리보드 일러스트)를 켜세요. 클립까지 원한다면 **Automatic Storyboard Animations**(자동 스토리보드 애니메이션)도 켜고 Video Generation 연결을 고르세요. 새 게임 마법사의 **Storyboard Optimized**(스토리보드 최적화) 연출은 GM 서술 방식만 다듬을 뿐, 에이전트를 설치하거나 활성화하지는 않습니다. Game과 Roleplay의 설정, 프롬프트, 뷰어, 마이그레이션 동작, 문제 해결은 [스토리보드 에이전트 가이드](game/storyboard.md)를 참고하세요.
 
 ## 통화에서 캐릭터가 소리 내어 말할 수 있나요?
 
@@ -182,7 +182,7 @@ Professor Mari는 평범한 Marinara 소스 파일도 편집할 수 있습니다
 
 ## Marinara로 이미지를 만들 수 있나요?
 
-네. 이미지 생성 연결을 추가하세요. 예를 들어 키가 필요 없는 **Pollinations**를 쓰거나 유료 제공자를 쓰면 됩니다. 그러면 Marinara가 캐릭터 아바타, 장면 일러스트, 셀카, Game Mode 스토리보드를 만들 수 있습니다. 추가 방법은 [AI 제공자에 연결하기](connections/connecting-to-a-provider.md)를 참고하세요.
+네. 이미지 생성 연결을 추가하세요. 예를 들어 키가 필요 없는 **Pollinations**를 쓰거나 유료 제공자를 쓰면 됩니다. 그러면 Marinara가 캐릭터 아바타, 장면 일러스트, 셀카, Roleplay나 Game Mode의 Storyboard 에이전트 키프레임을 만들 수 있습니다. 추가 방법은 [AI 제공자에 연결하기](connections/connecting-to-a-provider.md)를 참고하세요.
 
 ## 앱 안에서 문서를 읽으려면 어떻게 하나요?
 

@@ -132,7 +132,7 @@ Nos chats de **Game Mode**, o cartão **Scene Videos** é descrito como "Generat
 - **Game Video Prompt**: o modelo de prompt que decide como a imagem se anima. O padrão embutido é **Cinematic Scene Video**.
 - **Edit Video Presets**: adicione e edite cópias próprias do modelo de prompt de vídeo para este chat.
 
-O **Game Video Prompt** continua comandando os vídeos manuais da galeria e do painel Game Assets no Game Mode. As animações da galeria no **Roleplay** usam a configuração **Roleplay Gallery Animation Director**. Os clipes de quadro-chave do storyboard podem usar um **Storyboard Video Prompt** diferente, em **Chat Settings**, **Agents** e depois **Storyboards**. Sem uma escolha separada para o storyboard, eles herdam o Game Video Prompt.
+O **Game Video Prompt** continua comandando os vídeos manuais da galeria e do painel Game Assets no Game Mode. As animações da galeria no Roleplay usam a configuração **Roleplay Gallery Animation Director**. O agente Storyboard instalado tem um **Storyboard Video Prompt** padrão próprio, e cada chat de Roleplay ou de Game pode trocá-lo em **Chat Settings > Agents > Storyboards**. Redefinir essa escolha traz de volta o padrão do agente Storyboard, e não o prompt de outro chat.
 
 Ao criar um chat de Game Mode, o assistente de configuração também traz o seletor **Video Generation Connection**. Ele fica na etapa **Features** e aparece depois que você ativa a opção **Visual Generation**.
 
@@ -150,9 +150,9 @@ A mesma seção tem a configuração **Animated expression length**. Ela pertenc
 
 ## Storyboards
 
-O Game Mode também monta um storyboard, um conjunto ordenado de imagens de quadro-chave para um turno do jogo. Com as animações de storyboard ativadas, Marinara anima cada quadro-chave em um clipe usando a conexão de vídeo e o **Storyboard Video Prompt**. Esse prompt herda o **Game Video Prompt**, a menos que você escolha um modelo separado. O quadro-chave é uma imagem estática desse conjunto ordenado.
+O agente Storyboard, que você baixa à parte, monta imagens de quadro-chave em ordem e clipes no Roleplay e no Game Mode. O Game Mode usa um turno já concluído do GM (o mestre do jogo); o Roleplay reúne trocas concluídas em um episódio embutido. Com as animações ativadas, Marinara anima cada quadro-chave bem-sucedido com a conexão de vídeo escolhida e o **Storyboard Video Prompt** do agente.
 
-Os storyboards têm controles próprios e um guia próprio. Veja o [Guia do Storyboard Engine](../game/storyboard.md) para a configuração completa e o fluxo de trabalho.
+Os storyboards têm controles próprios e um guia próprio. Veja o [Guia do agente Storyboard](../game/storyboard.md) para a instalação e os fluxos de trabalho dos dois modos.
 
 ## Solução de problemas
 
@@ -179,7 +179,7 @@ Confira se a conexão tem uma chave de API válida e se a conta tem acesso a ví
 ## Guias relacionados
 
 - [Expressões animadas](animated-expressions.md)
-- [Guia do Storyboard Engine](../game/storyboard.md)
+- [Guia do agente Storyboard](../game/storyboard.md)
 - [Storyboards com LTX 2.3 no Game Mode](../game/ltx-2-3-storyboards.md)
 - [Provedores de IA compatíveis](../connections/providers-reference.md)
 - [Referência de configuração do servidor](../CONFIGURATION.md)

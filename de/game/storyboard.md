@@ -1,243 +1,357 @@
-# Anleitung zur Storyboard-Engine
+# Anleitung zum Storyboard-Agenten
 
-Diese Anleitung erklärt Storyboards in Marinara Engine. Ein Storyboard macht aus fertigem Erzähltext eine kurze Folge von Keyframe-Bildern und kann animierte Clips ergänzen. Im Game Mode folgt ein Storyboard genau einem abgeschlossenen GM-Zug. Im Roleplay fasst es abgeschlossene Wortwechsel zu einer Episode direkt im Chat zusammen. Conversation-Chats nutzen keine Storyboards.
+Der herunterladbare Agent **Storyboard** macht aus fertigem Erzähltext geordnete Keyframe-Bilder und auf Wunsch kurze Bild-zu-Video-Clips. Unterstützt werden **Roleplay** und **Game Mode**. Conversation-Chats nutzen kein Storyboard.
 
-## Was Storyboards sind
+So läuft es heute: komplett über den Agenten. Das Storyboard-Paket liefert die Planungs-Prompts, die Standardwerte und die Bedienelemente pro Chat. Marinara Engine kümmert sich um die Einbindung in der App, erzeugt die Medien, legt sie in der Gallery (Galerie) ab und zeigt sie im Chat oder im Game-Viewer an.
 
-Game Mode ist der Chat-Modus, in dem ein KI-Game Master (GM) ein rundenbasiertes Abenteuer erzählt. Sobald der GM einen Erzählzug beendet hat, kann die Storyboard-Engine genau diesen Zug bebildern. Im Roleplay liest der Storyboard-Agent die abgeschlossenen Nachrichten von dir und von der KI seit der letzten erfolgreichen Episode.
+## Roleplay und Game Mode im Überblick
 
-Marinara liest die GM-Erzählung und zerlegt sie in eine kurze Folge geordneter Keyframes. Jedes Keyframe zeigt einen Moment aus dem Zug. Ein Storyboard umfasst 1 bis 6 Keyframes, standardmäßig 3.
+| | Roleplay | Game Mode |
+| --- | --- | --- |
+| Quelle der Geschichte | Abgeschlossene Nachrichten von dir und von der KI seit der letzten erfolgreichen Episode | Ein abgeschlossener Erzählzug des Game Masters (GM) |
+| Automatik-Optionen | **Manual only**, **Still images** oder **Animations** | Getrennte Schalter **Automatic Storyboard Illustrations** und **Automatic Storyboard Animations** |
+| Manuelle Aktion | **Gallery > Create storyboard** für die zuletzt abgeschlossene KI-Antwort | **Gallery > Create storyboard** für den zuletzt abgeschlossenen GM-Zug |
+| Anzeige | Direkt im Chat unter der KI-Antwort, die die Episode abschließt | Schwebender Viewer oder Game-Hintergrund, synchron zur Erzählung |
+| Planungs-Prompts | Episode contract, Visual style, optionales Animation addon und Output contract | Getrennte Planner für Standbild und Animation |
+| Gemeinsame finale Prompts | Bild-Prompt für die Illustration und Video-Prompt für die Animation | Bild-Prompt für die Illustration und Video-Prompt für die Animation |
 
-Jedes Keyframe gehört zu einem Textabschnitt des Zuges. Diese Textabschnitte heißen Leseabschnitte. Während du den Zug durchliest, zeigt ein kleiner Viewer immer das Keyframe zur aktuellen Textstelle.
+Beide Modi legen die Keyframe-Bilder im Tab **Images** der Gallery ab und die Clips im Tab **Videos**.
 
-Bevor Marinara die Bilder plant, entfernt es die GM-Befehls-Tags aus dem Zug. GM-Befehls-Tags sind versteckte Anweisungs-Tags in einer GM-Nachricht, etwa für Würfelwürfe oder Änderungen am Spielzustand. Sie fliegen raus, damit sie nicht im Bild landen.
+## Den Agenten installieren
 
-Standbilder der Keyframes landen in der **Gallery** (Galerie) im Tab **Images**. Keyframe-Clips werden als Szenenvideos im Tab **Videos** abgelegt. Da es ganz normale Gallery-Einträge sind, lässt sich jedes Keyframe einzeln ansehen, herunterladen, anpinnen oder sein Prompt kopieren.
+1. Öffne über das Sparkles-Symbol das Panel **Agents** (Agenten).
+2. Wähle **Download Agents** (Agenten herunterladen).
+3. Öffne **Storyboard** und klick auf **Install** (Installieren).
+4. Öffne einen Roleplay- oder Game-Chat und geh dort zu **Chat Settings > Agents** (Chat-Einstellungen).
+5. Aktiviere **Enable Agents** (Agenten aktivieren) und danach **Enable Storyboards** in der Karte Storyboard.
 
-## Roleplay-Storyboard-Episoden
+Die Installation stellt das Paket in passenden Chats bereit – aktiv ist es damit noch lange nicht. Ein Neustart von Marinara ist beim aktuellen Paket nicht nötig.
 
-Roleplay-Storyboards sind vom Illustrator getrennt. Der Illustrator erzeugt weiterhin seine gewohnten Einzelbilder, während Storyboard ein oder mehrere geordnete Keyframes aus einem abgeschlossenen Abschnitt des Chats plant.
+Taucht Storyboard in den Chat Settings nicht auf, prüf zwei Dinge: Ist das Paket installiert, und läuft der Chat im Roleplay oder im Game Mode?
 
-1. Installiere **Storyboard** unter **Agents > Download Agents**.
-2. Öffne einen Roleplay-Chat und füge **Storyboard** unter **Chat Settings > Agents** hinzu.
-3. Wähle in der Karte Storyboard zwischen **Manual only**, **Still images** und **Animations**.
-4. Wähle die Verbindungen für Prompt, Bild und – wenn gewünscht – Video. Die Bild-Verbindung ist Pflicht.
-5. Für eine Episode von Hand öffnest du die **Gallery** und wählst **Create storyboard**. Automatische Episoden starten, sobald die eingestellte Zahl an Nachrichten von dir und von der KI zusammengekommen ist und eine KI-Antwort abschließt.
+## Einstellungen des Storyboard-Agenten
 
-Der Standardwert ist 1, eine automatische Episode kann also nach jeder neu abgeschlossenen KI-Antwort erscheinen. Ein höherer Wert bei **Messages per episode** lässt Dialog und Hin und Her erst einmal anwachsen. Nachrichten von dir und von der KI zählen beide fürs Intervall. Ist das Intervall erreicht, fasst Marinara die Nachrichten seit dem letzten erfolgreichen Storyboard zusammen, begrenzt auf ein Fenster der jüngsten Nachrichten. Beim Öffnen eines bestehenden Chats holt Marinara alte Nachrichten nicht nach. Und eine fehlgeschlagene Episode verschiebt den Ankerpunkt des Takts nicht.
+Öffne das Panel **Agents**, wähle **Storyboard** und ruf die Einrichtung auf. Diese Werte gelten als Standard für alle Chats ohne eigene Überschreibungen.
 
-Roleplay-Keyframes erscheinen direkt im Chat, unter der KI-Antwort, die die Episode abschließt. Umfasst ein Storyboard mehrere Keyframes, blätterst du mit den Pfeilen zwischen den Bildern. Bilder und Clips landen zusätzlich in der Gallery.
+### Standardwerte für Generierung und Medien
 
-Die Roleplay-Planung hat vier bearbeitbare Ebenen in den globalen Einstellungen unter **Agents > Storyboard**:
+| Einstellung | Standard | Zweck |
+| --- | --- | --- |
+| Agent connection | Die gewählte Agent-Verbindung | Plant das Storyboard mit einem LLM (großes Sprachmodell) |
+| **Image connection** | Use the Game image connection | Erzeugt jedes Keyframe; irgendwo in der Fallback-Kette muss eine Bild-Verbindung stehen |
+| **Video connection** | Use the Game video connection | Erzeugt Clips, sobald Animationen aktiv sind |
+| **Automatic generation** | Still images | Legt fest, wie sich frisch aktivierte Chats automatisch verhalten |
+| **Keyframes per turn** | 3, Bereich 1 bis 6 | Legt die Zielzahl der geordneten Bilder fest |
+| **Clip seconds** | 6, Bereich 1 bis 15 | Legt die gewünschte Länge jedes Clips fest |
+| **Viewer display** | Floating viewer | Standard für den Viewer im Game Mode; im Roleplay erscheinen Storyboards immer direkt im Chat |
+| **Default Roleplay episode interval** | 1, Bereich 1 bis 100 | Legt fest, wie viel neuer Roleplay-Stoff sich zwischen zwei automatischen Episoden ansammelt |
+| **Attach Card Appearance** | On | Ergänzt die Bild-Prompts um das Aussehen der erkannten Charaktere |
+| **Send Avatar References** | On | Schickt die Avatare der erkannten Charaktere und Personas mit, sofern der Bild-Anbieter Referenzen unterstützt |
+| **Use the final image template** | On | Formatiert ein geplantes Bild, bevor es an den Bild-Anbieter geht |
+| **Use NovelAI character prompts** | On | Nutzt die native Charakter-Prompt-Funktion offizieller NovelAI-V4/V4.5-Verbindungen |
 
-- **Episode contract** wählt abgeschlossene Handlungsmomente aus den übergebenen Nachrichten aus.
-- **Visual style** bietet normal/Anime, NovelAI, Comic, farbigen Manga und Schwarz-Weiß-Manga zur Wahl.
-- **Animation addon** kommt nur bei animierten Storyboards dazu. Es behandelt die Illustration als exaktes T=0-Bild und beschreibt dann schlichte Handlung, Kameraführung, Dialog aus der Vorlage, Geräusche, Atmosphäre und einen ruhigen Schluss.
-- **Output contract** legt das Keyframe-JSON fest, das das planende Modell zurückliefert.
+### Prompt-Bibliothek für den Game Mode
 
-Diese Roleplay-Prompts ersetzen die optimierte Planner-Bibliothek des Game Mode nicht. Die Formatierer für Bild- und Video-Anbieter bleiben gemeinsam nutzbar und wählbar. Der Animationsplan ist anbieterneutral und läuft daher über Google Gemini Omni, LTX/ComfyUI oder jede andere eingerichtete Video Generation-Verbindung, die Bild-zu-Video-Anfragen annimmt. Leistungsumfang und Ausgabequalität unterscheiden sich weiterhin je nach Anbieter.
+Die Bibliothek für den Game Mode kennt zwei getrennte Planungswege. Welcher greift, hängt davon ab, ob das Spiel gerade Standbilder oder Clips erzeugt.
+
+| Einstellung | Standard | Zweck |
+| --- | --- | --- |
+| **Still planner** | Still Keyframes | Zerlegt einen abgeschlossenen GM-Zug in fertige Standbild-Momente |
+| **Animation planner** | Comic Page Animation | Erzeugt animationsfertige Ausgangsbilder und Bewegungsanweisungen passend zur Cliplänge |
+
+Das Paket bringt außerdem Planner für NovelAI, Comic, farbigen Manga, Schwarz-Weiß-Manga, Anime-Episoden und LTX mit. Den Prompt-Text jedes Planners bearbeitest du in der globalen Agent-Einrichtung. Welche Standbild- und Animationsoption ein Game-Chat nutzt, legst du unter **Chat Settings > Agents > Storyboards** fest.
+
+### Prompt-Bibliothek für Roleplay
+
+Im Roleplay setzt Marinara vier ausgewählte Prompts zu einer einzigen Planungsanfrage zusammen.
+
+| Einstellung | Standard | Zweck |
+| --- | --- | --- |
+| **Episode contract** | Completed Roleplay Episode | Wählt abgeschlossene, vom Text gedeckte Handlungsmomente und behält deren Reihenfolge bei |
+| **Visual style** | Normal / Anime | Legt die optische Umsetzung jedes Keyframes fest |
+| **Animation addon** | Simple Storyboard Motion | Ergänzt nur für Clips Bewegung, Kameraführung, vom Text gedeckten Dialog und Geräusche, Atmosphäre und einen ruhigen Schluss |
+| **Output contract** | Roleplay Keyframe JSON | Legt fest, welche strukturierten Keyframe-Felder der Planner zurückliefert |
+
+Unter jedem Auswahlfeld liegt eine bearbeitbare Sammlung. Über **Add option** (Option hinzufügen) legst du einen eigenen Prompt an, benennst ihn um, ergänzt eine kurze Beschreibung und schreibst den Prompt-Text. Die mitgelieferten Optionen lassen sich jederzeit auf den Paket-Standard zurücksetzen.
+
+### Gemeinsame Formatierer für die Anbieter
+
+Sobald ein Modus seine Bilder geplant hat, bauen gemeinsame Formatierer daraus die fertigen Anfragen an die Anbieter.
+
+| Einstellung | Standard | Zweck |
+| --- | --- | --- |
+| **Default image prompt** | Game Scene Illustration | Formatiert jedes geplante Keyframe für den Bild-Anbieter |
+| **Default video prompt** | Cinematic Scene Video | Formatiert das Ausgangsbild und den Bewegungsplan für den Video-Anbieter |
+
+Bei den Bildern stehen außerdem **Storyboard Illustration** und **Storyboard First Frame** zur Wahl. Bei den Videos gibt es **Anime Game Video**, **Comic Page Video** und **LTX Director Video**. Game- und Roleplay-Chats dürfen unterschiedliche Formatierer nutzen, ohne die gemeinsame Prompt-Sammlung dahinter zu verändern.
+
+### Globale Standardwerte und Überschreibungen pro Chat
+
+Jeder Chat darf die Standardwerte des Agenten überschreiben. Geerbte Werte kennzeichnen die Chat Settings mit **Using agent default**; sobald eine Überschreibung existiert, erscheint eine Schaltfläche zum Zurücksetzen.
+
+Bei den Verbindungen gilt je nach Modus eine leicht andere Rangfolge:
+
+- Roleplay bietet pro Chat eigene Auswahlfelder für Prompt, Bild und Video. **Use global default** übernimmt die globale Storyboard-Einrichtung.
+- Der Game Mode nutzt zuerst die spielspezifischen Verbindungen für Planung, Bild und Video, sofern gesetzt, und fällt sonst auf die Standardwerte des Storyboard-Agenten zurück.
+
+Für Standbilder ist eine Bild-Verbindung Pflicht. Animationen brauchen zusätzlich ein erfolgreich erzeugtes Keyframe-Bild und eine Video-Verbindung.
+
+## Roleplay-Storyboards
+
+Roleplay-Storyboards bündeln abgeschlossene Wortwechsel zu einer bebilderten Episode und zeigen sie unter der KI-Antwort, die die Episode abschließt.
+
+### Schnellstart
+
+1. Installiere Storyboard und aktiviere es für den Roleplay-Chat.
+2. Wähle unter **Chat Settings > Agents > Storyboards** eine **Prompt connection** und eine **Image connection** – oder lass beide auf **Use global default**, wenn die globale Einrichtung vollständig ist.
+3. Wähle einen **Automatic mode**:
+   - **Manual only**: keine automatische Episode; **Create storyboard** (Storyboard erstellen) baut auf Zuruf eine Standbild-Episode.
+   - **Still images**: erzeugt automatisch eine bebilderte Episode.
+   - **Animations**: erzeugt automatisch Keyframe-Bilder und zu jedem Bild einen Clip; dafür ist eine Video-Verbindung nötig.
+4. Stell **Messages per episode** und **Keyframes per episode** ein.
+5. Lass eine neue KI-Antwort fertig laufen – oder öffne die Gallery und klick auf **Create storyboard**.
+
+Umfasst ein Storyboard mehrere Keyframes, blätterst du mit den Pfeilen zwischen den Bildern. Ein animiertes Keyframe spielt seinen Clip direkt im Chat ab und zeigt so lange das Bild, wie der Clip noch aussteht oder fehlt.
+
+### So funktioniert das Episodenintervall
+
+Das Intervall bestimmt, wie viele neue Nachrichten von dir und von der KI sich zwischen zwei erfolgreichen automatischen Storyboards ansammeln. Beide Nachrichtenarten zählen mit, und die Episode nimmt die neuen Nachrichten in zeitlicher Reihenfolge auf.
+
+Der Standard ist 1: Schon die nächste fertige KI-Antwort kann also eine Episode auslösen. Ein höherer Wert lässt Dialog und Handlung erst einmal anwachsen. Als Quelle dienen höchstens die jüngsten 20 Nachrichten und 12.000 Zeichen – so ufert die Planungsanfrage auch in einem alten oder sehr langen Chat nicht aus.
+
+Der Ankerpunkt des Takts rückt erst weiter, wenn ein vollständiges oder teilweises Storyboard gespeichert ist. Eine fehlgeschlagene Episode verbraucht das Ausgangsmaterial nicht. Beim Öffnen eines bestehenden Chats holt Marinara alte Antworten nicht nach; die Automatik wartet auf eine neu abgeschlossene KI-Antwort.
+
+### Die Prompt-Kette im Roleplay
+
+Vor den gemeinsamen Formatierern für die Anbieter durchläuft Roleplay vier Planungsebenen:
+
+1. **Episode contract** wählt abgeschlossene, vom Text gedeckte Handlungsmomente aus und verankert sie in den übergebenen Nachrichten.
+2. **Visual style** bestimmt die Umsetzung: Normal/Anime, NovelAI, Comic, Colored Manga oder B&W Manga.
+3. **Animation addon** kommt nur bei animierten Storyboards dazu. Es beschreibt eine machbare Handlung, die Kameraführung, vom Text gedeckten Dialog und Geräusche, die Atmosphäre und einen ruhigen Schluss.
+4. **Output contract** legt fest, welches strukturierte Keyframe-Ergebnis der Planner zurückgibt.
+
+Anschließend gießt der **Storyboard Illustration Prompt** jedes geplante Ausgangsbild in die Anfrage an den Bild-Anbieter. Sind Clips aktiv, formatiert der **Storyboard Video Prompt** den Bewegungsplan für den Video-Anbieter.
+
+Die Prompt-Bibliothek für Roleplay ist von der Planner-Bibliothek des Game Mode getrennt. Änderst du einen Visual style im Roleplay, bleiben die Standbild- und Animations-Planner des Game Mode unangetastet.
+
+### Storyboard und Illustrator zusammen
+
+Storyboard und Illustrator sind zwei verschiedene Agenten. Die manuellen Aktionen des Illustrators und seine übrigen Medien bleiben verfügbar. Steht das Roleplay-Storyboard auf **Still images** oder **Animations**, unterdrückt Marinara für diese fertige Antwort das übliche automatische Vordergrundbild des Illustrators. So liefern nicht beide Agenten konkurrierende Medien zur selben Antwort. Bei **Manual only** bleibt der gewohnte Illustrator-Ablauf unverändert.
 
 ## Game-Mode-Storyboards
 
-In diesem Abschnitt erfährst du, wie du Storyboards für Game-Mode-Züge einrichtest, erzeugst, prüfst und animierst.
+Im Game Mode stützt sich ein Storyboard auf genau einen abgeschlossenen GM-Erzählzug. Marinara entfernt die versteckten GM-Befehls-Tags, plant geordnete Bilder und hängt jedes Bild an einen Bereich lesbarer Abschnitte des Zuges. Beim Lesen wechselt der Viewer passend zum jeweiligen Abschnitt das Bild.
 
-## Bevor du loslegst
+### Schnellstart
 
-Ein paar Dinge müssen eingerichtet sein, damit ein Storyboard entstehen kann.
+1. Installiere Storyboard.
+2. Erstelle oder öffne einen Game-Mode-Chat.
+3. Öffne **Chat Settings > Agents**, aktiviere **Enable Agents** und danach **Enable Storyboards**.
+4. Prüf, ob das Spiel eine Bild-Verbindung hat oder die globale Storyboard-Einrichtung eine liefert.
+5. Lass einen GM-Erzählzug fertig laufen.
+6. Öffne die **Gallery** und klick auf **Create storyboard**.
 
-1. Ein Game-Mode-Chat. Die folgende Einrichtung gilt speziell für den Ablauf im Game Mode.
-2. Eine funktionierende Bild-Verbindung für den Illustrator des Spiels. Eine der beiden Stellen genügt:
-   - Bestehendes Spiel: Öffne **Chat Settings** (Chat-Einstellungen), geh zu **Agents** und dort zur Karte **Illustrator**. Aktiviere **Game Illustrator** und wähle eine **Image Connection**.
-   - Neues Spiel: Aktiviere im Einrichtungsassistenten **Visual Generation** und wähle eine **Image Generation Connection**.
-3. Empfehlenswert ist ein starkes, aktuelles Bildmodell. Die App schlägt ein topaktuelles Bildmodell vor oder etwas Vergleichbares zu Google Nano Banana 2 Lite.
+Hast du den Viewer im Spiel geschlossen, holst du ihn über **View storyboard** (Storyboard ansehen) in der Gallery zurück. Von Hand erzeugte Storyboards richten sich nach der aktuellen Animationseinstellung: Ist **Automatic Storyboard Animations** an, fordert auch das manuelle Storyboard Clips an.
 
-Für animierte Clips brauchst du zusätzlich eine Video-Verbindung. Die Schritte dazu stehen weiter unten.
+### Automatische Storyboards im Game Mode
 
-Fehlt die Bild-Verbindung, scheitert die Storyboard-Anfrage mit dieser Meldung: "Choose an Illustrator image connection in Game Settings first."
+Die Karte Storyboard hat zwei Schalter für die Automatik:
 
-Damit die Charaktere über alle Keyframes hinweg gleich aussehen, nimm Charakterkarten mit Avataren und aktiviere **Send Avatar References** in der Karte **Illustrator**. Marinara schickt dann den Avatar jedes Charakters als Referenzbild mit.
+- **Automatic Storyboard Illustrations** erzeugt nach einem abgeschlossenen GM-Zug Standbild-Keyframes.
+- **Automatic Storyboard Animations** ergänzt zu jedem Keyframe einen Clip. Wer Animationen aktiviert, aktiviert damit auch die Illustrationen; wer die Illustrationen abschaltet, schaltet die Animationen mit ab.
 
-## Schnellstart
+Die Automatik läuft nur, wenn der Storyboard-Agent für dieses Spiel aktiv ist. Für einen Zug, der schon ein Storyboard hat, legt sie kein zweites an. Willst du für den aktuellen Zug bewusst ein weiteres, nimm die manuelle Aktion in der Gallery.
 
-1. Öffne oder erstelle einen Game-Mode-Chat.
-2. Richte die Bild-Verbindung wie im Abschnitt oben ein.
-3. Spiel weiter, bis der GM einen Erzählzug abschließt.
-4. Öffne das Panel **Gallery**.
-5. Klick auf **Create storyboard** (Storyboard erstellen). Während der Generierung zeigt die Schaltfläche **Creating...** mit einem Ladekringel.
-   - Ist **Expose image prompts before sending** unter **Settings > Generation** aktiviert, prüfe und bearbeite den fertigen Prompt für jedes Keyframe und bestätige dann die Generierung.
-6. Lies den Zug weiter. Der schwebende Viewer erscheint und wechselt beim Lesen das Keyframe.
+Ist **Expose image prompts before sending** (Bild-Prompts vor dem Senden anzeigen) unter den Generation-Einstellungen aktiv, zeigt ein manuell erstelltes Game-Storyboard die fertig kompilierten Bild-Prompts zur Prüfung. Automatische Storyboards laufen ohne Prüffenster durch, damit das Spiel nicht stockt.
 
-Hast du den Viewer geschlossen, hol ihn zurück: Klick im Panel **Gallery** auf **View storyboard**.
+### Game-Einstellungen
 
-Während ein Storyboard entsteht, zeigt die **Gallery** dieses Banner: "Storyboard generation is running. Keyframes will appear in the game storyboard viewer when ready."
+Öffne **Chat Settings > Agents > Storyboards**.
 
-## Automatische und manuelle Storyboards
-
-Storyboards entstehen entweder auf Knopfdruck oder automatisch.
-
-Manuell heißt: die Schaltfläche **Create storyboard** in der **Gallery**. Sie baut ein Storyboard für den zuletzt abgeschlossenen GM-Erzählzug, und zwar nur auf Zuruf. Damit lässt sich der aktuelle Zug auch neu bebildern, selbst wenn automatische Storyboards aus sind.
-
-Automatische Storyboards stellst du pro Chat ein. Die Regler findest du an zwei Stellen:
-
-- Neues Spiel: Einrichtungsassistent, **Visual Generation**, dann der Unterabschnitt **Storyboards**.
-- Bestehendes Spiel: **Chat Settings**, **Agents**, dann die Karte **Storyboards**.
-
-**Automatic Storyboard Illustrations** erzeugt nach jedem abgeschlossenen GM-Zug Keyframe-Standbilder, ganz ohne Klick. Das ist die günstigere Variante. Bei einem neuen Spiel aus dem Einrichtungsassistenten ist die Option automatisch an, sobald **Visual Generation** aktiv ist. Wirksam wird sie erst, wenn **Game Illustrator** eingerichtet ist.
-
-Automatische Storyboards halten die Pipeline nach dem fertigen Zug nicht für eine Prompt-Prüfung an. Bei aktivem **Expose image prompts before sending** nimm die manuelle Aktion **Create storyboard**, um jeden fertig kompilierten Keyframe-Prompt zu sehen und zu ändern. Automatische Durchläufe laufen ohne Fenster durch, damit das Spiel nicht stockt, während niemand am Chat sitzt.
-
-**Automatic Storyboard Animations** erzeugt zusätzlich einen MP4-Clip pro Keyframe. Diese Option ist standardmäßig aus. Sie braucht Standbilder plus eine Video-Verbindung. Wer Animationen aktiviert, aktiviert damit auch die Illustrationen. Und wer die Illustrationen abschaltet, schaltet die Animationen mit ab.
-
-So richtest du Clips ein:
-
-1. Lege unter **Settings**, dann **Connections**, eine **Video Generation**-Verbindung an.
-2. Wähle sie im Feld **Video Generation Connection** des Assistenten aus – oder unter **Chat Settings**, **Agents**, **Scene Videos**, dann **Video Connection**.
-3. Aktiviere **Automatic Storyboard Animations**.
-
-Aktivierst du Animationen ohne Video-Verbindung, warnt der Einrichtungsassistent: "Choose a Video Generation connection below to save automatic storyboard animations."
-
-Ein Storyboard erzeugt normalerweise 3 Bild-Aufträge, einen pro Keyframe. Mit aktiven Animationen kommen bis zu 3 Video-Aufträge dazu. Die Anzahl richtet sich nach **Keyframes per Turn**: Bei 5 sind es also 5 Bild-Aufträge und bis zu 5 Video-Aufträge. Video-Aufträge dauern deutlich länger und kosten mehr. Fang mit Standbildern an und schalte Animationen nur dort dazu, wo Wartezeit und Kosten passen.
-
-## Storyboard-Einstellungen
-
-Alles davon steckt in der Karte **Storyboards**. Öffne **Chat Settings**, geh zu **Agents**, dann zu **Storyboards**.
-
-| Einstellung | Standard | Wirkung |
+| Einstellung | Agent-Standard | Wirkung |
 | --- | --- | --- |
-| **Automatic Storyboard Illustrations** | On bei neuen Assistenten-Spielen mit Visual Generation, sonst Off | Erzeugt nach jedem GM-Zug Keyframe-Standbilder |
-| **Automatic Storyboard Animations** | Off | Ergänzt einen MP4-Clip pro Keyframe; braucht eine Video-Verbindung |
-| **Keyframes per Turn** | 3 (Bereich 1 bis 6) | Wie viele Keyframes pro Zug geplant werden |
-| **Animation Clip Duration** | 6 Sekunden (Bereich 1 bis 15) | Länge jedes Clips |
-| **Viewer Display** | Floating | Schwebendes Panel oder vollflächiger Hintergrund |
-| **Illustration Planner** | Still Keyframes | Plant fertige Standbild-Keyframes und ihre Bildbeschreibungen |
+| **Enable Storyboards** | Off pro Chat | Aktiviert den installierten Agenten für dieses Spiel |
+| **Automatic Storyboard Illustrations** | Ergibt sich aus Automatic generation | Standbild-Keyframes nach jedem fertigen GM-Zug |
+| **Automatic Storyboard Animations** | Ergibt sich aus Automatic generation | MP4-Clips zu jedem Keyframe |
+| **Keyframes per Turn** | 3, Bereich 1 bis 6 | Zielzahl der Bilder; bei kurzen Zügen werden es womöglich weniger |
+| **Animation Clip Duration** | 6 Sekunden, Bereich 1 bis 15 | Gewünschte Länge jedes Clips; manche Anbieter kappen sie |
+| **Viewer Display** | Floating | Verschiebbarer Viewer oder vollflächiger Game-Hintergrund |
+| **Still Planner** | Still Keyframes | Plant fertige Standbild-Illustrationen |
 | **Animation Planner** | Comic Page Animation | Plant animationsfertige Ausgangsbilder und Bewegungsanweisungen |
-| **Use Storyboard Template** | On | Formatiert geplante Szenen mit dem gewählten Storyboard Illustration Prompt. Für direkte NovelAI-Tag-Prompts abschalten |
-| **Storyboard Illustration Prompt** | Game Scene Illustration | Formatiert jedes geplante Keyframe für das Bildmodell |
-| **Storyboard Video Prompt** | Wie Game Video Prompt | Bewegungs-Prompt nur für Storyboard-Keyframe-Clips |
+| **Use Storyboard Template** | On | Wendet den gewählten finalen Illustrations-Formatierer an |
+| **Storyboard Illustration Prompt** | Game Scene Illustration | Formatiert das geplante Bild für den Bild-Anbieter |
+| **Storyboard Video Prompt** | Cinematic Scene Video | Formatiert Ausgangsbild und Bewegungsplan für den Video-Anbieter |
 
-**Keyframes per Turn** ist ein Schieberegler. Die Engine versucht, so viele Keyframes zu planen. Bei einem kurzen Zug werden es womöglich weniger. Mehr als 6 plant sie nie.
+Das Paket liefert außerdem Planner für NovelAI, Comic, Manga, Anime und LTX. Ein Animation Planner allein schaltet die Videogenerierung noch nicht ein: Dafür brauchst du weiterhin **Automatic Storyboard Animations** und eine Video-Verbindung.
 
-**Animation Clip Duration** ist eine Sekundenzahl. Das Feld ist ausgegraut, solange **Automatic Storyboard Animations** aus ist. Bis du einen Wert setzt, gelten die 6 Sekunden Standard, erkennbar an der Plakette **Storyboard default**. Sobald ein eigener Wert drinsteht, erscheint die Schaltfläche **Use storyboard default**, um ihn zurückzunehmen. Manche Video-Anbieter kappen den Wert auf ein niedrigeres Maximum – die exakte Länge ist also nicht garantiert.
+### Die Prompt-Kette im Game Mode
 
-Im Viewer-Modus **Background** startet jede Animation einmal mit Ton, sobald ihr Erzählmoment aktiv wird. Die Erzählung darf währenddessen erscheinen, ihre automatische Wiedergabe wartet aber auf das Ende des Clips. Danach bleibt die Animation auf dem letzten Bild stehen. Über die Spiel-Werkzeugleiste steuerst du am Rechner wie am Handy Wiederholung, Wiedergabe/Pause und Stummschaltung. Auch schwebende Storyboard-Videos laufen einmal durch und lassen sich wiederholen, statt endlos in Schleife zu spielen.
+Für Standbilder und für animierte Ergebnisse hält der Game Mode getrennte Planner bereit:
 
-Den visuellen Plan erstellen die beiden Planner. **Illustration Planner** greift bei Standbild-Storyboards. **Animation Planner** kommt zum Zug, sobald Videos entstehen, und liefert sowohl eine animationsfertige Bildbeschreibung als auch eine knappe Bewegungsanweisung.
+```text
+completed GM narration
+  -> Still Planner or Animation Planner
+  -> Storyboard Illustration Prompt
+  -> image connection
+  -> optional Storyboard Video Prompt
+  -> video connection
+```
 
-**Storyboard Illustration Prompt** gießt die Bildbeschreibung des Planners anschließend in die fertige Anfrage an das Bildmodell. In bestehenden Chats steht das standardmäßig auf **Game Scene Illustration**. **Storyboard Illustration** stellt das Planner-Ergebnis in den Vordergrund und ergänzt Charakterreferenzen, Aussehen-Notizen, die Kunstrichtung der Kampagne sowie Bildanweisungen.
+Der Planner wählt die Handlungsmomente aus und bringt sie in eine Reihenfolge. Der Illustration Prompt ist reiner Formatierer Richtung Anbieter, kein zweiter Story-Planner. Bei aktiven Animationen liefert der Animation Planner beides: eine exakte Beschreibung des Ausgangsbildes und eine Bewegungsanweisung. Aus dieser Bewegungsanweisung baut der Video Prompt die fertige Anfrage.
 
-**Storyboard Video Prompt** ist unabhängig vom allgemeinen **Game Video Prompt** in der Karte **Scene Videos**. Es verbindet das erzeugte Keyframe, die Bewegungsanweisung des Animation Planners und den aktuellen Szenenkontext zur fertigen Anfrage an das Videomodell. Belass es auf der geerbten Auswahl, um den allgemeinen Prompt weiterzuverwenden – oder wähle **Anime Game Video** für Keyframe-Clips, ohne manuelle Gallery- und Game-Assets-Videos anzurühren.
+### Überarbeitete Rezepte für den Game Mode
 
-Für die dauerbewussten Comic-Ausgangsseiten wählst du **Comic Page Animation** und dazu **Comic Page Video**, damit die Panels als geordnete visuelle Referenzmomente für einen Clip gelesen werden. Das ursprüngliche **Comic Page** bleibt für gewöhnliche Illustrationen erhalten. Die getrennte Video-Auswahl lässt den geerbten **Game Video Prompt** sowie manuelle Gallery- und Game-Assets-Videos unverändert.
+Diese Rezepte kombinieren eine vom Paket gesetzte Storyboard-Kette mit den übrigen Einstellungen für Spiel und Anbieter. Bietet dein Paket die genannte Kette an, wende sie an; sonst stellst du die aufgeführten Werte von Hand ein.
 
-Neue Spiele mit der Darstellung **Storyboard Optimized** wählen **Storyboard Game Prompt**, den Planner **Comic Page Animation**, **Storyboard Illustration** und **Comic Page Video**. Auf die Einzelaufnahmen-Kombination stellst du den Chat jederzeit um, indem du **Still Keyframe Animation** und **Anime Game Video** wählst.
+#### Google-Comic-Storyboards
 
-### LTX 2.3 Image-to-Video
+Vom Paket gesetzte Kette:
 
-Für einen lokalen LTX-2.3-Workflow in ComfyUI startest du mit **LTX Simple Image-to-Video** als Animation Planner, **Storyboard First Frame** als Storyboard Illustration Prompt und **LTX Director Video** als Storyboard Video Prompt. Der Animation Planner erzeugt sowohl den natürlichsprachlichen T=0-Bild-Prompt als auch den vollständigen Bewegungsabsatz. Storyboard First Frame reicht die T=0-Szene mit minimaler Umrahmung an einen natürlichsprachlichen Bild-Anbieter weiter, während LTX Director Video den Bewegungsabsatz an den Eingang `%prompt%` des Workflows schickt. **LTX Director Storyboard** ist die ausführlichere, dauerbewusste Alternative; sie nutzt denselben Video-Prompt und denselben Workflow-Vertrag.
+- **Illustration Planner**: Still Keyframes
+- **Animation Planner**: Comic Page Animation
+- **Storyboard Illustration Prompt**: Game Scene Illustration
+- **Storyboard Video Prompt**: Comic Page Video
+- **Use Storyboard Template**: On
 
-Modellauswahl, ComfyUI-Platzhalter, das komplette Einstellungsprofil für das Spiel, Prüfschritte und Fehlerbehebung findest du unter [LTX 2.3 Storyboards im Game Mode](ltx-2-3-storyboards.md).
+Checkliste fürs Spiel:
 
-## Stil-Presets
+- **Visual Generation**: On
+- **Image Connection**: Google/Nano Banana
+- **Image Style**: Default
+- Behalte den bei der Einrichtung erzeugten Kunststil bei.
+- **Automatic Storyboard Illustrations**: On
+- **Automatic Storyboard Animations**: Off
+- **Keyframes per Turn**: 3
+- **Video Connection**: None
 
-Die Planner-Presets bestimmen, wie jedes Keyframe ausgewählt und beschrieben wird. Zwei Auswahlfelder legen sie fest:
+So entstehen ganz normale Standbild-Storyboards. Die gespeicherte Comic-Page-Animationskette greift erst, wenn du später eine Video-Verbindung wählst und **Automatic Storyboard Animations** aktivierst.
 
-- **Illustration Planner** greift, wenn Storyboards Standbild-Keyframes ohne Videos erzeugen. Standard: **Still Keyframes**.
-- **Animation Planner** greift, wenn **Automatic Storyboard Animations** aktiv ist. Standard: **Comic Page Animation**.
+#### NovelAI mit direkten Tags
 
-Die beiden Auswahlfelder haben getrennte Preset-Listen. Illustrations-Presets beschreiben fertige Standbilder und dürfen Comic- oder Manga-Beschriftungen für die Leserin enthalten. Animations-Presets beschreiben ein stabiles erstes Bild plus eine dauerbewusste Bewegungsanweisung. Ein Illustrations-Preset taucht nie im Menü des Animation Planners auf und ein Animations-Preset nie im Menü des Illustration Planners.
+Vom Paket gesetzte Kette:
 
-| Bereich | Preset | Am besten für |
-| --- | --- | --- |
-| Illustration | **Still Keyframes** | Normales Lesen. Einzelszenen-Keyframes ohne Comic-Panels, Sprechblasen, Bildunterschriften oder SFX-Text. |
-| Illustration | **NovelAI Keyframes** | Kompakte Tag-Prompts für Standbilder, abgestimmt auf NovelAI V4 und V4.5. Für einen direkten Tag-Prompt schalte **Use Storyboard Template** ab. |
-| Illustration | **Comic Page** | Fertige Comicseiten-Illustrationen mit 2 bis 6 Panels, Sprechblasen, Bildunterschriften und Beschriftung. |
-| Illustration | **Colored Manga** | Fertige farbige Manga-Inszenierung mit Cel-Shading, Rastertönen, Sprechblasen und SFX. |
-| Illustration | **B&W Manga** | Fertige Schwarz-Weiß-Manga-Zeichnungen mit Rastertönen, kräftigem Schwarz, Sprechblasen und SFX. |
-| Animation | **Still Keyframe Animation** | Geordnete Einzelaufnahmen mit exaktem ersten Bild, einer Hauptbewegung, schlichter Kameraführung, Bewegung im Umfeld und einem ruhigen Schluss. |
-| Animation | **Anime Episode Director** | Einzelaufnahmen im TV-Anime-Stil mit durchgehendem ersten Bild, knapper Bewegungsanweisung und anbietertauglicher Inszenierung. |
-| Animation | **NovelAI Keyframe Animation** | Erste Bilder aus NovelAI-Tags, wobei Timing und Bewegung in einer separaten Animationsanweisung stehen. |
-| Animation | **Comic Page Animation** | Dauerbewusste Comic-Ausgangsseiten, deren chronologische Panels als geordnete visuelle Referenz für einen Clip dienen. |
-| Animation | **Colored Manga Animation** | Textfreie farbige Manga-Ausgangsbilder mit Bewegung, die Linienführung und Cel-Shading erhält. |
-| Animation | **B&W Manga Animation** | Textfreie monochrome Ausgangsbilder mit Bewegung, die Zeichnung und Rastertöne erhält. |
+- **Illustration Planner**: NovelAI Keyframes
+- **Storyboard Illustration Prompt**: Leg eine eigene Option an, deren Prompt ausschließlich dies enthält:
 
-Das Preset **Still Keyframe Animation** ist das stilneutrale Bewegungs-Gegenstück zu **Still Keyframes**. **Anime Episode Director** ist eine eigene Spezialoption und passt zu **Anime Game Video**, wenn du Aufnahmen im TV-Anime-Stil planen willst. Schwere Gewalt hält es unblutig und inszeniert sie nach Möglichkeit über Vorahnung, Verdeckung, Reaktion oder Nachwirkung – das senkt die Zahl der Sicherheitsablehnungen beim Anbieter, ohne die Geschichte des GM zu verändern.
+  ```text
+  ${scenePrompt}
+  ```
 
-Das Preset **Comic Page Animation** steuert die Seitendichte über die Cliplänge. Bei 6 bis 7 Sekunden sind es standardmäßig 2 Panels, ein drittes nur bei drei einfachen Momenten von je etwa 2 Sekunden; bei 8 bis 10 Sekunden sind es 2 bis 3 Panels und bei längeren Clips höchstens 4. Animationsseiten stellen das visuelle Timing über die Comic-Beschriftung, halten jedes Panel fokussiert und lassen am Ende einen kurzen ruhigen Moment. Die Panels folgen in Leserichtung dem Prinzip von Ursache und Wirkung. **Comic Page Video** steigt normalerweise sofort in Panel 1 ein; eine ganz kurze Gesamtansicht zu Beginn ist nur erlaubt, wenn sie keine spätere Folge vorwegnimmt.
+- **Use Storyboard Template**: On
+- Animation Planner und Storyboard Video Prompt bleiben unverändert.
 
-Das Preset **NovelAI Keyframes** schreibt kompakte Danbooru-Tags. Danbooru-Tags sind kurze, per Komma getrennte Schlüsselwort-Tags, die manche Anime-Bildmodelle erwarten. Ein Animations-, Comic- oder Manga-Preset schaltet die Animationen nicht von allein ein. Für Clips brauchst du weiterhin **Automatic Storyboard Animations** und eine Video-Verbindung.
+Checkliste fürs Spiel:
 
-## Kunststil der Kampagne und Image-Style-Profile
+- **Image Style**: Danbooru
+- **Use Campaign Art Style**: Off
+- **Attach Card Appearance**: Off
+- **Send Avatar References**: Off
+- **Use NovelAI Character Prompts**: Off
+- **Queue media generation requests**: On
+- Entferne den Fließtext unter **Style Text** aus dem Danbooru-Profil.
+- Pass die positiven und negativen Tags sowie die Illustrations-Tags nach Bedarf an.
 
-Beim Einrichten des Spiels entsteht ein kampagnenweiter Kunststil für ein einheitliches Bild. In einem bestehenden Spiel siehst du ihn unter **Chat Settings > Agents > Illustrator** bei **Campaign art style**. Du kannst ihn bearbeiten, leeren, den ursprünglichen Wortlaut aus der Einrichtung zurückholen oder **Use Campaign Art Style** abschalten.
+Die eigene Durchreich-Vorlage schickt die kompakten NovelAI-Tags des Planners direkt los, ohne sie in den üblichen Fließtext-Formatierer zu verpacken.
 
-Der Kunststil der Kampagne und das **Image Style**-Profil sind zwei getrennte Prompt-Ebenen. Sind beide aktiv, nimmt Marinara beide mit. Schaltest du den Kampagnenstil ab oder leerst ihn, bleibt das gewählte Image-Style-Profil bestehen. Die Einstellung gilt für Storyboard-Keyframes und für die übrigen erzeugten Bildinhalte des Spiels.
+#### Lokal: Krea 2 + LTX 2.3
 
-Ist **Expose image prompts before sending** unter **Settings > Generation** aktiv, zeigen manuelle **Create storyboard**-Anfragen zuerst die exakt kompilierten positiven und negativen Prompts für alle geplanten Keyframes. Änderungen in dieser Prüfung gelten einmalig für dieses eine Storyboard; die Einstellungen für Kampagnenstil und Image-Style-Profil bleiben davon unberührt.
+Vom Paket gesetzte Kette:
 
-## Storyboard-Presets bearbeiten
+- **Illustration Planner**: Still Keyframes als Rückfalloption für reine Standbilder
+- **Animation Planner**: LTX Simple Image-to-Video
+- **Storyboard Illustration Prompt**: Storyboard First Frame
+- **Storyboard Video Prompt**: LTX Director Video
+- **Use Storyboard Template**: On
 
-Die mitgelieferten Presets sind schreibgeschützt. Für eigene Varianten öffnest du **Edit Illustration Planner Presets**, **Edit Animation Planner Presets**, **Edit Illustration Prompt Presets** oder **Edit Video Prompt Presets** in der Karte **Storyboards**. Jeder Abschnitt zeigt nur die mitgelieferten Presets und eigene Kopien für genau diese Stufe.
+Bei einer GPU mit 8 GB VRAM startest du mit einem einzigen Keyframe in 480p. Läuft das sauber durch, steigerst du auf drei Keyframes und höhere Auflösungen. ComfyUI-Verbindung, Platzhalter und das komplette Prüfverfahren stehen unter [LTX-2.3-Storyboards im Game Mode](ltx-2-3-storyboards.md).
 
-Kopiere ein mitgeliefertes Preset in eine bearbeitbare Vorlage für diesen Chat und wähle die Kopie dann im passenden Auswahlfeld. Kopien des Illustration Planners lassen sich nicht als Animation Planner wählen und umgekehrt. Kopien des Storyboard Illustration Prompt wirken nur auf Storyboard-Bilder. Kopien der Video-Prompts teilen sich weiterhin mit dem allgemeinen Game Video Prompt, sodass beide Video-Auswahlfelder sie nutzen können.
+### Die Präsentation Storyboard Optimized ist nicht der Agent-Schalter
 
-Jede eigene Kopie hat einen Namen, eine kurze Beschreibung und den Prompt-Text, den du bearbeitest. Ein Papierkorbsymbol löscht eine Kopie nach einer Rückfrage. Diese Kopien liegen nur bei diesem einen Chat, nicht app-weit.
+Die Präsentation **Storyboard Optimized** im Einrichtungsassistenten des Spiels ändert den Erzähl-Prompt des GM, damit die Züge klarere, verfilmbare Bildanker enthalten. Sie installiert oder aktiviert Storyboard aber nicht, schaltet keine automatischen Medien frei und wählt weder Bild- noch Video-Verbindung.
 
-## Der Storyboard-Viewer
+Der Storyboard-Agent funktioniert mit der Präsentation Standard genauso wie mit Storyboard Optimized. Installieren und aktivieren musst du ihn in jedem Fall separat.
 
-Der Viewer folgt deiner Leseposition. Er zeigt das Keyframe, dessen Leseabschnitt zu deiner Stelle im Zugtext passt – also nicht einfach „das neueste Gallery-Bild“. Zwei Darstellungsarten stehen zur Wahl, festgelegt über **Viewer Display**.
+### Der Viewer im Game Mode
 
-**Floating** ist der Standard. Ein kleines, verschiebbares Panel liegt über dem Spiel. Seine Kopfzeile lautet **Storyboard**. Es spielt das Video des Keyframes ab, sobald es fertig ist, und zeigt so lange das Bild, wie ein Clip noch aussteht oder fehlgeschlagen ist.
+**Floating viewer** ist ein verschiebbares, in der Größe veränderbares Panel über dem Spiel. Es folgt deiner Leseposition in der GM-Erzählung und zeigt das passende Bild. Ein Video läuft, sobald es fertig ist; sonst erscheint das Standbild des Keyframes.
 
-Der schwebende Viewer bietet diese Bedienelemente:
+**Game background** legt das aktive Bild hinter die Spielbedienelemente. Solange dieser Modus läuft, ersetzt er den sonst erzeugten Szenen-Hintergrund; die gewohnte Aktion **Generate background** (Hintergrund erzeugen) ist dann nicht verfügbar. Hintergrund-Clips laufen einmal durch und bleiben auf dem letzten Bild stehen; über die Spielbedienelemente steuerst du Wiederholung, Wiedergabe/Pause und Stummschaltung.
 
-- **Close storyboard viewer** blendet das Panel nur für den aktuellen Zug aus. Beim nächsten fertigen GM-Zug ist es wieder da. Auch ein Neuladen der Seite hebt das Ausblenden auf.
-- **Drag storyboard viewer** ist der Griff in der Kopfzeile. Zieh das Panel an eine beliebige Stelle des Bildschirms.
-- **Play storyboard video** und **Pause storyboard video** steuern die Wiedergabe. Clips starten stumm.
-- **Mute storyboard video** und **Unmute storyboard video** erscheinen nur, wenn zum Keyframe ein fertiger Clip vorliegt.
-- **Change storyboard viewer size** wechselt zwischen drei Breiten: klein, mittel (Standard) und groß.
-- Ein Griff in der Ecke skaliert das Panel frei und hebt die eingestellte Größe auf.
+Schließt du den schwebenden Viewer, bleibt er nur für den aktuellen Zug verborgen. Über **Gallery > View storyboard** holst du ihn zurück.
 
-**Background** füllt die gesamte Spielfläche mit dem aktiven Keyframe statt mit einer schwebenden Karte. Bild oder Clip liegen hinter den Spielbedienelementen. Die Logik zur Leseposition ist dieselbe wie beim schwebenden Viewer.
+## Bild-Prompts und einheitliche Charaktere
 
-Der Hintergrundmodus hat einen Haken: Er schaltet den sonst erzeugten Szenen-Hintergrund von Marinara ab. Solange er läuft, ist die Schaltfläche **Generate background** im Illustrator-Popover deaktiviert. Sie zeigt dann diesen Hinweis: "Storyboard background display is active, so scene background generation is disabled."
+Der gewählte Planner und der finale Bild-Prompt haben verschiedene Aufgaben:
 
-## Bessere Ergebnisse erzielen
+- Der Planner entscheidet, welche Momente zu sehen sind, und beschreibt den Bildinhalt jedes Keyframes.
+- Die finale Bildvorlage ergänzt die Struktur für den Anbieter, das Aussehen der erkannten Charaktere, die Referenzbilder, den Ort, den Kunststil der Kampagne und die Bildanweisungen.
 
-Ein Storyboard ist nur so klar wie der Zug, den es liest. Die besten Züge benennen, wer sich bewegt, was sich ändert und wo der entscheidende Moment liegt. Ein vages „der Kampf geht weiter“ gibt der Engine deutlich weniger zum Zeichnen als ein Zug mit konkreter Handlung und Details zum Schauplatz.
+Liefert ein Planner bereits genau die Prompt-Syntax, die der Bild-Anbieter erwarten soll, nimm eine Durchreich-Vorlage wie `${scenePrompt}`. **Use the final image template** schaltest du nur ab, wenn du den gewählten Formatierer bewusst umgehen willst. Die zwingenden Bildanweisungen gelten weiterhin.
 
-Für gleichmäßigere Ergebnisse:
+Für gleichbleibende Charaktere:
 
-- Halte Schauplatz, Ton und Kunststil des Spiels schon bei der Einrichtung konkret.
-- Nimm Charakterkarten mit detaillierten Avataren und aktiviere **Send Avatar References**.
-- Halte wichtige Kleidung, Wunden, Requisiten und Orte in der Erzählung klar benannt.
-- Nutze Image-Style-Profile für den gewünschten Look.
-- Nimm **Still Keyframes** fürs normale Lesen und ein Comic- oder Manga-Preset, sobald Clips laufen.
+- Halte das Feld Appearance auf der Charakterkarte konkret und aktuell.
+- Lass **Attach Card Appearance** an, außer der gewählte Planner wiederholt ohnehin alle nötigen Angaben zum Aussehen.
+- Lass **Send Avatar References** an, wenn der Anbieter Referenzen annimmt und die Avatare zum gewünschten Look passen.
+- Halte die Besetzung pro Bild klein und klar sichtbar. Storyboard nimmt nur Referenzen der erkannten, sichtbaren Charaktere und Personas mit, nicht jeden Charakter im Chat.
 
-## NovelAI-Optionen
+**Use NovelAI character prompts** wirkt ausschließlich bei Anfragen über offizielle NovelAI-V4/V4.5-Verbindungen. Bei allen anderen Anbietern läuft die Anfrage über den gemeinsamen Prompt-Pfad, auch wenn der Schalter an ist.
 
-Für eine kompakte NovelAI-Anfrage wählst du **NovelAI Keyframes** und schaltest **Use Storyboard Template** in der Karte **Storyboards** ab. Marinara schickt dann den geplanten Szenen-Prompt direkt und lässt die getrennten Einstellungen für Aussehen, Referenzbild, Bildanweisungen und Stil weiterhin verfügbar.
+## Kosten und Leistung
 
-**Use NovelAI Character Prompts** schickt jeden sichtbaren Charakter über die nativen NovelAI-Funktionen Add Character mit Bildunterschrift und Position. Die Option ist standardmäßig an. Wichtig: Sie greift nur bei einer offiziellen NovelAI-Verbindung mit einem V4- oder V4.5-Modell auf novelai.net. Bei jedem anderen Anbieter oder Modell bleibt der Schalter wirkungslos, und Marinara nutzt stattdessen den gemeinsamen alten Prompt.
+Jedes Keyframe ist ein eigener Bild-Auftrag. Bei animierten Storyboards kommt pro erfolgreichem Keyframe ein Video-Auftrag dazu. Ein animiertes Storyboard mit drei Bildern löst also drei Bild- und drei Video-Anfragen aus.
+
+Beim Test eines neuen Anbieters oder eines lokalen Workflows fängst du am besten mit Standbildern und einem einzigen Keyframe an. Bildzahl, Cliplänge und Automatik-Takt erhöhst du erst, wenn der Grundablauf zuverlässig läuft.
+
+## Bestehende Spiele aus dem alten Storyboard-System
+
+Storyboard ist inzwischen ein herunterladbarer Agent. In bestehenden Game-Chats können aber noch Werte stecken, die die frühere Engine-eigene Storyboard-Oberfläche gesetzt hat. Marinara behält sie bei der Installation des Pakets als Überschreibungen pro Chat – eine funktionierende Spieleinrichtung geht dabei nicht verloren.
+
+Ein älteres Spiel verhält sich deshalb womöglich anders, als es die aktuellen Standardwerte des Agenten vorgeben. Öffne **Chat Settings > Agents > Storyboards** und setz die betreffenden Felder einzeln zurück, damit sie wieder den Standard des Storyboard-Agenten erben.
+
+Die alten Einstellungen sind reine Migrationsdaten, keine zweite Storyboard-Umsetzung. Erzeugt wird weiterhin nur, wenn das Storyboard-Paket installiert und für das Spiel aktiv ist.
 
 ## Fehlerbehebung
 
-**"Choose an Illustrator image connection in Game Settings first."** Öffne **Chat Settings**, **Agents**, dann die Karte **Illustrator**. Aktiviere **Game Illustrator** und wähle eine **Image Connection**. Bei einem neuen Spiel aktivierst du im Einrichtungsassistenten **Visual Generation** und wählst eine **Image Generation Connection**.
+### Storyboard fehlt in den Chat Settings
 
-**"Storyboards can only be generated from GM narration turns."** **Create storyboard** funktioniert nur bei einem abgeschlossenen GM-Erzählzug, nicht bei deinen eigenen Spielernachrichten. Warte, bis die Antwort des GM fertig ist, und versuch es dann erneut.
+- Installiere **Storyboard** über **Agents > Download Agents**.
+- Nutze einen Roleplay- oder Game-Chat; Conversation wird nicht unterstützt.
+- Prüf, ob die Paketversion zur installierten Engine-Version passt.
 
-**"This GM turn has no narration to storyboard."** Der Zug enthält keinen Erzähltext zum Zeichnen. Das passiert, wenn ein GM-Zug nur versteckte Befehls-Tags und keine Erzählung enthält. Spiel weiter, bis der GM einen Zug mit Erzähltext schreibt, und erstell davon ein Storyboard.
+### Create storyboard ist da, aber die Generierung schlägt fehl
 
-**Bilder erscheinen, Videos aber nicht.** Für Videos müssen **Automatic Storyboard Animations** an und eine **Video Generation**-Verbindung ausgewählt sein. Ohne Animationen erzeugen Storyboards ausschließlich Standbild-Keyframes.
+- Aktiviere **Enable Agents** und **Enable Storyboards** für den Chat.
+- Wähle eine gültige Verbindung zur Bildgenerierung: in der Roleplay-Karte Storyboard, in den Game-Einstellungen oder in der globalen Storyboard-Einrichtung.
+- Warte, bis die Antwort der KI beziehungsweise des GM fertig ist, und versuch es dann erneut.
 
-**Automatische Storyboards laufen nicht.** Prüfe, ob **Automatic Storyboard Illustrations** oder **Automatic Storyboard Animations** aktiv ist. Prüfe außerdem, ob die Bild-Verbindung eingestellt ist und der GM-Zug fertig gestreamt hat. Für einen Zug, der schon ein Storyboard hat, legt Marinara kein zweites an. Von Hand geht es trotzdem: über **Create storyboard** in der **Gallery**.
+### Roleplay erzeugt keine automatische Episode
 
-**Das Storyboard ist unvollständig oder hängt.** Meist sind ein oder mehrere Bild- oder Video-Aufträge fehlgeschlagen, ins Zeitlimit gelaufen oder an ein Ratenlimit des Anbieters gestoßen. Auch unzulässige Inhalte können einen Auftrag blockieren. Ist ein Anbieter langsam, erhöh die Zeitlimits für Bild- und Videogenerierung in der Datei `.env` und starte Marinara neu. Die genauen Variablennamen stehen in der [Konfigurationsanleitung](../CONFIGURATION.md).
+- Wähle **Still images** oder **Animations**, nicht **Manual only**.
+- Warte auf eine neu abgeschlossene KI-Antwort. Beim Öffnen eines Chats holt Marinara alte Nachrichten nicht nach.
+- Prüf **Messages per episode**. Seit dem letzten erfolgreichen Ankerpunkt müssen genug neue Nachrichten von dir und von der KI zusammengekommen sein.
+- Ein fehlgeschlagener Durchlauf rückt den Ankerpunkt nicht weiter; schau also im Server-Log nach dem ursprünglichen Anbieter- oder Parsing-Fehler.
 
-Für eine genauere Diagnose stell die Log-Stufe auf debug und beobachte das Server-Log. Die Storyboard-Zeilen tragen die Markierungen `[debug/game/storyboard-illustrator]`, `[debug/game/storyboard-image-preview]`, `[debug/game/storyboard-image-assets]` und `[debug/game/storyboard-video]`.
+### Bilder erscheinen, Videos nicht
+
+- Wähle im Roleplay **Animations**. Im Game Mode aktivierst du **Automatic Storyboard Animations**.
+- Wähle eine **Video Generation**-Verbindung.
+- Prüf, ob die Video-Verbindung Bild-zu-Video-Eingaben unterstützt.
+- Schau im Tab **Videos** der Gallery nach. Ein Clip wird oft erst nach seinem Keyframe-Bild fertig.
+- Ist die Planung nach einem LLM-Fehler auf die Notlösung ausgewichen, behält Marinara die Ersatzbilder und lässt die Videos für diesen Durchlauf aus.
+
+### Ein Storyboard ist unvollständig oder hängt
+
+Dann sind meist ein oder mehrere Aufträge beim Anbieter fehlgeschlagen, ins Zeitlimit gelaufen oder an ein Anfrage- beziehungsweise Inhaltslimit gestoßen. Läuft der Anbieter störungsfrei, aber langsam, erhöh `IMAGE_GEN_TIMEOUT_MS` oder `VIDEO_GEN_TIMEOUT_MS` in der Datei `.env` und starte Marinara neu – diese Werte liest die App nur beim Start.
+
+Für einen genaueren Blick aktivierst du den Debug-Modus und suchst im Server-Log nach `storyboard`. Dort stehen Planner, kompilierter Bild-Prompt, ausgewählte Referenzen und Video-Prompt. Debug-Logs können private Chat-Texte und Prompts enthalten: Bereinige sie, bevor du sie weitergibst.
 
 ## Verwandte Anleitungen
 
-- [Szenen-Videogenerierung](../media/scene-video.md)
-- [Anbieter für Bildgenerierung](../media/image-providers.md)
+- [Agenten: KI-Helfer für deine Chats](../agents/agents-overview.md)
+- [Referenz der herunterladbaren Agenten](../agents/built-in-agents.md)
 - [Game Mode: Erste Schritte](getting-started.md)
-- [LTX 2.3 Storyboards im Game Mode](ltx-2-3-storyboards.md)
+- [Roleplay Mode: Erste Schritte](../roleplay/getting-started.md)
+- [Anbieter für Bildgenerierung und Einrichtung](../media/image-providers.md)
+- [Szenenvideos generieren](../media/scene-video.md)
+- [LTX-2.3-Storyboards im Game Mode](ltx-2-3-storyboards.md)

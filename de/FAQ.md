@@ -166,13 +166,13 @@ Professor Mari darf weiterhin gewöhnliche Marinara-Quelldateien bearbeiten. Abh
 
 Hinweis: Über eine gewöhnliche entfernte Adresse brauchen die datenändernden Aktionen von Professor Mari sowohl Basic Auth als auch ein Admin-Geheimnis. Vertrauenswürdige Netzwerkrouten und solche auf der Allowlist können die Ausnahmen nutzen, die [Fernzugriff](REMOTE_ACCESS.md) beschreibt.
 
-## Wie funktionieren Storyboard-Animationen?
+## Was ist der Storyboard-Agent, und wie nutze ich ihn im Game Mode?
 
-Ein **Storyboard** macht aus fertigem Erzähltext eine kurze Folge von Keyframe-Bildern und kann animierte Clips ergänzen. Im **Game Mode** folgt es einem fertigen Erzählzug des Game Masters. Im **Roleplay** fasst der Storyboard-Agent neu abgeschlossene Wortwechsel zu einer eingebetteten Episode zusammen – nach einer einstellbaren Anzahl von User- und Assistant-Nachrichten.
+Der herunterladbare Agent **Storyboard** macht aus fertigem Erzähltext eine geordnete Folge von Keyframe-Bildern und kann jedes Keyframe zu einem kurzen Clip animieren. Im **Game Mode** bebildert er genau einen fertigen Erzählzug des Game Masters (GM). Die Bilder zeigt er in einem schwebenden Viewer oder als Hintergrund des Spiels. Im **Roleplay** fasst er neu abgeschlossene Wortwechsel zu einer eingebetteten Episode zusammen.
 
-Von Hand erstellst du eines so: Öffne die **Gallery** (Galerie) und klick auf **Create storyboard** (Storyboard erstellen). Im Game Mode holst du den Betrachter mit **View storyboard** (Storyboard ansehen) zurück; im Roleplay erscheint das Ergebnis unter der Assistant-Antwort, die die Episode abschließt.
+So nutzt du ihn im Game Mode: Installiere **Storyboard** über **Agents > Download Agents**. Öffne das Spiel, geh zu **Chat Settings > Agents** und schalte **Enable Agents** (Agenten aktivieren) und **Enable Storyboards** (Storyboards aktivieren) ein. Leg außerdem eine Verbindung für Bildgenerierung im Spiel oder in der globalen Storyboard-Einrichtung fest. Beende einen Erzählzug des GM, öffne dann die **Gallery** (Galerie) und klick auf **Create storyboard** (Storyboard erstellen). Mit **View storyboard** (Storyboard ansehen) holst du den Viewer zurück.
 
-Automatisch geht es so: Öffne die **Chat Settings**, wechsle zu **Agents** und such die Karte **Storyboards**. Der Game Mode hat getrennte Schalter für Illustrationen und Animationen. Im Roleplay stehen **Manual only**, **Still images** und **Animations** zur Wahl, dazu **Messages per episode**. Dieses Feld zählt User- und Assistant-Nachrichten zusammen. Videoclips brauchen eine Verbindung für Videogenerierung. Beide Abläufe stehen unter [Anleitung zur Storyboard-Engine](game/storyboard.md).
+Für automatische Storyboards im Spiel schaltest du **Automatic Storyboard Illustrations** ein. Willst du auch Clips, schalte zusätzlich **Automatic Storyboard Animations** ein und wähl eine Verbindung für Videogenerierung. Die Präsentation **Storyboard Optimized** aus dem Einrichtungsassistenten für neue Spiele prägt nur die Erzählung des GM; sie installiert oder aktiviert den Agenten nicht. Einrichtung in Game und Roleplay, Prompts, Viewer, Migrationsverhalten und Fehlerbehebung stehen in der [Anleitung zum Storyboard-Agenten](game/storyboard.md).
 
 ## Können Charaktere in einem Anruf laut sprechen?
 
@@ -182,7 +182,7 @@ Willst du per Mikrofon antworten und arbeitet die Spracherkennung des Browsers u
 
 ## Kann Marinara Bilder generieren?
 
-Ja. Leg eine Verbindung für Bildgenerierung an, etwa **Pollinations** (braucht keinen Key) oder einen kostenpflichtigen Anbieter. Danach erstellt Marinara Charakter-Avatare, Szenenbilder, Selfies und Storyboards im Game Mode. Wie du eine anlegst, steht unter [Mit einem KI-Anbieter verbinden](connections/connecting-to-a-provider.md).
+Ja. Leg eine Verbindung für Bildgenerierung an, etwa **Pollinations** (braucht keinen Key) oder einen kostenpflichtigen Anbieter. Danach erstellt Marinara Charakter-Avatare, Szenenbilder, Selfies und Keyframes des Storyboard-Agenten im Roleplay oder im Game Mode. Wie du eine anlegst, steht unter [Mit einem KI-Anbieter verbinden](connections/connecting-to-a-provider.md).
 
 ## Wie lese ich die Dokumentation innerhalb der App?
 

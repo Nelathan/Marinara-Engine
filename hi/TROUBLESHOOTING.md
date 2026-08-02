@@ -189,8 +189,9 @@ pnpm backgroundremover:install
 
 ### Game Mode या Roleplay के स्टोरीबोर्ड नहीं दिखते
 
-Game Mode Storyboards पूरी हो चुकी GM (कहानी चलाने वाला AI) नैरेशन को कीफ़्रेम इमेज और वैकल्पिक क्लिप में बदलते हैं। Roleplay Storyboards पूरी हो चुकी बातचीत को जोड़ते हैं और नतीजा असिस्टेंट के जवाब के ठीक बाद वहीं दिखाते हैं।
+Game Mode Storyboards पूरे हो चुके GM (कहानी चलाने वाला AI) नैरेशन को कीफ़्रेम इमेज और वैकल्पिक क्लिप में बदलते हैं। Roleplay Storyboards पूरी हो चुकी बातचीत को जोड़ते हैं और नतीजा असिस्टेंट के जवाब के ठीक बाद वहीं दिखाते हैं।
 
+- देख लें कि **Agents** > **Download Agents** से **Storyboard** इंस्टॉल है, फिर उस चैट के लिए **Enable Agents** और **Enable Storyboards** चालू करें।
 - मैन्युअल सीन वीडियो के लिए पहले **Gallery** (गैलरी) में कोई इमेज जेनरेट करें या अपलोड करें, फिर उसका **Video** या **Animate** एक्शन इस्तेमाल करें। **Gallery** में **Images** और **Videos** अलग टैब में होते हैं, इसलिए **Videos** टैब देखें।
 - अपने आप बनने वाले Game Mode Storyboards के लिए **Chat Settings** > **Agents** > **Storyboards** खोलें और देखें कि **Automatic Storyboard Illustrations** चालू है। क्लिप भी चाहिए तो **Automatic Storyboard Animations** भी चालू करें।
 - Roleplay में चैट में **Storyboard** एजेंट जोड़ें। **Still images** या **Animations** चुनें, **Messages per episode** सेट करें, और Storyboard के लिए इमेज कनेक्शन चुनें। **Manual only** चुनने पर यह गैलरी के **Create storyboard** से चलता है।
@@ -198,7 +199,7 @@ Game Mode Storyboards पूरी हो चुकी GM (कहानी च�
 - अगर सारे कैरेक्टर एक साथ रखने पर कस्टम प्रॉम्प्ट बेहतर काम करे, तो **Use NovelAI Character Prompts** बंद कर दें।
 - धीमे प्रोवाइडर पर टाइमआउट (सर्वर धीमे काम का कितनी देर इंतज़ार करता है) हो सकता है। `.env` में `IMAGE_GEN_TIMEOUT_MS` या `VIDEO_GEN_TIMEOUT_MS` बढ़ाएँ, फिर Marinara दोबारा शुरू करें। सर्वर ये वैल्यू सिर्फ़ शुरू होते समय पढ़ता है।
 
-दोनों तरीकों के लिए [स्टोरीबोर्ड इंजन गाइड](game/storyboard.md) देखें, और गेम सेटअप के लिए [Game Mode: शुरुआत](game/getting-started.md)।
+दोनों तरीकों के लिए [Storyboard एजेंट गाइड](game/storyboard.md) देखें, और गेम सेटअप के लिए [Game Mode: शुरुआत](game/getting-started.md)।
 
 ### Game Mode की वर्ल्ड जेनरेशन में JSON एरर दिखती है
 

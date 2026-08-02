@@ -20,6 +20,7 @@ Game Mode 是 Marinara 的聊天模式之一，另外两种是 Conversation(对�
 
 - **图像生成。** Game Mode 有一套带背景和角色画面的视觉布局。要把画面填满，就需要一个图像生成连接。向导里的 **Visual Generation**(视觉生成) 默认关闭，得自己打开。不开也能正常玩，故事、状态追踪和战斗都在，只是视觉区域是空的。
 - **跑场景效果的本地模型。** Marinara 可以在自己的机器上跑一个小模型，界面上叫 **Local Model (Gemma)**。它负责背景和音乐建议，不产生额外费用，也是向导里的默认选项。见[本地模型设置](../connections/local-model.md)。
+- **Storyboard 智能体。** 从 **Agents > Download Agents** 安装，想要静态或动态分镜时，再到 **Chat Settings > Agents** 里为建好的游戏启用它。
 - **视频生成连接。** 只有要做场景视频或动态分镜时才需要。
 - **音乐。** **Music DJ** 智能体可以播放游戏音乐，需要 Spotify 或者一个本地音乐文件夹，默认关闭。
 
@@ -34,8 +35,8 @@ Game Mode 是 Marinara 的聊天模式之一，另外两种是 Conversation(对�
 3. **Party。** 选择你的用户角色（也就是你扮演的角色）、**Game Master Mode**(游戏主持人模式)，以及队伍成员。
 4. **Goals。** 告诉 GM 你想从这场冒险里得到什么。
 5. **Lorebooks。** 挂上世界书，里面的设定 GM 会当作正典。世界书就是一组世界背景设定条目。见[世界书](../lorebooks/overview.md)。
-6. **Features。** 开启可选系统，比如 Visual Generation、分镜、Music DJ 和 HUD 小组件。
-7. **GM。** 在生成世界之前，选择呈现风格并检查 GM 的高级指令。
+6. **Features。** 开启可选系统，比如 Visual Generation、Music DJ 和 HUD 小组件。可安装的智能体要等游戏建好之后，从 Chat Settings 里启用。
+7. **GM。** 在生成世界之前，选择呈现方式并检查 GM 的高级指令。
 
 填完之后点击 **Start Game**(开始游戏)。
 
@@ -52,21 +53,18 @@ Game Mode 是 Marinara 的聊天模式之一，另外两种是 Conversation(对�
 | Language | English | 游戏内所有文字都用这个语言书写 |
 | Game Master Mode | Standalone GM | Standalone GM 会替你造一个 GM；Character GM 用你的某张角色卡当 GM |
 | Visual Generation | Off | 想要图像就打开；需要图像生成连接 |
-| Automatic Storyboard Illustrations | On | 只有 Visual Generation 打开后才生效 |
-| Automatic Storyboard Animations | Off | 需要视频生成连接 |
-| Keyframes per Turn | 3 | 开启分镜插图后可用；范围 1 到 6 |
-| Game Presentation | Standard | **Storyboard Optimized** 会统一调度 Storyboard Game Prompt、Comic Page Animation 规划器、Storyboard Illustration 和 Comic Page Video 这几个提示词 |
+| Game Presentation | Standard | **Storyboard Optimized** 用 Storyboard Game Prompt 来塑造 GM 的叙述；它不会安装也不会启用 Storyboard 智能体 |
 | Music DJ | Off | 需要 Spotify 或本地音乐文件夹 |
 | Custom HUD Widgets | On | 使用新世界里由 AI 生成的状态小组件 |
 | Start Muted | Off | 开局时静音 |
 
 第一次玩 Game Mode 的话，**Game Master Mode** 就留在 **Standalone GM**。Marinara 会造一个公正、偶尔毒舌的 GM，先摸清这个模式的路数，再考虑自己写 GM 角色卡。
 
-想让 GM 的回合写成可拍摄的视觉段落时，在最后一步选 **Storyboard Optimized**(分镜优化)。它会选中内置的 **Storyboard Game Prompt**、**Comic Page Animation** 规划器、**Storyboard Illustration** 和 **Comic Page Video** 预设。Comic Page Animation 用片段时长来限制按时间顺序排列的画格数量，Storyboard Illustration 把规划好的每一个关键帧整理成图像模型能用的格式，Comic Page Video 则把这些画格当作有先后顺序的动画参考。它不会打开图像生成或视频生成，也不会改动已选的连接。GM 会把向导里的 **Keyframes per Turn**(每回合关键帧数) 当成一个目标值，用来标记有分量的视觉锚点；遇到简短交流可以少写，剧情需要时也可以多写几段叙述。
+想让 GM 的回合写成可拍摄的视觉段落时，在最后一步选 **Storyboard Optimized**(分镜优化)。它会为 GM 的叙述选中内置的 **Storyboard Game Prompt**。它不会安装或启用 Storyboard 智能体，不会打开图像生成或视频生成，不会改动已选的连接，也不会替换这个智能体自带的规划器和格式化器默认值。游戏建好之后，另行安装并启用 Storyboard，再到 **Chat Settings > Agents > Storyboards** 里配置它的关键帧、规划器、图像和视频设置。
 
 设置完成后，另一套动画单镜组合依然可用：Animation Planner 选 **Anime Episode Director**，Storyboard Video Prompt 选 **Anime Game Video**。
 
-**GM Prompt**(GM 提示词) 编辑器会按当前选中的呈现风格预览实际生效的提示词。选中 **Storyboard Optimized** 时打开编辑器，看到的就是 Storyboard Game Prompt，其中包含关键帧数量的宏。不动这段文字，内置预设就保持选中；一旦编辑，就会生成一个自定义提示词，覆盖掉呈现风格自带的预设。
+**GM Prompt**(GM 提示词) 编辑器会按当前选中的呈现方式预览实际生效的提示词。选中 **Storyboard Optimized** 时打开编辑器，看到的就是 Storyboard Game Prompt，其中包含关键帧数量的宏。不动这段文字，内置预设就保持选中；一旦编辑，就会生成一个自定义提示词，覆盖掉呈现方式自带的预设。
 
 ## 三种 AI 调用
 
@@ -120,7 +118,7 @@ Game Mode 还会用到 **Review Agent Outputs**(查看智能体输出)，方便�
 - [Game Mode：骰子与技能检定](dice-and-skill-checks.md)介绍骰子菜单和技能检定规则。
 - [Game Mode：HUD 小组件](hud-widgets.md)介绍屏幕上的状态小组件。
 - [游戏素材](game-assets.md)介绍音乐、音效、立绘和背景素材库。
-- [分镜引擎指南](storyboard.md)介绍如何把 GM 的一个回合变成漫画风格的关键帧。
+- [Storyboard 智能体指南](storyboard.md)介绍安装步骤，以及 Roleplay 和 Game Mode 两边的分镜。
 
 作者注释在这里的用法和其他模式一样，见 [Roleplay 模式：入门](../roleplay/getting-started.md)。
 
@@ -151,7 +149,7 @@ Game Mode 还会用到 **Review Agent Outputs**(查看智能体输出)，方便�
 - [Game Mode：骰子与技能检定](dice-and-skill-checks.md)
 - [Game Mode：HUD 小组件](hud-widgets.md)
 - [游戏素材](game-assets.md)
-- [分镜引擎指南](storyboard.md)
+- [Storyboard 智能体指南](storyboard.md)
 - [Roleplay 模式：入门](../roleplay/getting-started.md)
 - [连接 AI 服务商](../connections/connecting-to-a-provider.md)
 - [智能体：聊天里的 AI 帮手](../agents/agents-overview.md)

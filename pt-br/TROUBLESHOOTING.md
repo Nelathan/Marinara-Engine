@@ -191,6 +191,7 @@ Depois reinicie Marinara e clique em **Reapply Cleanup** na janela de geração 
 
 Os storyboards do Game Mode transformam uma narração concluída do GM em imagens de quadro-chave e, se você quiser, em pequenos vídeos. Os storyboards do Roleplay reúnem trocas de mensagens já concluídas e mostram o resultado logo abaixo da resposta do assistente.
 
+- Confirme que o agente **Storyboard** foi instalado em **Agents** > **Download Agents** e depois ative **Enable Agents** e **Enable Storyboards** para o chat.
 - Para um vídeo de cena manual, gere ou faça upload de uma imagem na **Gallery** e depois use a ação **Video** ou **Animate** dessa imagem. A **Gallery** separa **Images** e **Videos** em abas, então confira a aba **Videos**.
 - Para os storyboards automáticos do Game Mode, abra **Chat Settings** > **Agents** > **Storyboards** e confirme que a opção **Automatic Storyboard Illustrations** está ligada. Ligue também **Automatic Storyboard Animations** se quiser os vídeos.
 - No Roleplay, adicione o agente **Storyboard** ao chat. Escolha **Still images** ou **Animations**, defina o campo **Messages per episode** e selecione a conexão de imagem do Storyboard. A opção **Manual only** roda pelo botão **Create storyboard** da Gallery.
@@ -198,7 +199,7 @@ Os storyboards do Game Mode transformam uma narração concluída do GM em image
 - Se um prompt personalizado funciona melhor com todos os personagens juntos, desligue a opção **Use NovelAI Character Prompts**.
 - Provedores lentos podem estourar o tempo limite. Aumente `IMAGE_GEN_TIMEOUT_MS` ou `VIDEO_GEN_TIMEOUT_MS` no arquivo `.env` e reinicie Marinara. O servidor só lê esses valores na inicialização.
 
-Veja [Guia do Storyboard Engine](game/storyboard.md) para os dois fluxos de trabalho e [Game Mode: primeiros passos](game/getting-started.md) para a configuração do Game.
+Veja o [Guia do agente Storyboard](game/storyboard.md) para os dois fluxos de trabalho e [Game Mode: primeiros passos](game/getting-started.md) para a configuração do Game.
 
 ### A geração de mundo do Game Mode mostra um erro de JSON
 

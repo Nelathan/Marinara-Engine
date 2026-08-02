@@ -20,7 +20,8 @@ Todo o resto é opcional e vem desativado por padrão. Esses itens podem ser adi
 
 - **Geração de imagens.** Game Mode tem um layout visual com planos de fundo e arte dos personagens. Para preencher tudo isso, você precisa de uma conexão de geração de imagens. A configuração **Visual Generation** (geração visual) do assistente vem desativada por padrão, então você mesmo precisa ativá-la. Sem ela, a história, o acompanhamento do estado e o combate continuam funcionando, mas as áreas visuais ficam vazias.
 - **Um modelo local para os efeitos de cena.** Marinara consegue rodar um modelo pequeno na sua própria máquina, identificado como **Local Model (Gemma)**. Ele cuida das sugestões de plano de fundo e de música sem custo extra. É a opção padrão do assistente. Veja [Como configurar o Local Model](../connections/local-model.md).
-- **Uma conexão de geração de vídeos.** Só é necessária para vídeos de cena ou storyboards animados.
+- **O agente Storyboard.** Instale-o em **Agents > Download Agents** e, quando quiser Storyboards estáticos ou animados, ative-o para o Game já criado em **Chat Settings > Agents**.
+- **Uma conexão de geração de vídeos.** Só é necessária para vídeos de cena ou Storyboards animados.
 - **Música.** O agente **Music DJ** toca a música do jogo. Ele precisa do Spotify ou de uma pasta de música local, e vem desativado por padrão.
 
 ## O assistente de configuração
@@ -34,7 +35,7 @@ As sete etapas são:
 3. **Party.** Escolha a persona (o personagem que você interpreta), o **Game Master Mode** e os integrantes da equipe.
 4. **Goals.** Conte ao GM o que você espera da aventura.
 5. **Lorebooks.** Anexe os lorebooks cujos fatos o GM deve tratar como cânone. O lorebook é um conjunto de fatos do seu mundo. Veja [Visão geral dos lorebooks](../lorebooks/overview.md).
-6. **Features.** Ative sistemas opcionais como Visual Generation, storyboards, Music DJ e widgets do HUD.
+6. **Features.** Ative sistemas opcionais como Visual Generation, Music DJ e widgets do HUD. Os agentes instaláveis podem ser ativados em Chat Settings depois que o Game é criado.
 7. **GM.** Escolha o estilo de apresentação e revise as instruções avançadas do GM antes de o mundo ser criado.
 
 Ao terminar, clique em **Start Game**.
@@ -52,17 +53,14 @@ Estes são os valores iniciais das etapas **World**, **Party** e **Features**. T
 | Language | English | Todo o texto dentro do jogo é escrito nesse idioma |
 | Game Master Mode | Standalone GM | Standalone GM monta um GM para você; Character GM usa um dos seus cards como GM |
 | Visual Generation | Off | Ative para ter imagens; exige uma conexão de geração de imagens |
-| Automatic Storyboard Illustrations | On | Só funciona depois que Visual Generation estiver ativado |
-| Automatic Storyboard Animations | Off | Exige uma conexão de geração de vídeos |
-| Keyframes per Turn | 3 | Disponível com as ilustrações do storyboard; de 1 a 6 |
-| Game Presentation | Standard | **Storyboard Optimized** coordena os prompts Storyboard Game Prompt, o planejador Comic Page Animation, Storyboard Illustration e Comic Page Video |
+| Game Presentation | Standard | **Storyboard Optimized** usa o Storyboard Game Prompt para moldar a narração do GM; não instala nem ativa o agente Storyboard |
 | Music DJ | Off | Exige o Spotify ou uma pasta de música local |
 | Custom HUD Widgets | On | Usa widgets de status criados pela IA a partir do novo mundo |
 | Start Muted | Off | Começa o jogo com o áudio no mudo |
 
 É a sua primeira vez no Game Mode? Deixe **Game Master Mode** em **Standalone GM**. Marinara monta um GM justo e levemente irônico para você, e assim você conhece o modo antes de escrever um card de GM personalizado.
 
-Escolha **Storyboard Optimized** na última etapa quando quiser os turnos do GM escritos como cenas visuais prontas para filmar. Essa opção seleciona os presets internos **Storyboard Game Prompt**, o planejador **Comic Page Animation**, **Storyboard Illustration** e **Comic Page Video**. O Comic Page Animation usa a duração do clipe para limitar o número de quadrinhos em ordem cronológica, o Storyboard Illustration formata cada quadro-chave planejado para o modelo de imagem, e o Comic Page Video trata esses quadrinhos como referências de animação em sequência. Isso não ativa a geração de imagens nem a de vídeos, e não altera as conexões selecionadas. O GM usa o valor de **Keyframes per Turn** do assistente como meta de momentos visuais marcantes, mas pode escrever menos em uma troca curta e usar mais parágrafos de narração quando a história pedir.
+Escolha **Storyboard Optimized** na última etapa quando quiser os turnos do GM escritos como cenas visuais prontas para filmar. Essa opção seleciona o preset interno **Storyboard Game Prompt** para a narração do GM. Ela não instala nem ativa o agente Storyboard, não ativa a geração de imagens nem a de vídeos, não altera as conexões e não substitui os padrões de planejador e de formatador do agente. Depois de criar o Game, instale e ative o Storyboard à parte e ajuste as configurações de quadro-chave, planejador, imagem e vídeo em **Chat Settings > Agents > Storyboards**.
 
 A combinação alternativa de plano único em estilo anime continua disponível depois da configuração: escolha **Anime Episode Director** no Animation Planner e **Anime Game Video** no Storyboard Video Prompt.
 
@@ -120,7 +118,7 @@ Este guia coloca você dentro de um jogo. Cada assunto mais aprofundado tem o gu
 - [Game Mode: dados e testes de perícia](dice-and-skill-checks.md) trata do menu de dados e das regras dos testes de perícia.
 - [Game Mode: widgets do HUD](hud-widgets.md) trata dos widgets de status que aparecem na tela.
 - [Recursos do jogo](game-assets.md) trata da biblioteca de músicas, sons, sprites e planos de fundo.
-- [Guia do Storyboard Engine](storyboard.md) trata de transformar um turno do GM em quadros-chave no estilo mangá.
+- [Guia do agente Storyboard](storyboard.md) trata da instalação e dos Storyboards no Roleplay e no Game Mode.
 
 As Author's Notes funcionam aqui do mesmo jeito que nos outros modos. Veja [Roleplay Mode: primeiros passos](../roleplay/getting-started.md).
 
@@ -151,7 +149,7 @@ Alguns modelos permanecem animados independentemente do tom. Você tem duas opç
 - [Game Mode: dados e testes de perícia](dice-and-skill-checks.md)
 - [Game Mode: widgets do HUD](hud-widgets.md)
 - [Recursos do jogo](game-assets.md)
-- [Guia do Storyboard Engine](storyboard.md)
+- [Guia do agente Storyboard](storyboard.md)
 - [Roleplay Mode: primeiros passos](../roleplay/getting-started.md)
 - [Conectando a um provedor de IA](../connections/connecting-to-a-provider.md)
 - [Agentes: ajudantes de IA para os seus chats](../agents/agents-overview.md)

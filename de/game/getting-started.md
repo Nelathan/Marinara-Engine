@@ -20,6 +20,7 @@ Alles Weitere ist optional und standardmäßig aus. Nachrüsten kannst du jederz
 
 - **Bildgenerierung.** Game Mode hat ein visuelles Layout mit Hintergründen und Charakterbildern. Zum Füllen brauchst du eine Verbindung zur Bildgenerierung. Die Einstellung **Visual Generation** (visuelle Generierung) im Assistenten ist standardmäßig aus und muss von Hand aktiviert werden. Ohne sie bekommst du weiterhin Geschichte, Zustandsverfolgung und Kampf, aber die visuellen Flächen bleiben leer.
 - **Ein lokales Modell für Szeneneffekte.** Marinara kann ein kleines Modell auf dem eigenen Rechner laufen lassen; es heißt **Local Model (Gemma)**. Es liefert Vorschläge für Hintergrund und Musik, ohne Zusatzkosten. Im Assistenten ist es die Standardwahl. Mehr dazu unter [Lokales Modell einrichten](../connections/local-model.md).
+- **Der Storyboard-Agent.** Installiere ihn über **Agents > Download Agents** (Agenten herunterladen) und aktiviere ihn danach für das fertige Spiel unter **Chat Settings > Agents**, wenn du Storyboards als Standbilder oder Animationen willst.
 - **Eine Verbindung zur Videogenerierung.** Die brauchst du nur für Szenenvideos oder animierte Storyboards.
 - **Musik.** Der Agent **Music DJ** kann Spielmusik abspielen. Er benötigt Spotify oder einen lokalen Musikordner und ist standardmäßig aus.
 
@@ -34,7 +35,7 @@ Die sieben Schritte:
 3. **Party.** Wähle deine Persona (den Charakter, den du spielst), den **Game Master Mode** und eventuelle Partymitglieder.
 4. **Goals.** Sag dem GM, was du dir vom Abenteuer erhoffst.
 5. **Lorebooks.** Hänge die Lorebooks an, deren Fakten der GM als verbindlich behandeln soll. Ein Lorebook ist eine Sammlung von Hintergrundwissen zur Welt. Mehr dazu unter [Lorebooks](../lorebooks/overview.md).
-6. **Features.** Aktiviere optionale Systeme wie Visual Generation, Storyboards, Music DJ und HUD-Widgets.
+6. **Features.** Aktiviere optionale Systeme wie Visual Generation, Music DJ und HUD-Widgets. Installierbare Agenten aktivierst du nach dem Anlegen des Spiels in den Chat Settings.
 7. **GM.** Wähle den Präsentationsstil und sieh dir die erweiterten GM-Anweisungen an, bevor die Welt gebaut wird.
 
 Zum Schluss klickst du auf **Start Game**.
@@ -52,17 +53,14 @@ Das sind die Startwerte in den Schritten **World**, **Party** und **Features**. 
 | Language | English | Der gesamte Text im Spiel wird in dieser Sprache geschrieben |
 | Game Master Mode | Standalone GM | Standalone GM baut dir einen GM; Character GM nutzt eine deiner Charakterkarten als GM |
 | Visual Generation | Off | Für Bilder einschalten; braucht eine Verbindung zur Bildgenerierung |
-| Automatic Storyboard Illustrations | On | Wirkt erst, wenn Visual Generation an ist |
-| Automatic Storyboard Animations | Off | Braucht eine Verbindung zur Videogenerierung |
-| Keyframes per Turn | 3 | Verfügbar mit Storyboard-Illustrationen; Bereich 1 bis 6 |
-| Game Presentation | Standard | **Storyboard Optimized** stimmt die Prompts Storyboard Game Prompt, Comic Page Animation Planner, Storyboard Illustration und Comic Page Video aufeinander ab |
+| Game Presentation | Standard | **Storyboard Optimized** nutzt den Storyboard Game Prompt, um die Erzählung des GM zu formen; der Storyboard-Agent wird dadurch weder installiert noch aktiviert |
 | Music DJ | Off | Braucht Spotify oder einen lokalen Musikordner |
 | Custom HUD Widgets | On | Nutzt die von der KI erzeugten Status-Widgets der neuen Welt |
 | Start Muted | Off | Startet das Spiel stummgeschaltet |
 
 Neu in Game Mode? Dann lass **Game Master Mode** auf **Standalone GM**. Marinara baut dir einen fairen, leicht schnippischen GM, und du kannst den Modus in Ruhe ausprobieren, bevor du eine eigene GM-Karte schreibst.
 
-Wähle im letzten Schritt **Storyboard Optimized**, wenn GM-Züge als verfilmbare visuelle Momente geschrieben werden sollen. Damit greifen die eingebauten Presets **Storyboard Game Prompt**, **Comic Page Animation** (Planer), **Storyboard Illustration** und **Comic Page Video**. Comic Page Animation begrenzt über die Cliplänge die Zahl der chronologischen Panels, Storyboard Illustration bereitet jedes geplante Keyframe fürs Bildmodell auf, und Comic Page Video behandelt diese Panels als geordnete Animationsvorlagen. Bild- oder Videogenerierung schaltet die Auswahl nicht ein, und an den gewählten Verbindungen ändert sie nichts. Der Wert **Keyframes per Turn** aus dem Assistenten dient dem GM als Zielgröße für starke visuelle Ankermomente – bei einem kurzen Wortwechsel dürfen es weniger sein, und wenn die Geschichte es verlangt, darf er mehr Erzählabsätze schreiben.
+Wähle im letzten Schritt **Storyboard Optimized**, wenn GM-Züge als verfilmbare visuelle Momente geschrieben werden sollen. Damit greift das eingebaute Preset **Storyboard Game Prompt** für die Erzählung des GM. Der Storyboard-Agent wird dadurch weder installiert noch aktiviert. Bild- oder Videogenerierung schaltet die Auswahl nicht ein, an den gewählten Verbindungen ändert sie nichts, und die Standardwerte des Agenten für Planner und Formatierung bleiben ebenfalls erhalten. Installiere und aktiviere Storyboard nach dem Anlegen des Spiels separat. Seine Einstellungen für Keyframes, Planner, Bild und Video legst du unter **Chat Settings > Agents > Storyboards** fest.
 
 Die alternative Anime-Kombination aus einem Guss bleibt nach der Einrichtung verfügbar: Wähle **Anime Episode Director** für den Animation Planner und **Anime Game Video** für den Storyboard Video Prompt.
 
@@ -120,7 +118,7 @@ Diese Anleitung bringt dich ins Spiel. Jedes tiefergehende Thema hat eine eigene
 - [Game Mode: Würfel und Fertigkeitsproben](dice-and-skill-checks.md) behandelt das Würfelmenü und die Regeln für Fertigkeitsproben.
 - [Game Mode: HUD-Widgets](hud-widgets.md) behandelt die Status-Widgets auf dem Bildschirm.
 - [Spiel-Assets](game-assets.md) behandelt die Bibliothek für Musik, Sound, Sprites und Hintergründe.
-- [Anleitung zur Storyboard-Engine](storyboard.md) behandelt, wie aus einem GM-Zug Keyframes im Manga-Stil werden.
+- [Anleitung zum Storyboard-Agenten](storyboard.md) behandelt die Installation sowie Storyboards in Roleplay und Game Mode.
 
 Author's Notes funktionieren hier genauso wie in den anderen Modi. Mehr dazu unter [Roleplay Mode: Erste Schritte](../roleplay/getting-started.md).
 
@@ -151,7 +149,7 @@ Manche Modelle bleiben gut gelaunt, egal welcher Ton eingestellt ist. Dafür gib
 - [Game Mode: Würfel und Fertigkeitsproben](dice-and-skill-checks.md)
 - [Game Mode: HUD-Widgets](hud-widgets.md)
 - [Spiel-Assets](game-assets.md)
-- [Anleitung zur Storyboard-Engine](storyboard.md)
+- [Anleitung zum Storyboard-Agenten](storyboard.md)
 - [Roleplay Mode: Erste Schritte](../roleplay/getting-started.md)
 - [Verbindung zu einem KI-Anbieter herstellen](../connections/connecting-to-a-provider.md)
 - [Agenten: KI-Helfer für deine Chats](../agents/agents-overview.md)

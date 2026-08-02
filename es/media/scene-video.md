@@ -132,7 +132,7 @@ Los chats de **Game Mode** muestran una tarjeta **Scene Videos** descrita como *
 - **Game Video Prompt**: la plantilla de prompt que decide cómo se anima la imagen. El valor predeterminado incorporado es **Cinematic Scene Video**.
 - **Edit Video Presets** (Editar presets de video): añade y edita tus propias copias de la plantilla de prompt de video para este chat.
 
-El **Game Video Prompt** sigue controlando los videos manuales de la **Gallery** y de **Game Assets** en Game Mode. Las animaciones de la **Gallery** en Roleplay usan **Roleplay Gallery Animation Director** en su lugar. Los clips de fotograma clave del storyboard (secuencia de viñetas) pueden elegir un **Storyboard Video Prompt** distinto en **Chat Settings**, **Agents**, luego **Storyboards**. Si no se fija una elección de storyboard aparte, heredan el Game Video Prompt.
+El **Game Video Prompt** sigue controlando los videos manuales de la **Gallery** y de **Game Assets** en Game Mode. Las animaciones de la **Gallery** en Roleplay usan **Roleplay Gallery Animation Director** en su lugar. El agente Storyboard (secuencia de viñetas) instalado tiene su propio **Storyboard Video Prompt** predeterminado, y cada chat de Roleplay o de Game puede anularlo en **Chat Settings > Agents > Storyboards**. Restablecer esa elección vuelve al valor predeterminado del agente Storyboard; no hereda el prompt de otro chat.
 
 Cuando creas por primera vez un chat de Game Mode, el asistente de configuración también tiene un selector **Video Generation Connection** (Conexión de generación de video). Está en el paso **Features** (Funciones), y aparece después de que actives **Visual Generation** (Generación visual).
 
@@ -150,9 +150,9 @@ La misma sección tiene un ajuste **Animated expression length** (Duración de l
 
 ## Storyboards
 
-Game Mode también puede construir un storyboard, que es un conjunto ordenado de imágenes de fotograma clave para un turno del juego. Cuando las animaciones de storyboard están activadas, Marinara anima cada fotograma clave en un clip usando tu conexión de video y el **Storyboard Video Prompt**. Hereda el **Game Video Prompt** salvo que elijas una plantilla aparte. Un fotograma clave es un fotograma fijo dentro de ese conjunto ordenado.
+El agente descargable Storyboard puede construir imágenes de fotograma clave ordenadas y clips en Roleplay y en Game Mode. Game Mode usa un turno del GM (director del juego) ya terminado; Roleplay combina intercambios terminados en un episodio que se muestra dentro del chat. Cuando las animaciones están activadas, Marinara anima con la conexión de video seleccionada y el **Storyboard Video Prompt** del agente cada fotograma clave que se haya generado correctamente.
 
-Los storyboards tienen sus propios controles y su propia guía. Consulta [Storyboards en Game Mode](../game/storyboard.md) para ver la configuración y el flujo de trabajo completos.
+Los storyboards tienen sus propios controles y su propia guía. Consulta la [Guía del agente Storyboard](../game/storyboard.md) para la instalación y los flujos de trabajo de ambos modos.
 
 ## Solución de problemas
 
@@ -179,7 +179,7 @@ Comprueba que la conexión tenga una API key válida y que tu cuenta tenga acces
 ## Guías relacionadas
 
 - [Expresiones animadas](animated-expressions.md)
-- [Storyboards en Game Mode](../game/storyboard.md)
+- [Guía del agente Storyboard](../game/storyboard.md)
 - [Storyboards con LTX 2.3 en Game Mode](../game/ltx-2-3-storyboards.md)
 - [Proveedores de IA admitidos](../connections/providers-reference.md)
 - [Referencia de configuración del servidor](../CONFIGURATION.md)

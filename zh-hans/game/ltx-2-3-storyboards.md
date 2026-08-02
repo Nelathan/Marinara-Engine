@@ -24,7 +24,7 @@ GM narration
 2. 可编辑的 `ltx-director-simple` 工作流，或者任何一张能在 ComfyUI 里完整跑通的等价 LTX 2.3 图生视频流程图。
 3. 它的 API 格式导出文件 `ltx-director-simple-api`，用于 Marinara 连接。
 4. 一个用来出首帧插图的 Marinara 图像生成连接。
-5. 一个支持分镜的 Game Mode 聊天。
+5. **Storyboard** 智能体，从 **Agents > Download Agents** 安装，并在 **Chat Settings > Agents** 里为这局游戏启用。
 
 可编辑的 ComfyUI 工作流和它的 API 导出是两个不同的文件。先在 ComfyUI 里打开 `ltx-director-simple`，把 ComfyUI Manager 报出来的缺失自定义节点全部装上，并在 ComfyUI 里测通这张图。然后把 `ltx-director-simple-api` 导入 Marinara 连接。之后每改一次节点或模型，都要重新按 API 格式导出，并替换连接里保存的 JSON。不要把普通的可视化编辑器工作流粘贴进 Marinara。
 
@@ -142,7 +142,7 @@ LTX Director 节点照样可以处理图像条件、引导数据、音频和两�
 
 ## 配置 Game Mode 聊天
 
-打开 Game Mode 聊天，然后打开 **Chat Settings**(聊天设置) 并选择 **Agents**(智能体)。
+打开 Game Mode 聊天，然后打开 **Chat Settings**(聊天设置) 并选择 **Agents**(智能体)。配置下面几节之前，先开启 **Enable Agents**(启用智能体) 和 **Enable Storyboards**(启用分镜)。新建游戏向导里的 Storyboard Optimized 呈现方式不会启用这个智能体。
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Animation Planner 已经拿到了本回合分镜的角色外观上下文，所�
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3；1 到 6 之间任选，看这一回合的内容和渲染预算 |
+| **Keyframes per Turn** | 平时用 3；第一次做 8 GB 显存测试时先用 1 |
 | **Animation Clip Duration** | 6 秒 |
 | **Viewer Display** | 测试期间用 Floating |
 | **Illustration Planner** | **Still Keyframes**；保留作为纯静态图的兜底 |
@@ -194,11 +194,11 @@ Animation Planner 已经拿到了本回合分镜的角色外观上下文，所�
 
 **Illustration Planner: Still Keyframes** 在动画开启时不会生成给 Krea 用的提示词。动画模式下由 **LTX Simple Image-to-Video** 同时产出两份内容：给 Krea 的自然语言 `imagePrompt`，以及给 LTX 的 `narrationBeat`。Still Keyframes 之所以还选着，只是为了那些不出视频的回合。
 
-**Storyboard First Frame** 会把 Animation Planner 写好的完整自然语言 T=0 场景原样交给 Krea，不再添加关键帧标题、提示词标签、重复的外观说明或战役美术方向。**Use Storyboard Template** 要保持开启，这个排版器才会真正生效。
+**Storyboard First Frame** 会把 Animation Planner 写好的完整自然语言 T=0 场景原样交给 Krea，不再添加关键帧标题、提示词标签、重复的外观说明或战役美术方向。**Use Storyboard Template** 要保持开启，这个格式化器才会真正生效。
 
 **LTX Director Video** 有意做得很轻。它只是把 Animation Planner 完成的 `narrationBeat` 按通用视频提示词约定传下去，不在外面再套一层场景复述。
 
-每个关键帧会产生一个 Krea 图像任务和一个本地 LTX 视频任务。所以 3 个关键帧就是 3 次首帧渲染加 3 次视频渲染。如果想先证明连接是通的，再上完整的三镜头配置，8 GB 显存的第一次验证跑就只用 1 个关键帧。
+每个关键帧会产生一个 Krea 图像任务和一个本地 LTX 视频任务。所以 3 个关键帧就是 3 次首帧渲染加 3 次视频渲染。8 GB 显存的显卡先用 1 个关键帧、480p 起步。跑通之后再往 3 个关键帧和更高分辨率上加。
 
 ## 跑第一次测试
 
@@ -297,7 +297,7 @@ API 工作流和当前装好的流程图对不上。检查是不是删了某个�
 
 ## 相关指南
 
-- [分镜引擎指南](storyboard.md)
+- [Storyboard 智能体指南](storyboard.md)
 - [ComfyUI 工作流设置](../media/comfyui.md)
 - [场景视频生成](../media/scene-video.md)
 - [Game Mode：入门](getting-started.md)

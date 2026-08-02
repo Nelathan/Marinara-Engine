@@ -224,7 +224,8 @@ Misc 에이전트는 이미지, 음악, 관객 반응, 카드 업데이트 같�
 - **연동 방식**: 에이전트 패키지입니다. Game과 Roleplay는 Engine의 Storyboard 호스트 연동을 통해 설치된 패키지의 프롬프트 템플릿과 설정을 씁니다.
 - **사용 가능한 곳**: Roleplay, Game.
 - **주요 설정**: 정지 이미지 플래너와 애니메이션 플래너 선택, 이미지 연결과 동영상 연결, 키프레임 수, 길이, 표시 방식, 캐릭터 참조 처리 방식, Roleplay 에피소드 템플릿과 스타일 템플릿, Game 삽화 템플릿과 동영상 템플릿.
-- **호환성**: Engine `2.3.5` 이상 `4.0.0` 미만. 이 패키지는 `agent-runtime`, `chat-read`, `prompt-context`, `storage`, `ui` 권한을 쓰며 재시작은 필요하지 않습니다.
+- **호환성**: Engine `2.3.5` 이상 `3.0.0` 미만. 이 패키지는 `agent-runtime`, `chat-read`, `prompt-context`, `storage`, `ui` 권한을 쓰며 재시작은 필요하지 않습니다.
+- **전체 가이드**: [스토리보드 에이전트 가이드](../game/storyboard.md).
 
 ### Calls
 

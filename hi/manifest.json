@@ -8,8 +8,8 @@
     },
     {
       "path": "FAQ.md",
-      "sha256": "179a172a207c44975d3fef80cb9e4572ba075ba152f4246cb2a6d3bd0fff8222",
-      "bytes": 41065
+      "sha256": "65fc67efa2fb1a955c50cbcb29f43c6fe36a376450826fe50e53d04d600972df",
+      "bytes": 41665
     },
     {
       "path": "INSTALLATION.md",
@@ -23,8 +23,8 @@
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "fecc85bb91722a5d91d4f04a1bb2f75de373acd4c012b529824390d7440fb678",
-      "bytes": 61668
+      "sha256": "2708a20b88913f4d2e689fde0a24ab635a0d054737912490e6af6f2b1de73980",
+      "bytes": 61883
     },
     {
       "path": "UPGRADING.md",
@@ -43,8 +43,8 @@
     },
     {
       "path": "agents/built-in-agents.md",
-      "sha256": "eb1d168c009765324aec64e1152b5ede863a29572cda5f9634f0aae4f8626cba",
-      "bytes": 42309
+      "sha256": "5a0e53565d15bb72fb0e4ecca60caa6155aafdc0dd79fe68a6479962e729ad8b",
+      "bytes": 42413
     },
     {
       "path": "agents/custom-agents.md",
@@ -373,8 +373,8 @@
     },
     {
       "path": "game/getting-started.md",
-      "sha256": "4a92df2034d68b0971f66a3c68c4250458b935ebd3a14f44431374b1413e3ec9",
-      "bytes": 30997
+      "sha256": "0578df1c1dfdc8cff7dd2d345f1ea64570b65ae96035895e9ca85004c5546785",
+      "bytes": 30604
     },
     {
       "path": "game/hud-widgets.md",
@@ -383,8 +383,8 @@
     },
     {
       "path": "game/ltx-2-3-storyboards.md",
-      "sha256": "ad7586b8d2dc81320a5f543b93cf8affc0545082fe6ee8b2d9dcb479aa19989c",
-      "bytes": 42450
+      "sha256": "2853d3bea727ea4c0289f17f57fd70485da4347797062111f5778bbc51a2eb3f",
+      "bytes": 42896
     },
     {
       "path": "game/map-time-weather.md",
@@ -403,8 +403,8 @@
     },
     {
       "path": "game/storyboard.md",
-      "sha256": "3365169a367ff1be1faafb6177add385d989157d1af4516748b00b6cf78be27d",
-      "bytes": 54255
+      "sha256": "fdcde06bcd69d7f3296fb1f3820ec6a2b9b1368f36f79bc682aec3ff5f947f31",
+      "bytes": 47649
     },
     {
       "path": "home/achievements.md",
@@ -533,8 +533,8 @@
     },
     {
       "path": "media/scene-video.md",
-      "sha256": "1769e145702105025881e1ea6304d73f044595308c90e8e59ef8fe107b5806c7",
-      "bytes": 30243
+      "sha256": "1bd716cb7a3933deda5f589e13ccf4457c1132d7da12259118dd454830f3ca49",
+      "bytes": 30506
     },
     {
       "path": "media/style-profiles.md",
@@ -543,8 +543,8 @@
     },
     {
       "path": "media/tts-setup.md",
-      "sha256": "7c86394cced53e3bfb328d5734eb309d30652be9aff667355caa966c01504c62",
-      "bytes": 30001
+      "sha256": "ee5da334fdf9d5bb081cd2457d581a731e9df9974d614142d094c3025f6b754d",
+      "bytes": 30008
     },
     {
       "path": "noodle/overview.md",

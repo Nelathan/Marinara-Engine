@@ -224,7 +224,8 @@ Knowledge Retrievalより費用を抑えられる代替手段です。要約す�
 - **統合方法**: エージェントパッケージです。GameとRoleplayは、EngineのStoryboardホスト連携を通じて、インストールしたパッケージのプロンプトのテンプレートと設定を使います。
 - **使える場所**: RoleplayとGame。
 - **主な設定**: 静止画と動画のどちらのプランナーを使うか、画像と動画の接続、キーフレーム数、長さ、表示方法、キャラクター参照の扱い、Roleplayのエピソードと作風のテンプレート、Gameのイラストと動画のテンプレートを選べます。
-- **対応バージョン**: Engineの`2.3.5`以上`4.0.0`未満です。このパッケージは`agent-runtime`、`chat-read`、`prompt-context`、`storage`、`ui`の権限を使い、再起動は不要です。
+- **対応バージョン**: Engineの`2.3.5`以上`3.0.0`未満です。このパッケージは`agent-runtime`、`chat-read`、`prompt-context`、`storage`、`ui`の権限を使い、再起動は不要です。
+- **詳しいガイド**: [Storyboardエージェントガイド](../game/storyboard.md)。
 
 ### Calls
 

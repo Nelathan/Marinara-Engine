@@ -24,7 +24,7 @@ Du brauchst:
 2. Den bearbeitbaren Workflow `ltx-director-simple` oder einen gleichwertigen LTX-2.3-Graphen für Bild-zu-Video, der in ComfyUI fehlerfrei durchläuft.
 3. Dessen API-Export `ltx-director-simple-api` für die Marinara-Verbindung.
 4. Eine Marinara-Verbindung zur Bildgenerierung für die Erstbild-Illustrationen.
-5. Einen Game-Mode-Chat mit Storyboard-Unterstützung.
+5. Den Agenten **Storyboard**, installiert über **Agents > Download Agents** (Agenten herunterladen) und für das Spiel unter **Chat Settings > Agents** aktiviert.
 
 Der bearbeitbare ComfyUI-Workflow und sein API-Export sind zwei verschiedene Dateien. Öffne `ltx-director-simple` in ComfyUI, installiere jede fehlende Custom Node, die der ComfyUI Manager meldet, und teste den Graphen dort. Importiere `ltx-director-simple-api` in die Marinara-Verbindung. Nach jeder Änderung an Nodes oder Modellen exportierst du den Graphen erneut im API-Format und ersetzt das JSON (das gespeicherte Datenformat des Workflows) auf der Verbindung. Füge niemals den normalen Workflow aus dem visuellen Editor in Marinara ein.
 
@@ -142,7 +142,7 @@ Ein reiner Text-Verbindungstest kann `%reference_image_name%` nicht prüfen. Tes
 
 ## Den Game-Mode-Chat einrichten
 
-Öffne den Game-Mode-Chat, dann **Chat Settings** (Chat-Einstellungen) und wähle **Agents** (Agenten).
+Öffne den Game-Mode-Chat, dann **Chat Settings** (Chat-Einstellungen) und wähle **Agents** (Agenten). Schalte **Enable Agents** (Agenten aktivieren) und **Enable Storyboards** (Storyboards aktivieren) ein, bevor du die folgenden Abschnitte einrichtest. Die Präsentation Storyboard Optimized aus dem Einrichtungsassistenten für neue Spiele aktiviert den Agenten nicht.
 
 ### Illustrator
 
@@ -155,7 +155,7 @@ Ein reiner Text-Verbindungstest kann `%reference_image_name%` nicht prüfen. Tes
 | **Attach Card Appearance** | Off |
 | **Send Avatar References** | Off für diesen getesteten Workflow |
 
-Der Animation Planner bekommt das Aussehen der Charaktere aus dem Storyboard-Zug ohnehin mitgeliefert. Deshalb bleibt **Attach Card Appearance** hier aus – sonst stünde dieselbe Information beim finalen Formatieren des Bildes ein zweites Mal im Prompt. Auch **Storyboard First Frame** verzichtet darauf, die Kunstrichtung der Kampagne rund um die fertige T=0-Szene des Planners zu wiederholen.
+Der Animation Planner bekommt das Aussehen der Charaktere aus dem Storyboard-Zug ohnehin mitgeliefert. Deshalb bleibt **Attach Card Appearance** hier aus – sonst stünde dieselbe Information beim finalen Formatieren des Bildes ein zweites Mal im Prompt. Auch **Storyboard First Frame** verzichtet darauf, den Kunststil der Kampagne rund um die fertige T=0-Szene des Planners zu wiederholen.
 
 **Send Avatar References** steuert die Referenzbilder an den Anbieter für das erste Bild, nicht das Eingangsbild von LTX. LTX bekommt die fertige Storyboard-Illustration über `%reference_image_name%`. Lass die Avatar-Referenzen bei diesem getesteten Krea-Setup aus. Schalte sie erst separat ein, wenn feststeht, dass die gewählte Bildverbindung sie unterstützt und davon profitiert.
 
@@ -179,7 +179,7 @@ Nutze dieses Startprofil:
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3; jeder Wert von 1–6 ist möglich, je nach Zug und Render-Budget |
+| **Keyframes per Turn** | normalerweise 3; beim ersten Test mit 8 GB VRAM zunächst 1 |
 | **Animation Clip Duration** | 6 Sekunden |
 | **Viewer Display** | Zum Testen **Floating** |
 | **Illustration Planner** | **Still Keyframes**; bleibt als Rückfalloption für reine Standbilder |
@@ -194,11 +194,11 @@ Nutze dieses Startprofil:
 
 **Illustration Planner: Still Keyframes** erzeugt den Prompt für Krea nicht, solange Animationen aktiv sind. Im Animationsmodus erzeugt **LTX Simple Image-to-Video** beide Ausgaben: einen natürlichsprachigen `imagePrompt` für Krea und einen `narrationBeat` für LTX. Still Keyframes bleibt nur für Züge ausgewählt, die ohne Videos generiert werden.
 
-**Storyboard First Frame** reicht die vollständige natürlichsprachige T=0-Szene des Animation Planners direkt an Krea weiter – ohne Keyframe-Titel, Prompt-Beschriftungen, wiederholte Notizen zum Aussehen oder Kunstrichtung der Kampagne. Lass **Use Storyboard Template** an, damit diese Formatierung überhaupt greift.
+**Storyboard First Frame** reicht die vollständige natürlichsprachige T=0-Szene des Animation Planners direkt an Krea weiter – ohne Keyframe-Titel, Prompt-Beschriftungen, wiederholte Notizen zum Aussehen oder Kunststil der Kampagne. Lass **Use Storyboard Template** an, damit diese Formatierung überhaupt greift.
 
 **LTX Director Video** ist bewusst schlank. Es reicht den fertigen `narrationBeat` des Animation Planners durch den universellen Video-Prompt-Vertrag, ohne ihn mit einer weiteren Szenen-Zusammenfassung zu umgeben.
 
-Jedes Keyframe erzeugt einen Bildauftrag bei Krea und einen lokalen Videoauftrag bei LTX. Drei Keyframes starten also drei Erstbild-Renderings und drei Video-Renderings. Nimm für den ersten Validierungslauf mit 8 GB ein einziges Keyframe, wenn du die Verbindung prüfen willst, bevor du dich auf das volle Setup mit drei Einstellungen festlegst.
+Jedes Keyframe erzeugt einen Bildauftrag bei Krea und einen lokalen Videoauftrag bei LTX. Drei Keyframes starten also drei Erstbild-Renderings und drei Video-Renderings. Bei einer GPU mit 8 GB VRAM beginnst du mit einem Keyframe in 480p. Klappt das, gehst du schrittweise auf drei Keyframes und höhere Auflösungen.
 
 ## Den ersten Test fahren
 
@@ -293,11 +293,11 @@ Wird die Browser-Anfrage geschlossen oder bricht die Client-Verbindung ab, kann 
 
 Vergleich das gespeicherte Verbindungs-JSON mit dem neuesten API-Export. Kontrollier Basis-URL, Schreibweise der Platzhalter, nötige Custom Nodes, Modellpfade, Ausgabe-Node, Maße und Dauerfelder. Der bearbeitbare Graph kann funktionieren, während Marinara noch eine ältere exportierte Momentaufnahme hält.
 
-Für ausführliche Server-Traces aktivierst du das Debug-Logging und achtest auf `[debug/game/storyboard-video]` und `[video-gen/comfyui]`. Eine gesunde Anfrage zeigt den fertigen globalen Prompt, den Dateinamen des hochgeladenen Referenzbilds, die Dauer, die Bildanzahl und eine eingereihte ComfyUI-Prompt-ID.
+Für ausführliche Server-Traces aktivierst du das Debug-Logging und achtest auf `[debug/game/storyboard-video]` und `[video-gen/comfyui]`. Eine fehlerfreie Anfrage zeigt den fertigen globalen Prompt, den Dateinamen des hochgeladenen Referenzbilds, die Dauer, die Bildanzahl und eine eingereihte ComfyUI-Prompt-ID.
 
 ## Verwandte Anleitungen
 
-- [Anleitung zur Storyboard-Engine](storyboard.md)
+- [Anleitung zum Storyboard-Agenten](storyboard.md)
 - [ComfyUI-Workflow einrichten](../media/comfyui.md)
 - [Videogenerierung für Szenen](../media/scene-video.md)
 - [Game Mode: Erste Schritte](getting-started.md)

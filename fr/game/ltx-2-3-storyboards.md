@@ -24,7 +24,7 @@ Il te faut :
 2. Le workflow modifiable `ltx-director-simple`, ou un graphe LTX 2.3 image-vers-vidéo équivalent qui s'exécute jusqu'au bout dans ComfyUI.
 3. Son export au format API `ltx-director-simple-api`, destiné à la connexion Marinara.
 4. Une connexion Marinara de génération d'images pour les illustrations de première image.
-5. Un chat en Game Mode compatible avec les storyboards.
+5. L'agent **Storyboard**, installé depuis **Agents > Download Agents** et activé pour la partie dans **Chat Settings > Agents**.
 
 Le workflow ComfyUI modifiable et son export API sont deux fichiers différents. Ouvre `ltx-director-simple` dans ComfyUI, installe tous les nœuds personnalisés manquants signalés par ComfyUI Manager, puis teste le graphe sur place. Importe `ltx-director-simple-api` dans la connexion Marinara. Après chaque changement de nœud ou de modèle, réexporte le graphe au format API et remplace le JSON enregistré sur la connexion. Ne colle jamais le workflow de l'éditeur visuel classique dans Marinara.
 
@@ -142,7 +142,7 @@ Un test de connexion en texte seul ne peut pas mettre `%reference_image_name%` �
 
 ## Configurer le chat en Game Mode
 
-Ouvre le chat en Game Mode, puis ouvre **Chat Settings** (réglages du chat) et sélectionne l'onglet **Agents**.
+Ouvre le chat en Game Mode, puis ouvre **Chat Settings** (réglages du chat) et sélectionne l'onglet **Agents**. Active **Enable Agents** et **Enable Storyboards** avant de configurer les sections ci-dessous. Dans l'assistant de création de partie, la présentation Storyboard Optimized n'active pas l'agent.
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Pars de ce profil :
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3 ; n'importe quelle valeur de 1 à 6 convient, selon le tour et le budget de rendu |
+| **Keyframes per Turn** | 3 en temps normal ; commence à 1 pour le premier test en 8 Go de VRAM |
 | **Animation Clip Duration** | 6 secondes |
 | **Viewer Display** | Floating pendant les tests |
 | **Illustration Planner** | **Still Keyframes** ; conservé comme solution de repli pour les images fixes seules |
@@ -190,7 +190,7 @@ Pars de ce profil :
 
 **LTX Simple Image-to-Video** est la valeur par défaut recommandée. Il prépare une première image prête à animer et un prompt de mouvement direct de 4 à 8 phrases. Il privilégie une action principale, un seul comportement de caméra, un mouvement d'environnement retenu, plus un son ou un court dialogue quand c'est pertinent.
 
-**LTX Director Storyboard** reste disponible comme option avancée. Il fournit une direction plus détaillée, tenant compte de la durée, ainsi que des règles de continuité. Essaie-le une fois le chemin simple stabilisé, ou quand un clip plus long a vraiment besoin de plusieurs phases enchaînées. Les deux planificateurs utilisent le même contrat de workflow `%prompt%`.
+**LTX Director Storyboard** reste disponible comme option avancée. Il fournit des indications plus détaillées, tenant compte de la durée, ainsi que des règles de continuité. Essaie-le une fois le chemin simple stabilisé, ou quand un clip plus long a vraiment besoin de plusieurs phases enchaînées. Les deux planificateurs utilisent le même contrat de workflow `%prompt%`.
 
 **Illustration Planner : Still Keyframes** ne crée pas le prompt destiné à Krea tant que les animations sont activées. En mode animation, **LTX Simple Image-to-Video** produit les deux sorties : un `imagePrompt` en langage naturel pour Krea et un `narrationBeat` pour LTX. Still Keyframes ne sert donc plus qu'aux tours générés sans vidéo.
 
@@ -198,7 +198,7 @@ Pars de ce profil :
 
 **LTX Director Video** est volontairement minimal. Il fait passer le `narrationBeat` terminé de l'Animation Planner dans le contrat universel de prompt vidéo, sans l'entourer d'un nouveau récapitulatif de scène.
 
-Chaque image-clé lance une tâche d'image Krea et une tâche vidéo LTX locale. Trois images-clés déclenchent donc trois rendus de première image et trois rendus vidéo. Utilise une seule image-clé pour le premier essai de validation en 8 Go, si tu veux valider la connexion avant de te lancer dans la configuration complète à trois plans.
+Chaque image-clé lance une tâche d'image Krea et une tâche vidéo LTX locale. Trois images-clés déclenchent donc trois rendus de première image et trois rendus vidéo. Sur un GPU de 8 Go de VRAM, commence avec une seule image-clé en 480p. Une fois que ça passe, monte vers trois images-clés et des résolutions plus élevées.
 
 ## Lancer le premier test
 
@@ -297,7 +297,7 @@ Pour des traces serveur détaillées, active les logs de débogage (le journal d
 
 ## Guides associés
 
-- [Guide du moteur de storyboard](storyboard.md)
+- [Guide de l'agent Storyboard](storyboard.md)
 - [Configurer un workflow ComfyUI](../media/comfyui.md)
 - [Génération de vidéos de scène](../media/scene-video.md)
 - [Game Mode : premiers pas](getting-started.md)

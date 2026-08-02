@@ -166,13 +166,13 @@ Professor Mari 也能修改 Marinara 的普通源码文件。依赖文件、启�
 
 注意：走普通远程地址时，Professor Mari 的数据改动操作既要 Basic Auth，也要管理员密钥。可信或在允许列表里的网络路径可以使用[远程访问](REMOTE_ACCESS.md)里讲的放行方式。
 
-## 分镜动画是怎么回事？
+## Storyboard 智能体是什么？在 Game Mode 里怎么用？
 
-**storyboard**(分镜) 把写完的剧情文字变成一小串关键帧图像，还能加上动画片段。在 **Game Mode** 里，它跟在一轮完整的 GM 旁白之后生成。在 **Roleplay** 里，Storyboard Agent(分镜智能体) 会在积攒到设定条数的用户消息和 Assistant 消息之后，把新完成的这几轮对话合成一段内嵌的小剧集。
+可下载的 **Storyboard**(分镜) 智能体把写完的剧情文字变成一串有先后顺序的关键帧图像，还能把每一帧做成一小段动画片段。在 **Game Mode** 里，它为一轮已完成的 GM 叙述生成分镜，画面显示在浮动查看器里，也可以直接当作游戏背景。在 **Roleplay** 里，它把新完成的几轮往来合成一段内嵌的小剧集。
 
-想手动做一个，打开 **Gallery**(图库) 点 **Create storyboard**(创建分镜)。Game Mode 可以用 **View storyboard**(查看分镜) 重新打开查看窗口，Roleplay 则把结果显示在结束该剧集的那条 Assistant 回复下方。
+想在 Game Mode 里用它，先从 **Agents > Download Agents** 安装 **Storyboard**。打开游戏，进 **Chat Settings > Agents**，开启 **Enable Agents**(启用智能体) 和 **Enable Storyboards**(启用分镜)，再在这局游戏里或 Storyboard 的全局设置里选好一个图像连接。跑完一轮 GM 叙述，打开 **Gallery**(图库) 点 **Create storyboard**(创建分镜)。想重新打开查看器就点 **View storyboard**(查看分镜)。
 
-想自动生成，打开 **Chat Settings**，进 **Agents**，找到 **Storyboards**(分镜) 卡片。Game Mode 的插图和动画是两个独立开关。Roleplay 提供 **Manual only**、**Still images** 和 **Animations** 三个选项，外加 **Messages per episode**(每集消息数)，这个数字把用户消息和 Assistant 消息一起算。视频片段需要一个视频生成连接。两种流程都写在[分镜引擎指南](game/storyboard.md)里。
+想让游戏里的分镜自动生成，开启 **Automatic Storyboard Illustrations**(自动分镜插图)。还想要动画片段，就再开启 **Automatic Storyboard Animations**(自动分镜动画)，并选好一个视频生成连接。新建游戏向导里的 **Storyboard Optimized**(分镜优化) 呈现方式只影响 GM 叙述的写法，既不会安装也不会启用这个智能体。Game 和 Roleplay 两边的配置、提示词、查看器、迁移行为和排查方法，都写在 [Storyboard 智能体指南](game/storyboard.md)里。
 
 ## 角色能在通话里出声说话吗？
 
@@ -182,7 +182,7 @@ Professor Mari 也能修改 Marinara 的普通源码文件。依赖文件、启�
 
 ## Marinara 能生成图像吗？
 
-能。添加一个图像生成连接，比如 **Pollinations**(不需要密钥) 或者某家付费服务商。之后 Marinara 就能生成角色头像、场景图、自拍和 Game Mode 的分镜。添加方法见[连接 AI 服务商](connections/connecting-to-a-provider.md)。
+能。添加一个图像生成连接，比如 **Pollinations**(不需要密钥) 或者某家付费服务商。之后 Marinara 就能生成角色头像、场景图、自拍，以及 Roleplay 或 Game Mode 里 Storyboard 智能体产出的关键帧。添加方法见[连接 AI 服务商](connections/connecting-to-a-provider.md)。
 
 ## 在应用里怎么看文档？
 

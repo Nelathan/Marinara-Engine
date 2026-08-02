@@ -224,7 +224,8 @@ Knowledge Retrieval 的省钱替代方案。它不做摘要，而是读取世界
 - **集成方式**：智能体包；Game 和 Roleplay 通过 Engine 的 Storyboard 宿主集成，使用已安装的这个包的提示词模板和设置。
 - **适用范围**：Roleplay 和 Game。
 - **主要设置**：选择静态或动画规划器、图像连接和视频连接、关键帧数量、时长、显示模式、角色参考图的处理方式、Roleplay 的分集模板和风格模板，以及 Game 的插图模板和视频模板。
-- **兼容性**：Engine `2.3.5` 起，`4.0.0` 之前。这个包使用 `agent-runtime`、`chat-read`、`prompt-context`、`storage` 和 `ui` 权限，不需要重启。
+- **兼容性**：Engine `2.3.5` 起，`3.0.0` 之前。这个包使用 `agent-runtime`、`chat-read`、`prompt-context`、`storage` 和 `ui` 权限，不需要重启。
+- **完整指南**：[Storyboard 智能体指南](../game/storyboard.md)。
 
 ### Calls
 

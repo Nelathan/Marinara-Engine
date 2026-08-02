@@ -166,13 +166,13 @@ Professor MariはMarinaraの通常のソースファイルなら編集できま�
 
 注記: 通常のリモートアドレスからアクセスしている場合、Professor Mariがデータを変更するにはBasic Authと管理者用のシークレットの両方が必要です。信頼済みまたは許可リストに載っているネットワーク経路では、[リモートアクセス](REMOTE_ACCESS.md)で説明している回避方法を使えます。
 
-## 絵コンテのアニメーションはどう動きますか?
+## Storyboardエージェントとは何ですか? Game Modeではどう使いますか?
 
-**絵コンテ**は、できあがった物語の文章をキーフレーム画像を並べた短い連続シーンに変えるもので、アニメーションのクリップを加えることもできます。**Game Mode**では、ゲームマスターの語りが1ターン分そろったところで作られます。**Roleplay**では、Storyboard Agentが新しくそろったやり取りをまとめ、指定した数のユーザーとアシスタントのメッセージごとにチャット内のエピソードとして仕上げます。
+ダウンロードして使う**Storyboard**エージェントは、できあがった物語の文章を、順番に並んだキーフレーム画像に変えます。各キーフレームを短いクリップとして動かすこともできます。**Game Mode**では、終了したゲームマスター(GM)の語り1ターン分を絵コンテにして、フローティングのビューアーかGameの背景にキーフレームを表示します。**Roleplay**では、新しくそろったやり取りをまとめ、チャット内のエピソードとして表示します。
 
-手動で作るには、**Gallery**(ギャラリー)を開き、**Create storyboard**(絵コンテの作成)をクリックします。Game Modeでは**View storyboard**(絵コンテの表示)からビューアーを開き直せます。Roleplayでは、エピソードの最後になったアシスタントの返信の下に結果が表示されます。
+Game Modeで使うには、**Agents > Download Agents**から**Storyboard**をインストールします。Gameを開いて**Chat Settings > Agents**に移動し、**Enable Agents**(エージェントを有効にする)と**Enable Storyboards**(絵コンテを有効にする)をオンにして、Game側かStoryboardの全体設定で画像生成の接続を指定します。GMの語りが1ターン分終わったら、**Gallery**(ギャラリー)を開いて**Create storyboard**(絵コンテの作成)をクリックします。ビューアーを開き直すときは**View storyboard**(絵コンテの表示)を使います。
 
-自動で作るには、**Chat Settings**を開き、**Agents**に移動して、**Storyboards**カードを探します。Game Modeにはイラストとアニメーションのトグルが別々にあります。Roleplayでは**Manual only**、**Still images**、**Animations**から選び、**Messages per episode**も指定できます。この数にはユーザーとアシスタントの両方のメッセージが入ります。動画のクリップにはVideo Generationの接続が必要です。どちらの手順も[絵コンテエンジンガイド](game/storyboard.md)で説明しています。
+Gameの絵コンテを自動で作るには、**Automatic Storyboard Illustrations**をオンにします。クリップも欲しいときは、**Automatic Storyboard Animations**もオンにして、Video Generationの接続を選びます。新規Gameの設定ウィザードにある**Storyboard Optimized**の演出は、GMの語り方を整えるだけです。エージェントのインストールや有効化は行いません。GameとRoleplayの設定、プロンプト、ビューアー、移行時の動作、トラブル対処については、[Storyboardエージェントガイド](game/storyboard.md)を参照してください。
 
 ## 通話でキャラクターに声を出してもらえますか?
 
@@ -182,7 +182,7 @@ Professor MariはMarinaraの通常のソースファイルなら編集できま�
 
 ## Marinaraは画像を生成できますか?
 
-はい。画像生成の接続を追加してください。たとえば**Pollinations**(キーが不要)や、有料のプロバイダーが使えます。追加すると、キャラクターのアバター、シーンのアート、自撮り写真、Game Modeの絵コンテを生成できるようになります。追加方法は[AIプロバイダーへの接続](connections/connecting-to-a-provider.md)を参照してください。
+はい。画像生成の接続を追加してください。たとえば**Pollinations**(キーが不要)や、有料のプロバイダーが使えます。追加すると、キャラクターのアバター、シーンのアート、自撮り写真、RoleplayやGame ModeでのStoryboardエージェントのキーフレームを生成できるようになります。追加方法は[AIプロバイダーへの接続](connections/connecting-to-a-provider.md)を参照してください。
 
 ## アプリの中でドキュメントを読むには?
 

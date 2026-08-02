@@ -24,7 +24,7 @@ Você precisa de:
 2. O workflow editável `ltx-director-simple`, ou um grafo equivalente de imagem para vídeo do LTX 2.3 que conclua sem erros dentro do ComfyUI.
 3. A exportação em formato de API `ltx-director-simple-api`, usada na conexão do Marinara.
 4. Uma conexão de geração de imagens no Marinara para as ilustrações do primeiro quadro.
-5. Um chat de Game Mode com suporte a Storyboard.
+5. O agente **Storyboard** instalado em **Agents > Download Agents** e ativado para o Game em **Chat Settings > Agents**.
 
 O workflow editável do ComfyUI e a exportação em formato de API são arquivos diferentes. Abra `ltx-director-simple` no ComfyUI, instale todos os nós personalizados que o ComfyUI Manager apontar como ausentes e teste o grafo por lá. Importe `ltx-director-simple-api` na conexão do Marinara. A cada mudança de nó ou de modelo, exporte o grafo de novo em formato de API e substitua o JSON guardado na conexão. Não cole no Marinara o workflow normal do editor visual.
 
@@ -142,7 +142,7 @@ Um teste de conexão apenas com texto não exercita `%reference_image_name%`. Va
 
 ## Configure o chat de Game Mode
 
-Abra o chat de Game Mode, depois abra **Chat Settings** (configurações do chat) e selecione **Agents**.
+Abra o chat de Game Mode, depois abra **Chat Settings** (configurações do chat) e selecione **Agents**. Ative **Enable Agents** e **Enable Storyboards** antes de configurar as seções abaixo. A apresentação Storyboard Optimized do assistente de configuração do novo jogo não ativa o agente.
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Use este perfil de partida:
 | **Automatic Storyboard Illustrations** | On |
 | **Automatic Storyboard Animations** | On |
 | **Use NovelAI Character Prompts** | Off |
-| **Keyframes per Turn** | 3; use qualquer valor de 1 a 6 que combine com o turno e com o orçamento de renderização |
+| **Keyframes per Turn** | 3 normalmente; comece com 1 no primeiro teste de 8 GB de VRAM |
 | **Animation Clip Duration** | 6 segundos |
 | **Viewer Display** | Floating durante os testes |
 | **Illustration Planner** | **Still Keyframes**; fica como alternativa apenas para imagens estáticas |
@@ -198,7 +198,7 @@ Use este perfil de partida:
 
 **LTX Director Video** é propositalmente enxuto. Ele passa o `narrationBeat` já pronto do Animation Planner pelo contrato universal de prompt de vídeo, sem cercá-lo de mais um resumo da cena.
 
-Cada quadro-chave cria um trabalho de imagem no Krea e um trabalho de vídeo local no LTX. Três quadros-chave, portanto, disparam três renderizações de primeiro quadro e três renderizações de vídeo. Use um único quadro-chave na primeira validação em 8 GB se quiser confirmar a conexão antes de assumir a configuração completa de três tomadas.
+Cada quadro-chave cria um trabalho de imagem no Krea e um trabalho de vídeo local no LTX. Três quadros-chave, portanto, disparam três renderizações de primeiro quadro e três renderizações de vídeo. Em uma GPU com 8 GB de VRAM, comece com um quadro-chave em 480p. Quando isso funcionar, avance para três quadros-chave e resoluções maiores.
 
 ## Faça o primeiro teste
 
@@ -297,7 +297,7 @@ Para rastreamentos detalhados no servidor, ative o log de depuração e procure 
 
 ## Guias relacionados
 
-- [Guia do Storyboard Engine](storyboard.md)
+- [Guia do agente Storyboard](storyboard.md)
 - [Configuração de workflows do ComfyUI](../media/comfyui.md)
 - [Geração de vídeo de cena](../media/scene-video.md)
 - [Game Mode: primeiros passos](getting-started.md)

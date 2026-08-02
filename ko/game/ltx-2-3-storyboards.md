@@ -24,7 +24,7 @@ GM narration
 2. 편집 가능한 `ltx-director-simple` 워크플로, 또는 ComfyUI 안에서 문제없이 끝까지 실행되는 동등한 LTX 2.3 이미지-투-비디오 그래프.
 3. Marinara 연결에 넣을 API 형식 내보내기 파일 `ltx-director-simple-api`.
 4. 첫 프레임 삽화를 만들 Marinara 이미지 생성 연결.
-5. 스토리보드를 지원하는 Game Mode 채팅.
+5. **Agents > Download Agents**에서 설치하고 **Chat Settings > Agents**에서 해당 게임에서 활성화한 **Storyboard** 에이전트.
 
 편집용 ComfyUI 워크플로와 API 내보내기 파일은 서로 다른 파일입니다. ComfyUI에서 `ltx-director-simple`을 열고, ComfyUI Manager가 알려 주는 누락된 사용자 지정 노드를 모두 설치한 다음, 그래프를 그 자리에서 테스트하세요. Marinara 연결에는 `ltx-director-simple-api`를 가져오세요. 노드나 모델을 바꿀 때마다 그래프를 API 형식으로 다시 내보내고, 연결에 저장된 JSON을 교체하세요. 일반 비주얼 편집기용 워크플로를 Marinara에 붙여넣으면 안 됩니다.
 
@@ -142,7 +142,7 @@ API 내보내기 파일에서 해당 값들을 따옴표로 감싼 Marinara 플�
 
 ## Game Mode 채팅 설정하기
 
-Game Mode 채팅을 열고 **Chat Settings**(채팅 설정)에서 **Agents**(에이전트)를 선택하세요.
+Game Mode 채팅을 열고 **Chat Settings**(채팅 설정)에서 **Agents**(에이전트)를 선택하세요. 아래 항목을 설정하기 전에 **Enable Agents**(에이전트 활성화)와 **Enable Storyboards**(스토리보드 활성화)를 켜세요. 새 게임 마법사의 **Storyboard Optimized**(스토리보드 최적화) 연출은 에이전트를 활성화하지 않습니다.
 
 ### Illustrator
 
@@ -179,7 +179,7 @@ Animation Planner는 이미 해당 스토리보드 턴의 캐릭터 외형 컨�
 | **Automatic Storyboard Illustrations**(자동 스토리보드 일러스트) | On |
 | **Automatic Storyboard Animations**(자동 스토리보드 애니메이션) | On |
 | **Use NovelAI Character Prompts**(NovelAI 캐릭터 프롬프트 사용) | Off |
-| **Keyframes per Turn**(턴당 키프레임 수) | 3. 턴 내용과 렌더링 예산에 맞춰 1에서 6까지 아무 값이나 쓸 수 있습니다 |
+| **Keyframes per Turn**(턴당 키프레임 수) | 보통은 3. 첫 8 GB VRAM 테스트는 1로 시작하세요 |
 | **Animation Clip Duration**(애니메이션 클립 길이) | 6초 |
 | **Viewer Display**(시청자 화면) | 테스트 중에는 **Floating** |
 | **Illustration Planner**(일러스트 플래너) | **Still Keyframes**. 정지 이미지 전용 대비책으로 남겨 둡니다 |
@@ -198,7 +198,7 @@ Animation Planner는 이미 해당 스토리보드 턴의 캐릭터 외형 컨�
 
 **LTX Director Video**는 의도적으로 아주 단순합니다. Animation Planner가 완성한 `narrationBeat`를 범용 동영상 프롬프트 규약으로 넘길 뿐, 장면 요약을 다시 감싸지 않습니다.
 
-키프레임 1개마다 Krea 이미지 작업 1개와 로컬 LTX 동영상 작업 1개가 생깁니다. 즉, 키프레임이 3개면 첫 프레임 렌더링 3회와 동영상 렌더링 3회가 시작됩니다. 3컷 구성을 본격적으로 돌리기 전에 연결만 먼저 검증하고 싶다면, 첫 8 GB 검증 실행은 키프레임 1개로 하세요.
+키프레임 1개마다 Krea 이미지 작업 1개와 로컬 LTX 동영상 작업 1개가 생깁니다. 즉, 키프레임이 3개면 첫 프레임 렌더링 3회와 동영상 렌더링 3회가 시작됩니다. VRAM이 8 GB인 GPU라면 480p에서 키프레임 1개로 시작하세요. 이 설정이 성공한 다음에 키프레임 3개와 더 높은 해상도로 옮겨 가세요.
 
 ## 첫 테스트 실행하기
 
@@ -297,7 +297,7 @@ API 워크플로가 현재 설치된 그래프와 맞지 않는다는 뜻입니�
 
 ## 관련 가이드
 
-- [스토리보드 엔진 가이드](storyboard.md)
+- [스토리보드 에이전트 가이드](storyboard.md)
 - [ComfyUI 워크플로 설정](../media/comfyui.md)
 - [장면 동영상 생성](../media/scene-video.md)
 - [Game Mode: 시작하기](getting-started.md)

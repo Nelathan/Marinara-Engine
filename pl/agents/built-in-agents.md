@@ -219,12 +219,13 @@ Dodaje po każdej odpowiedzi klikalne przyciski wyboru w stylu "What will you do
 
 ### Storyboard
 
-Planuje statyczne albo animowane storyboardy na podstawie zakończonych wymian w trybie Roleplay i narracji w trybie Game. Osobne planowanie i formatowanie dopasowane do dostawcy pilnują chronologii źródła, tożsamości postaci oraz wybranego stylu wizualnego w generowanych klatkach kluczowych i filmach.
+Planuje nieruchome albo animowane storyboardy na podstawie zakończonych wymian w trybie Roleplay i narracji w trybie Game. Osobne planowanie i formatowanie dopasowane do dostawcy pilnują chronologii źródła, tożsamości postaci oraz wybranego stylu wizualnego w generowanych klatkach kluczowych i filmach.
 
 - **Integracja**: pakiet agenta – tryb Game i Roleplay korzystają z szablonów promptów i ustawień zainstalowanego pakietu przez wbudowaną integrację Storyboard w silniku.
 - **Gdzie działa**: Roleplay i Game.
-- **Najważniejsze ustawienia**: wybór planera obrazów statycznych albo animacji, połączenia do obrazów i wideo, liczba klatek kluczowych, czas trwania, tryb wyświetlania, obsługa odniesień do postaci, szablony odcinka i stylu dla trybu Roleplay oraz szablony ilustracji i wideo dla trybu Game.
-- **Zgodność**: silnik od wersji `2.3.5` do wersji sprzed `4.0.0`. Pakiet korzysta z uprawnień `agent-runtime`, `chat-read`, `prompt-context`, `storage` i `ui`, a jego instalacja nie wymaga ponownego uruchomienia.
+- **Najważniejsze ustawienia**: wybór planera obrazów nieruchomych albo animacji, połączenia do obrazów i wideo, liczba klatek kluczowych, czas trwania, tryb wyświetlania, obsługa odniesień do postaci, szablony odcinka i stylu dla trybu Roleplay oraz szablony ilustracji i wideo dla trybu Game.
+- **Zgodność**: silnik od wersji `2.3.5` do wersji sprzed `3.0.0`. Pakiet korzysta z uprawnień `agent-runtime`, `chat-read`, `prompt-context`, `storage` i `ui`, a jego instalacja nie wymaga ponownego uruchomienia.
+- **Pełny przewodnik**: [Przewodnik po agencie Storyboard](../game/storyboard.md).
 
 ### Calls
 
