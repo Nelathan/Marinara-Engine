@@ -26,6 +26,11 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Implemented {{lorebookSize::lorebookID}} macro, which resolves to the total number of entries inside a lorebook, when given its unique ID (#5464)
 - Game Setup now includes an on-by-default Quick Time Events switch; turning it off removes the timed-reaction command from GM prompts for that campaign (#5467).
 - Custom Agents can now opt into proposing complete character cards, which remain editable and require explicit approval before they are saved to the Characters library (#5456).
+- Added server-owned Game Mode combat sessions shared by Classic and Tactical battles, with deterministic seeds, revision checks, duplicate-action replay protection, bounded action history, objective tracking, boss-phase telegraphs, refresh recovery, and chat cleanup.
+- Added mechanically resolved combat maneuvers to both combat styles. The GM now returns a constrained proposal, while the seeded resolver owns the actual outcome and validates every damage, healing, status, movement, terrain, and objective effect before the GM narrates it.
+- Added Tactical line-of-sight, opportunity attacks, Overwatch, terrain interactions, real inventory effects, skill-aware forecasts, projected skill threats, animation-speed controls, reduced-motion defaults, keyboard shortcuts, and standard gamepad navigation.
+- Added HP/round boss phases with telegraphs, counterplay, terrain/status mechanics, and bounded reinforcement waves, plus session-backed combat event history in the in-game combat log.
+- Added deterministic victory loot and objective outcomes to the authoritative combat aftermath, including direct inventory persistence before the GM narrates the result.
 - Active Memory Nag packages now get a standalone Roleplay Agents settings section; inactive Memory Nag remains in Tracker Agents for initial setup and tracker scheduling (#5440, Pasta-Devs/Marinara-Agents#518).
 - Pull requests and scheduled security audits now run the focused import, sandbox, host-authentication, and runtime-integrity regression lane, while the new security policy provides private vulnerability reporting without changing Marinara's local-first capabilities (#5436).
 - Game setup's Review Starting Widgets step can now add, rename, re-icon, retype, duplicate, and fully edit proposed widgets before the first turn (#5426).
@@ -52,6 +57,12 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Conversation and Roleplay automatic summaries can now keep recent summaries in context while semantically retrieving relevant older summaries for long-running chats (#5240).
 - Text Rules now has an opt-in "Color Character Names in Text" toggle that colors character names inline in message text using each character's assigned name color, with support for gradient colors, name aliases, and a "Force Solid Colors for Inline Names" sub-toggle for users who prefer simpler inline readability. Names inside dialogue quotes are skipped, and only characters added to the chat are eligible (inspired by the AI Dungeon "Dungeon Extension v2" extension) (#5321).
 - Added `nai-diffusion-5-full` and `nai-diffusion-5-curated` to `IMAGE_GEN_MODELS` in `model-lists.ts` with display names "NAI Diffusion 5 Full" and "NAI Diffusion 5 Curated" (#5343).
+
+### Changed
+
+- Increased the adjudication budget for combat maneuvers and made the GM's maneuver instructions more explicit about acceptable target formats, unit reach, and terrain rules, so fewer proposals need repair or fallback.
+- Moved Classic and Tactical action resolution onto canonical server state while keeping their separate cinematic and grid interfaces. Difficulty now scales enemy damage rather than indiscriminately multiplying both sides, restored battles rehydrate from the active server session, and combat aftermath writes every matched party member's HP, MP, statuses, and consumed inventory back to Game state.
+- Changed Classic invalid targets, unavailable skills, insufficient MP, cooldown violations, and invalid item targets from silent fallbacks into explicit rejected actions.
 
 ### Fixed
 
@@ -559,6 +570,26 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Moved full Docker images to Debian Trixie so ARM64 sidecars can load the required glibc and libstdc++ symbols (#4638).
 - Matched the **Add character to active chat** button to the neighboring Character row actions in folders and standalone rows on desktop and mobile.
 - Stopped the NoodleR reserve poll from scanning the prepared-post and Noodle post tables every minute when automatic posting is off and no reserve posts exist, and backed the automatic timeline-refresh poll off to 15 minutes while refreshes are disabled, cutting idle CPU wake-ups on phone and Termux installs (#4630).
+- Streamed the large Game Mode combat blueprint initialization response so slow LLM providers can send headers before the transport timeout instead of surfacing a generic combat-generation failure.
+- Fixed Special/Maneuver actions in Classic and Tactical combat producing no effect when the GM's proposal was malformed: the resolver now salvages what it can, asks the GM once to repair an unusable proposal, and falls back to a deterministic reading of the player's own instruction so a maneuver always produces a result, and the combat log now explains when part of a maneuver could not take effect.
+- Fixed Tactical combat using a hard-coded Potion, ignoring frozen/stunned/imprisoned and zero-Speed turn skips, previewing attack skills as basic attacks, accepting blocked ranged attacks, and losing authoritative HP/MP/status/inventory changes across refreshes.
+- Fixed concurrent tabs and repeated combat clicks resolving the same state twice, unseeded Classic rolls changing after refresh, Classic session adapters dropping initiative/status/reaction animation data, and stale combat sessions surviving chat deletion or an explicit return to the pre-combat turn.
+- Fixed combat state leaking across chat switches, duplicate replays rewinding durable inventory, Tactical restoration replacing a canonical session, terminal maneuvers racing the aftermath handoff, completed combat logs disappearing, and duplicate-name party sheets missing aftermath updates.
+- Fixed boss telegraphs resolving damage before the player could react, recurring round mechanics firing only once, hostile reinforcements escaping all-enemy objectives, and conditional or escape objectives completing without their required interaction or exit.
+
+## [2.4.2]
+
+### Added
+
+- Exposed **Max Parallel Agent Jobs** in local-model runtime settings and used it for agent scheduling and llama-server parallel slots while retaining the configured context budget per request (#4609).
+
+### Changed
+
+- Advanced the stable release identity to v2.4.2 across the Engine, PWA manifest, Windows installer, Android bootstrap APK, update checks, Home page, and release references. Android uses `versionName` `2.4.2` with `versionCode` `43` so it updates over every previously published APK (#4610).
+- Required AI-agent contributions to update the Unreleased changelog for every bug fix, behavior change, and new feature, keeping release notes aligned with the implementation that introduced each change (#4613).
+
+### Fixed
+
 - Removed duplicate safe-area padding from Noodle's mobile setup footer so the shared shell remains the single owner of spacing above Android navigation controls (#4586).
 - Kept the first edit to a sent user message after canceling generation instead of discarding it when transient swipe cleanup changes the active index (#4608).
 - Matched the **Add character to active chat** action to neighboring controls in folders and standalone Character rows, including a visible consistently sized icon on desktop and mobile (#4611).
