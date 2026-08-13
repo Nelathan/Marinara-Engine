@@ -124,24 +124,24 @@ Istnieje też szersza flaga `ALLOW_UNAUTHENTICATED_REMOTE=true`, która otwiera 
 
 ## Pominięcie dla sieci Tailscale i kontenerów Docker
 
-Dwie flagi pozwalają bezpośredniemu ruchowi z sieci Tailscale i z kontenerów Docker pominąć zarówno listę dozwolonych adresów IP, jak i Basic Auth, dokładnie tak samo jak robi to loopback. Obie flagi są domyślnie włączone. Dlatego świeża instalacja jest od razu dostępna przez sieć Tailscale i bezpośrednio z kontenerów Docker, bez żadnej konfiguracji:
+Dwie flagi pozwalają bezpośredniemu ruchowi z sieci Tailscale i z kontenerów Docker pominąć zarówno listę dozwolonych adresów IP, jak i Basic Auth, dokładnie tak samo jak robi to loopback. Zostaw je puste, żeby korzystać z automatycznego wykrywania:
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-Te wartości domyślne zakładają, że każde urządzenie w sieci Tailscale należy do zaufanego użytkownika aplikacji Marinara Engine. Adresy mostka Docker i brama wykryta wewnątrz kontenera wskazują ten sam komputer z Docker. Nawet przy włączonym Basic Auth klienty łączące się bezpośrednio z sieci Tailscale i z kontenerów Docker nie widzą pytania o hasło. Jeśli w twojej sieci Tailscale są też mniej zaufane urządzenia, ustaw `BYPASS_AUTH_TAILSCALE=false`.
+Tryb automatyczny ufa urządzeniu Tailscale tylko wtedy, gdy oba końce jego bezpośredniego gniazda używają adresów sieci Tailscale. Ruch Docker jest zaufany tylko wtedy, gdy Marinara Engine działa w kontenerze, a źródło pasuje do wykrytego interfejsu kontenera albo jego dokładnej bramy. Dzięki temu zwykła prywatna konfiguracja sieci Tailscale i kontenerów Docker na tym samym komputerze nadal działa, ale niezwiązany ruch CGNAT, LAN, sieci hosta ani proxy nie jest uznawany za uwierzytelniony.
 
-Ustaw flagę na false, jeśli ci klienci też mają podawać hasło. Są dwa rzadsze powody, żeby wyłączyć jedną z nich.
+Ustaw flagę na `false`, jeśli ci klienci też mają podawać hasło. Ustaw `true`, żeby zachować starsze szerokie pominięcie, gdy automatyczne wykrywanie jest niedostępne: Tailscale ufa wtedy całemu zakresowi `100.64.0.0/10`, a Docker także wykrytym interfejsom i bramie oraz starszemu zakresowi `172.16.0.0/12`. Używaj tego trybu zgodności tylko wtedy, gdy każdy pasujący klient jest zaufany.
 
-Dostawca internetu może używać CGNAT w zakresie `100.64.0.0/10`, czyli w tym samym, z którego korzysta Tailscale. Wtedy wyłącz pominięcie dla sieci Tailscale:
+Jeśli na przykład w twojej sieci Tailscale są mniej zaufane urządzenia, wyłącz pominięcie dla sieci Tailscale:
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-Zwykła sieć LAN może używać adresów `172.16.x.x`. Wtedy wyłącz pominięcie dla kontenerów Docker i dopisz konkretne kontenery do `IP_ALLOWLIST`:
+Jeśli wykryte urządzenia Docker nie mają omijać uwierzytelniania, wyłącz pominięcie Docker i w razie potrzeby dodaj konkretne klienty do `IP_ALLOWLIST`:
 
 ```env
 BYPASS_AUTH_DOCKER=false

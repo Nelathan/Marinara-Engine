@@ -124,24 +124,24 @@ También hay un indicador más amplio, `ALLOW_UNAUTHENTICATED_REMOTE=true`, que 
 
 ## Bypass de Tailscale y Docker
 
-Dos indicadores permiten que el tráfico directo de Tailscale y Docker se salte tanto la lista de IP permitidas como Basic Auth, igual que hace loopback. Ambos indicadores están activados de forma predeterminada. Por eso una instalación nueva ya es accesible por Tailscale o directamente desde tus contenedores de Docker sin configuración:
+Dos indicadores permiten que el tráfico directo de Tailscale y Docker se salte tanto la lista de IP permitidas como Basic Auth, igual que hace loopback. Déjalos vacíos para la detección automática:
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-Estos valores predeterminados dan por hecho que todo par de Tailscale es un usuario de confianza de Marinara. Las direcciones de puente de Docker y la puerta de enlace exacta detectada desde dentro del contenedor representan el mismo host de Docker. Incluso con Basic Auth activado, los clientes directos de Tailscale y Docker siguen saltándose el aviso. Si tu tailnet incluye pares de menor confianza, configura `BYPASS_AUTH_TAILSCALE=false`.
+El modo automático solo confía en un par de Tailscale cuando los dos extremos de su socket directo usan direcciones de tailnet. Solo confía en el tráfico de Docker cuando Marinara se ejecuta en un contenedor y el origen coincide con una interfaz de contenedor detectada o con su puerta de enlace exacta. Así, la configuración privada habitual de Tailscale y Docker en el mismo host sigue funcionando sin tratar como autenticado el tráfico no relacionado de CGNAT, LAN, red del anfitrión o proxy.
 
-Configura un indicador en falso si quieres una contraseña también de esos clientes. Hay dos razones menos comunes para desactivar uno.
+Pon un indicador en `false` si quieres exigir una contraseña también a esos clientes. Ponlo en `true` para conservar el bypass amplio anterior cuando la detección automática no esté disponible: Tailscale confiará en todo `100.64.0.0/10`, mientras que Docker también confiará en sus interfaces y puerta de enlace detectadas y en el rango heredado `172.16.0.0/12`. Usa este modo de compatibilidad solo si todos los pares que coincidan son de confianza.
 
-Puede que tu proveedor de internet use CGNAT en el rango `100.64.0.0/10`, el mismo rango que usa Tailscale. En ese caso, desactiva el bypass de Tailscale:
+Por ejemplo, si tu tailnet incluye pares de menor confianza, desactiva el bypass de Tailscale:
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-Puede que tu LAN normal use direcciones `172.16.x.x`. En ese caso, desactiva el bypass de Docker y agrega tus contenedores específicos a `IP_ALLOWLIST`:
+Si no quieres que los pares de Docker detectados eviten la autenticación, desactiva el bypass de Docker y añade clientes específicos a `IP_ALLOWLIST` si hace falta:
 
 ```env
 BYPASS_AUTH_DOCKER=false

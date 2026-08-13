@@ -124,24 +124,24 @@ ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK=true
 
 ## Tailscale 与 Docker 放行
 
-有两个开关能让直连的 Tailscale 和 Docker 流量像环回地址一样，同时跳过 IP 允许列表和 Basic Auth。两个开关默认都是开的，这也是全新安装无需任何配置就能通过 Tailscale 或直接从 Docker 容器访问的原因：
+有两个开关能让直连的 Tailscale 和 Docker 流量像环回地址一样，同时跳过 IP 允许列表和 Basic Auth。留空即可使用自动检测：
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-这套默认值的前提是：每个 Tailscale 对端都是可信的 Marinara 使用者；Docker 网桥地址和容器内检测到的具体网关都代表同一台 Docker 主机。即使开着 Basic Auth，直连的 Tailscale 和 Docker 客户端照样不会看到密码提示。如果 tailnet 里有不太可信的对端，就设 `BYPASS_AUTH_TAILSCALE=false`。
+自动模式只在直连 Tailscale 套接字的两端都使用 tailnet 地址时信任该对端。只有当 Marinara 在容器内运行，而且来源与检测到的容器接口或其确切网关匹配时，才信任 Docker 流量。这样，常见的私有 Tailscale 和同主机 Docker 配置仍能正常工作，同时不会把无关的 CGNAT、局域网、主机网络或代理流量当作已经认证。
 
-想让这些客户端也输密码，把对应开关设成 false。另外还有两种不太常见的关闭理由。
+如果也想要求这些客户端输入密码，请把相应开关设为 `false`。自动检测不可用时，设为 `true` 可保留旧版的宽泛放行：Tailscale 会信任整个 `100.64.0.0/10`，Docker 还会信任检测到的接口和网关以及旧版 `172.16.0.0/12` 网段。只有在所有匹配对端都可信时才使用这种兼容模式。
 
-网络服务商可能在 `100.64.0.0/10` 段上使用 CGNAT，和 Tailscale 用的是同一段地址。这种情况下关掉 Tailscale 放行：
+例如，如果 tailnet 里有不太可信的对端，请关掉 Tailscale 放行：
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-日常局域网也可能用 `172.16.x.x` 地址。这种情况下关掉 Docker 放行，再把具体的容器地址加进 `IP_ALLOWLIST`：
+如果不想让检测到的 Docker 对端跳过认证，请关掉 Docker 放行，并按需把具体客户端加进 `IP_ALLOWLIST`：
 
 ```env
 BYPASS_AUTH_DOCKER=false

@@ -256,6 +256,16 @@ Aplikacja na system Android to cienka nakładka na Termux. Termux to linuksowy t
 
 Sprawdź też, czy aplikacja i Termux używają tego samego portu. Domyślnie jest to `7860`. Jeśli aplikacja została zbudowana z innym portem, ustaw pasujący `PORT` także w pliku `.env` w aplikacji Termux.
 
+### Android localhost otwiera stronę logowania albo zwraca 401/503
+
+Instalacje środowiska Termux zarządzane przez plik APK chronią localhost prywatnym sekretem osobnym dla każdej instalacji. Aplikacja na system Android uwierzytelnia się automatycznie. W innej przeglądarce na tym samym telefonie otwórz `/android-login` i wklej wartość wyświetloną przez to polecenie w aplikacji Termux:
+
+```bash
+cat ~/.marinara-engine/android-secret
+```
+
+Lokalne narzędzie `mari` CLI automatycznie odczytuje ten sam plik. Kod 401 oznacza, że wklejony sekret albo wezwanie uwierzytelniające zostało odrzucone; odśwież `/android-login` i wklej bieżącą wartość. Kod 503 oznacza, że serwer dostał skonfigurowany sekret w złym formacie. Uruchom ponownie za pomocą `./start-termux.sh`. Jeśli program uruchamiający zgłosi, że plik sekretu jest nieprawidłowy albo pusty, wróć do aplikacji na system Android i dotknij **Install / Start Marinara**, żeby APK utworzył go ponownie. Nie umieszczaj tego sekretu na zrzutach ekranu ani w zgłoszeniach problemów.
+
 ### Aktualizacja w systemie Android zatrzymuje się z kodem wyjścia 134
 
 Kod wyjścia 134 zwykle oznacza, że systemowi Android zabrakło pamięci na którymś kroku budowania. Zaktualizuj ponownie z najnowszego programu uruchamiającego:

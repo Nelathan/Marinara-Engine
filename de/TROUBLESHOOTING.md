@@ -256,6 +256,16 @@ Die Android-App ist nur eine schlanke Hülle um Termux. Termux ist eine Linux-Te
 
 Prüf außerdem, ob App und Termux denselben Port nutzen. Der Standard ist `7860`. Hast du die App mit einem anderen Port gebaut, trag den passenden `PORT` auch in der `.env` von Termux ein.
 
+### Android-localhost öffnet die Anmeldeseite oder gibt 401/503 zurück
+
+Von der APK verwaltete Termux-Installationen schützen localhost mit einem privaten Geheimwert pro Installation. Die Android-App authentifiziert sich automatisch. Öffne in einem anderen Browser auf demselben Handy `/android-login` und füge den Wert aus diesem Termux-Befehl ein:
+
+```bash
+cat ~/.marinara-engine/android-secret
+```
+
+Die lokale `mari`-CLI liest dieselbe Datei automatisch. 401 bedeutet, dass der eingefügte Geheimwert oder eine Authentifizierungs-Challenge abgelehnt wurde; lade `/android-login` neu und füge den aktuellen Wert ein. 503 bedeutet, dass der Server einen fehlerhaft konfigurierten Geheimwert erhalten hat. Starte über `./start-termux.sh` neu. Meldet der Launcher, seine Geheimwertdatei sei ungültig oder leer, kehr zur Android-App zurück und tipp auf **Install / Start Marinara**, damit die APK sie neu anlegt. Zeig diesen Geheimwert nie in Screenshots oder Problemberichten.
+
 ### Das Android-Update bricht mit Exit-Status 134 ab
 
 Exit-Status 134 heißt meist, dass Android während eines Build-Schritts der Arbeitsspeicher ausgegangen ist. Aktualisiere erneut über den neuesten Launcher:

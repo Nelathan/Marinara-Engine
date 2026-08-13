@@ -124,24 +124,24 @@ Daneben gibt es den weiter gefassten Schalter `ALLOW_UNAUTHENTICATED_REMOTE=true
 
 ## Ausnahme für Tailscale und Docker
 
-Zwei Schalter lassen direkten Tailscale- und Docker-Verkehr sowohl die IP-Allowlist als auch Basic Auth überspringen, genau wie Loopback. Beide sind standardmäßig aktiv. Deshalb ist eine frische Installation ohne jede Einrichtung schon über Tailscale und direkt aus den eigenen Docker-Containern erreichbar:
+Zwei Schalter lassen direkten Tailscale- und Docker-Verkehr sowohl die IP-Allowlist als auch Basic Auth überspringen, genau wie Loopback. Lass sie für die automatische Erkennung leer:
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-Diese Standardwerte setzen voraus, dass jeder Tailscale-Peer ein vertrauenswürdiger Marinara-Nutzer ist. Docker-Bridge-Adressen und das aus dem Container erkannte exakte Gateway stehen für denselben Docker-Host. Auch mit aktivem Basic Auth überspringen direkte Tailscale- und Docker-Clients die Abfrage. Gehören zu deinem Tailnet weniger vertrauenswürdige Peers, setze `BYPASS_AUTH_TAILSCALE=false`.
+Im automatischen Modus wird einem Tailscale-Peer nur vertraut, wenn beide Enden seines direkten Sockets Tailnet-Adressen nutzen. Docker-Verkehr wird nur dann vertraut, wenn Marinara in einem Container läuft und die Quelle einer erkannten Container-Schnittstelle oder ihrem exakten Gateway entspricht. So funktionieren übliche private Tailscale- und Docker-Konfigurationen auf demselben Host weiter, ohne fremden CGNAT-, LAN-, Host-Netzwerk- oder Proxy-Verkehr als authentifiziert zu behandeln.
 
-Setze einen Schalter auf false, wenn auch diese Clients ein Passwort brauchen sollen. Dafür gibt es zwei seltenere Gründe.
+Setze einen Schalter auf `false`, wenn auch diese Clients ein Passwort brauchen sollen. Mit `true` behältst du die ältere breite Ausnahme, falls die automatische Erkennung nicht verfügbar ist: Tailscale vertraut dann dem gesamten Bereich `100.64.0.0/10`, Docker zusätzlich seinen erkannten Schnittstellen und Gateways sowie dem alten Bereich `172.16.0.0/12`. Nutze diesen Kompatibilitätsmodus nur, wenn jeder passende Peer vertrauenswürdig ist.
 
-Vielleicht nutzt dein Internetanbieter CGNAT im Bereich `100.64.0.0/10` – genau dem Bereich, den Tailscale verwendet. Dann schalte die Tailscale-Ausnahme ab:
+Gehören zu deinem Tailnet beispielsweise weniger vertrauenswürdige Peers, schalte die Tailscale-Ausnahme ab:
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-Oder dein normales LAN nutzt Adressen der Form `172.16.x.x`. Dann schalte die Docker-Ausnahme ab und trag die betreffenden Container einzeln in `IP_ALLOWLIST` ein:
+Sollen erkannte Docker-Peers die Authentifizierung nicht umgehen, schalte die Docker-Ausnahme ab und füge bei Bedarf bestimmte Clients zu `IP_ALLOWLIST` hinzu:
 
 ```env
 BYPASS_AUTH_DOCKER=false

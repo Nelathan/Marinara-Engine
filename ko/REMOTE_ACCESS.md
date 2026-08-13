@@ -124,24 +124,24 @@ ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK=true
 
 ## Tailscale과 Docker 우회
 
-플래그 2개를 쓰면 Tailscale과 Docker에서 직접 오는 트래픽이 루프백처럼 IP 허용 목록과 Basic Auth를 모두 건너뜁니다. 두 플래그는 기본적으로 켜져 있습니다. 그래서 새로 설치한 상태에서도 Tailscale로, 또는 Docker 컨테이너에서 바로 아무 설정 없이 접근할 수 있습니다.
+플래그 2개를 쓰면 Tailscale과 Docker에서 직접 오는 트래픽이 루프백처럼 IP 허용 목록과 Basic Auth를 모두 건너뜁니다. 자동 감지를 쓰려면 두 값을 비워 두세요.
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-이 기본값은 모든 Tailscale 피어가 신뢰할 수 있는 Marinara 사용자라고 전제합니다. Docker 브리지 주소와 컨테이너 안에서 감지한 게이트웨이 주소는 같은 Docker 호스트를 가리킵니다. Basic Auth를 켜 두어도 Tailscale과 Docker에서 직접 오는 클라이언트는 입력창을 건너뜁니다. tailnet에 덜 신뢰하는 피어가 있다면 `BYPASS_AUTH_TAILSCALE=false`로 설정하세요.
+자동 모드는 직접 연결된 Tailscale 소켓의 양 끝이 모두 tailnet 주소를 쓸 때만 해당 피어를 신뢰합니다. Docker 트래픽은 Marinara가 컨테이너에서 실행 중이고 출처가 감지된 컨테이너 인터페이스나 그 인터페이스의 정확한 게이트웨이와 일치할 때만 신뢰합니다. 따라서 일반적인 비공개 Tailscale과 같은 호스트의 Docker 구성은 계속 작동하지만, 관련 없는 CGNAT, LAN, 호스트 네트워크, 프록시 트래픽을 인증된 것으로 처리하지 않습니다.
 
-그런 클라이언트에도 비밀번호를 요구하려면 플래그를 false로 설정하세요. 흔하지는 않지만 우회를 꺼야 하는 이유가 2가지 있습니다.
+그런 클라이언트에도 비밀번호를 요구하려면 플래그를 `false`로 설정하세요. 자동 감지를 쓸 수 없을 때 예전의 넓은 우회를 유지하려면 `true`로 설정하세요. 그러면 Tailscale은 `100.64.0.0/10` 전체를 신뢰하고 Docker는 감지된 인터페이스와 게이트웨이뿐 아니라 예전 `172.16.0.0/12` 범위도 신뢰합니다. 일치하는 모든 피어를 신뢰할 수 있을 때만 이 호환 모드를 쓰세요.
 
-인터넷 서비스 사업자가 Tailscale과 같은 `100.64.0.0/10` 범위에서 CGNAT을 쓸 수 있습니다. 그럴 때는 Tailscale 우회를 끄세요.
+예를 들어 tailnet에 덜 신뢰하는 피어가 있다면 Tailscale 우회를 끄세요.
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-평소 쓰는 LAN이 `172.16.x.x` 주소를 쓸 수도 있습니다. 그럴 때는 Docker 우회를 끄고, 필요한 컨테이너만 `IP_ALLOWLIST`에 추가하세요.
+감지된 Docker 피어가 인증을 우회하지 않게 하려면 Docker 우회를 끄고, 필요하면 특정 클라이언트를 `IP_ALLOWLIST`에 추가하세요.
 
 ```env
 BYPASS_AUTH_DOCKER=false
