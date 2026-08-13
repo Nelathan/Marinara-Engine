@@ -179,7 +179,7 @@ As ferramentas podem ser movidas de uma instalação para outra.
 - Para exportar todas as ferramentas, clique em **Export functions to ZIP** na seção **Functions**.
 - Para importar, clique em **Import functions from ZIP or JSON** e escolha um arquivo `.json` ou `.zip`. Uma mensagem informa quantas ferramentas foram importadas.
 
-As ferramentas do tipo **Webhook** importadas são sempre salvas desativadas e com a opção **Include hidden chat context** desligada, mesmo que o arquivo peça uma dessas permissões. Depois da importação, o Marinara mostra a origem de destino do webhook e as permissões que o arquivo pediu. Abra cada webhook importado, confira o endereço completo e a configuração do contexto oculto e só ative a ferramenta se você confiar no destino. As ferramentas Static e Script mantêm o estado de ativação que veio na importação.
+As ferramentas importadas do tipo **Webhook** e **Script** são sempre salvas desativadas e com a opção **Include hidden chat context** desligada, mesmo que o arquivo peça uma dessas permissões. Depois da importação, o Marinara mostra o tipo de execução, o destino do webhook quando aplicável e as permissões solicitadas pelo arquivo. Abra cada ferramenta executável importada, confira seu conteúdo e só a ative se você confiar nela. As ferramentas Static mantêm o estado de ativação que veio na importação.
 
 A importação ignora qualquer ferramenta cujo nome conflite com uma ferramenta existente ou com o nome de uma ferramenta integrada. Os pacotes de agente não levam nem importam ferramentas personalizadas junto: exporte as funções confiáveis separadamente, revise-as em **Function Calls** e anexe-as explicitamente depois de importar o agente.
 

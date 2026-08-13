@@ -73,8 +73,8 @@
     },
     {
       "path": "appearance/card-css-theming.md",
-      "sha256": "45622f65cc9f07d91535eac2e95068851132b9024cd29c7b2f8d519e3fc41dd7",
-      "bytes": 36227
+      "sha256": "f24e640ce50e2956a176dde16c1bdd2e61848d2d11909c910b079e4b71932be9",
+      "bytes": 37303
     },
     {
       "path": "appearance/chat-backgrounds.md",
@@ -343,8 +343,8 @@
     },
     {
       "path": "extending/custom-tools.md",
-      "sha256": "5e996bc2a463a52da9a1054780ed6ba9d6f483ac2f04e8828355ae1ebd5a2bf0",
-      "bytes": 28644
+      "sha256": "7093cd7d82c56bdf105f82a8e19fb6872528fe6fe47eabc79c61493589e7827b",
+      "bytes": 28626
     },
     {
       "path": "extending/personal-extensions.md",

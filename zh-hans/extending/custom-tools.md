@@ -179,7 +179,7 @@ AI 以 `x` 为 2、`y` 为 3 调用 `add_numbers` 时，工具返回的和是 5�
 - 导出全部工具：在 **Functions** 区块点击 **Export functions to ZIP**。
 - 导入：点击 **Import functions from ZIP or JSON**，选一个 `.json` 或 `.zip` 文件，随后会有一条消息报告导入了多少个工具。
 
-导入的 Webhook 工具一律以关闭状态保存，**Include hidden chat context** 也一律关闭，哪怕文件里要求开启其中任意一项。导入完成后，Marinara 会显示这个 Webhook 的目标源站以及文件请求的权限。逐个打开导入的 Webhook 工具，检查完整 URL 和隐藏上下文设置，确认信任这个目标之后再开启它。Static 和 Script 类型的工具会保留文件里的启用状态。
+导入的 Webhook 和 Script 工具一律以关闭状态保存，**Include hidden chat context** 也一律关闭，哪怕文件里要求开启其中任意一项。导入完成后，Marinara 会显示执行类型、适用时 Webhook 的目标地址，以及文件请求的权限。逐个打开导入的可执行工具，检查其内容，确认信任后再开启。Static 类型的工具会保留文件里的启用状态。
 
 导入时，名称和已有工具或内置工具冲突的会被跳过。智能体包不会打包也不会导入自定义工具：单独导出你信任的函数，在 **Function Calls** 里逐个检查，导入智能体之后再手动挂上去。
 
