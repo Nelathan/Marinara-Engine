@@ -133,7 +133,7 @@ BYPASS_AUTH_DOCKER=
 
 El modo automático solo confía en un par de Tailscale cuando los dos extremos de su socket directo usan direcciones de tailnet. Solo confía en el tráfico de Docker cuando Marinara se ejecuta en un contenedor y el origen coincide con una interfaz de contenedor detectada o con su puerta de enlace exacta. Así, la configuración privada habitual de Tailscale y Docker en el mismo host sigue funcionando sin tratar como autenticado el tráfico no relacionado de CGNAT, LAN, red del anfitrión o proxy.
 
-Pon un indicador en `false` si quieres exigir una contraseña también a esos clientes. Ponlo en `true` para conservar el bypass amplio anterior cuando la detección automática no esté disponible: Tailscale confiará en todo `100.64.0.0/10`, mientras que Docker también confiará en sus interfaces y puerta de enlace detectadas y en el rango heredado `172.16.0.0/12`. Usa este modo de compatibilidad solo si todos los pares que coincidan son de confianza.
+Pon un indicador en `false` si quieres aplicar a esos clientes las comprobaciones normales de Basic Auth y de la lista de IP permitidas. Ponlo en `true` para conservar el bypass amplio anterior cuando la detección automática no esté disponible: Tailscale confiará en todo `100.64.0.0/10`, mientras que Docker también confiará en sus interfaces y puerta de enlace detectadas y en el rango heredado `172.16.0.0/12`. Usa este modo de compatibilidad solo si todos los pares que coincidan son de confianza.
 
 Por ejemplo, si tu tailnet incluye pares de menor confianza, desactiva el bypass de Tailscale:
 
