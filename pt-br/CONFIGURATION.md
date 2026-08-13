@@ -129,8 +129,8 @@ As principais configurações de controle de acesso são:
 | `ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK` | `false` | Devolve o acesso sem senha a partir de redes privadas quando nenhum login está definido. |
 | `ALLOW_UNAUTHENTICATED_REMOTE` | `false` | Libera o acesso sem senha de qualquer endereço, inclusive da internet pública. Não recomendado. |
 | `TRUSTED_PRIVATE_NETWORKS` | padrões internos | Substitui as faixas de rede privada padrão. Inclua também os padrões que você quiser manter. |
-| `BYPASS_AUTH_TAILSCALE` | `true` | Deixa o tráfego do Tailscale pular o login e a lista de permissões. |
-| `BYPASS_AUTH_DOCKER` | `true` | Deixa o tráfego da ponte do Docker e o gateway padrão exato detectado dentro do Docker pularem o login e a lista de permissões. |
+| `BYPASS_AUTH_TAILSCALE` | automático | Quando vazio, confia em sockets diretos do Tailscale somente se as duas pontas usam endereços da tailnet. Defina como `true` para manter a liberação antiga de toda a faixa `100.64.0.0/10` ou como `false` para exigir o controle de acesso normal. |
+| `BYPASS_AUTH_DOCKER` | automático | Quando vazio, confia somente em uma interface de contêiner detectada e no seu gateway exato. Defina como `true` para manter a compatibilidade com redes antigas ou personalizadas, ou como `false` para exigir o controle de acesso normal. |
 | `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `true` | Exige as verificações normais de login e de lista de permissões para o tráfego do Docker encaminhado por proxy. Defina como `false` só quando todo cliente na frente do servidor for confiável. |
 | `TRUSTED_HOSTS` | vazio | Nomes de host públicos ou de proxy reverso adicionais que Marinara pode atender. IP direto, localhost, `.local`, `.home.arpa` e nomes de rede local de rótulo único funcionam sozinhos. |
 | `SSL_CERT` | vazio | Caminho de um arquivo de certificado TLS. Defina junto com `SSL_KEY` para servir HTTPS diretamente. |
@@ -269,6 +269,8 @@ Esta seção lista as configurações restantes, agrupadas por finalidade. As ta
 | --- | --- | --- |
 | `PORT` | `7860` | A porta em que o servidor escuta. Use o mesmo valor no Android, no Docker e no Termux. |
 | `HOST` | `127.0.0.1` (`0.0.0.0` nos inicializadores de shell) | A interface de rede a que o servidor se associa. Use `0.0.0.0` para acesso pela rede local. |
+| `MARINARA_ANDROID_SECRET` | vazio | Segredo interno de autenticação local para instalações do Termux gerenciadas pelo APK. O invólucro do Android cria esse segredo e o inicializador do Termux o exporta; não o defina em instalações comuns de desktop nem em instalações manuais do Termux. Quando definido, ele deve ter exatamente 64 caracteres hexadecimais. Um valor inválido e não vazio faz as requisições locais do dispositivo falharem com HTTP 503 em vez de enfraquecer a autenticação. |
+| `MARINARA_ANDROID_SECRET_FILE` | `~/.marinara-engine/android-secret` | Caminho do arquivo privado de segredo usado pelo inicializador do Termux e pela CLI local `mari`. O APK e o inicializador gerenciam esse arquivo automaticamente. |
 | `AUTO_OPEN_BROWSER` | `true` | Define se os inicializadores de shell abrem o endereço do aplicativo para você. Defina como `false` para desligar. |
 | `AUTO_UPDATE_ENABLED` | `true` | Define se os inicializadores baseados em Git para Windows, macOS/Linux e Termux buscam e aplicam atualizações do Engine antes de iniciar. Defina como `false` para desligar de vez; isso passa a valer no próximo início. O inicializador ainda faz uma checagem somente leitura de versões publicadas mais novas e imprime um lembrete de download quando existe uma, enquanto as checagens manuais, a aplicação dentro do aplicativo, as atualizações de pacotes e as atualizações de modelos continuam disponíveis. Use `--skip-update` para pular as duas checagens do inicializador em um único início. |
 | `MARINARA_ENV_FILE` | o arquivo `.env` na raiz do projeto | Caminho alternativo, opcional, para o arquivo `.env`. Defina antes de iniciar. |

@@ -129,8 +129,8 @@ Marinara 在运行期间会盯着 `.env` 文件。保存修改后，大部分设
 | `ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK` | `false` | 在没设登录的情况下，恢复私有网络的免密访问。 |
 | `ALLOW_UNAUTHENTICATED_REMOTE` | `false` | 允许任意地址免密访问，包括公网。不推荐。 |
 | `TRUSTED_PRIVATE_NETWORKS` | 内置默认值 | 替换默认的私有网络段。仍需保留的默认段要自己写进去。 |
-| `BYPASS_AUTH_TAILSCALE` | `true` | 让 Tailscale 流量跳过登录和允许列表。 |
-| `BYPASS_AUTH_DOCKER` | `true` | 让 Docker 网桥流量以及在 Docker 内部检测到的那个默认网关跳过登录和允许列表。 |
+| `BYPASS_AUTH_TAILSCALE` | 自动 | 留空时，仅当直连 Tailscale 套接字的两端都是 tailnet 地址才予以信任。设为 `true` 可保留旧版对整个 `100.64.0.0/10` 的放行，设为 `false` 则要求执行正常访问控制。 |
+| `BYPASS_AUTH_DOCKER` | 自动 | 留空时，仅信任检测到的容器接口及其确切网关。设为 `true` 可兼容旧版或自定义网络，设为 `false` 则要求执行正常访问控制。 |
 | `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `true` | 对经代理转发的 Docker 流量照常执行登录和允许列表检查。只有在确认每一个上游客户端都可信时才设为 `false`。 |
 | `TRUSTED_HOSTS` | 空 | Marinara 额外允许响应的公网或反向代理主机名。直连 IP、localhost、`.local`、`.home.arpa` 和单段局域网名称自动生效。 |
 | `SSL_CERT` | 空 | TLS 证书文件的路径。与 `SSL_KEY` 一起设置即可直接提供 HTTPS 服务。 |
@@ -269,6 +269,8 @@ ADMIN_SECRET=replace-this-with-a-long-random-secret
 | --- | --- | --- |
 | `PORT` | `7860` | 服务器监听的端口。Android、Docker 和 Termux 上保持同一个值。 |
 | `HOST` | `127.0.0.1`(shell 启动脚本里是 `0.0.0.0`) | 要绑定的网络接口。局域网访问用 `0.0.0.0`。 |
+| `MARINARA_ANDROID_SECRET` | 空 | APK 管理的 Termux 安装使用的内部本地认证密钥。Android 外壳负责生成，Termux 启动脚本负责导出；普通桌面安装或手动 Termux 安装不要设置。设置后必须正好是 64 个十六进制字符。非空值无效时，设备本地请求会收到 HTTP 503，而不会通过削弱认证来继续运行。 |
+| `MARINARA_ANDROID_SECRET_FILE` | `~/.marinara-engine/android-secret` | Termux 启动脚本和本地 `mari` CLI 使用的私密密钥文件路径。APK 和启动脚本会自动管理这个文件。 |
 | `AUTO_OPEN_BROWSER` | `true` | shell 启动脚本是否替你打开应用地址。设为 `false` 即可关闭。 |
 | `AUTO_UPDATE_ENABLED` | `true` | 基于 Git 的 Windows、macOS/Linux 和 Termux 启动脚本是否在启动前拉取并应用 Engine 更新。设为 `false` 可长期关闭，下次启动生效。启动脚本仍会只读地检查有没有更新的正式发布版，有的话打印一条下载提醒；手动检查、应用内应用更新、包更新和模型更新都照常可用。加 `--skip-update` 可让本次启动跳过这两项检查。 |
 | `MARINARA_ENV_FILE` | 项目根目录的 `.env` | 可选，覆盖 `.env` 文件的路径。要在启动前设置。 |

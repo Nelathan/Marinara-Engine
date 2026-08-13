@@ -3,13 +3,13 @@
   "files": [
     {
       "path": "CONFIGURATION.md",
-      "sha256": "b62b9c5e1e9af14d9c4ca3038d0fe8d748a78d5488030be9a33110be19795233",
-      "bytes": 48708
+      "sha256": "acf327986a3e9fc43838c39c615d4d8ef80b27ebf079c685937ea34330c8dd36",
+      "bytes": 50285
     },
     {
       "path": "FAQ.md",
-      "sha256": "2dee722f2c93d7588dda1290fb5d66d3a268ca841eeeb2b61624077a2b23c64f",
-      "bytes": 35028
+      "sha256": "e4e53232713925fc4ca14cf3e49c4a35d7c459cc432f7bbb8da1b759e3f6c468",
+      "bytes": 36036
     },
     {
       "path": "INSTALLATION.md",
@@ -18,13 +18,13 @@
     },
     {
       "path": "REMOTE_ACCESS.md",
-      "sha256": "f5333df8bd8fcb5ba953ad8793d5d8e14a9680262ecff9d8a8ff1ecc192ca758",
-      "bytes": 27493
+      "sha256": "3f0cee1d632d248ec14a79beb8d80f0ff32562faa1a80b8999a526c0b072ec6d",
+      "bytes": 27872
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "290185b1c3c92171dddca0764bb5aa22b7ece78bc10219c4ce92101ac93b9b4e",
-      "bytes": 50670
+      "sha256": "c51ef5d69fc02015c81df9703a262c5ede48025dbedecf520897fb9ae75091fa",
+      "bytes": 52235
     },
     {
       "path": "UPGRADING.md",

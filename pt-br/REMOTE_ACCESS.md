@@ -124,24 +124,24 @@ Existe também uma chave mais ampla, `ALLOW_UNAUTHENTICATED_REMOTE=true`, que li
 
 ## Liberação para Tailscale e Docker
 
-Duas chaves permitem que o tráfego direto de Tailscale e Docker pule tanto a lista de IPs permitidos quanto Basic Auth, do mesmo jeito que o loopback faz. As duas chaves vêm ativadas por padrão. É por isso que uma instalação nova já está acessível pelo Tailscale ou diretamente a partir dos seus contêineres Docker, sem configuração:
+Duas chaves permitem que o tráfego direto de Tailscale e Docker pule tanto a lista de IPs permitidos quanto Basic Auth, do mesmo jeito que o loopback faz. Deixe-as vazias para a detecção automática:
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-Esses padrões partem do princípio de que todo par Tailscale é um usuário confiável do Marinara. Os endereços de bridge do Docker e o gateway exato detectado de dentro do contêiner representam o mesmo host Docker. Mesmo com Basic Auth ativo, os clientes diretos de Tailscale e Docker continuam pulando o pedido de senha. Se a sua tailnet tem pares menos confiáveis, defina `BYPASS_AUTH_TAILSCALE=false`.
+O modo automático confia em um par Tailscale somente quando as duas pontas do socket direto usam endereços da tailnet. Ele confia no tráfego Docker somente quando Marinara está rodando em um contêiner e a origem corresponde a uma interface de contêiner detectada ou ao seu gateway exato. Assim, a configuração privada comum de Tailscale e Docker no mesmo host continua funcionando sem tratar tráfego não relacionado de CGNAT, LAN, rede do host ou proxy como autenticado.
 
-Coloque uma chave em false se você quiser senha também para esses clientes. Há dois motivos menos comuns para desativar uma delas.
+Defina uma chave como `false` se você também quiser exigir senha desses clientes. Defina como `true` para manter a antiga liberação ampla quando a detecção automática não estiver disponível: o Tailscale passa a confiar em toda a faixa `100.64.0.0/10`, enquanto o Docker também confia nas interfaces e no gateway detectados e na faixa antiga `172.16.0.0/12`. Use esse modo de compatibilidade somente quando todos os pares correspondentes forem confiáveis.
 
-O seu provedor de internet pode usar CGNAT na faixa `100.64.0.0/10`, a mesma faixa do Tailscale. Nesse caso, desative a liberação do Tailscale:
+Por exemplo, se a sua tailnet tem pares menos confiáveis, desative a liberação do Tailscale:
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-A sua LAN comum pode usar endereços `172.16.x.x`. Nesse caso, desative a liberação do Docker e acrescente os contêineres específicos à variável `IP_ALLOWLIST`:
+Se você não quiser que os pares Docker detectados pulem a autenticação, desative a liberação do Docker e acrescente clientes específicos a `IP_ALLOWLIST` se necessário:
 
 ```env
 BYPASS_AUTH_DOCKER=false

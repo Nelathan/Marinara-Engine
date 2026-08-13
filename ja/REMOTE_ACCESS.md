@@ -124,24 +124,24 @@ ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK=true
 
 ## TailscaleとDockerのバイパス
 
-2つのフラグにより、TailscaleとDockerからの直接の通信は、ループバックと同じようにIP許可リストとBasic Authの両方を通らずに入れます。どちらのフラグもデフォルトでオンです。インストール直後でも、設定なしでTailscale経由やDockerコンテナーから直接接続できるのはこのためです。
+2つのフラグにより、TailscaleとDockerからの直接の通信は、ループバックと同じようにIP許可リストとBasic Authの両方を通らずに入れます。自動検出を使うには、どちらも空にします。
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-このデフォルトは、Tailscaleのピアがすべて信頼できるMarinaraのユーザーであることを前提にしています。Dockerのブリッジアドレスと、コンテナー内部から検出した正確なゲートウェイは、どちらも同じDockerホストを指します。Basic Authを有効にしても、TailscaleとDockerから直接つなぐクライアントは入力画面を飛ばします。tailnetに信頼度の低いピアが含まれる場合は、`BYPASS_AUTH_TAILSCALE=false`を設定してください。
+自動モードでは、直接接続されたTailscaleソケットの両端がtailnetのアドレスである場合にだけ、そのピアを信頼します。Dockerの通信は、Marinaraがコンテナー内で動作し、送信元が検出されたコンテナーのインターフェイスまたはその正確なゲートウェイと一致する場合にだけ信頼します。これにより、一般的なプライベートTailscaleと同じホストのDocker構成はそのまま使えますが、無関係なCGNAT、LAN、ホストネットワーク、プロキシの通信を認証済みとは扱いません。
 
-これらのクライアントにもパスワードを求めたい場合は、フラグをfalseにします。オフにしたほうがよいケースは、多くはありませんが2つあります。
+これらのクライアントにもパスワードを求めたい場合は、フラグを`false`にします。自動検出を利用できないときに以前の広いバイパスを残すには、`true`にします。この場合、Tailscaleは`100.64.0.0/10`全体を信頼し、Dockerは検出されたインターフェイスとゲートウェイに加えて、従来の`172.16.0.0/12`の範囲も信頼します。この互換モードは、一致するピアをすべて信頼できる場合にだけ使ってください。
 
-契約しているインターネットプロバイダーが、Tailscaleと同じ`100.64.0.0/10`の範囲でCGNATを使っていることがあります。その場合はTailscaleのバイパスをオフにします。
+たとえば、tailnetに信頼度の低いピアが含まれる場合は、Tailscaleのバイパスをオフにします。
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-普段使っているLANが`172.16.x.x`のアドレスを使っていることもあります。その場合はDockerのバイパスをオフにして、対象のコンテナーを`IP_ALLOWLIST`に追加します。
+検出されたDockerのピアに認証をバイパスさせたくない場合は、Dockerのバイパスをオフにし、必要に応じて特定のクライアントを`IP_ALLOWLIST`に追加します。
 
 ```env
 BYPASS_AUTH_DOCKER=false

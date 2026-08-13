@@ -34,7 +34,7 @@ Zamiast `192.168.1.42` wpisz własny adres IP hosta.
 
 5. Zaloguj się, jeśli przeglądarka poprosi o nazwę użytkownika i hasło Basic Auth. Jeśli zamiast tego pojawia się strona **Access blocked**, dokończ najpierw krok 2 na komputerze-hoście.
 
-Na tym samym komputerze (`127.0.0.1`) hasło nigdy nie jest potrzebne. Inne urządzenia pozostają zablokowane, dopóki nie skonfigurujesz kontroli dostępu (Basic Auth albo lista dozwolonych adresów IP). Każdą z opcji wyjaśnia przewodnik [Dostęp zdalny](REMOTE_ACCESS.md).
+W zwykłych instalacjach komputerowych hasło nie jest potrzebne na tym samym komputerze (`127.0.0.1`). Instalacje w systemie Android zarządzane przez plik APK dodają prywatne logowanie na localhost, żeby inna aplikacja w systemie Android nie mogła podszyć się pod Marinara Engine. Inne urządzenia pozostają zablokowane, dopóki nie skonfigurujesz kontroli dostępu (Basic Auth albo lista dozwolonych adresów IP). Każdą z opcji wyjaśnia przewodnik [Dostęp zdalny](REMOTE_ACCESS.md).
 
 Jeśli urządzenia są w różnych sieciach, pomoże narzędzie takie jak Tailscale. Tailscale nadaje każdemu urządzeniu stały adres prywatny. Dzięki temu da się połączyć z dowolnego miejsca bez wystawiania aplikacji Marinara Engine do publicznego internetu. Jeśli połączenie się nie udaje, zajrzyj do przewodnika [Rozwiązywanie problemów](TROUBLESHOOTING.md).
 
@@ -43,6 +43,8 @@ Jeśli urządzenia są w różnych sieciach, pomoże narzędzie takie jak Tailsc
 Osobnej, natywnej aplikacji mobilnej nie ma. Na telefonie i tablecie korzysta się z tej samej aplikacji internetowej w przeglądarce. Większość przeglądarek mobilnych oferuje opcję **Add to Home Screen** (dodanie do ekranu głównego) albo **Install App** (instalacja aplikacji), dzięki czemu całość wygląda jak prawdziwa aplikacja, bez paska przeglądarki. Nazywa się to PWA (Progressive Web App, czyli strona internetowa, którą da się zainstalować jak aplikację).
 
 W systemie Android można też zainstalować plik APK, czyli plik instalacyjny aplikacji dla tego systemu. Marinara Engine działa wtedy lokalnie na telefonie. Zobacz [Przewodnik instalacji na Android (Termux)](installation/android-termux.md). Na urządzeniach iPhone i iPad zajrzyj do przewodnika [PWA na iOS](installation/ios-pwa.md).
+
+Nakładka na system Android loguje się automatycznie przy otwieraniu zarządzanego przez plik APK serwera w środowisku Termux. Żeby skorzystać z innej przeglądarki na tym telefonie, otwórz `/android-login`, wykonaj `cat ~/.marinara-engine/android-secret` w aplikacji Termux i wklej wyświetlony sekret. Lokalne narzędzie `mari` CLI automatycznie odczytuje ten sam sekret zarządzany przez program uruchamiający. Ręczne instalacje w środowisku Termux zachowują zwykłe reguły dostępu z localhost i z sieci.
 
 ## Jakie są trzy tryby czatu?
 

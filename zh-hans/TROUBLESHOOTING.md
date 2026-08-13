@@ -256,6 +256,16 @@ Android 应用只是套在 Termux 外面的一层轻壳。Termux 是 Android 上
 
 另外确认应用和 Termux 用的是同一个端口。默认是 `7860`。如果打包应用时改了端口，Termux 的 `.env` 里也要设置成一样的 `PORT`。
 
+### Android localhost 打开登录页面或返回 401/503
+
+由 APK 管理的 Termux 安装会用每次安装独有的私密密钥保护 localhost。Android 应用会自动认证。在同一部手机的其他浏览器中打开 `/android-login`，然后粘贴以下 Termux 命令显示的值：
+
+```bash
+cat ~/.marinara-engine/android-secret
+```
+
+本地 `mari` CLI 会自动读取同一个文件。401 表示粘贴的密钥或认证质询遭到拒绝；请重新加载 `/android-login` 并粘贴当前值。503 表示服务器收到的已配置密钥格式错误。请通过 `./start-termux.sh` 重新启动。如果启动脚本报告密钥文件无效或为空，请回到 Android 应用并点击 **Install / Start Marinara**，让 APK 重新生成。不要把这个密钥放进截图或问题报告。
+
 ### Android 更新停在 exit status 134
 
 exit status 134 通常表示构建过程中 Android 内存不够了。用最新的启动脚本重新更新：

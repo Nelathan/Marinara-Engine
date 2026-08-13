@@ -124,24 +124,24 @@ Il existe aussi un indicateur plus large, `ALLOW_UNAUTHENTICATED_REMOTE=true`, q
 
 ## Contournement Tailscale et Docker
 
-Deux indicateurs permettent au trafic Tailscale et Docker direct de contourner à la fois la liste d'autorisation d'IP et Basic Auth, exactement comme le fait loopback. Les deux sont activés par défaut. C'est pour ça qu'une installation neuve est déjà accessible via Tailscale ou directement depuis tes conteneurs Docker, sans rien configurer :
+Deux indicateurs permettent au trafic Tailscale et Docker direct de contourner à la fois la liste d'autorisation d'IP et Basic Auth, exactement comme le fait loopback. Laisse-les vides pour la détection automatique :
 
 ```env
-BYPASS_AUTH_TAILSCALE=true
-BYPASS_AUTH_DOCKER=true
+BYPASS_AUTH_TAILSCALE=
+BYPASS_AUTH_DOCKER=
 ```
 
-Ces valeurs par défaut partent du principe que chaque pair Tailscale est un utilisateur de Marinara de confiance. Les adresses du pont Docker et la passerelle exacte détectée depuis l'intérieur du conteneur désignent le même hôte Docker. Même avec Basic Auth activé, les clients Tailscale et Docker directs évitent la demande de mot de passe. Si ton tailnet compte des pairs moins fiables, mets `BYPASS_AUTH_TAILSCALE=false`.
+Le mode automatique ne fait confiance à un pair Tailscale que si les deux extrémités de sa connexion directe utilisent des adresses du tailnet. Il ne fait confiance au trafic Docker que si Marinara s'exécute dans un conteneur et si la source correspond à une interface de conteneur détectée ou à sa passerelle exacte. Les configurations privées habituelles avec Tailscale et Docker sur le même hôte continuent ainsi de fonctionner, sans considérer comme authentifié du trafic CGNAT, LAN, réseau de l'hôte ou proxy sans rapport.
 
-Mets un indicateur à false si tu veux exiger un mot de passe de ces clients aussi. Il y a deux raisons, plus rares, d'en désactiver un.
+Mets un indicateur à `false` si tu veux aussi exiger un mot de passe de ces clients. Mets-le à `true` pour conserver l'ancien contournement large quand la détection automatique n'est pas disponible : Tailscale fait alors confiance à toute la plage `100.64.0.0/10`, tandis que Docker fait aussi confiance à ses interfaces et à sa passerelle détectées, ainsi qu'à l'ancienne plage `172.16.0.0/12`. N'utilise ce mode de compatibilité que si tous les pairs correspondants sont de confiance.
 
-Ton fournisseur d'accès utilise peut-être le CGNAT sur la plage `100.64.0.0/10`, celle-là même qu'emploie Tailscale. Dans ce cas, désactive le contournement Tailscale :
+Par exemple, si ton tailnet compte des pairs moins fiables, désactive le contournement Tailscale :
 
 ```env
 BYPASS_AUTH_TAILSCALE=false
 ```
 
-Ton LAN habituel utilise peut-être des adresses `172.16.x.x`. Dans ce cas, désactive le contournement Docker et ajoute tes conteneurs précis à la variable `IP_ALLOWLIST` :
+Si tu ne veux pas que les pairs Docker détectés contournent l'authentification, désactive le contournement Docker et ajoute au besoin certains clients à `IP_ALLOWLIST` :
 
 ```env
 BYPASS_AUTH_DOCKER=false

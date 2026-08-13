@@ -129,8 +129,8 @@ Marinara는 실행 중에도 `.env` 파일을 지켜봅니다. 변경 사항을 
 | `ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK` | `false` | 로그인을 설정하지 않았을 때 사설 네트워크에서 비밀번호 없이 접근하도록 되돌립니다. |
 | `ALLOW_UNAUTHENTICATED_REMOTE` | `false` | 공개 인터넷을 포함한 모든 주소에서 비밀번호 없이 접근하도록 허용합니다. 권장하지 않습니다. |
 | `TRUSTED_PRIVATE_NETWORKS` | 내장 기본값 | 기본 사설 네트워크 범위를 대체합니다. 계속 쓰고 싶은 기본값은 직접 포함해야 합니다. |
-| `BYPASS_AUTH_TAILSCALE` | `true` | Tailscale 트래픽이 로그인과 허용 목록을 건너뛰게 합니다. |
-| `BYPASS_AUTH_DOCKER` | `true` | Docker 브리지 트래픽과 Docker 안에서 감지한 기본 게이트웨이가 로그인과 허용 목록을 건너뛰게 합니다. |
+| `BYPASS_AUTH_TAILSCALE` | 자동 | 비워 두면 직접 연결된 Tailscale 소켓의 양 끝이 모두 tailnet 주소를 쓸 때만 신뢰합니다. 예전처럼 `100.64.0.0/10` 전체를 우회하려면 `true`, 일반 접근 제어를 요구하려면 `false`로 설정하세요. |
+| `BYPASS_AUTH_DOCKER` | 자동 | 비워 두면 감지된 컨테이너 인터페이스와 그 인터페이스의 정확한 게이트웨이만 신뢰합니다. 예전 구성이나 사용자 지정 네트워크와 호환하려면 `true`, 일반 접근 제어를 요구하려면 `false`로 설정하세요. |
 | `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `true` | 프록시를 거쳐 들어온 Docker 트래픽에도 일반 로그인과 허용 목록 검사를 적용합니다. 상위의 모든 클라이언트를 신뢰할 수 있을 때만 `false`로 두세요. |
 | `TRUSTED_HOSTS` | 비어 있음 | Marinara가 응답해도 되는 공개 호스트명이나 리버스 프록시 호스트명을 추가합니다. 직접 IP, localhost, `.local`, `.home.arpa`, 점이 없는 LAN 이름은 자동으로 동작합니다. |
 | `SSL_CERT` | 비어 있음 | TLS 인증서 파일 경로. `SSL_KEY`와 함께 설정하면 HTTPS를 직접 제공합니다. |
@@ -269,6 +269,8 @@ ADMIN_SECRET=replace-this-with-a-long-random-secret
 | --- | --- | --- |
 | `PORT` | `7860` | 서버가 대기하는 포트입니다. Android, Docker, Termux에서 같은 값을 쓰세요. |
 | `HOST` | `127.0.0.1`(셸 런처에서는 `0.0.0.0`) | 바인딩할 네트워크 인터페이스입니다. LAN에서 접근하려면 `0.0.0.0`을 쓰세요. |
+| `MARINARA_ANDROID_SECRET` | 비어 있음 | APK가 관리하는 Termux 설치의 내부 로컬 인증 비밀 값입니다. Android 래퍼가 만들고 Termux 런처가 내보냅니다. 일반 데스크톱 설치나 수동 Termux 설치에서는 설정하지 마세요. 설정할 때는 정확히 64자의 16진수여야 합니다. 비어 있지 않은 잘못된 값은 인증을 약화하는 대신 기기 내부 요청을 HTTP 503으로 실패시킵니다. |
+| `MARINARA_ANDROID_SECRET_FILE` | `~/.marinara-engine/android-secret` | Termux 런처와 로컬 `mari` CLI가 쓰는 비공개 비밀 파일 경로입니다. APK와 런처가 이 파일을 자동으로 관리합니다. |
 | `AUTO_OPEN_BROWSER` | `true` | 셸 런처가 앱 URL을 대신 열지 여부입니다. 열지 않으려면 `false`로 설정하세요. |
 | `AUTO_UPDATE_ENABLED` | `true` | Git 기반 Windows, macOS/Linux, Termux 런처가 시작 전에 Engine 업데이트를 받아 적용할지 여부입니다. 계속 받지 않으려면 `false`로 설정하세요. 다음 실행부터 적용됩니다. 이렇게 해도 런처는 새로 공개된 릴리스가 있는지 읽기 전용으로 확인해 다운로드 안내를 출력하며, 수동 확인, 앱 내 적용, 패키지 업데이트, 모델 업데이트는 그대로 쓸 수 있습니다. 이번 한 번만 두 가지 런처 확인을 모두 건너뛰려면 `--skip-update`를 쓰세요. |
 | `MARINARA_ENV_FILE` | 프로젝트 최상위의 `.env` | `.env` 파일 경로를 다른 곳으로 지정하는 선택 설정입니다. 서버를 시작하기 전에 설정하세요. |

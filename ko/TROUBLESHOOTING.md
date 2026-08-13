@@ -256,6 +256,16 @@ Android 앱은 Termux를 감싼 얇은 껍데기입니다. Termux는 Android용 
 
 앱과 Termux가 같은 포트를 쓰는지도 확인하세요. 기본값은 `7860`입니다. 다른 포트로 앱을 빌드했다면 Termux의 `.env`에도 같은 `PORT`를 설정하세요.
 
+### Android localhost에서 로그인 페이지가 열리거나 401/503이 반환될 때
+
+APK가 관리하는 Termux 설치는 설치마다 다른 비공개 비밀 값으로 localhost를 보호합니다. Android 앱은 자동으로 인증합니다. 같은 휴대폰의 다른 브라우저에서는 `/android-login`을 열고 다음 Termux 명령으로 표시된 값을 붙여 넣으세요.
+
+```bash
+cat ~/.marinara-engine/android-secret
+```
+
+로컬 `mari` CLI도 같은 파일을 자동으로 읽습니다. 401은 붙여 넣은 비밀 값이나 인증 챌린지가 거부되었다는 뜻입니다. `/android-login`을 새로 고치고 현재 값을 붙여 넣으세요. 503은 서버가 잘못된 형식으로 설정된 비밀 값을 받았다는 뜻입니다. `./start-termux.sh`로 다시 시작하세요. 런처에서 비밀 파일이 잘못되었거나 비어 있다고 알리면 Android 앱으로 돌아가 **Install / Start Marinara**를 탭하여 APK가 다시 만들게 하세요. 이 비밀 값을 스크린샷이나 문제 보고서에 넣지 마세요.
+
 ### Android 업데이트가 종료 코드 134로 멈출 때
 
 종료 코드 134는 대개 빌드 도중 Android의 메모리가 부족했다는 뜻입니다. 최신 런처로 다시 업데이트하세요.

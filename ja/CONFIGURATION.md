@@ -129,8 +129,8 @@ Marinaraは実行中も`.env`ファイルを監視しています。変更を保
 | `ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK` | `false` | ログインを設定していないとき、プライベートネットワークからのパスワードなしの接続を再び許可します。 |
 | `ALLOW_UNAUTHENTICATED_REMOTE` | `false` | インターネットを含む任意のアドレスから、パスワードなしで接続できるようにします。推奨しません。 |
 | `TRUSTED_PRIVATE_NETWORKS` | 組み込みのデフォルト | デフォルトのプライベートネットワークの範囲を置き換えます。残したいデフォルトも書き足してください。 |
-| `BYPASS_AUTH_TAILSCALE` | `true` | Tailscaleの通信がログインと許可リストを省略できるようにします。 |
-| `BYPASS_AUTH_DOCKER` | `true` | Dockerのブリッジの通信と、Docker内部で検出したデフォルトのゲートウェイが、ログインと許可リストを省略できるようにします。 |
+| `BYPASS_AUTH_TAILSCALE` | 自動 | 空の場合、直接接続されたTailscaleソケットの両端がtailnetのアドレスであるときだけ信頼します。以前と同様に`100.64.0.0/10`全体をバイパスするには`true`、通常のアクセス制御を必須にするには`false`を設定します。 |
+| `BYPASS_AUTH_DOCKER` | 自動 | 空の場合、検出されたコンテナーのインターフェイスとその正確なゲートウェイだけを信頼します。以前の構成や独自ネットワークとの互換性を保つには`true`、通常のアクセス制御を必須にするには`false`を設定します。 |
 | `REQUIRE_AUTH_FOR_DOCKER_PROXY` | `true` | プロキシ経由で転送されたDockerの通信にも、通常のログインと許可リストの確認を求めます。上流のクライアントがすべて信頼できる場合だけ`false`にしてください。 |
 | `TRUSTED_HOSTS` | 空 | Marinaraが応答してよい公開ホスト名やリバースプロキシのホスト名を追加します。IPアドレスの直接指定、localhost、`.local`、`.home.arpa`、ラベルが1つだけのLAN名は自動的に扱われます。 |
 | `SSL_CERT` | 空 | TLS証明書ファイルのパス。`SSL_KEY`と合わせて設定すると、HTTPSを直接提供します。 |
@@ -269,6 +269,8 @@ ADMIN_SECRET=replace-this-with-a-long-random-secret
 | --- | --- | --- |
 | `PORT` | `7860` | サーバーが待ち受けるポート。Android、Docker、Termuxでは同じ値にそろえてください。 |
 | `HOST` | `127.0.0.1`(シェルの起動スクリプトでは`0.0.0.0`) | 待ち受けるネットワークインターフェイス。LANから接続するには`0.0.0.0`にします。 |
+| `MARINARA_ANDROID_SECRET` | 空 | APKが管理するTermuxインストール向けの内部ローカル認証シークレット。Androidラッパーが用意し、Termuxランチャーが環境変数として渡します。通常のデスクトップや手動のTermuxインストールでは設定しないでください。設定する場合は、ちょうど64文字の16進数でなければなりません。空でない無効な値を受け取ると、認証を弱める代わりに端末内からのリクエストをHTTP 503で拒否します。 |
+| `MARINARA_ANDROID_SECRET_FILE` | `~/.marinara-engine/android-secret` | Termuxランチャーとローカルの`mari` CLIが使う非公開シークレットファイルのパス。APKとランチャーがこのファイルを自動で管理します。 |
 | `AUTO_OPEN_BROWSER` | `true` | シェルの起動スクリプトがアプリのURLを自動で開くかどうか。開かせたくない場合は`false`にします。 |
 | `AUTO_UPDATE_ENABLED` | `true` | Gitを使うWindows、macOS/Linux、Termuxの起動スクリプトが、起動前にEngineのアップデートを取得して適用するかどうか。`false`にすると継続的に無効になり、次回の起動から反映されます。この場合も起動スクリプトは、新しい公開リリースがないかを読み取りだけで確認し、あればダウンロードを促すメッセージを表示します。手動での確認、アプリ内での適用、パッケージのアップデート、モデルのアップデートはそのまま使えます。1回の起動だけ両方の確認を省略するには`--skip-update`を使います。 |
 | `MARINARA_ENV_FILE` | プロジェクトルートの`.env` | `.env`ファイルのパスを任意で変更します。起動前に設定してください。 |
