@@ -133,7 +133,7 @@ BYPASS_AUTH_DOCKER=
 
 Tryb automatyczny ufa urządzeniu Tailscale tylko wtedy, gdy oba końce jego bezpośredniego gniazda używają adresów sieci Tailscale. Ruch Docker jest zaufany tylko wtedy, gdy Marinara Engine działa w kontenerze, a źródło pasuje do wykrytego interfejsu kontenera albo jego dokładnej bramy. Dzięki temu zwykła prywatna konfiguracja sieci Tailscale i kontenerów Docker na tym samym komputerze nadal działa, ale niezwiązany ruch CGNAT, LAN, sieci hosta ani proxy nie jest uznawany za uwierzytelniony.
 
-Ustaw flagę na `false`, jeśli ci klienci też mają podawać hasło. Ustaw `true`, żeby zachować starsze szerokie pominięcie, gdy automatyczne wykrywanie jest niedostępne: Tailscale ufa wtedy całemu zakresowi `100.64.0.0/10`, a Docker także wykrytym interfejsom i bramie oraz starszemu zakresowi `172.16.0.0/12`. Używaj tego trybu zgodności tylko wtedy, gdy każdy pasujący klient jest zaufany.
+Ustaw flagę na `false`, jeśli wobec tych klientów mają obowiązywać zwykłe kontrole Basic Auth i listy dozwolonych adresów IP. Ustaw `true`, żeby zachować starsze szerokie pominięcie, gdy automatyczne wykrywanie jest niedostępne: Tailscale ufa wtedy całemu zakresowi `100.64.0.0/10`, a Docker także wykrytym interfejsom i bramie oraz starszemu zakresowi `172.16.0.0/12`. Używaj tego trybu zgodności tylko wtedy, gdy każdy pasujący klient jest zaufany.
 
 Jeśli na przykład w twojej sieci Tailscale są mniej zaufane urządzenia, wyłącz pominięcie dla sieci Tailscale:
 
