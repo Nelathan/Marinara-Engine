@@ -413,8 +413,8 @@
     },
     {
       "path": "home/professor-mari.md",
-      "sha256": "5c01ac60f3a443e83a01d08914391e8fcf58d80be26677605c04486f7a24930f",
-      "bytes": 14792
+      "sha256": "d15f53ea203315abf4f6dabad046d914ba85823eb30abca5d35c76f19d24e5d1",
+      "bytes": 17977
     },
     {
       "path": "home/tutorial.md",
@@ -473,8 +473,8 @@
     },
     {
       "path": "lorebooks/entries.md",
-      "sha256": "e3d43f1c40fe7a43f4d4fc17c2b31596a9402a038dd89d610f880e2200ea745a",
-      "bytes": 13746
+      "sha256": "d4b1948be3433c731c1af134e02dc9d8a63185eac888ac3ddb854d45c146e4a5",
+      "bytes": 39803
     },
     {
       "path": "lorebooks/import-export.md",
@@ -488,8 +488,8 @@
     },
     {
       "path": "lorebooks/overview.md",
-      "sha256": "a808a1443856d18f06d91406f2db471cf7466d1ed77dfcef4f725d60c439414c",
-      "bytes": 10246
+      "sha256": "a74b62a81ceb2608e327a7d3ca0b6fe4e6982bbf1181c2f8c85b0388808d79b5",
+      "bytes": 10481
     },
     {
       "path": "lorebooks/semantic-search.md",

@@ -23,7 +23,8 @@ Peça ajuda a ela em qualquer um destes casos:
 - Criar ou editar uma persona. A persona é a identidade que você interpreta no chat, o "você" da história.
 - Criar ou editar um lorebook. O lorebook é um conjunto de anotações do seu mundo que a IA usa quando fazem sentido.
 - Criar ou editar um tema, um agente, um preset de prompt ou um rascunho de Personal Extension. Professor Mari é a única autora de extensões que já vem no aplicativo. Os rascunhos dela ficam desativados até você inspecionar o código em ambiente isolado (sandbox), revisar as permissões ativas de card de personagem ou de persona que forem pedidas e aprovar o hash exato em **Settings** (Configurações) > **Addons**.
-- Comparar os 31 agentes e pacotes de recursos oficiais disponíveis para download, explicar quais modos cada um atende e indicar o que combina com o objetivo do usuário. Ela diferencia o que existe no catálogo do que está realmente instalado, encaminha o usuário para **Agents → Download Agents** quando é o caso, e sabe que os pacotes e o catálogo completo estão em [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
+- Editar uma parte específica de um preset de prompt, sem mexer no resto. Ela lista as seções, os grupos de prompt e as variáveis de escolha do preset, lê qualquer um desses itens por inteiro e acrescenta, altera ou remove só aquele pedaço. É possível, por exemplo, acrescentar uma linha em uma seção específica, em vez de só criar ou substituir o preset inteiro.
+- Comparar os 32 agentes e pacotes de recursos oficiais disponíveis para download, explicar quais modos cada um atende e indicar o que combina com o objetivo do usuário. Ela diferencia o que existe no catálogo do que está realmente instalado, encaminha o usuário para **Agents → Download Agents** quando é o caso, e sabe que os pacotes e o catálogo completo estão em [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
 - Gerar ou atribuir imagens, como avatares, sprites e planos de fundo. O sprite é a imagem do personagem, um retrato ou uma pose de corpo inteiro, que aparece durante o chat.
 - Consultar páginas públicas de wikis do Fandom para pesquisar um personagem ou um mundo.
 - Conduzir uma criação ou edição de várias etapas pelas sugestões rápidas acima da caixa de mensagem, com cores diferentes para cada tipo de item.
@@ -107,6 +108,25 @@ Clique no botão **Skills** no cabeçalho do chat dela para abrir o painel **Pro
 - Selecionar uma Skill para editar os campos **Name**, **Description** e **Instructions** e clicar em **Save**. Clique em **Delete** para excluir a Skill.
 
 Enquanto não houver nenhuma Skill, o painel mostra **No custom skills yet**.
+
+## Lembranças salvas
+
+Professor Mari guarda as suas preferências fixas, para você não repeti-las a cada conversa: o formato que você prefere nos lorebooks ou nos cards de personagem, as suas convenções de nomes, ou o jeito como ela deve se comportar.
+
+Existem duas formas de dar uma lembrança a ela:
+
+- **Conte para ela.** Diga algo como "lembre que eu sempre uso o nome e o apelido do personagem como chaves das entradas de lorebook". Ela salva a informação e mostra um card de revisão **Keep/Restore** com o texto exato. Toda lembrança que ela salva começa **desativada**, então nada muda até você ativá-la. O card traz um terceiro botão, **Keep & Enable** (manter e ativar), para salvar e ativar na hora.
+- **Crie você mesmo.** Clique no botão **Memories** (lembranças) no cabeçalho do chat dela para abrir o painel **Memories**. Ali você cria, edita, ativa, desativa e exclui as suas lembranças. Também é possível usar o botão **Upload** para enviar um arquivo `.md` ou de texto e transformar o conteúdo dele em uma lembrança.
+
+Ela só salva ou altera uma lembrança quando **você** pede, nunca porque algo que ela leu (um personagem, um lorebook ou um arquivo) mandou.
+
+Como ela usa as lembranças, e por que isso continua econômico:
+
+- A cada turno ela vê um **índice** curto das lembranças *ativadas*, só com os títulos e uma descrição de uma linha, o que custa quase nada. Quando uma lembrança tem a ver com o que você está fazendo, ela consulta o texto completo e segue o que está ali. Assim o prompt dela continua pequeno conforme você acrescenta lembranças, porque só o índice curto está sempre presente. A exceção é a lembrança marcada como **Persistent** (veja abaixo): o texto completo dela entra em todo turno, então convém ter poucas assim, e curtas. Uma lembrança desativada continua salva, mas é ignorada. Desative uma para testar outro caminho e ative de novo depois.
+- As lembranças salvas **têm prioridade sobre o comportamento padrão dela** quando há conflito. Por exemplo, uma lembrança que diz "quando eu perguntar como fazer algo, apenas faça" traz de volta a edição sem perguntar e passa por cima do hábito dela de confirmar antes.
+- Uma orientação rara, que precisa valer em *todo* turno, pode ser marcada como **Persistent** (persistente), para o texto completo ficar sempre diante dela. Mantenha poucas lembranças persistentes, e curtas, porque cada uma ocupa espaço no prompt dela o tempo todo. Use esse recurso só para descrever um comportamento que deve valer sempre.
+
+Para gerenciar as lembranças, use o painel **Memories** ou peça direto a ela: "o que você lembra?", "atualize a minha lembrança de formatação de lorebook para incluir também os títulos" ou "esqueça isso".
 
 ## Histórico de chats e Restart
 

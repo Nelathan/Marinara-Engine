@@ -78,7 +78,7 @@ Eldoria is a rainy port city ruled by a council of nine merchants.
 4. そのエントリーに、`Eldoria`のような反応するキーワードを1つ以上追加します。
 5. エントリーの**Content**(本文)欄に、AIに受け取ってほしい文章を書きます。
 
-エントリーは、入力の手が止まった少しあとに自動で保存されます。**Saved automatically**という短い表示が出ます。これでロアブックは動きます。最近のチャットにキーワードが一致すると、そのエントリーの本文がプロンプトに加わります。キーワード、照合のルール、タイミングの選択肢については、エントリーのガイドで説明します。
+エントリーは、入力の手が止まった少しあとに自動で保存されます。**Saved automatically**という短い表示が出ます。これでロアブックは動きます。最近のチャットにキーワードが一致すると、そのエントリーの本文がプロンプトに加わります。キーワード、照合のルール、タイミングの選択肢については、[ロアブックのエントリー](entries.md)のガイドで説明します。各エントリーにどの設定を選ぶかは、[作成の方針](entries.md#authoring-strategy-choosing-the-right-entry)と[実例](entries.md#worked-example-a-small-setting)の節が参考になります。
 
 ## Overviewタブの設定
 
