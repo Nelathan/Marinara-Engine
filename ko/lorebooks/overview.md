@@ -78,7 +78,7 @@ Eldoria is a rainy port city ruled by a council of nine merchants.
 4. 그 항목에 `Eldoria`처럼 반응할 키워드를 하나 이상 추가하세요.
 5. 항목의 **Content**(내용) 입력란에 AI가 받을 텍스트를 작성하세요.
 
-입력을 멈추고 잠시 지나면 항목이 알아서 저장됩니다. **Saved automatically**라는 짧은 안내가 잠깐 표시됩니다. 이제 로어북이 동작합니다. 최근 채팅에 키워드가 걸리면 항목의 내용이 프롬프트에 합쳐집니다. 키워드, 일치 규칙, 타이밍 설정은 항목 가이드에서 설명합니다.
+입력을 멈추고 잠시 지나면 항목이 알아서 저장됩니다. **Saved automatically**라는 짧은 안내가 잠깐 표시됩니다. 이제 로어북이 동작합니다. 최근 채팅에 키워드가 걸리면 항목의 내용이 프롬프트에 합쳐집니다. 키워드, 일치 규칙, 타이밍 설정은 [로어북 항목](entries.md) 가이드에서 설명합니다. 그중 [작성 전략](entries.md#authoring-strategy-choosing-the-right-entry)과 [실전 예시](entries.md#worked-example-a-small-setting) 절을 보면 항목마다 어떤 컨트롤을 골라야 할지 알 수 있습니다.
 
 ## Overview 탭 설정
 

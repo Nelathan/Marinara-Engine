@@ -78,7 +78,7 @@ Eldoria is a rainy port city ruled by a council of nine merchants.
 4. 在条目里填一个或多个触发关键词，比如 `Eldoria`。
 5. 在条目的 **Content**(内容) 输入框里写下想让 AI 收到的文本。
 
-停止输入后过一小会儿，条目会自动保存，界面上会出现一句 **Saved automatically** 提示。到这里世界书就能用了：最近的聊天命中关键词时，条目内容就会加入提示词。关键词、匹配规则和时机选项详见条目指南。
+停止输入后过一小会儿，条目会自动保存，界面上会出现一句 **Saved automatically** 提示。到这里世界书就能用了：最近的聊天命中关键词时，条目内容就会加入提示词。关键词、匹配规则和时机选项详见[世界书条目](entries.md)指南。其中的[编写策略](entries.md#authoring-strategy-choosing-the-right-entry)和[实例演练](entries.md#worked-example-a-small-setting)两节会讲怎样给每个条目选对控件。
 
 ## Overview 选项卡的设置
 

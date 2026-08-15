@@ -78,7 +78,7 @@ Lorebook nie ma jeszcze żadnych wpisów. Czas dodać pierwszy.
 4. We wpisie dodaj przynajmniej jedno wyzwalające słowo kluczowe, na przykład `Eldoria`.
 5. W polu **Content** wpisz tekst, który ma trafić do AI.
 
-Wpis zapisuje się sam chwilę po zakończeniu pisania. Na ekranie widać wtedy krótką informację **Saved automatically**. Lorebook już działa: kiedy słowo kluczowe pasuje do niedawnych wiadomości, treść wpisu dołącza do promptu. Przewodnik o wpisach wyjaśnia słowa kluczowe, zasady dopasowania i opcje czasu działania.
+Wpis zapisuje się sam chwilę po zakończeniu pisania. Na ekranie widać wtedy krótką informację **Saved automatically**. Lorebook już działa: kiedy słowo kluczowe pasuje do niedawnych wiadomości, treść wpisu dołącza do promptu. Przewodnik [Wpisy lorebooka](entries.md) wyjaśnia słowa kluczowe, zasady dopasowania i opcje czasu działania. Sekcje [Strategia pisania](entries.md#authoring-strategy-choosing-the-right-entry) i [Przykład w praktyce](entries.md#worked-example-a-small-setting) pokazują, jak dobrać właściwe ustawienia do każdego wpisu.
 
 ## Ustawienia w zakładce Overview
 

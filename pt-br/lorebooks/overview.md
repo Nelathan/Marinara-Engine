@@ -78,7 +78,7 @@ O lorebook ainda está sem entradas. Adicione a primeira agora.
 4. Na entrada, adicione uma ou mais palavras-chave de gatilho, como `Eldoria`.
 5. No campo **Content** (conteúdo) da entrada, escreva o texto que a IA deve receber.
 
-Marinara salva a entrada sozinha pouco depois de você parar de digitar. Aparece um aviso curto: **Saved automatically**. O lorebook já funciona: quando uma palavra-chave corresponde às mensagens recentes, o conteúdo da entrada entra no prompt. O guia de entradas explica as palavras-chave, as regras de correspondência e as opções de momento de acionar.
+Marinara salva a entrada sozinha pouco depois de você parar de digitar. Aparece um aviso curto: **Saved automatically**. O lorebook já funciona: quando uma palavra-chave corresponde às mensagens recentes, o conteúdo da entrada entra no prompt. O [guia de entradas](entries.md) explica as palavras-chave, as regras de correspondência e as opções de momento de acionar. As seções [Estratégia de escrita](entries.md#authoring-strategy-choosing-the-right-entry) e [Exemplo prático](entries.md#worked-example-a-small-setting) mostram como escolher os controles certos para cada entrada.
 
 ## As configurações da aba **Overview**
 

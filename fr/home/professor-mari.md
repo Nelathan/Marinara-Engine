@@ -23,7 +23,8 @@ Demande-lui de l'aide pour tout ceci :
 - Créer ou modifier un persona. Le persona est l'identité que tu incarnes dans un chat, le "toi" de l'histoire.
 - Créer ou modifier un lorebook. Un lorebook est un recueil de notes sur ton univers, que l'IA reprend quand elles sont pertinentes.
 - Créer ou modifier un thème, un agent, un preset de prompt ou un brouillon de Personal Extension. Professor Mari est la seule autrice d'extension par défaut. Ses brouillons restent désactivés tant que tu n'as pas donné ton accord. Inspecte le code en bac à sable, puis examine les permissions actives demandées sur les fiches de personnage ou les personas. Approuve enfin le hash exact dans **Settings** (Paramètres) > **Addons**.
-- Comparer les 31 agents et packs de fonctionnalités officiels à télécharger, expliquer quels modes ils prennent en charge et conseiller ceux qui correspondent à ton objectif. Elle distingue ce que propose le catalogue de ce qui est réellement installé, oriente vers **Agents → Download Agents** (télécharger des agents) quand il le faut, et sait que les sources des packs et le catalogue complet se trouvent sur [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
+- Modifier une seule partie d'un preset de prompt, sur place. Elle sait lister les sections, les groupes de prompt et les variables de choix d'un preset, puis lire n'importe lequel d'entre eux en entier. Elle ajoute, change ou retire ce seul morceau, par exemple une ligne dans une section précise, au lieu de créer ou de remplacer le preset entier.
+- Comparer les 32 agents et packs de fonctionnalités officiels à télécharger, expliquer quels modes ils prennent en charge et conseiller ceux qui correspondent à ton objectif. Elle distingue ce que propose le catalogue de ce qui est réellement installé, oriente vers **Agents → Download Agents** (télécharger des agents) quand il le faut, et sait que les sources des packs et le catalogue complet se trouvent sur [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
 - Générer ou attribuer des images : avatars, sprites, arrière-plans. Un sprite est une image du personnage, portrait ou pose en pied, affichée pendant un chat.
 - Consulter les pages publiques du wiki Fandom pour t'aider à te documenter sur un personnage ou un univers.
 - Suivre les pastilles de suggestion de réponse rapide affichées au-dessus du champ de saisie, dont la couleur dépend du type d'élément, tout au long d'une création ou d'une modification en plusieurs étapes.
@@ -107,6 +108,25 @@ Clique sur le bouton **Skills** dans l'en-tête de son chat pour ouvrir le panne
 - Sélectionner une Skill pour modifier les champs **Name** (nom), **Description** et **Instructions**, puis cliquer sur **Save** (enregistrer). Clique sur **Delete** (supprimer) pour l'effacer.
 
 Tant que tu n'as aucune Skill, le panneau affiche **No custom skills yet**.
+
+## Les souvenirs enregistrés
+
+Professor Mari peut retenir tes préférences durables, pour t'éviter de les répéter à chaque conversation : la mise en forme que tu attends pour tes lorebooks ou tes fiches de personnage, tes conventions de nommage, ou la façon dont elle doit se comporter.
+
+Il y a deux façons de lui donner un souvenir :
+
+- **Dis-le-lui.** Écris par exemple "retiens que mes entrées de lorebook ont toujours pour clés le nom du personnage et son surnom". Elle l'enregistre et affiche un encart de révision **Keep/Restore** avec la formulation exacte. Un souvenir qu'elle enregistre démarre **désactivé** : il ne change rien tant que tu ne l'as pas activé. L'encart propose un troisième bouton, **Keep & Enable** (conserver et activer), pour l'enregistrer et l'activer tout de suite.
+- **Ajoute-le toi-même.** Clique sur le bouton **Memories** (souvenirs) dans l'en-tête de son chat pour ouvrir le panneau **Memories**. Tu peux y créer, modifier, activer, désactiver et supprimer tes souvenirs. Autre option : téléverser un fichier `.md` ou texte avec **Upload**, pour transformer son contenu en souvenir.
+
+Elle n'enregistre et ne modifie un souvenir que si **toi** tu le lui demandes, jamais parce qu'un contenu qu'elle a lu (un personnage, un lorebook, un fichier) le lui a dit.
+
+Comment elle s'en sert, et pourquoi cela coûte si peu :
+
+- À chaque tour, elle voit un court **index** de tes souvenirs *activés*, avec leurs seuls titres et descriptions d'une ligne : le coût est quasi nul. Quand un souvenir se rapporte à ce que tu fais, elle en consulte le texte complet et le suit. Son prompt reste donc petit à mesure que tu ajoutes des souvenirs, puisque seul l'index court est toujours présent. Exception : un souvenir marqué **Persistent** (voir plus bas), dont le texte complet est inséré à chaque tour. Ceux-là doivent rester rares et courts. Un souvenir désactivé est conservé mais ignoré : tu peux en désactiver un pour essayer autre chose, puis le réactiver plus tard.
+- Les souvenirs enregistrés **priment sur son comportement par défaut** en cas de conflit. Un souvenir qui dit "quand je demande comment faire quelque chose, fais-le" te remet, par exemple, dans le mode modification sans question, et l'emporte sur son habitude de confirmer d'abord.
+- Une consigne rare qui doit s'appliquer à *chaque* tour peut passer en **Persistent** : son texte complet reste alors en permanence sous ses yeux. Garde peu de souvenirs persistants, et garde-les courts, puisque chacun occupe son prompt en continu. Réserve-les aux comportements qui doivent s'appliquer en permanence.
+
+Pour gérer tes souvenirs, passe par le panneau **Memories**, ou demande-lui simplement : "de quoi tu te souviens ?", "ajoute les titres à mon souvenir sur la mise en forme des lorebooks" ou "oublie ça".
 
 ## L'historique des chats et le bouton Restart
 

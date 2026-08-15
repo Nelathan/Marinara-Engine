@@ -23,7 +23,8 @@ Pídele ayuda con cualquiera de estas tareas:
 - Crear o editar una persona. Una persona es la identidad con la que juegas en un chat, el "tú" de la historia.
 - Crear o editar un lorebook. Un lorebook (libro de trasfondo) es un conjunto de notas del mundo que la IA incorpora cuando son relevantes.
 - Crear o editar un tema, un agente, un preset de prompt o un borrador de Personal Extension (Extensión personal). Professor Mari es la única autora de extensiones predeterminada. Sus borradores permanecen desactivados hasta que inspeccionas el código en el entorno aislado, revisas los permisos activos de tarjeta de personaje o de persona que solicite, y apruebas el hash exacto en **Settings** (Configuración) > **Addons**.
-- Comparar los 31 agentes oficiales descargables y paquetes de funciones, explicar qué modos admiten y aconsejar cuáles encajan con el objetivo de un usuario. Distingue la disponibilidad del catálogo de lo que realmente está instalado, dirige a los usuarios a **Agents → Download Agents** (Agentes → Descargar agentes) cuando hace falta, y sabe que las fuentes de los paquetes y el catálogo completo están disponibles en [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
+- Editar una sola parte de un preset de prompt sin tocar el resto. Puede listar las secciones individuales, los grupos de prompt y las variables de elección de un preset, leer cualquiera de ellos por completo, y agregar, cambiar o quitar solo esa pieza —por ejemplo, agregar una línea a una sección concreta— en lugar de solo crear o reemplazar el preset entero.
+- Comparar los 32 agentes y paquetes de funciones oficiales descargables, explicar qué modos admiten y aconsejar cuáles encajan con el objetivo de un usuario. Distingue la disponibilidad del catálogo de lo que realmente está instalado, dirige a los usuarios a **Agents → Download Agents** (Agentes → Descargar agentes) cuando hace falta, y sabe que las fuentes de los paquetes y el catálogo completo están disponibles en [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
 - Generar o asignar imágenes, como avatares, sprites y fondos. Un sprite (imagen del personaje) es una imagen del personaje, como un retrato o una pose de cuerpo completo, que se muestra durante un chat.
 - Consultar páginas públicas de wikis de Fandom para ayudarte a investigar un personaje o un mundo.
 - Seguir sugerencias en chips de respuesta rápida encima de la entrada del chat, con colores según el tipo de entidad, a lo largo de una creación o edición de varios pasos.
@@ -107,6 +108,25 @@ Haz clic en el botón **Skills** en la cabecera de su chat para abrir el panel *
 - Seleccionar un Skill para editar su **Name** (Nombre), **Description** (Descripción) e **Instructions** (Instrucciones), y luego hacer clic en **Save** (Guardar). Haz clic en **Delete** (Eliminar) para quitarlo.
 
 Cuando aún no tienes ningún Skill, el panel muestra **No custom skills yet** (Aún no hay skills personalizados).
+
+## Memorias guardadas
+
+Professor Mari puede recordar tus preferencias fijas para que no tengas que repetirlas en cada conversación: cómo te gusta que se formateen tus lorebooks o tus tarjetas de personaje, tus convenciones de nombres, o cómo quieres que se comporte ella.
+
+Hay dos formas de darle una memoria:
+
+- **Díselo.** Escribe algo como "recuerda que siempre pongo como palabra clave de las entradas de lorebook el nombre del personaje y su apodo". Ella la guarda y te muestra una tarjeta de revisión **Keep/Restore** con el texto exacto. Una memoria que ella guarda empieza **desactivada**, así que no cambia nada hasta que tú la activas. La tarjeta ofrece un tercer botón, **Keep & Enable** (Conservar y activar), para guardarla y activarla de inmediato.
+- **Agrégala tú.** Haz clic en el botón **Memories** (Memorias) en la cabecera de su chat para abrir el panel **Memories**, donde puedes crear, editar, activar o desactivar, y eliminar tus memorias. También puedes usar **Upload** con un archivo `.md` o de texto para convertir su contenido en una memoria.
+
+Ella solo guarda o cambia una memoria cuando **tú** se lo pides, nunca porque algo que leyó (un personaje, un lorebook o un archivo) se lo haya dicho.
+
+Cómo las usa, y por qué sigue siendo eficiente:
+
+- En cada turno ella ve un **índice** corto de tus memorias *activadas*, solo con sus títulos y descripciones de una línea, lo cual casi no cuesta nada. Cuando una memoria es relevante para lo que estás haciendo, busca su texto completo y lo sigue. Así su prompt se mantiene pequeño a medida que agregas memorias, ya que solo el índice corto está siempre presente. La excepción es una memoria que marcas como **Persistent** (Persistente; ver abajo): su texto completo se inyecta en cada turno, así que de esas conviene tener pocas y cortas. Una memoria desactivada se conserva pero se ignora, así que puedes desactivar una para probar algo distinto y volver a activarla más tarde.
+- Las memorias guardadas **tienen prioridad sobre su comportamiento predeterminado** cuando entran en conflicto. Por ejemplo, una memoria que dice "cuando yo pregunte cómo hacer algo, hazlo sin más" hace que ella vuelva a editar sin preguntarte, por delante de su costumbre de confirmar primero.
+- Una directriz poco común que deba aplicarse en *cada* turno se puede marcar como **Persistent** para que su texto completo esté siempre delante de ella. Que tus memorias persistentes sean pocas y breves, ya que cada una está siempre en su prompt, y úsalas solo para describir un comportamiento que quieres que sea siempre cierto.
+
+Para gestionar tus memorias, usa el panel **Memories**, o simplemente pregúntale: "¿qué recuerdas?", "actualiza mi memoria de formato de lorebooks para que también incluya los títulos" u "olvida eso".
 
 ## Historial de chats y Restart
 

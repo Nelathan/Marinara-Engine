@@ -23,7 +23,8 @@ Bei all dem kannst du sie um Hilfe bitten:
 - Eine Persona anlegen oder bearbeiten. Die Persona ist die Identität, die du im Chat spielst – das „Ich“ in der Geschichte.
 - Ein Lorebook anlegen oder bearbeiten. Ein Lorebook ist eine Sammlung von Weltwissen, die die KI heranzieht, sobald sie zum Thema passt.
 - Ein Theme, einen Agenten, ein Prompt-Preset oder einen Entwurf für eine **Personal Extension** (persönliche Erweiterung) anlegen oder bearbeiten. Professor Mari ist die einzige Erweiterungs-Autorin im Standard-Umfang. Ihre Entwürfe bleiben deaktiviert, bis du den Code in der Sandbox geprüft, alle angeforderten aktiven Berechtigungen für Charakterkarten oder Personas durchgesehen und den exakten Hash unter **Settings** (Einstellungen) > **Addons** freigegeben hast.
-- Alle 31 offiziellen herunterladbaren Agenten und Feature-Pakete vergleichen, erklären, welche Modi sie unterstützen, und empfehlen, welche zum jeweiligen Ziel passen. Sie unterscheidet dabei, was im Katalog steht und was tatsächlich installiert ist, verweist bei Bedarf auf **Agents → Download Agents** und weiß, dass Paketquellen und der vollständige Katalog unter [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents) liegen.
+- Einen einzelnen Teil eines Prompt-Presets an Ort und Stelle bearbeiten. Sie listet die einzelnen Abschnitte, Prompt-Gruppen und Auswahlvariablen eines Presets auf und zeigt dir jedes dieser Elemente auf Wunsch vollständig an. Ergänzen, ändern oder entfernen kann sie dann genau dieses eine Stück – etwa eine zusätzliche Zeile in einem bestimmten Abschnitt. Sie muss also nicht das ganze Preset neu anlegen oder ersetzen.
+- Alle 32 offiziellen herunterladbaren Agenten und Feature-Pakete vergleichen, erklären, welche Modi sie unterstützen, und empfehlen, welche zum jeweiligen Ziel passen. Sie unterscheidet dabei, was im Katalog steht und was tatsächlich installiert ist, verweist bei Bedarf auf **Agents → Download Agents** und weiß, dass Paketquellen und der vollständige Katalog unter [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents) liegen.
 - Bilder generieren oder zuweisen, etwa Avatare, Sprites und Hintergründe. Ein Sprite ist ein Charakterbild – ein Porträt oder eine Ganzkörper-Pose –, das während eines Chats angezeigt wird.
 - Öffentliche Fandom-Wiki-Seiten nachschlagen, damit du zu einem Charakter oder einer Welt recherchieren kannst.
 - Dich über die Vorschlags-Chips oberhalb der Chat-Eingabe durch eine mehrstufige Erstellung oder Bearbeitung führen; ihre Farbe richtet sich nach dem Objekttyp.
@@ -107,6 +108,25 @@ Klick auf die Schaltfläche **Skills** in ihrer Chat-Kopfzeile, um das Panel **P
 - Einen Skill auswählen und **Name**, **Description** und **Instructions** bearbeiten, dann auf **Save** (speichern) klicken. Über **Delete** (löschen) verschwindet er wieder.
 
 Solange es noch keine Skills gibt, steht im Panel **No custom skills yet** („noch keine eigenen Skills“).
+
+## Gespeicherte Erinnerungen
+
+Professor Mari merkt sich deine dauerhaften Vorlieben, damit du sie nicht in jedem Chat wiederholen musst: wie deine Lorebooks oder Charakterkarten formatiert sein sollen, welche Namenskonventionen gelten oder wie sie sich verhalten soll.
+
+Eine Erinnerung bekommt sie auf zwei Wegen:
+
+- **Sag es ihr.** Zum Beispiel: „Merk dir, dass ich Lorebook-Einträge immer über den Namen des Charakters und seinen Spitznamen auslöse.“ Sie speichert das und zeigt dir eine Prüfkarte **Keep/Restore** mit dem genauen Wortlaut. Eine so gespeicherte Erinnerung ist zunächst **deaktiviert** (aus) und ändert nichts, bis du sie einschaltest. Dafür gibt es auf der Karte eine dritte Schaltfläche, **Keep & Enable**: speichern und sofort einschalten.
+- **Leg sie selbst an.** Klick auf die Schaltfläche **Memories** (Erinnerungen) in ihrer Chat-Kopfzeile, um das Panel **Memories** zu öffnen. Dort legst du Erinnerungen an, bearbeitest sie, schaltest sie ein oder aus und löschst sie. Über **Upload** wird außerdem der Inhalt einer `.md`- oder Textdatei zu einer Erinnerung.
+
+Sie speichert oder ändert eine Erinnerung nur, wenn **du** sie darum bittest – nie, weil etwas Gelesenes es ihr aufträgt: ein Charakter, ein Lorebook oder eine Datei.
+
+Wie sie die Erinnerungen nutzt – und warum das ihren Prompt kaum belastet:
+
+- Bei jedem Zug sieht sie nur einen kurzen **Index** deiner *eingeschalteten* Erinnerungen: Titel und je eine Zeile Beschreibung. Das kostet fast nichts. Passt eine Erinnerung zu dem, was du gerade tust, schlägt sie den vollen Text nach und richtet sich danach. So bleibt ihr Prompt klein, auch wenn du viele Erinnerungen anlegst – dauerhaft dabei ist nur der kurze Index. Die Ausnahme ist eine Erinnerung mit **Persistent** (siehe unten): Ihr voller Text wandert bei jedem Zug in den Prompt, deshalb sollten es wenige und kurze sein. Eine ausgeschaltete Erinnerung bleibt erhalten, wird aber ignoriert. So kannst du eine kurz abschalten, etwas anderes ausprobieren und sie später wieder einschalten.
+- Bei einem Widerspruch **haben gespeicherte Erinnerungen Vorrang vor ihrem Standardverhalten**. Eine Erinnerung wie „Wenn ich frage, wie etwas geht, mach es einfach“ bringt dich zurück zum Bearbeiten ohne Rückfrage – ihre übliche Gewohnheit, vorher nachzufragen, tritt dann in den Hintergrund.
+- Eine seltene Vorgabe, die bei *jedem* Zug gelten muss, stellst du auf **Persistent**. Dann hat sie den vollen Text immer vor Augen. Leg nur wenige solcher Erinnerungen an und halte sie kurz, denn jede steckt dauerhaft in ihrem Prompt. Nutz sie nur für Verhalten, das immer gelten soll.
+
+Verwalten kannst du deine Erinnerungen im Panel **Memories** – oder du fragst sie einfach: „Woran erinnerst du dich?“, „Ergänz in meiner Erinnerung zur Lorebook-Formatierung auch die Titel“ oder „Vergiss das“.
 
 ## Chatverlauf und Restart
 

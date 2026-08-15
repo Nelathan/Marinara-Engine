@@ -23,7 +23,8 @@ Poproś ją o pomoc przy dowolnej z tych rzeczy:
 - Utworzenie lub edycja persony. Persona to postać, w którą się wcielasz w czacie, czyli "ty" w opowieści.
 - Utworzenie lub edycja lorebooka. Lorebook to zbiór faktów o twoim świecie, które AI wciąga do rozmowy, kiedy pasują do sytuacji.
 - Utworzenie lub edycja motywu, agenta, presetu promptu albo szkicu rozszerzenia Personal Extension. Professor Mari jest jedyną domyślną autorką rozszerzeń. Jej szkice pozostają wyłączone, dopóki nie sprawdzisz kodu w piaskownicy i nie przejrzysz wymaganych uprawnień do aktywnej karty postaci lub persony. Na koniec zatwierdź dokładny skrót w **Settings** (Ustawienia) > **Addons**.
-- Porównanie wszystkich 31 oficjalnych agentów i pakietów funkcji do pobrania, wyjaśnienie, które tryby obsługują, i podpowiedź, które pasują do celu użytkownika. Asystentka odróżnia dostępność w katalogu od tego, co jest naprawdę zainstalowane, w razie potrzeby kieruje do sekcji **Agents → Download Agents** i wie, że źródła pakietów oraz pełny katalog znajdują się w repozytorium [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents).
+- Edycja jednego fragmentu presetu promptu na miejscu. Asystentka wypisuje pojedyncze sekcje presetu, grupy promptów i zmienne wyboru, a każdą z nich czyta w całości. Potem dodaje, zmienia albo usuwa sam ten fragment, na przykład dopisuje jedną linię do wybranej sekcji. Nie musi tworzyć ani podmieniać całego presetu.
+- Porównanie wszystkich 32 oficjalnych agentów i pakietów funkcji do pobrania, wyjaśnienie, które tryby obsługują, i podpowiedź, które pasują do celu użytkownika. Asystentka odróżnia dostępność w katalogu od tego, co jest naprawdę zainstalowane, i w razie potrzeby kieruje do sekcji **Agents → Download Agents**. Zna też repozytorium [Pasta-Devs/Marinara-Agents](https://github.com/Pasta-Devs/Marinara-Agents), gdzie leżą źródła pakietów i pełny katalog.
 - Generowanie lub przypisywanie obrazów: awatarów, sprite'ów i teł. Sprite to obrazek postaci, na przykład portret albo cała sylwetka, pokazywany podczas czatu.
 - Wyszukiwanie publicznych stron wiki Fandom, które pomagają zebrać informacje o postaci albo świecie.
 - Prowadzenie przez wieloetapowe tworzenie lub edycję za pomocą kafelków z podpowiedziami nad polem wiadomości, oznaczonych kolorami według typu elementu.
@@ -107,6 +108,25 @@ Kliknij przycisk **Skills** w nagłówku jej czatu, żeby otworzyć panel **Prof
 - Wybrać Skill i zmienić pola **Name**, **Description** oraz **Instructions**, a potem kliknąć przycisk **Save**. Przycisk **Delete** go usuwa.
 
 Kiedy nie ma jeszcze żadnych własnych dokumentów Skill, panel pokazuje napis **No custom skills yet**.
+
+## Zapisane wspomnienia
+
+Professor Mari zapamiętuje stałe preferencje, więc nie trzeba ich powtarzać w każdym czacie. Chodzi na przykład o sposób formatowania lorebooków i kart postaci, przyjęte nazewnictwo albo oczekiwany sposób jej działania.
+
+Wspomnienie można jej przekazać na dwa sposoby:
+
+- **Powiedz jej o tym.** Wystarczy zdanie w stylu "zapamiętaj, że wpisy w lorebookach zawsze opieram na imieniu postaci i jej przezwisku". Asystentka zapisuje je i pokazuje kartę do zatwierdzenia **Keep/Restore** z dokładnym brzmieniem. Zapisane wspomnienie jest na starcie **wyłączone**, więc niczego nie zmienia, dopóki go nie włączysz. Karta ma wtedy trzeci przycisk, **Keep & Enable** (zachowaj i włącz), który zapisuje wspomnienie i od razu je włącza.
+- **Dodaj je samodzielnie.** Kliknij przycisk **Memories** (wspomnienia) w nagłówku jej czatu, żeby otworzyć panel **Memories**. Można w nim tworzyć, edytować, włączać, wyłączać i usuwać wspomnienia. Przycisk **Upload** wczytuje plik `.md` albo zwykły plik tekstowy i zamienia jego treść we wspomnienie.
+
+Asystentka zapisuje albo zmienia wspomnienie tylko wtedy, gdy **ty** ją o to poprosisz. Nigdy nie robi tego dlatego, że tak nakazuje przeczytana przez nią treść: postać, lorebook albo plik.
+
+Jak z nich korzysta i dlaczego to nie obciąża promptu:
+
+- W każdej turze asystentka widzi krótki **spis** *włączonych* wspomnień: same tytuły i jednolinijkowe opisy. Prawie nic to nie kosztuje. Kiedy wspomnienie pasuje do bieżącego zadania, asystentka sięga po jego pełną treść i stosuje się do niej. Dzięki temu prompt nie rośnie wraz z liczbą wspomnień, bo na stałe obecny jest tylko krótki spis. Wyjątkiem jest wspomnienie oznaczone jako **Persistent** (trwałe, opisane niżej). Jego pełna treść trafia do promptu w każdej turze, dlatego takich wspomnień twórz niewiele i pisz je krótko. Wyłączone wspomnienie nadal istnieje, ale jest pomijane. Dowolne wspomnienie można więc wyłączyć na czas eksperymentu i później włączyć z powrotem.
+- W razie konfliktu zapisane wspomnienia **mają pierwszeństwo przed jej domyślnym zachowaniem**. Na przykład wspomnienie "kiedy pytam, jak coś zrobić, po prostu to zrób" przywraca edycję bez dopytywania. Wygrywa wtedy z jej zwyczajem upewniania się przed działaniem.
+- Rzadką wytyczną, która ma obowiązywać w *każdej* turze, oznacz jako **Persistent**. Jej pełna treść jest wtedy zawsze widoczna dla asystentki. Wspomnień trwałych twórz niewiele i pisz je krótko, bo każde jest stale obecne w treści promptu. Opisuj nimi tylko zachowania, które mają obowiązywać zawsze.
+
+Wspomnieniami zarządzaj w panelu **Memories** albo poproś o to asystentkę: "co pamiętasz?", "dopisz tytuły do wspomnienia o formatowaniu lorebooków" albo "zapomnij o tym".
 
 ## Historia czatów i przycisk **Restart**
 

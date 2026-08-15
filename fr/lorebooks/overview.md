@@ -78,7 +78,7 @@ Ton lorebook n'a encore aucune entrée. Ajoutes-en une.
 4. Dans l'entrée, ajoute un ou plusieurs mots-clés déclencheurs, par exemple `Eldoria`.
 5. Dans le champ **Content** (contenu) de l'entrée, écris le texte que l'IA doit recevoir.
 
-L'entrée s'enregistre toute seule un instant après que tu as cessé de taper. Une brève mention **Saved automatically** s'affiche. Ton lorebook est opérationnel : quand un mot-clé correspond aux messages récents, le contenu de l'entrée rejoint le prompt. Le guide des entrées détaille les mots-clés, les règles de correspondance et les options de déclenchement.
+L'entrée s'enregistre toute seule un instant après que tu as cessé de taper. Une brève mention **Saved automatically** s'affiche. Ton lorebook est opérationnel : quand un mot-clé correspond aux messages récents, le contenu de l'entrée rejoint le prompt. Le [guide des entrées](entries.md) détaille les mots-clés, les règles de correspondance et les options de déclenchement. Ses sections [Stratégie de rédaction](entries.md#authoring-strategy-choosing-the-right-entry) et [Exemple complet](entries.md#worked-example-a-small-setting) montrent comment choisir les bons contrôles pour chaque entrée.
 
 ## Les réglages de l'onglet Overview
 

@@ -78,7 +78,7 @@ Tu lorebook aún no tiene entradas. Ahora agrega una.
 4. En la entrada, agrega una o más palabras clave disparadoras, como `Eldoria`.
 5. En el campo **Content** (Contenido) de la entrada, escribe el texto que quieres que reciba la IA.
 
-La entrada se guarda sola un momento después de que dejas de escribir. Verás una breve nota **Saved automatically** (Guardado automáticamente). Tu lorebook ya funciona: cuando una palabra clave coincide con el chat reciente, el contenido de la entrada se une al prompt. La guía de entradas explica las palabras clave, las reglas de coincidencia y las opciones de momento de activación.
+La entrada se guarda sola un momento después de que dejas de escribir. Verás una breve nota **Saved automatically** (Guardado automáticamente). Tu lorebook ya funciona: cuando una palabra clave coincide con el chat reciente, el contenido de la entrada se une al prompt. La [guía de entradas](entries.md) explica las palabras clave, las reglas de coincidencia y las opciones de momento de activación. Sus secciones [Estrategia de redacción](entries.md#authoring-strategy-choosing-the-right-entry) y [Ejemplo práctico](entries.md#worked-example-a-small-setting) muestran cómo elegir los controles adecuados para cada entrada.
 
 ## Los ajustes de la pestaña Overview
 

@@ -78,7 +78,7 @@ Einträge hat das Lorebook noch keine. Also leg jetzt einen an.
 4. Trag im Eintrag ein oder mehrere auslösende Schlüsselwörter ein, zum Beispiel `Eldoria`.
 5. Schreib in das Feld **Content** (Inhalt) des Eintrags den Text, den die KI erhalten soll.
 
-Kurz nachdem du aufhörst zu tippen, speichert der Eintrag von selbst. Ein kurzer Hinweis **Saved automatically** bestätigt das. Damit funktioniert das Lorebook: Passt ein Schlüsselwort zum jüngsten Chatverlauf, wandert der Inhalt des Eintrags in den Prompt. Die Anleitung zu den Einträgen erklärt Schlüsselwörter, Abgleichregeln und Timing-Optionen.
+Kurz nachdem du aufhörst zu tippen, speichert der Eintrag von selbst. Ein kurzer Hinweis **Saved automatically** bestätigt das. Damit funktioniert das Lorebook: Passt ein Schlüsselwort zum jüngsten Chatverlauf, wandert der Inhalt des Eintrags in den Prompt. Die [Anleitung zu den Einträgen](entries.md) erklärt Schlüsselwörter, Abgleichregeln und Timing-Optionen. Ihre Abschnitte [Schreibstrategie](entries.md#authoring-strategy-choosing-the-right-entry) und [Praxisbeispiel](entries.md#worked-example-a-small-setting) zeigen, wie du für jeden Eintrag die passenden Bedienelemente wählst.
 
 ## Die Einstellungen im Tab Overview
 
