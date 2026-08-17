@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type { ChatMode } from "@marinara-engine/shared";
 import {
@@ -54,7 +54,6 @@ import {
   usePersonalExtensionCommands,
 } from "../../lib/personal-extension-contributions";
 import { resolvePresetArtwork } from "../../lib/preset-artwork";
-import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { getAvatarCropStyle } from "../../lib/utils";
@@ -75,12 +74,16 @@ import {
 } from "../command-center/command-center-visuals";
 import type { RichCommandResult } from "../command-center/command-result-preview.types";
 
+const OmnibarProfessorMariChat = lazy(() =>
+  import("../chat/HomeProfessorMariChat").then((module) => ({ default: module.HomeProfessorMariChat })),
+);
+
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
 const BROWSE_BATCH_SIZE = 48;
 
-type OmnibarPane = "results" | "browse" | "detail";
-type DetailOrigin = Exclude<OmnibarPane, "detail">;
+type OmnibarPane = "results" | "browse" | "detail" | "mari";
+type DetailOrigin = Exclude<OmnibarPane, "detail" | "mari">;
 type BrowseFilter = Exclude<CommandCenterCategoryFilter, "all" | "settings" | "docs">;
 type RankedOmnibarResult = OmnibarResult & {
   command: RichCommandResult["command"];
@@ -181,6 +184,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setBrowseSelectedId = (value: string | null) => setSessionValue("browseSelectedId", value);
   const setBrowseLimit = (value: number) => setSessionValue("browseLimit", value);
   const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
+  const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -1054,12 +1058,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     if (result.id === "ask-professor-mari") {
-      useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, query.trim());
-      useChatStore.getState().setActiveChatId(null);
-      ui().closeAllDetails();
-      ui().closeRightPanel();
-      requestProfessorMariOpen(query.trim());
-      onClose();
+      openProfessorMari();
       return;
     }
     if (result.category === "connection") {
@@ -1100,6 +1099,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       setDetailResult(null);
       setSessionValue("detailResultId", null);
       setPane(detailOrigin);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else if (pane === "mari") {
+      setPane("results");
       requestAnimationFrame(() => inputRef.current?.focus());
     } else if (pane === "browse") {
       setPane("results");
@@ -1203,20 +1205,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const openProfessorMari = () => {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
-    useChatStore.getState().setActiveChatId(null);
-    ui().closeAllDetails();
-    ui().closeRightPanel();
-    requestProfessorMariOpen({
-      draft,
-      context: previewResult
-        ? {
-            source: "command-center",
-            capability: "explain",
-            action: `Selected Command Center result: ${previewResult.title} (${previewResult.category}, ${previewResult.id})`,
-          }
-        : undefined,
-    });
-    onClose();
+    setMariChatOpen(true);
+    setDetailResult(null);
+    setSessionValue("detailResultId", null);
+    setPane("mari");
   };
   const resultIcon = (result: RankedOmnibarResult) => {
     if (result.category === "chat") {
@@ -1457,7 +1449,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <X size={18} />
             </button>
           </div>
-          {query.trim() || pane === "browse" ? (
+          {(query.trim() || pane === "browse") && pane !== "mari" ? (
             <div
               role="toolbar"
               aria-label={t("commandCenter.filters.label", "Result categories")}
@@ -1483,7 +1475,35 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           {liveMessage}
         </div>
 
-        {pane !== "browse" ? (
+        {pane === "mari" ? (
+          <div
+            data-component="GlobalOmnibar.Mari"
+            className="relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)]"
+          >
+            <Suspense
+              fallback={
+                <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
+                  <Loader2 className="mr-2 animate-spin" size={16} />
+                  {t("omnibar.loading", "Loading results")}
+                </div>
+              }
+            >
+              <OmnibarProfessorMariChat
+                pageActive
+                embeddedTab
+                launchHidden
+                chatWindowOpen={mariChatOpen}
+                onChatWindowOpenChange={(open) => {
+                  setMariChatOpen(open);
+                  if (!open) {
+                    setPane("results");
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }
+                }}
+              />
+            </Suspense>
+          </div>
+        ) : pane !== "browse" ? (
           <div className="flex min-h-0 flex-1">
             <div
               ref={listRef}

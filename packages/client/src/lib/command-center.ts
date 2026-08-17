@@ -188,8 +188,8 @@ const MAX_COMMAND_ID_LENGTH = 256;
 const MAX_USE_COUNT = 10_000;
 const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type CommandCenterPane = "results" | "browse" | "detail";
-export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail">;
+export type CommandCenterPane = "results" | "browse" | "detail" | "mari";
+export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "mari">;
 
 export interface CommandCenterSessionState {
   query: string;
