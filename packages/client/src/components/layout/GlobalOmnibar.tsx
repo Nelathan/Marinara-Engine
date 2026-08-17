@@ -177,12 +177,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
-  const [session, setSession] = useState<CommandCenterSessionState>(() => {
-    // Reopen on search, not a stale Mari pane; the conversation still resumes on
-    // explicit re-entry within a session.
-    const stored = readCommandCenterSessionState();
-    return stored.pane === "mari" ? { ...stored, pane: "results" } : stored;
-  });
+  // The session normalizer resets any persisted `mari` pane to `results`, so the
+  // omnibar always reopens on search; the Mari conversation resumes only on
+  // explicit re-entry within a session.
+  const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
   const { query, filter, pane, activeResultId, detailOrigin, browseSelectedId, browseLimit, detailResultId } = session;
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));

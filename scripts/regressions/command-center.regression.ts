@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   COMMAND_CENTER_MAX_RESULTS,
+  normalizeCommandCenterSessionState,
   normalizeCommandRankingState,
   presentCommandCenterResults,
   rankCommandResults,
@@ -157,5 +158,11 @@ const categorizedCommands = searchOmnibar("command", {
 });
 assert.equal(categorizedCommands.find((result) => result.id === "custom-settings-command")?.category, "settings");
 assert.equal(categorizedCommands.find((result) => result.id === "settings-looking-navigation")?.category, "navigation");
+
+// The omnibar reopens on search, never a stale Professor Mari pane: the session
+// normalizer must reset an unsupported persisted pane back to "results".
+assert.equal(normalizeCommandCenterSessionState({ pane: "mari" }).pane, "results");
+assert.equal(normalizeCommandCenterSessionState({ pane: "browse" }).pane, "browse");
+assert.equal(normalizeCommandCenterSessionState({ pane: "detail" }).pane, "detail");
 
 console.info("Command Center regression checks passed.");
