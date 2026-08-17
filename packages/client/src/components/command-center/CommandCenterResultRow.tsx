@@ -66,9 +66,9 @@ export function CommandCenterResultRow({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={cn(
-        "group grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center rounded-md transition-colors",
-        "min-h-14 sm:h-12",
-        selected ? "bg-[var(--accent)]" : "hover:bg-[var(--accent)]/60",
+        "group grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center rounded-xl transition-colors",
+        "min-h-14 sm:h-[3.25rem]",
+        selected ? "bg-[var(--primary)]/12 ring-1 ring-inset ring-[var(--primary)]/20" : "hover:bg-[var(--accent)]/60",
         groupClassName,
         className,
       )}
@@ -79,7 +79,7 @@ export function CommandCenterResultRow({
         data-selected={selected || undefined}
         onClick={onSelect}
         title={description}
-        className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-md px-2 text-left text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
+        className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 text-left text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
       >
         <CommandCenterMedia
           size="row"
