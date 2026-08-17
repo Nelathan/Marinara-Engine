@@ -4,6 +4,8 @@ import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared"
 import {
   ArrowRight,
   ChevronLeft,
+  Clock3,
+  Compass,
   Edit3,
   FolderOpen,
   Gamepad2,
@@ -12,6 +14,8 @@ import {
   MessageCircle,
   Play,
   Search,
+  SlidersHorizontal,
+  Sparkles,
   Theater,
   X,
 } from "lucide-react";
@@ -120,11 +124,6 @@ function readNamedRow(value: unknown) {
 
 function readString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function timeOfDayKey() {
-  const hour = new Date().getHours();
-  return hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
 }
 
 function formatDate(value: unknown) {
@@ -898,7 +897,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       if (selected.length >= 4) break;
       add(result.id);
     }
-    return selected.slice(0, 4);
+    return selected.slice(0, 12);
   }, [allLocalResults, ranking.recent, searchableCommandResults]);
   // Context-aware results: read the app's current location (active chat, open
   // editor) and surface direct jumps to whatever is on screen and under it.
@@ -1691,44 +1690,60 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-sm:hidden") : ""}`}
             >
               {!query.trim() ? (
-                <div className="mb-2 flex items-center gap-3 rounded-2xl bg-[var(--accent)] px-3 py-3 motion-safe:animate-fade-in-up">
-                  <button
-                    type="button"
-                    onClick={openProfessorMari}
-                    aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                    className="shrink-0 rounded-full ring-1 ring-[var(--border)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] motion-reduce:transition-none"
-                  >
-                    <img
-                      src={PROFESSOR_MARI_PEEK_URL}
-                      alt=""
-                      aria-hidden="true"
-                      draggable={false}
-                      className="size-12 rounded-full object-cover object-top"
-                    />
-                  </button>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-                      {t(`omnibar.greeting.${timeOfDayKey()}`, "What do you want to do?")}
-                    </p>
-                    <p className="truncate text-xs text-[var(--muted-foreground)]">
-                      {t("omnibar.greeting.hint", "Search, jump to anything, or ask Professor Mari.")}
-                    </p>
+                <div className="border-b border-[var(--border)] px-3 pb-3 pt-3 motion-safe:animate-fade-in-up">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[var(--foreground)]">
+                        {t("commandCenter.deck.title", "Command Center")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                        {t("commandCenter.deck.subtitle", "Jump, create, change, or ask Professor Mari.")}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openProfessorMari}
+                      aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                      title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                      className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+                    >
+                      <img
+                        src={PROFESSOR_MARI_PEEK_URL}
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                        className="absolute left-1/2 top-0 h-20 w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+                      />
+                    </button>
                   </div>
-                </div>
-              ) : null}
-              {!query.trim() && BROWSE_FILTERS.some((item) => browseAvailability[item] > 0) ? (
-                <div className="mb-1 flex items-center justify-between gap-3 px-2 pb-1">
-                  <span className="text-xs text-[var(--muted-foreground)]">
-                    {t("commandCenter.initialHint", "Recent and useful actions")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={openBrowse}
-                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                  >
-                    <LayoutGrid size={15} aria-hidden="true" />
-                    {t("commandCenter.browse", "Browse")}
-                  </button>
+                  <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => {
+                          setFilter(item);
+                          setPane("browse");
+                          setBrowseLimit(BROWSE_BATCH_SIZE);
+                        }}
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--secondary)] px-2.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/40 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      >
+                        <LayoutGrid size={13} aria-hidden="true" />
+                        {filterLabels[item]}
+                        <span className="text-[0.625rem] text-[var(--muted-foreground)]">
+                          {browseAvailability[item]}
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={openBrowse}
+                      className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                    >
+                      <Compass size={13} aria-hidden="true" />
+                      {t("commandCenter.browse", "Browse")}
+                    </button>
+                  </div>
                 </div>
               ) : null}
               {query.trim() && loading && results.length === 0 ? (
@@ -1742,119 +1757,137 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   {t("omnibar.error", "Some results could not be loaded")}
                 </div>
               ) : null}
-              {presentation.groups.map((group) => (
-                <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
-                  <h3
-                    id={`omnibar-group-${group.id}`}
-                    className="px-2 pb-1 pt-2 text-xs font-semibold text-[var(--muted-foreground)]"
-                  >
-                    {groupLabels[group.id]}
-                  </h3>
-                  <ul className="space-y-0.5">
-                    {group.results.map((result, rowIndex) => {
-                      const visual = resultVisual(result);
-                      const selected = result.id === activeResult?.id;
-                      const hasDetails = selected && (result.control?.type === "choice" || isRichResult(result));
-                      const currentChoice =
-                        result.control?.type === "choice"
-                          ? result.control.options?.find((option) => option.value === String(result.control?.value))
-                              ?.label
-                          : undefined;
-                      const setupStatus =
-                        result.command.availability?.status === "requires-capability"
-                          ? t("commandCenter.setup", "Set up")
-                          : result.command.availability?.status === "requires-admin"
-                            ? t("commandCenter.adminRequired", "Administrator access required")
+              {presentation.groups.map((group) => {
+                const GroupIcon =
+                  group.id === "context"
+                    ? Compass
+                    : group.id === "recent"
+                      ? Clock3
+                      : group.id === "quick-controls"
+                        ? SlidersHorizontal
+                        : group.id === "pinned"
+                          ? Sparkles
+                          : LayoutGrid;
+                return (
+                  <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
+                    <div className="flex items-center gap-1.5 px-3 pb-1 pt-3">
+                      <GroupIcon size={12} className="text-[var(--primary)]" aria-hidden="true" />
+                      <h3
+                        id={`omnibar-group-${group.id}`}
+                        className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]"
+                      >
+                        {groupLabels[group.id]}
+                      </h3>
+                      <span className="text-[0.625rem] text-[var(--muted-foreground)]/70">{group.results.length}</span>
+                    </div>
+                    <ul className="space-y-0.5 px-1">
+                      {group.results.map((result, rowIndex) => {
+                        const visual = resultVisual(result);
+                        const selected = result.id === activeResult?.id;
+                        const hasDetails = selected && (result.control?.type === "choice" || isRichResult(result));
+                        const currentChoice =
+                          result.control?.type === "choice"
+                            ? result.control.options?.find((option) => option.value === String(result.control?.value))
+                                ?.label
                             : undefined;
-                      return (
-                        <CommandCenterResultRow
-                          key={result.id}
-                          className="motion-safe:animate-omnibar-row-in"
-                          style={{ animationDelay: `${Math.min(rowIndex, 8) * 22}ms` }}
-                          dataResultId={result.id}
-                          id={`omnibar-${result.id}`}
-                          title={
-                            result.id === "ask-professor-mari"
-                              ? t("omnibar.askProfessorMari", "Ask Professor Mari")
-                              : result.title
-                          }
-                          metadata={resultMetadata(result, visual.label)}
-                          tertiaryMetadata={
-                            result.preview?.status?.label ?? result.preview?.badges?.[0] ?? result.preview?.metadataLine
-                          }
-                          description={result.description ?? result.preview?.description}
-                          icon={resultIcon(result)}
-                          selected={selected}
-                          onSelect={() => selectResult(result)}
-                          onMouseEnter={() => setActiveResultId(result.id)}
-                          mediaSrc={result.preview?.media?.src}
-                          mediaKind={result.preview?.media?.kind}
-                          avatarCropStyle={result.preview?.media?.avatarCropStyle}
-                          groupClassName={visual.groupClassName}
-                          accent={result.preview?.accent}
-                          currentChoice={currentChoice}
-                          setupStatus={setupStatus}
-                          enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
-                          detailsLabel={
-                            hasDetails
-                              ? t("commandCenter.detailsFor", "Details for {{title}}", { title: result.title })
-                              : undefined
-                          }
-                          onDetails={hasDetails ? () => showResultDetail(result) : undefined}
-                          control={
-                            result.control?.type === "choice" ? (
-                              <CommandCenterSegmentedChoice
-                                label={result.control.label}
-                                value={String(result.control.value)}
-                                options={(result.control.options ?? []).map((option) => ({ ...option }))}
-                                onValueChange={(value) => result.control?.onChange(value)}
-                                variant="compact"
-                              />
-                            ) : result.category === "persona" || result.category === "preset" ? (
-                              <CommandCenterActionValue
-                                label={
-                                  result.category === "persona"
-                                    ? t("commandCenter.actions.activatePersona", "Activate persona")
-                                    : t("commandCenter.actions.setDefaultPreset", "Set default preset")
-                                }
-                                icon={result.category === "persona" ? Play : ArrowRight}
-                                value={
-                                  result.control?.value === true
-                                    ? t("commandCenter.values.active", "Active")
-                                    : undefined
-                                }
-                                onClick={() => {
-                                  if (result.control?.type === "toggle") result.control.onChange(true);
-                                }}
-                                disabled={result.control?.value === true || resultControlPending(result)}
-                                loading={resultControlPending(result)}
-                                variant="compact"
-                                tone="primary"
-                                className="justify-end"
-                              />
-                            ) : result.control?.type === "toggle" ? (
-                              <CommandCenterToggle
-                                label={result.control.label}
-                                checked={Boolean(result.control.value)}
-                                stateLabel={
-                                  result.control.value
-                                    ? t("commandCenter.values.enabled", "Enabled")
-                                    : t("commandCenter.values.disabled", "Disabled")
-                                }
-                                onCheckedChange={(value) => result.control?.onChange(value)}
-                                disabled={resultControlPending(result)}
-                                loading={resultControlPending(result)}
-                                variant="compact"
-                                className="justify-end"
-                              />
-                            ) : undefined
-                          }
-                        />
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
+                        const setupStatus =
+                          result.command.availability?.status === "requires-capability"
+                            ? t("commandCenter.setup", "Set up")
+                            : result.command.availability?.status === "requires-admin"
+                              ? t("commandCenter.adminRequired", "Administrator access required")
+                              : undefined;
+                        return (
+                          <CommandCenterResultRow
+                            key={result.id}
+                            className="motion-safe:animate-omnibar-row-in"
+                            style={{ animationDelay: `${Math.min(rowIndex, 8) * 22}ms` }}
+                            dataResultId={result.id}
+                            id={`omnibar-${result.id}`}
+                            title={
+                              result.id === "ask-professor-mari"
+                                ? t("omnibar.askProfessorMari", "Ask Professor Mari")
+                                : result.title
+                            }
+                            metadata={resultMetadata(result, visual.label)}
+                            tertiaryMetadata={
+                              result.preview?.status?.label ??
+                              result.preview?.badges?.[0] ??
+                              result.preview?.metadataLine
+                            }
+                            description={result.description ?? result.preview?.description}
+                            icon={resultIcon(result)}
+                            selected={selected}
+                            onSelect={() => selectResult(result)}
+                            onMouseEnter={() => setActiveResultId(result.id)}
+                            mediaSrc={result.preview?.media?.src}
+                            mediaKind={result.preview?.media?.kind}
+                            avatarCropStyle={result.preview?.media?.avatarCropStyle}
+                            groupClassName={visual.groupClassName}
+                            accent={result.preview?.accent}
+                            currentChoice={currentChoice}
+                            setupStatus={setupStatus}
+                            enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
+                            detailsLabel={
+                              hasDetails
+                                ? t("commandCenter.detailsFor", "Details for {{title}}", { title: result.title })
+                                : undefined
+                            }
+                            onDetails={hasDetails ? () => showResultDetail(result) : undefined}
+                            control={
+                              result.control?.type === "choice" ? (
+                                <CommandCenterSegmentedChoice
+                                  label={result.control.label}
+                                  value={String(result.control.value)}
+                                  options={(result.control.options ?? []).map((option) => ({ ...option }))}
+                                  onValueChange={(value) => result.control?.onChange(value)}
+                                  variant="compact"
+                                />
+                              ) : result.category === "persona" || result.category === "preset" ? (
+                                <CommandCenterActionValue
+                                  label={
+                                    result.category === "persona"
+                                      ? t("commandCenter.actions.activatePersona", "Activate persona")
+                                      : t("commandCenter.actions.setDefaultPreset", "Set default preset")
+                                  }
+                                  icon={result.category === "persona" ? Play : ArrowRight}
+                                  value={
+                                    result.control?.value === true
+                                      ? t("commandCenter.values.active", "Active")
+                                      : undefined
+                                  }
+                                  onClick={() => {
+                                    if (result.control?.type === "toggle") result.control.onChange(true);
+                                  }}
+                                  disabled={result.control?.value === true || resultControlPending(result)}
+                                  loading={resultControlPending(result)}
+                                  variant="compact"
+                                  tone="primary"
+                                  className="justify-end"
+                                />
+                              ) : result.control?.type === "toggle" ? (
+                                <CommandCenterToggle
+                                  label={result.control.label}
+                                  checked={Boolean(result.control.value)}
+                                  stateLabel={
+                                    result.control.value
+                                      ? t("commandCenter.values.enabled", "Enabled")
+                                      : t("commandCenter.values.disabled", "Disabled")
+                                  }
+                                  onCheckedChange={(value) => result.control?.onChange(value)}
+                                  disabled={resultControlPending(result)}
+                                  loading={resultControlPending(result)}
+                                  variant="compact"
+                                  className="justify-end"
+                                />
+                              ) : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </ul>
+                  </section>
+                );
+              })}
               {!loading && query.trim() && results.length === 0 ? (
                 <div className="flex min-h-32 flex-col items-center justify-center px-4 text-center">
                   <Search size={20} className="mb-2 text-[var(--muted-foreground)]" aria-hidden="true" />
@@ -1864,64 +1897,68 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </div>
               ) : null}
             </div>
-            {previewResult && (pane !== "results" || isRichResult(previewResult)) ? (
+            {pane === "results" || previewResult ? (
               <aside
                 data-component="GlobalOmnibar.Detail"
-                className={`min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] ${pane === "results" ? "max-sm:hidden motion-safe:animate-fade-in-up sm:w-[22rem] sm:shrink-0 sm:border-l" : detailOrigin === "results" ? "sm:w-[22rem] sm:shrink-0 sm:border-l" : ""}`}
+                className={`min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] ${pane === "results" ? "hidden sm:block sm:w-[22rem] sm:shrink-0 sm:border-l" : detailOrigin === "results" ? "sm:w-[22rem] sm:shrink-0 sm:border-l" : ""}`}
               >
-                <CommandResultPreview
-                  key={previewResult.id}
-                  result={
-                    {
-                      command: previewResult.command,
-                      score: previewResult.score,
-                      preview: previewResult.preview,
-                    } as RichCommandResult
-                  }
-                  variant="compact"
-                  statusLabel={
-                    previewResult.command.availability?.status === "requires-capability"
-                      ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                          capability:
-                            previewResult.command.availability.capability ??
-                            t("commandCenter.capability", "capability"),
-                        })
-                      : previewResult.command.availability?.status === "requires-admin"
-                        ? t("commandCenter.adminRequired", "Administrator access required")
-                        : undefined
-                  }
-                  actions={previewActions}
-                />
-                {previewResult.control?.type === "choice" ? (
-                  <div className="border-t border-[var(--border)] p-3">
-                    <CommandCenterSegmentedChoice
-                      label={previewResult.control.label}
-                      value={String(previewResult.control.value)}
-                      options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
-                      onValueChange={(value) => previewResult.control?.onChange(value)}
-                      variant="compact"
-                    />
-                  </div>
-                ) : null}
-                {previewResult.control?.type === "toggle" &&
-                previewResult.category !== "persona" &&
-                previewResult.category !== "preset" ? (
-                  <div className="border-t border-[var(--border)] p-3">
-                    <CommandCenterToggle
-                      label={previewResult.control.label}
-                      checked={Boolean(previewResult.control.value)}
-                      stateLabel={
-                        previewResult.control.value
-                          ? t("commandCenter.values.enabled", "Enabled")
-                          : t("commandCenter.values.disabled", "Disabled")
+                {previewResult && (pane !== "results" || isRichResult(previewResult)) ? (
+                  <>
+                    <CommandResultPreview
+                      key={previewResult.id}
+                      result={
+                        {
+                          command: previewResult.command,
+                          score: previewResult.score,
+                          preview: previewResult.preview,
+                        } as RichCommandResult
                       }
-                      onCheckedChange={(value) => previewResult.control?.onChange(value)}
-                      disabled={resultControlPending(previewResult)}
-                      loading={resultControlPending(previewResult)}
                       variant="compact"
-                      className="w-full"
+                      statusLabel={
+                        previewResult.command.availability?.status === "requires-capability"
+                          ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
+                              capability:
+                                previewResult.command.availability.capability ??
+                                t("commandCenter.capability", "capability"),
+                            })
+                          : previewResult.command.availability?.status === "requires-admin"
+                            ? t("commandCenter.adminRequired", "Administrator access required")
+                            : undefined
+                      }
+                      actions={previewActions}
                     />
-                  </div>
+                    {previewResult.control?.type === "choice" ? (
+                      <div className="border-t border-[var(--border)] p-3">
+                        <CommandCenterSegmentedChoice
+                          label={previewResult.control.label}
+                          value={String(previewResult.control.value)}
+                          options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
+                          onValueChange={(value) => previewResult.control?.onChange(value)}
+                          variant="compact"
+                        />
+                      </div>
+                    ) : null}
+                    {previewResult.control?.type === "toggle" &&
+                    previewResult.category !== "persona" &&
+                    previewResult.category !== "preset" ? (
+                      <div className="border-t border-[var(--border)] p-3">
+                        <CommandCenterToggle
+                          label={previewResult.control.label}
+                          checked={Boolean(previewResult.control.value)}
+                          stateLabel={
+                            previewResult.control.value
+                              ? t("commandCenter.values.enabled", "Enabled")
+                              : t("commandCenter.values.disabled", "Disabled")
+                          }
+                          onCheckedChange={(value) => previewResult.control?.onChange(value)}
+                          disabled={resultControlPending(previewResult)}
+                          loading={resultControlPending(previewResult)}
+                          variant="compact"
+                          className="w-full"
+                        />
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
               </aside>
             ) : null}

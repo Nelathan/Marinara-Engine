@@ -6,6 +6,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Reworked the empty Command Center into a focused command deck with contextual actions, recent commands, quick controls, category shortcuts, and a compact Professor Mari handoff.
+
+- Fixed Command Center hover previews so the desktop results list keeps a stable width when the preview changes.
+
 - Removed the separate "Professor Mari navigation" result from Command Center search. The direct Ask Professor Mari entry remains available.
 
 - The Command Center now uses a connected spring transition when opening Professor Mari, moving the header identity and Mari pane together instead of swapping them abruptly.

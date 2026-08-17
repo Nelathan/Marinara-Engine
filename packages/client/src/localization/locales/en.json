@@ -302,6 +302,8 @@
   "commandCenter.controls.timestamps": "Show timestamps",
   "commandCenter.controls.tokenUsage": "Show token usage",
   "commandCenter.controls.unfocusedSounds": "Sounds only when unfocused",
+  "commandCenter.deck.subtitle": "Jump, create, change, or ask Professor Mari.",
+  "commandCenter.deck.title": "Command Center",
   "commandCenter.detailsFor": "Details for {{title}}",
   "commandCenter.dirtyEditor": "You have unsaved changes. Leave this editor?",
   "commandCenter.filters.agents": "Agents",
