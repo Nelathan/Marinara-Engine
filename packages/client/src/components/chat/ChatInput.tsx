@@ -2038,6 +2038,7 @@ export const ChatInput = memo(function ChatInput({
           dragging: isDragging,
           hasContent: hasInput || attachments.length > 0,
           layout: "roleplay",
+          className: isProfessorMariChat ? "mari-professor-composer" : undefined,
         })}
       >
         {/* Attachment button */}
@@ -2050,6 +2051,7 @@ export const ChatInput = memo(function ChatInput({
           onChange={handleFileUpload}
         />
         <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={!activeChatId || isInputBusy}
           className={cn(
@@ -2059,6 +2061,7 @@ export const ChatInput = memo(function ChatInput({
               : "text-foreground/40 hover:bg-foreground/10 hover:text-foreground/70",
           )}
           title={t("chat.input.attachFiles")}
+          aria-label={t("chat.input.attachFiles")}
         >
           <Paperclip size="1rem" />
         </button>
@@ -2171,6 +2174,7 @@ export const ChatInput = memo(function ChatInput({
         {/* Send / Stop button */}
 
         <button
+          type="button"
           onClick={
             isStreaming
               ? () => {
@@ -2184,6 +2188,20 @@ export const ChatInput = memo(function ChatInput({
             (!isStreaming && (isInputBusy || isReadingAttachments)) ||
             (!hasInput && !attachments.length && !canSubmitSpatialMove && !isStreaming && !canRetry && !canContinue) ||
             !activeChatId
+          }
+          aria-label={
+            isStreaming
+              ? t("chat.input.stopGenerating")
+              : isInputBusy
+                ? t("chat.input.waitForAgents")
+                : t("chat.input.send")
+          }
+          title={
+            isStreaming
+              ? t("chat.input.stopGenerating")
+              : isInputBusy
+                ? t("chat.input.waitForAgents")
+                : t("chat.input.send")
           }
           className={cn(
             "mari-chat-send-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 sm:h-8 sm:w-8",

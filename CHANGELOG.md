@@ -6,6 +6,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Professor Mari now uses a consistent, theme-aware composer treatment across Home, floating chat, and normal Conversation and Roleplay chats, with clearer accessible labels for composer actions.
+
 - Professor Mari now shows selected connection, context use, sandbox state, pending approvals, enabled skills, and enabled memories in a compact trust strip. Provider, tool, context, and other request failures keep the request available with a localized retry action.
 - FAQ answers, Command Center selections, and the Recent Chats load error can now open Professor Mari with an editable, grounded draft and typed source context without sending a model request.
 - Professor Mari suggestion chips now reject incomplete structured output and clear stale guided plans when chats switch, restart, or stop; guided completion keeps any text already in the draft.

@@ -5618,7 +5618,7 @@ export function HomeProfessorMariChat({
           </div>
         )}
         <MariSuggestionChips chips={chipRowChips} onSelect={handleSuggestionSelect} disabled={isBusy} />
-        <div className="relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50">
+        <div className="mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50">
           <MariAttachButton
             onAttachFiles={() => attachmentInputRef.current?.click()}
             onAddChatHistory={() => void handleOpenHistoryPicker()}
@@ -6383,7 +6383,7 @@ export function HomeProfessorMariChat({
                             disabled={isBusy}
                             compact
                           />
-                          <div className="relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50">
+                          <div className="mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50">
                             <MariAttachButton
                               onAttachFiles={() => attachmentInputRef.current?.click()}
                               onAddChatHistory={() => void handleOpenHistoryPicker()}
