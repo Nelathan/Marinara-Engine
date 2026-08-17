@@ -2181,6 +2181,7 @@ export function GameCombatUI({
                               ? "cursor-not-allowed border-white/10 bg-white/5 text-white/30"
                               : "border-blue-400/20 bg-blue-500/10 text-white/85 hover:border-blue-400/40 hover:bg-blue-500/15",
                           )}
+                          title={`${localizeUi(combatSkillTypeLabelKey(skill.type))}: ${skill.description || localizeUi(combatSkillDescriptionKey(skill.type))}`}
                         >
                           <span className="min-w-0 truncate font-semibold text-white/90">{skill.name}</span>
                           <span className="shrink-0 text-[0.6rem] tabular-nums text-white/45">

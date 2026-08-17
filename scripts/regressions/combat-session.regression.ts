@@ -296,6 +296,16 @@ assert.match(
 );
 assert.match(
   gameSurfaceSource,
+  /key=\{`\$\{activeChatId\}:classic:\$\{combatStartMessageId \?\? "pending"\}`\}/,
+  "Classic combat UI must remount for each combat declaration so terminal summaries cannot bleed across battles",
+);
+assert.match(
+  gameSurfaceSource,
+  /key=\{`\$\{activeChatId\}:tactical:\$\{combatStartMessageId \?\? "pending"\}`\}/,
+  "Tactical combat UI must remount for each combat declaration so terminal summaries cannot bleed across battles",
+);
+assert.match(
+  gameSurfaceSource,
   /protection \? resolvedTargetIds\?\.filter\(\(id\) => partyIds\.has\(id\)\)/,
   "generated defend and escort targets must resolve to allies, never to enemies the player is meant to kill",
 );

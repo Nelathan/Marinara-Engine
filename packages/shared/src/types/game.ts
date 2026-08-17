@@ -526,6 +526,8 @@ export interface GameCombatStateSnapshot {
   dialogueCues: CombatDialogueCue[];
   /** ID of the assistant message whose `[combat:]` tag opened this encounter. */
   startMessageId: string | null;
+  /** Encounter tier used for context-bound combat music. */
+  musicTier?: string | null;
   round?: number;
   outcome?: "victory" | "defeat" | "flee";
   difficulty?: string;

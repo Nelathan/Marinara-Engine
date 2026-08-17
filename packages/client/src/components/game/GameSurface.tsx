@@ -1018,6 +1018,7 @@ export function generatedPartyMemberToCombatant(
   index: number,
   avatarCandidates: GamePartyMemberInfo[],
   fallbackLevel: number,
+  gameCard?: StoredGameCombatCard,
   usedIds?: Set<string>,
 ): Combatant {
   const matchedAvatar = findNamedEntry(avatarCandidates, member.name, (entry) => entry.name);
@@ -2476,9 +2477,6 @@ function GameSurfaceComponent({
   const useJsonMusicDjGameMusic = useYoutubeGameMusic || useCustomGameMusic;
   const useMusicDjPlayerMusic = useSpotifyGameMusic || useJsonMusicDjGameMusic;
   const { data: ttsConfig } = useTTSConfig();
-  const generateGameSoundEffects = ttsConfig?.source === "elevenlabs" && ttsConfig.elevenLabsGameSoundEffects === true;
-  const generateGameMusic =
-    ttsConfig?.source === "elevenlabs" && ttsConfig.elevenLabsGameMusic === true && !useMusicDjPlayerMusic;
   const activeGameMetaId = typeof chatMeta.gameId === "string" ? chatMeta.gameId : "";
   const sceneRuntimeScopeKey = `${activeChatId}:${activeGameMetaId}`;
   const { data: connectionsList } = useConnections();
@@ -2714,28 +2712,47 @@ function GameSurfaceComponent({
       ...(filterGameAssetMap(generatedAudioAssetsRef.current, gameAssetExcludedFolders) ?? {}),
     };
   }, [gameAssetExcludedFolders, queryClient]);
-  const generateGameAudioAsset = useCallback(async (kind: "sfx" | "music", prompt: string): Promise<string | null> => {
-    const category = kind === "sfx" ? "sfx" : "music";
-    if (prompt.startsWith(`${category}:generated:`)) return prompt;
-    try {
-      const generated = await withTimeout(
-        (signal) => api.post<{ tag: string; path: string }>("/tts/game-audio", { kind, prompt }, { signal }),
-        GAME_AUDIO_GENERATION_TIMEOUT_MS,
-      );
-      generatedAudioAssetsRef.current[generated.tag] = {
-        tag: generated.tag,
-        category,
-        subcategory: "generated",
-        name: generated.tag.split(":").at(-1) ?? generated.tag,
-        path: generated.path,
-        ext: ".mp3",
-      };
-      return generated.tag;
-    } catch (error) {
-      console.warn(`[game-audio] Failed to generate ${kind}:`, error);
-      return null;
+  // Once the served manifest carries a session-generated tag, the manifest is
+  // authoritative. Drop the shadow copy so later renames/deletes in the Game
+  // Assets panel take effect instead of a dead tag staying selectable all session.
+  useEffect(() => {
+    const manifestAssets = assetManifest?.assets;
+    if (!manifestAssets) return;
+    for (const tag of Object.keys(generatedAudioAssetsRef.current)) {
+      if (manifestAssets[tag]) delete generatedAudioAssetsRef.current[tag];
     }
-  }, []);
+  }, [assetManifest?.assets]);
+  const gameAudioConnectionId = gameAudioConnection ? (gameAudioConnection.id as string) : undefined;
+  const generateGameAudioAsset = useCallback(
+    async (kind: "sfx" | "music", prompt: string): Promise<string | null> => {
+      const category = kind === "sfx" ? "sfx" : "music";
+      if (prompt.startsWith(`${category}:generated:`)) return prompt;
+      try {
+        const generated = await withTimeout(
+          (signal) =>
+            api.post<{ tag: string; path: string }>(
+              "/tts/game-audio",
+              { kind, prompt, ...(gameAudioConnectionId ? { audioConnectionId: gameAudioConnectionId } : {}) },
+              { signal },
+            ),
+          GAME_AUDIO_GENERATION_TIMEOUT_MS,
+        );
+        generatedAudioAssetsRef.current[generated.tag] = {
+          tag: generated.tag,
+          category,
+          subcategory: "generated",
+          name: generated.tag.split(":").at(-1) ?? generated.tag,
+          path: generated.path,
+          ext: ".mp3",
+        };
+        return generated.tag;
+      } catch (error) {
+        console.warn(`[game-audio] Failed to generate ${kind}:`, error);
+        return null;
+      }
+    },
+    [gameAudioConnectionId],
+  );
   const materializeGeneratedGameAudio = useCallback(
     async (input: SceneAnalysis): Promise<SceneAnalysis> => {
       if (!generateGameSoundEffects) return input;
@@ -8383,6 +8400,15 @@ function GameSurfaceComponent({
     (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
     (combatSetupConfig?.combatStyle as GameCombatStyle | undefined) ??
     "classic";
+  // Keep package callbacks tied to the current surface state. Experiences may
+  // retain a requestCombat callback across renders, so reading this ref avoids
+  // stale combat/replay/concluded flags during sequential battles.
+  const combatSeamRef = useRef({ combatUiActive: false, concluded: false, replayActive: false });
+  useEffect(() => {
+    combatSeamRef.current.combatUiActive = combatUiActive;
+    combatSeamRef.current.concluded = (chatMeta.gameSessionStatus as string) === "concluded";
+    combatSeamRef.current.replayActive = replayActive;
+  });
   const surfaceCombatSessionQuery = useActiveCombatSession(
     activeChatId,
     effectiveCombatStyle,
@@ -8492,10 +8518,20 @@ function GameSurfaceComponent({
   const hydrateGeneratedCombatState = useCallback(
     (combatState: CombatInitState): { party: Combatant[]; enemies: Combatant[] } | null => {
       const fallbackLevel = sessionNumber ?? 5;
+      const gameCharacterCards = Array.isArray(chatMeta.gameCharacterCards)
+        ? (chatMeta.gameCharacterCards as StoredGameCombatCard[])
+        : [];
       const usedPartyIds = new Set<string>();
       const partyCombatants = Array.isArray(combatState.party)
         ? combatState.party.map((member, index) =>
-            generatedPartyMemberToCombatant(member, index, combatAvatarCandidates, fallbackLevel, usedPartyIds),
+            generatedPartyMemberToCombatant(
+              member,
+              index,
+              combatAvatarCandidates,
+              fallbackLevel,
+              findGameCombatCard(gameCharacterCards, member.name),
+              usedPartyIds,
+            ),
           )
         : [];
       const enemyCombatants = Array.isArray(combatState.enemies)
@@ -10224,6 +10260,8 @@ function GameSurfaceComponent({
       setCombatParty(null);
       setCombatEnemies(null);
       setCombatSceneMeta(null);
+      setCombatMusicTier(null);
+      setCombatSpriteSuggestion(null);
       setPendingEncounter(null);
       setQueuedEncounter(null);
       setQueuedCombatGeneration(null);
@@ -10478,6 +10516,8 @@ function GameSurfaceComponent({
         setCombatParty(null);
         setCombatEnemies(null);
         setCombatSceneMeta(null);
+        setCombatMusicTier(null);
+        setCombatSpriteSuggestion(null);
         setQueuedCombatGeneration(null);
         setCombatGenerationPending(false);
         setCombatItemEffects([]);
@@ -12848,7 +12888,10 @@ function GameSurfaceComponent({
                         >
                           {effectiveCombatStyle === "tactical" ? (
                             <TacticalCombatUI
-                              key={`${activeChatId}:tactical`}
+                              // A chat can contain multiple sequential battles. Include the
+                              // declaration message in the key so terminal summaries, session
+                              // revisions, and animation refs never bleed into the next battle.
+                              key={`${activeChatId}:tactical:${combatStartMessageId ?? "pending"}`}
                               chatId={activeChatId}
                               party={combatParty}
                               enemies={combatEnemies}
@@ -12872,7 +12915,10 @@ function GameSurfaceComponent({
                             />
                           ) : (
                             <GameCombatUI
-                              key={`${activeChatId}:classic`}
+                              // A chat can contain multiple sequential battles. Include the
+                              // declaration message in the key so terminal summaries, session
+                              // revisions, and animation refs never bleed into the next battle.
+                              key={`${activeChatId}:classic:${combatStartMessageId ?? "pending"}`}
                               chatId={activeChatId}
                               party={combatParty}
                               enemies={combatEnemies}

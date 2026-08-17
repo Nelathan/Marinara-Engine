@@ -889,6 +889,7 @@ export function createChatsStorage(db: DB) {
     await database.delete(agentMemory).where(eq(agentMemory.chatId, chatId));
     await database.delete(gameCheckpoints).where(eq(gameCheckpoints.chatId, chatId));
     await database.delete(gameStateSnapshots).where(eq(gameStateSnapshots.chatId, chatId));
+    await database.delete(gameCombatSessions).where(eq(gameCombatSessions.chatId, chatId));
     await database.delete(spatialContextSnapshots).where(eq(spatialContextSnapshots.chatId, chatId));
     await database.delete(gameEngineState).where(eq(gameEngineState.chatId, chatId));
     await database.delete(conversationCallMessages).where(eq(conversationCallMessages.chatId, chatId));
@@ -1434,25 +1435,9 @@ export function createChatsStorage(db: DB) {
     },
 
     async remove(id: string) {
-      // Clean up agent data referencing this chat
-      await db.delete(agentRuns).where(eq(agentRuns.chatId, id));
-      await db.delete(agentMemory).where(eq(agentMemory.chatId, id));
-      await db.delete(gameCheckpoints).where(eq(gameCheckpoints.chatId, id));
-      await db.delete(gameStateSnapshots).where(eq(gameStateSnapshots.chatId, id));
-      await db.delete(gameCombatSessions).where(eq(gameCombatSessions.chatId, id));
-      await db.delete(spatialContextSnapshots).where(eq(spatialContextSnapshots.chatId, id));
-      await db.delete(gameEngineState).where(eq(gameEngineState.chatId, id));
-      await db.delete(conversationCallMessages).where(eq(conversationCallMessages.chatId, id));
-      await db.delete(conversationCallSessions).where(eq(conversationCallSessions.chatId, id));
-      const storyboards = await db
-        .select({ id: gameTurnStoryboards.id })
-        .from(gameTurnStoryboards)
-        .where(eq(gameTurnStoryboards.chatId, id));
-      for (const storyboard of storyboards) {
-        await db.delete(gameTurnStoryboardKeyframes).where(eq(gameTurnStoryboardKeyframes.storyboardId, storyboard.id));
-      }
-      await db.delete(gameTurnStoryboards).where(eq(gameTurnStoryboards.chatId, id));
-      await db.delete(gameSceneVideos).where(eq(gameSceneVideos.chatId, id));
+      const galleryFilePaths = await db.transaction((tx) => removeChatDatabaseRecords(tx, id));
+      await cleanupDeletedChatFiles(id, galleryFilePaths);
+    },
 
     /** Atomically remove a marked Roleplay DM thread only while it is still empty. */
     async removeEmptyRoleplayDmChat(id: string): Promise<boolean> {
