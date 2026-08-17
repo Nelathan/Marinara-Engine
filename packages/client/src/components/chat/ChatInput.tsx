@@ -2171,7 +2171,15 @@ export const ChatInput = memo(function ChatInput({
         {/* Send / Stop button */}
 
         <button
-          onClick={isStreaming ? () => useChatStore.getState().stopGeneration(activeChatId ?? undefined) : handleSend}
+          onClick={
+            isStreaming
+              ? () => {
+                  clearMariChips();
+                  clearMariPlan();
+                  useChatStore.getState().stopGeneration(activeChatId ?? undefined);
+                }
+              : handleSend
+          }
           disabled={
             (!isStreaming && (isInputBusy || isReadingAttachments)) ||
             (!hasInput && !attachments.length && !canSubmitSpatialMove && !isStreaming && !canRetry && !canContinue) ||

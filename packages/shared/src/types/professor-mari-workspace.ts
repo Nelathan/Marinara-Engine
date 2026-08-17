@@ -260,8 +260,9 @@ function normalizeMariChipEntity(value: unknown): MariChipEntity | undefined {
  */
 export function sanitizeMariSuggestionChips(raw: unknown, options: { maxChips?: number } = {}): MariSuggestionChip[] {
   if (!Array.isArray(raw)) return [];
-  const maxChips = options.maxChips ?? 6;
+  const maxChips = Math.max(0, Math.floor(options.maxChips ?? 6));
   const chips: MariSuggestionChip[] = [];
+  const ids = new Set<string>();
   for (const entry of raw) {
     const record: Record<string, unknown> =
       typeof entry === "string"
@@ -271,16 +272,20 @@ export function sanitizeMariSuggestionChips(raw: unknown, options: { maxChips?: 
           : {};
     if (Object.keys(record).length === 0) continue;
     const rawLabel = firstStringField(record, CHIP_LABEL_KEYS);
-    const rawPrompt = firstStringField(record, CHIP_PROMPT_KEYS) ?? rawLabel;
+    const rawPrompt = firstStringField(record, CHIP_PROMPT_KEYS);
     if (!rawLabel || !rawPrompt) continue;
     const label = truncateMariChipText(rawLabel, 40);
     const prompt = truncateMariChipText(rawPrompt, 400);
     if (!label || !prompt) continue;
+    let id =
+      typeof record.id === "string" && record.id.trim()
+        ? truncateMariChipText(record.id, 80)
+        : `suggestion-${chips.length + 1}`;
+    if (!id || ids.has(id)) id = `suggestion-${chips.length + 1}`;
+    while (ids.has(id)) id = `suggestion-${chips.length + 1}-${ids.size + 1}`;
+    ids.add(id);
     const chip: MariSuggestionChip = {
-      id:
-        typeof record.id === "string" && record.id.trim()
-          ? truncateMariChipText(record.id, 80)
-          : `suggestion-${chips.length + 1}`,
+      id,
       label,
       prompt,
     };
@@ -289,8 +294,9 @@ export function sanitizeMariSuggestionChips(raw: unknown, options: { maxChips?: 
     if (typeof record.icon === "string" && record.icon.trim()) {
       chip.icon = truncateMariChipText(record.icon, 40);
     }
-    if (typeof record.tone === "string" && MARI_CHIP_TONES.has(record.tone as MariChipTone)) {
-      chip.tone = record.tone as MariChipTone;
+    if (typeof record.tone === "string") {
+      const tone = record.tone.trim().toLowerCase();
+      if (MARI_CHIP_TONES.has(tone as MariChipTone)) chip.tone = tone as MariChipTone;
     }
     chips.push(chip);
     if (chips.length >= maxChips) break;
@@ -318,8 +324,8 @@ export function sanitizeMariGuidedPlan(
   options: { maxSteps?: number; maxChipsPerStep?: number } = {},
 ): MariGuidedPlanStep[] {
   if (!Array.isArray(raw)) return [];
-  const maxSteps = options.maxSteps ?? 8;
-  const maxChipsPerStep = options.maxChipsPerStep ?? 5;
+  const maxSteps = Math.max(0, Math.floor(options.maxSteps ?? 8));
+  const maxChipsPerStep = Math.max(0, Math.floor(options.maxChipsPerStep ?? 5));
   const steps: MariGuidedPlanStep[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
@@ -331,9 +337,12 @@ export function sanitizeMariGuidedPlan(
       maxChips: maxChipsPerStep,
     });
     if (chips.length === 0) continue;
+    const fieldKey = truncateMariChipText(rawFieldKey, 40).replace(/\s+/g, "_");
+    const question = truncateMariChipText(rawQuestion, 120);
+    if (!fieldKey || !question) continue;
     steps.push({
-      fieldKey: truncateMariChipText(rawFieldKey, 40).replace(/\s+/g, "_"),
-      question: truncateMariChipText(rawQuestion, 120),
+      fieldKey,
+      question,
       chips,
     });
     if (steps.length >= maxSteps) break;

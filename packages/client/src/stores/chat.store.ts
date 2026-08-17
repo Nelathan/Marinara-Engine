@@ -423,9 +423,7 @@ export const useChatStore = create<ChatState>()(
       // Only reset agent + game state when actually switching chats — re-selecting the
       // same chat should not blow away loaded tracker data.
       if (id !== prev) {
-        // Professor Mari suggestions and guided plans are already scoped to their chat IDs.
-        // Keep them through temporary editor navigation so reopening the chat does not flash
-        // or replace them with the starter suggestions (#4953).
+        // Clear chat-scoped agent state so suggestions and guided plans cannot leak into another chat.
         useAgentStore.getState().resetForChatChange();
         useGameStateStore.getState().setGameState(null);
         if (id) {

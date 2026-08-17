@@ -4175,7 +4175,9 @@ export function HomeProfessorMariChat({
             .map(([key, value]) => `${key}: ${value}`)
             .join("; ");
           clearMariPlan();
-          setDraft(`Create it - ${summary}`);
+          setDraft((current) =>
+            current.trim() ? `${current.trimEnd()} Create it - ${summary}` : `Create it - ${summary}`,
+          );
           focusComposer();
         }
         return;
@@ -4354,6 +4356,8 @@ export function HomeProfessorMariChat({
 
   const stopWorkspace = useCallback(async () => {
     workspaceAbortRef.current?.abort();
+    clearMariChips();
+    clearMariPlan();
     try {
       await api.post("/professor-mari/workspace/abort");
     } catch (error) {
@@ -4363,7 +4367,7 @@ export function HomeProfessorMariChat({
         duration: 12_000,
       });
     }
-  }, [localizeUi]);
+  }, [clearMariChips, clearMariPlan, localizeUi]);
 
   const createSkillFromContent = useCallback(
     async (input: { content: string; fileName?: string; name?: string; description?: string }) => {

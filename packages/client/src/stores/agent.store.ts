@@ -473,15 +473,6 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     })),
   clearPendingAgentWriteApprovals: () => set({ pendingAgentWriteApprovals: [] }),
 
-  resetForChatChange: () =>
-    set((state) => ({
-      ...createInitialAgentDataState(),
-      mariChips: state.mariChips,
-      mariChipsChatId: state.mariChipsChatId,
-      mariPlan: state.mariPlan,
-      mariPlanChatId: state.mariPlanChatId,
-      mariPlanCursor: state.mariPlanCursor,
-      mariPlanAnswers: state.mariPlanAnswers,
-    })),
+  resetForChatChange: () => set(createInitialAgentDataState()),
   reset: () => set(createInitialAgentDataState()),
 }));

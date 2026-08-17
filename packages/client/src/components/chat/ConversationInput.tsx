@@ -2345,7 +2345,11 @@ export function ConversationInput({
           <button
             onClick={
               isActuallyGenerating
-                ? () => useChatStore.getState().stopGeneration(activeChatId ?? undefined)
+                ? () => {
+                    clearMariChips();
+                    clearMariPlan();
+                    useChatStore.getState().stopGeneration(activeChatId ?? undefined);
+                  }
                 : handleSend
             }
             disabled={!isActuallyGenerating && (isSendBlocked || isReadingAttachments || !activeChatId || !canSubmit)}
