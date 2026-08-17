@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { Check, ChevronRight, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,8 @@ export interface CommandCenterBrowseGridProps {
   ariaLabel: string;
   results: readonly CommandCenterBrowseResult[];
   selectedId?: string | null;
+  selectedIds?: ReadonlySet<string>;
+  selectionMode?: boolean;
   onSelectedIdChange?: (id: string) => void;
   emptyTitle: string;
   emptyDescription?: string;
@@ -46,6 +48,8 @@ export function CommandCenterBrowseGrid({
   ariaLabel,
   results,
   selectedId,
+  selectedIds,
+  selectionMode = false,
   onSelectedIdChange,
   emptyTitle,
   emptyDescription,
@@ -144,7 +148,8 @@ export function CommandCenterBrowseGrid({
         className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(auto-fill,minmax(132px,1fr))]"
       >
         {results.map((result, index) => {
-          const selected = result.id === activeId;
+          const active = result.id === activeId;
+          const selected = selectionMode ? Boolean(selectedIds?.has(result.id)) : result.id === activeId;
 
           return (
             <li key={result.id} className="min-w-0">
@@ -155,7 +160,8 @@ export function CommandCenterBrowseGrid({
                 }}
                 type="button"
                 data-selected={selected || undefined}
-                tabIndex={selected ? 0 : -1}
+                aria-pressed={selectionMode ? selected : undefined}
+                tabIndex={active ? 0 : -1}
                 onFocus={() => setActiveId(result.id)}
                 onClick={result.onSelect}
                 onKeyDown={(event) => handleKeyDown(event, result, index)}
@@ -199,6 +205,19 @@ export function CommandCenterBrowseGrid({
                     >
                       {result.title}
                     </div>
+                    {selectionMode ? (
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-sm border",
+                          selected
+                            ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
+                            : "border-[var(--border)] bg-[var(--background)]",
+                        )}
+                      >
+                        {selected ? <Check className="size-3.5" /> : null}
+                      </span>
+                    ) : null}
                   </div>
                   {result.metadata ? (
                     <div className="mt-1 line-clamp-2 break-words text-xs leading-4 text-[var(--muted-foreground)]">

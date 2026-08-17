@@ -93,6 +93,27 @@ assert.deepEqual(
     ["create-navigation", ["characters"]],
   ],
 );
+assert.deepEqual(
+  buildProfessorMariCommandCenterContext(
+    "compare these presets",
+    { id: "preset:one", title: "One", category: "preset" },
+    [
+      { id: "preset:two", title: "Two", category: "preset" },
+      { id: "preset:three", title: "Three", category: "preset" },
+    ],
+  ),
+  {
+    source: "command-center",
+    capability: "recommend",
+    query: "compare these presets",
+    resource: { kind: "preset", id: "one", label: "One" },
+    relatedResources: [
+      { kind: "preset", id: "two", label: "Two" },
+      { kind: "preset", id: "three", label: "Three" },
+    ],
+    action: "Selected Command Center result: One",
+  },
+);
 assert.equal(emptyPresentation.results.length, 4);
 assert.equal(emptyPresentation.results[0]?.metadata?.[0]?.value, "first");
 assert.equal(emptyPresentation.categoryAvailability.all, 4);

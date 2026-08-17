@@ -14,6 +14,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 - Command Center now keeps current-chat context available when several editors are open, and Escape closes the embedded Mari pane without changing the floating assistant preference.
 
+- Command Center Browse can now select up to five resources and send a bounded, server-validated comparison request to Professor Mari.
+
 - Command Center search now finds common Settings controls and sections, with a description and direct navigation to the matching Settings location.
 
 - Reworked the empty Command Center into a focused command deck with contextual actions, recent commands, quick controls, category shortcuts, and a compact Professor Mari handoff.

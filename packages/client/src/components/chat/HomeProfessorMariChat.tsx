@@ -5467,6 +5467,11 @@ export function HomeProfessorMariChat({
           {handoffContext.field
             ? localizeUi("ui.chat.homeprofessormarichat.handoffContextField", { field: handoffContext.field })
             : ""}
+          {handoffContext.relatedResources?.length
+            ? localizeUi("ui.chat.homeprofessormarichat.handoffRelatedResources", {
+                count: handoffContext.relatedResources.length,
+              })
+            : ""}
         </p>
         {handoffContext.query ? (
           <p className="mt-0.5 line-clamp-2 text-[var(--muted-foreground)]/80">{handoffContext.query}</p>

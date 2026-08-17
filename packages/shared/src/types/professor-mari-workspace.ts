@@ -80,11 +80,19 @@ export interface ProfessorMariContextResource {
   label?: string;
 }
 
+export type ProfessorMariRelatedResource = ProfessorMariContextResource & {
+  kind: Extract<
+    ProfessorMariContextResourceKind,
+    "character" | "persona" | "lorebook" | "preset" | "connection" | "agent"
+  >;
+};
+
 export interface ProfessorMariAskContext {
   source: ProfessorMariEntryPoint;
   capability: ProfessorMariCapability;
   query?: string;
   resource?: ProfessorMariContextResource;
+  relatedResources?: ProfessorMariRelatedResource[];
   field?: string;
   error?: { message: string; code?: string };
   action?: string;

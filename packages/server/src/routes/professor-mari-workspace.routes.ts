@@ -66,6 +66,16 @@ export const professorMariPromptSchema = z.object({
           label: z.string().max(200).optional(),
         })
         .optional(),
+      relatedResources: z
+        .array(
+          z.object({
+            kind: z.enum(["character", "persona", "lorebook", "preset", "connection", "agent"]),
+            id: z.string().min(1).max(200),
+            label: z.string().max(200).optional(),
+          }),
+        )
+        .max(4)
+        .optional(),
       field: z.string().min(1).max(200).optional(),
       error: z.object({ message: z.string().min(1).max(2_000), code: z.string().max(200).optional() }).optional(),
       action: z.string().max(500).optional(),

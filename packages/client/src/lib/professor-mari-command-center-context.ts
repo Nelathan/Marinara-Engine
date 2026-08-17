@@ -47,10 +47,18 @@ function resourceIdFromResult(result: Pick<OmnibarResult, "id" | "category">) {
 export function buildProfessorMariCommandCenterContext(
   query: string,
   selectedResult: Pick<OmnibarResult, "id" | "title" | "category"> | null | undefined,
+  relatedResults: readonly Pick<OmnibarResult, "id" | "title" | "category">[] = [],
 ): ProfessorMariAskContext {
   const trimmedQuery = query.trim();
   const resourceKind = selectedResult ? RESOURCE_KIND_BY_CATEGORY[selectedResult.category] : undefined;
   const resourceId = selectedResult ? resourceIdFromResult(selectedResult) : null;
+  const relatedResources = relatedResults.flatMap((result) => {
+    const kind = RESOURCE_KIND_BY_CATEGORY[result.category];
+    const id = resourceIdFromResult(result);
+    return kind && id && kind !== "setting" && kind !== "chat" && kind !== "game"
+      ? [{ kind, id, label: result.title }]
+      : [];
+  });
 
   return {
     source: "command-center",
@@ -60,6 +68,7 @@ export function buildProfessorMariCommandCenterContext(
       selectedResult && resourceKind && resourceId
         ? { kind: resourceKind, id: resourceId, label: selectedResult.title }
         : undefined,
+    ...(relatedResources.length > 0 ? { relatedResources: relatedResources.slice(0, 4) } : {}),
     action: selectedResult ? `Selected Command Center result: ${selectedResult.title}` : undefined,
   };
 }

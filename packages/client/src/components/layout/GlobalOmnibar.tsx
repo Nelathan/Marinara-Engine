@@ -204,6 +204,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const mariReturnResultIdRef = useRef<string | null>(null);
+  const [browseCompareMode, setBrowseCompareMode] = useState(false);
+  const [browseCompareIds, setBrowseCompareIds] = useState<string[]>([]);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -1176,6 +1178,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const visibleBrowseResults = browseResults.slice(0, browseLimit);
 
   useEffect(() => {
+    const availableIds = new Set(browseResults.map((result) => result.id));
+    setBrowseCompareIds((current) => {
+      const next = current.filter((id) => availableIds.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [browseResults]);
+
+  useEffect(() => {
     writeCommandCenterSessionState(session);
   }, [session]);
 
@@ -1333,6 +1343,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else if (pane === "browse") {
       setPane("results");
       setFilter("all");
+      setBrowseCompareMode(false);
+      setBrowseCompareIds([]);
       setSessionValue("detailResultId", null);
       requestAnimationFrame(() => inputRef.current?.focus());
     } else if (query || filter !== "all") {
@@ -1411,6 +1423,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setActiveResultId(null);
     setBrowseSelectedId(null);
     setBrowseLimit(BROWSE_BATCH_SIZE);
+    setBrowseCompareMode(false);
+    setBrowseCompareIds([]);
     if (!query.trim() && BROWSE_FILTERS.includes(nextFilter as BrowseFilter)) setPane("browse");
     else if (pane === "detail") setPane("results");
     if (pane === "browse" && !BROWSE_FILTERS.includes(nextFilter as BrowseFilter)) setPane("results");
@@ -1420,6 +1434,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     if (!BROWSE_FILTERS.includes(filter as BrowseFilter)) setFilter(browseFilter);
     setPane("browse");
     setBrowseLimit(BROWSE_BATCH_SIZE);
+    setBrowseCompareMode(false);
+    setBrowseCompareIds([]);
   };
   const leaveDetail = () => {
     const destination = pane === "detail" ? detailOrigin : "results";
@@ -1439,6 +1455,36 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
+  };
+  const compareWithProfessorMari = () => {
+    const resultById = new Map(browseResults.map((result) => [result.id, result]));
+    const selected = browseCompareIds.flatMap((id) => {
+      const result = resultById.get(id);
+      return result ? [result] : [];
+    });
+    const primary = selected[0];
+    if (!primary || selected.length < 2) return;
+    const draft =
+      query.trim() ||
+      t("commandCenter.compareDraft", "Compare these {{count}} items and recommend the best fit for me.", {
+        count: selected.length,
+      });
+    useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
+    setMariContext(buildProfessorMariCommandCenterContext(draft, primary, selected.slice(1)));
+    setMariReturnPane("browse");
+    mariReturnResultIdRef.current = primary.id;
+    setMariChatOpen(true);
+    setMariMounted(true);
+    setPane("mari");
+  };
+  const toggleBrowseCompareResult = (id: string) => {
+    setBrowseCompareIds((current) =>
+      current.includes(id)
+        ? current.filter((currentId) => currentId !== id)
+        : current.length < 5
+          ? [...current, id]
+          : current,
+    );
   };
   const resultIcon = (result: RankedOmnibarResult) => {
     if (result.category === "chat") {
@@ -2113,10 +2159,50 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   })}
                 </p>
               </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {browseCompareMode ? (
+                  <>
+                    <span aria-live="polite" className="text-xs text-[var(--muted-foreground)]">
+                      {t("commandCenter.compareSelectionCount", "{{count}}/5 selected", {
+                        count: browseCompareIds.length,
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBrowseCompareMode(false);
+                        setBrowseCompareIds([]);
+                      }}
+                      className="min-h-9 rounded-md px-2.5 text-xs font-semibold text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+                    >
+                      {t("common.cancel", "Cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={compareWithProfessorMari}
+                      disabled={browseCompareIds.length < 2}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <Sparkles size={14} aria-hidden="true" />
+                      {t("commandCenter.compareWithMari", "Compare with Mari")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setBrowseCompareMode(true)}
+                    className="min-h-9 rounded-md border border-[var(--border)] bg-[var(--secondary)] px-3 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--accent)]"
+                  >
+                    {t("commandCenter.selectToCompare", "Select to compare")}
+                  </button>
+                )}
+              </div>
             </div>
             <CommandCenterBrowseGrid
               ariaLabel={filterLabels[browseFilter]}
               selectedId={browseSelectedId}
+              selectedIds={new Set(browseCompareIds)}
+              selectionMode={browseCompareMode}
               onSelectedIdChange={setBrowseSelectedId}
               results={visibleBrowseResults.map((result) => {
                 const command = {
@@ -2151,7 +2237,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     : undefined,
                   onSelect: () => {
                     setBrowseSelectedId(result.id);
-                    showResultDetail(command, "browse");
+                    if (browseCompareMode) toggleBrowseCompareResult(result.id);
+                    else showResultDetail(command, "browse");
                   },
                 };
               })}

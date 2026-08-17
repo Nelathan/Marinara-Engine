@@ -2568,35 +2568,52 @@ export class ProfessorMariWorkspaceService {
     }
 
     const characters = createCharactersStorage(this.app.db);
-    const row =
-      resource.kind === "character"
-        ? await characters.getById(resource.id)
-        : resource.kind === "persona"
-          ? await characters.getPersona(resource.id)
-          : resource.kind === "lorebook"
-            ? await createLorebooksStorage(this.app.db).getById(resource.id)
-            : resource.kind === "preset"
-              ? await createChatPresetsStorage(this.app.db).getById(resource.id)
-              : resource.kind === "chat"
-                ? await createChatsStorage(this.app.db).getById(resource.id)
-                : resource.kind === "connection"
-                  ? await createConnectionsStorage(this.app.db).getById(resource.id)
-                  : resource.kind === "agent"
-                    ? await createAgentsStorage(this.app.db).getByType(resource.id)
-                    : resource.kind === "setting" || resource.kind === "game"
-                      ? { name: resource.label ?? resource.kind }
+    const resolveResource = async (candidate: NonNullable<ProfessorMariAskContext["resource"]>) =>
+      candidate.kind === "character"
+        ? await characters.getById(candidate.id)
+        : candidate.kind === "persona"
+          ? await characters.getPersona(candidate.id)
+          : candidate.kind === "lorebook"
+            ? await createLorebooksStorage(this.app.db).getById(candidate.id)
+            : candidate.kind === "preset"
+              ? await createChatPresetsStorage(this.app.db).getById(candidate.id)
+              : candidate.kind === "chat"
+                ? await createChatsStorage(this.app.db).getById(candidate.id)
+                : candidate.kind === "connection"
+                  ? await createConnectionsStorage(this.app.db).getById(candidate.id)
+                  : candidate.kind === "agent"
+                    ? await createAgentsStorage(this.app.db).getByType(candidate.id)
+                    : candidate.kind === "setting" || candidate.kind === "game"
+                      ? { name: candidate.label ?? candidate.kind }
                       : null;
+    const row = await resolveResource(resource);
     if (!row) {
       throw new Error(
         `The selected ${resource.kind} is no longer available. Remove the context or return to the editor.`,
       );
     }
     const currentLabel = "name" in row && typeof row.name === "string" ? row.name : resource.kind;
+    const relatedResources = await Promise.all(
+      (context.relatedResources ?? []).map(async (candidate) => {
+        const relatedRow = await resolveResource(candidate);
+        if (!relatedRow) {
+          throw new Error(
+            `The selected ${candidate.kind} ${candidate.label ? `"${candidate.label}"` : candidate.id} is no longer available. Remove it and try again.`,
+          );
+        }
+        return {
+          kind: candidate.kind,
+          id: candidate.id,
+          label: "name" in relatedRow && typeof relatedRow.name === "string" ? relatedRow.name : candidate.kind,
+        };
+      }),
+    );
     const summary = {
       source: context.source,
       capability: context.capability,
       query: context.query,
       resource: { kind: resource.kind, id: resource.id, label: currentLabel },
+      relatedResources: relatedResources.length > 0 ? relatedResources : undefined,
       field: context.field,
       error: context.error,
       action: context.action,
