@@ -13,7 +13,10 @@ import {
   type CommandCenterPresentableResult,
 } from "../../packages/client/src/lib/command-center.js";
 import { createSystemCommandDefinitions } from "../../packages/client/src/lib/command-center-system-commands.js";
-import { searchOmnibar } from "../../packages/client/src/lib/omnibar-search.js";
+import {
+  getOmnibarActiveChatContextResultIds,
+  searchOmnibar,
+} from "../../packages/client/src/lib/omnibar-search.js";
 import { getOmnibarSettingsDestinations } from "../../packages/client/src/lib/omnibar-settings.js";
 import {
   buildProfessorMariCommandCenterContext,
@@ -163,6 +166,62 @@ const categorizedCommands = searchOmnibar("command", {
 });
 assert.equal(categorizedCommands.find((result) => result.id === "custom-settings-command")?.category, "settings");
 assert.equal(categorizedCommands.find((result) => result.id === "settings-looking-navigation")?.category, "navigation");
+
+const naturalRequestResults = searchOmnibar("make Luna warmer", {
+  commands: [],
+  chats: [],
+  resources: [
+    { kind: "character", id: "luna", name: "Luna" },
+    { kind: "character", id: "mara", name: "Mara" },
+  ],
+  connections: [],
+  contextResultIds: new Set(["character:luna"]),
+});
+assert.equal(naturalRequestResults[0]?.id, "character:luna");
+assert.equal(naturalRequestResults[0]?.score, 194);
+
+const contextRankedResults = searchOmnibar("Luna", {
+  commands: [],
+  chats: [],
+  resources: [
+    { kind: "character", id: "other-luna", name: "Luna" },
+    { kind: "character", id: "current-luna", name: "Luna" },
+  ],
+  connections: [],
+  contextResultIds: new Set(["character:current-luna"]),
+});
+assert.equal(contextRankedResults[0]?.id, "character:current-luna");
+assert.deepEqual(
+  [...getOmnibarActiveChatContextResultIds("chat-one", {
+    id: "chat-one",
+    characterIds: ["luna"],
+    personaId: "hero",
+    promptPresetId: "moonlight",
+    connectionId: "primary",
+    enableAgents: true,
+    activeAgentIds: ["world-state"],
+  })].sort(),
+  [
+    "agent:world-state",
+    "character:luna",
+    "chat:chat-one",
+    "connection:primary",
+    "persona:hero",
+    "preset:moonlight",
+  ],
+);
+assert.deepEqual(
+  [...getOmnibarActiveChatContextResultIds("chat-two", { id: "chat-one", characterIds: ["luna"] })],
+  [],
+);
+assert.equal(
+  getOmnibarActiveChatContextResultIds("chat-one", {
+    id: "chat-one",
+    enableAgents: false,
+    activeAgentIds: ["world-state"],
+  }).has("agent:world-state"),
+  false,
+);
 
 const settingsDestinations = getOmnibarSettingsDestinations();
 const streamingSetting = settingsDestinations.find((setting) => setting.controlId === "streaming-speed");

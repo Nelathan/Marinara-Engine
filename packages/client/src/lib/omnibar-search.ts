@@ -90,17 +90,53 @@ export type OmnibarSearchData = {
   }[];
   browserTabs?: readonly ProfessorMariBrowserTab[];
   controls?: readonly OmnibarResult[];
+  contextResultIds?: ReadonlySet<string>;
   askProfessorTitle?: string;
 };
+
+export type OmnibarActiveChatContext = {
+  id: string;
+  characterIds?: readonly string[];
+  personaId?: string | null;
+  promptPresetId?: string | null;
+  connectionId?: string | null;
+  enableAgents?: boolean;
+  activeAgentIds?: readonly string[];
+};
+
+export function getOmnibarActiveChatContextResultIds(
+  activeChatId: string | null | undefined,
+  chat: OmnibarActiveChatContext | null | undefined,
+): Set<string> {
+  const ids = new Set<string>();
+  if (!activeChatId || !chat || chat.id !== activeChatId) return ids;
+  ids.add(`chat:${chat.id}`);
+  for (const characterId of chat.characterIds ?? []) ids.add(`character:${characterId}`);
+  if (chat.personaId) ids.add(`persona:${chat.personaId}`);
+  if (chat.promptPresetId) ids.add(`preset:${chat.promptPresetId}`);
+  if (chat.connectionId) ids.add(`connection:${chat.connectionId}`);
+  if (chat.enableAgents) {
+    for (const agentId of chat.activeAgentIds ?? []) ids.add(`agent:${agentId}`);
+  }
+  return ids;
+}
 
 function scoreText(query: string, values: readonly string[]) {
   return values.reduce((best, value) => {
     const normalized = normalizeProfessorMariNavigationQuery(value);
+    if (!normalized) return best;
     if (normalized === query) return Math.max(best, 300 + normalized.length);
     if (normalized.startsWith(query)) return Math.max(best, 200 + query.length);
+    if (normalized.length >= 2 && ` ${query} `.includes(` ${normalized} `)) {
+      return Math.max(best, 150 + normalized.length);
+    }
     if (normalized.includes(query)) return Math.max(best, 100 + query.length);
     return best;
   }, -1);
+}
+
+function withContextScore(score: number, resultId: string, contextResultIds: ReadonlySet<string> | undefined) {
+  return score + (contextResultIds?.has(resultId) ? 40 : 0);
 }
 
 export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarResult[] {
@@ -109,7 +145,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
   const results: OmnibarResult[] = [];
   for (const control of data.controls ?? []) {
     const score = scoreText(normalized, [control.title, ...(control.aliases ?? [])]);
-    if (score >= 0) results.push({ ...control, score });
+    if (score >= 0) results.push({ ...control, score: withContextScore(score, control.id, data.contextResultIds) });
   }
   for (const command of data.commands) {
     const score = scoreText(normalized, [command.title, ...(command.aliases ?? [])]);
@@ -120,7 +156,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         kind: command.kind,
         icon: command.icon,
         availability: command.availability,
-        score,
+        score: withContextScore(score, command.id, data.contextResultIds),
       });
   }
   for (const chat of data.chats) {
@@ -131,7 +167,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         title: chat.name,
         category: "chat",
         target: { kind: "chat", chatId: chat.id },
-        score,
+        score: withContextScore(score, `chat:${chat.id}`, data.contextResultIds),
         description: chat.description,
         preview: chat.preview,
         kind: "chat",
@@ -147,7 +183,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         title: resource.name,
         category: resource.kind,
         target: { kind: "resource", resource: resource.kind, id: resource.id },
-        score,
+        score: withContextScore(score, `${resource.kind}:${resource.id}`, data.contextResultIds),
         description: resource.description,
         preview: resource.preview,
         kind: "resource",
@@ -173,7 +209,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         title: connection.name,
         category: "connection",
         target: { kind: "panel", panel: "connections" },
-        score,
+        score: withContextScore(score, `connection:${connection.id}`, data.contextResultIds),
         preview: connection.preview,
         kind: "settings",
         icon: "connection",

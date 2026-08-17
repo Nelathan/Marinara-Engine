@@ -53,7 +53,12 @@ import {
 } from "../../lib/command-center";
 import { createSystemCommandDefinitions } from "../../lib/command-center-system-commands";
 import { getCommandIcon } from "../../lib/command-icons";
-import { searchOmnibar, type OmnibarCategory, type OmnibarResult } from "../../lib/omnibar-search";
+import {
+  getOmnibarActiveChatContextResultIds,
+  searchOmnibar,
+  type OmnibarCategory,
+  type OmnibarResult,
+} from "../../lib/omnibar-search";
 import { getOmnibarSettingsDestinations } from "../../lib/omnibar-settings";
 import {
   activatePersonalExtensionCommand,
@@ -222,12 +227,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const showTokenUsage = useUIStore((state) => state.showTokenUsage);
   const userStatus = useUIStore((state) => state.userStatus);
   const activeChat = useChatStore((state) => state.activeChat);
+  const activeChatId = useChatStore((state) => state.activeChatId);
   const openCharacterId = useUIStore((state) => state.characterDetailId);
   const openPersonaId = useUIStore((state) => state.personaDetailId);
   const openLorebookId = useUIStore((state) => state.lorebookDetailId);
   const openPresetId = useUIStore((state) => state.presetDetailId);
   const openConnectionId = useUIStore((state) => state.connectionDetailId);
   const openAgentId = useUIStore((state) => state.agentDetailId);
+  const settingsTab = useUIStore((state) => state.settingsTab);
+  const settingsTargetControlId = useUIStore((state) => state.settingsTargetControlId);
+  const settingsPanelVisible = useUIStore((state) => state.rightPanelOpen && state.rightPanel === "settings");
 
   const categoryLabels = useMemo<CommandCenterCategoryLabels>(
     () => ({
@@ -843,6 +852,41 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => [...controls, ...searchableCommandResults, ...searchableEntityResults],
     [controls, searchableCommandResults, searchableEntityResults],
   );
+  const contextResultIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (openCharacterId) ids.add(`character:${openCharacterId}`);
+    if (openPersonaId) ids.add(`persona:${openPersonaId}`);
+    if (openLorebookId) ids.add(`lorebook:${openLorebookId}`);
+    if (openPresetId) ids.add(`preset:${openPresetId}`);
+    if (openConnectionId) ids.add(`connection:${openConnectionId}`);
+    if (openAgentId) ids.add(`agent:${openAgentId}`);
+    if (settingsPanelVisible && settingsTargetControlId) ids.add(`settings-control:${settingsTargetControlId}`);
+    else if (settingsPanelVisible && settingsTab) ids.add(`settings-section:${settingsTab}`);
+    for (const id of getOmnibarActiveChatContextResultIds(
+      activeChatId,
+      activeChat
+        ? {
+            ...activeChat,
+            enableAgents: activeChat.metadata?.enableAgents,
+            activeAgentIds: activeChat.metadata?.activeAgentIds,
+          }
+        : null,
+    ))
+      ids.add(id);
+    return ids;
+  }, [
+    activeChat,
+    activeChatId,
+    openAgentId,
+    openCharacterId,
+    openConnectionId,
+    openLorebookId,
+    openPersonaId,
+    openPresetId,
+    settingsTab,
+    settingsTargetControlId,
+    settingsPanelVisible,
+  ]);
   const searchResults = useMemo<OmnibarResult[]>(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const faqResults =
@@ -876,7 +920,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ];
           });
     return [
-      ...searchOmnibar(query, { ...data, controls }),
+      ...searchOmnibar(query, { ...data, controls, contextResultIds }),
       ...faqResults,
       ...docs.results.map((result) => ({
         ...result,
@@ -900,7 +944,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "documentation" as const,
       })),
     ];
-  }, [controls, data, docs.results, localize, query, t]);
+  }, [contextResultIds, controls, data, docs.results, localize, query, t]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -973,7 +1017,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           icon: "connection",
         });
     }
-    if (activeChat) {
+    if (activeChat && activeChat.id === activeChatId) {
       push({
         id: `context:chat:${activeChat.id}`,
         title: t("commandCenter.context.currentChat", "Current chat: {{name}}", { name: activeChat.name }),
@@ -1009,10 +1053,36 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             icon: "persona",
           });
       }
+      if (activeChat.promptPresetId) {
+        const name = listName(presets.data, activeChat.promptPresetId);
+        if (name)
+          push({
+            id: `context:chat-preset:${activeChat.promptPresetId}`,
+            title: name,
+            category: "preset",
+            target: { kind: "resource", resource: "preset", id: activeChat.promptPresetId },
+            score: 0,
+            group: "context",
+            icon: "preset",
+          });
+      }
+      if (activeChat.connectionId) {
+        const name = connectionById.get(activeChat.connectionId)?.name;
+        if (name)
+          push({
+            id: `connection:${activeChat.connectionId}`,
+            title: name,
+            category: "connection",
+            score: 0,
+            group: "context",
+            icon: "connection",
+          });
+      }
     }
     return out.slice(0, 6);
   }, [
     activeChat,
+    activeChatId,
     agents.data,
     characterById,
     connectionById,
