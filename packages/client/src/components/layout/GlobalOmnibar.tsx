@@ -1782,7 +1782,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <div
             data-component="GlobalOmnibar.Browse"
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
