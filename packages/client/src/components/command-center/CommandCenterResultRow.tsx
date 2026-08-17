@@ -1,5 +1,5 @@
 import type { MouseEventHandler, ReactNode } from "react";
-import { ChevronRight, CornerDownLeft, Settings2, type LucideIcon } from "lucide-react";
+import { CornerDownLeft, Settings2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -24,8 +24,6 @@ export interface CommandCenterResultRowProps {
   currentChoice?: string;
   enterHint?: string;
   setupStatus?: string;
-  detailsLabel?: string;
-  onDetails?: () => void;
   onMouseEnter?: MouseEventHandler<HTMLLIElement>;
   onMouseLeave?: MouseEventHandler<HTMLLIElement>;
   className?: string;
@@ -51,14 +49,11 @@ export function CommandCenterResultRow({
   currentChoice,
   enterHint,
   setupStatus,
-  detailsLabel,
-  onDetails,
   onMouseEnter,
   onMouseLeave,
   className,
   style,
 }: CommandCenterResultRowProps) {
-  const hasDetailsAction = Boolean(onDetails && detailsLabel);
   return (
     <li
       data-result-id={dataResultId}
@@ -67,7 +62,7 @@ export function CommandCenterResultRow({
       onMouseLeave={onMouseLeave}
       style={style}
       className={cn(
-        "group grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center rounded-xl transition-colors",
+        "group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center rounded-xl transition-colors",
         "min-h-14 sm:h-[3.25rem]",
         selected ? "bg-[var(--primary)]/12 ring-1 ring-inset ring-[var(--primary)]/20" : "hover:bg-[var(--accent)]/60",
         groupClassName,
@@ -116,20 +111,6 @@ export function CommandCenterResultRow({
           {control}
         </div>
       ) : null}
-
-      <div className="col-start-3 flex h-full w-9 shrink-0 items-center justify-end pr-0.5">
-        {hasDetailsAction ? (
-          <button
-            type="button"
-            aria-label={detailsLabel}
-            title={detailsLabel}
-            onClick={onDetails}
-            className="inline-flex size-9 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)] sm:size-8"
-          >
-            <ChevronRight className="size-5" aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
     </li>
   );
 }

@@ -1854,7 +1854,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             icon={resultIcon(result)}
                             selected={selected}
                             onSelect={() => selectResult(result)}
-                            onMouseEnter={() => setActiveResultId(result.id)}
+                            onMouseEnter={() => {
+                              if (
+                                hasDetails &&
+                                window.matchMedia("(min-width: 1280px) and (hover: hover) and (pointer: fine)").matches
+                              ) {
+                                showResultDetail(result);
+                                return;
+                              }
+                              setActiveResultId(result.id);
+                            }}
                             mediaSrc={result.preview?.media?.src}
                             mediaKind={result.preview?.media?.kind}
                             avatarCropStyle={result.preview?.media?.avatarCropStyle}
@@ -1863,12 +1872,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             currentChoice={currentChoice}
                             setupStatus={setupStatus}
                             enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
-                            detailsLabel={
-                              hasDetails
-                                ? t("commandCenter.detailsFor", "Details for {{title}}", { title: result.title })
-                                : undefined
-                            }
-                            onDetails={hasDetails ? () => showResultDetail(result) : undefined}
                             control={
                               result.control?.type === "choice" ? (
                                 <CommandCenterSegmentedChoice
