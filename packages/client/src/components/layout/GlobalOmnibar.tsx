@@ -121,6 +121,11 @@ function readString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function timeOfDayKey() {
+  const hour = new Date().getHours();
+  return hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+}
+
 function formatDate(value: unknown) {
   const date = typeof value === "string" ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime())
@@ -1548,6 +1553,32 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               data-component="GlobalOmnibar.Results"
               className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-sm:hidden") : ""}`}
             >
+              {!query.trim() ? (
+                <div className="mb-2 flex items-center gap-3 rounded-2xl bg-[var(--accent)] px-3 py-3 motion-safe:animate-fade-in-up">
+                  <button
+                    type="button"
+                    onClick={openProfessorMari}
+                    aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                    className="shrink-0 rounded-full ring-1 ring-[var(--border)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] motion-reduce:transition-none"
+                  >
+                    <img
+                      src={PROFESSOR_MARI_PEEK_URL}
+                      alt=""
+                      aria-hidden="true"
+                      draggable={false}
+                      className="size-12 rounded-full object-cover object-top"
+                    />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                      {t(`omnibar.greeting.${timeOfDayKey()}`, "What do you want to do?")}
+                    </p>
+                    <p className="truncate text-xs text-[var(--muted-foreground)]">
+                      {t("omnibar.greeting.hint", "Search, jump to anything, or ask Professor Mari.")}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
               {!query.trim() && BROWSE_FILTERS.some((item) => browseAvailability[item] > 0) ? (
                 <div className="mb-1 flex items-center justify-between gap-3 px-2 pb-1">
                   <span className="text-xs text-[var(--muted-foreground)]">
