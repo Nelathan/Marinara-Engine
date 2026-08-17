@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import type { ChatMode } from "@marinara-engine/shared";
+import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
 import {
   ArrowRight,
   ChevronLeft,
@@ -185,6 +185,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setBrowseLimit = (value: number) => setSessionValue("browseLimit", value);
   const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
+  const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -1205,6 +1206,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const openProfessorMari = () => {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
+    setMariContext(
+      previewResult
+        ? {
+            source: "command-center",
+            capability: "explain",
+            action: `Selected Command Center result: ${previewResult.title} (${previewResult.category}, ${previewResult.id})`,
+          }
+        : null,
+    );
     setMariChatOpen(true);
     setDetailResult(null);
     setSessionValue("detailResultId", null);
@@ -1509,6 +1519,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 pageActive
                 embeddedTab
                 launchHidden
+                initialAskContext={mariContext}
                 chatWindowOpen={mariChatOpen}
                 onChatWindowOpenChange={(open) => {
                   setMariChatOpen(open);

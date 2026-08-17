@@ -15,6 +15,9 @@ export function executeStateNavigation(
   handlers: StateNavigationHandlers = {},
 ): boolean {
   const ui = useUIStore.getState();
+  // Any navigation means "take me somewhere"; get the omnibar out of the way so
+  // the destination (e.g. a resource opened from Professor Mari) is visible.
+  ui.setOmnibarOpen(false);
   if (target.kind === "home") {
     if (handlers.home) handlers.home();
     else {

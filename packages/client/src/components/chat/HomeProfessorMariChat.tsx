@@ -3313,6 +3313,7 @@ type HomeProfessorMariChatProps = {
   embeddedTab?: boolean;
   floatingMode?: boolean;
   launchHidden?: boolean;
+  initialAskContext?: ProfessorMariAskContext | null;
   onChatWindowOpenChange?: (open: boolean) => void;
   onChatWindowExitComplete?: () => void;
   onFloatingDismiss?: () => void;
@@ -3325,6 +3326,7 @@ export function HomeProfessorMariChat({
   embeddedTab = false,
   floatingMode = false,
   launchHidden = false,
+  initialAskContext = null,
   onChatWindowOpenChange,
   onChatWindowExitComplete,
   onFloatingDismiss,
@@ -3608,6 +3610,12 @@ export function HomeProfessorMariChat({
     window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
     return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
   }, [applyHandoff, floatingMode]);
+
+  // Direct prop channel (e.g. the omnibar Mari pane) — avoids the global open
+  // event so a co-mounted Home instance never steals the handoff context.
+  useEffect(() => {
+    if (initialAskContext) setHandoffContext(initialAskContext);
+  }, [initialAskContext]);
 
   useEffect(() => {
     if (professorMariSuggestionsEnabled) return;
