@@ -1386,7 +1386,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     <div
       data-component="GlobalOmnibar"
       data-pane={pane}
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 sm:px-6 sm:pt-[10vh]"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm sm:px-6 sm:pt-[10vh]"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
@@ -1396,8 +1396,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         aria-labelledby="global-omnibar-title"
         onKeyDown={trapFocus}
         data-component="GlobalOmnibar.Panel"
-        className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)] sm:max-w-[60rem] sm:rounded-lg sm:border sm:border-[var(--border)]"
+        className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)] sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60"
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-44 bg-[radial-gradient(120%_100%_at_12%_0%,oklch(0.72_0.16_255/0.12),transparent_60%),radial-gradient(120%_100%_at_88%_0%,oklch(0.73_0.21_345/0.11),transparent_60%)]"
+        />
         <h2 id="global-omnibar-title" className="sr-only">
           {t("omnibar.title", "Search Marinara")}
         </h2>
