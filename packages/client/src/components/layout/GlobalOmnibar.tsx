@@ -1206,7 +1206,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     useChatStore.getState().setActiveChatId(null);
     ui().closeAllDetails();
     ui().closeRightPanel();
-    requestProfessorMariOpen(draft);
+    requestProfessorMariOpen({
+      draft,
+      context: previewResult
+        ? {
+            source: "command-center",
+            capability: "explain",
+            action: `Selected Command Center result: ${previewResult.title} (${previewResult.category}, ${previewResult.id})`,
+          }
+        : undefined,
+    });
     onClose();
   };
   const resultIcon = (result: RankedOmnibarResult) => {

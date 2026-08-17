@@ -14414,6 +14414,15 @@ test("home browser hub scales cleanly and opens FAQ as a bookmark window", async
   const faqWindow = page.getByRole("dialog", { name: "Professor Mari's FAQ" });
   await expect(faqWindow).toBeVisible();
   await expect(faqWindow.getByRole("searchbox", { name: "Search FAQ" })).toBeVisible();
+  await faqWindow.getByRole("button", { name: /How do I connect Marinara to a model/ }).click();
+  await faqWindow.getByRole("button", { name: "Ask Mari about this" }).click();
+  await expect(faqWindow).toBeHidden();
+  await expect(page.getByRole("tab", { name: "Professor", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('textarea[placeholder="Ask Professor Mari"]:visible')).toContainText(
+    "How do I connect Marinara to a model?",
+  );
+  await openHomeBookmark(page, "FAQ");
+  await expect(faqWindow).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(faqWindow).toBeHidden();
 

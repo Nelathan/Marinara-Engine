@@ -23,6 +23,7 @@ export function FaqViewerModal({
         expanded
         openItemId={openItemId}
         onOpenItemIdChange={setOpenItemId}
+        onAskMari={onClose}
         className="max-w-none"
       />
     </Modal>

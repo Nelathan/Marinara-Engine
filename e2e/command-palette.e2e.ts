@@ -97,6 +97,40 @@ test("Professor Mari header action closes the palette and preserves an unsent dr
   await expect(page.locator('textarea[placeholder="Ask Professor Mari"]:visible')).toHaveValue(draft);
 });
 
+test("Professor Mari header action preserves the selected Command Center result", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Professor Mari result context is covered on desktop.");
+
+  await page.evaluate(() => {
+    (window as Window & { professorMariHandoff?: unknown }).professorMariHandoff = undefined;
+    window.addEventListener(
+      "marinara:home-professor-mari-open",
+      (event) => {
+        (window as Window & { professorMariHandoff?: unknown }).professorMariHandoff = (event as CustomEvent).detail;
+      },
+      { once: true },
+    );
+  });
+  await page.keyboard.press("Control+k");
+  const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+  await omnibar.getByRole("searchbox", { name: "Search Marinara" }).fill("Appearance");
+  const appearance = omnibar.locator("[data-command-center-result-row]").filter({ hasText: "Appearance" });
+  await appearance.hover();
+  await expect(appearance).toHaveAttribute("data-selected", "true");
+  await omnibar.locator('[data-component="GlobalOmnibar.ProfessorMariButton"]').click();
+
+  await expect(omnibar).toBeHidden();
+  await expect(page.locator('textarea[placeholder="Ask Professor Mari"]:visible')).toHaveValue("Appearance");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { professorMariHandoff?: { context?: { action?: string } } }).professorMariHandoff
+            ?.context?.action,
+      ),
+    )
+    .toContain("Selected Command Center result: Appearance");
+});
+
 test("mobile keeps the command palette button and panel inside the top-bar layout", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "The mobile top-bar layout is covered on mobile.");
 

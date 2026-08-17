@@ -24,7 +24,7 @@ export type ProfessorMariCompletionKind = "open-resource" | "show-field" | "show
 export const PROFESSOR_MARI_CAPABILITY_CATALOG = {
   explain: {
     owner: "workspace",
-    entryPoints: ["home", "floating-assistant", "command-center", "character-chat"],
+    entryPoints: ["home", "floating-assistant", "command-center", "faq", "character-chat"],
     completion: "return-to-source",
   },
   recommend: {
@@ -44,7 +44,7 @@ export const PROFESSOR_MARI_CAPABILITY_CATALOG = {
   },
   repair: {
     owner: "workspace",
-    entryPoints: ["home", "floating-assistant"],
+    entryPoints: ["home", "floating-assistant", "chat-error"],
     completion: "show-review",
   },
   navigate: {

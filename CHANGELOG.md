@@ -6,6 +6,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- FAQ answers, Command Center selections, and the Recent Chats load error can now open Professor Mari with an editable, grounded draft and typed source context without sending a model request.
 - Professor Mari suggestion chips now reject incomplete structured output and clear stale guided plans when chats switch, restart, or stop; guided completion keeps any text already in the draft.
 
 - Professor Mari workspace results now show direct Open and Review actions for created or updated characters, personas, lorebooks, and presets, and refresh the matching app data before opening it.

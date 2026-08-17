@@ -1,11 +1,22 @@
 import { useMemo, useState } from "react";
-import { BookOpen, ChevronDown, ChevronRight, HelpCircle, Search, Sparkles, TriangleAlert, X } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  HelpCircle,
+  MessageCircleQuestion,
+  Search,
+  Sparkles,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useDocsIndex } from "../../hooks/use-docs";
 import { useUIStore } from "../../stores/ui.store";
 import { Modal } from "../ui/Modal";
 import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
 import { useTranslation as useUiTranslation } from "react-i18next";
+import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 
 export interface HomeFaqItem {
   id: string;
@@ -31,6 +42,7 @@ interface HomeFaqProps {
   headerless?: boolean;
   /** Omits the introductory and pre-bug guidance so a modal can focus on the FAQ list. */
   faqOnly?: boolean;
+  onAskMari?: () => void;
 }
 
 const QUICK_FIXES = [
@@ -592,6 +604,7 @@ export function HomeFaq({
   mobileModal = false,
   headerless = false,
   faqOnly = false,
+  onAskMari,
 }: HomeFaqProps = {}) {
   const { t: localizeUi } = useUiTranslation();
   const localize = useLocalizedUiText();
@@ -617,6 +630,31 @@ export function HomeFaq({
         ? HOME_FAQ_ITEMS.filter((item) => getFaqSearchText(item, localize).includes(trimmedSearch))
         : HOME_FAQ_ITEMS,
     [localize, trimmedSearch],
+  );
+  const askMari = (item: HomeFaqItem) => {
+    requestProfessorMariOpen({
+      draft: localizeUi("professorMari.handoff.faqDraft", { question: localize(item.question) }),
+      context: {
+        source: "faq",
+        capability: "explain",
+        action: `FAQ question: ${item.question}`,
+      },
+    });
+    onAskMari?.();
+  };
+
+  const askMariButton = (item: HomeFaqItem, compactButton = false) => (
+    <button
+      type="button"
+      onClick={() => askMari(item)}
+      className={cn(
+        "mt-2 inline-flex items-center gap-1.5 rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/10 font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
+        compactButton ? "min-h-7 px-2 text-[0.625rem]" : "min-h-8 px-2.5 text-[0.6875rem]",
+      )}
+    >
+      <MessageCircleQuestion size={compactButton ? "0.6875rem" : "0.75rem"} aria-hidden="true" />
+      {localizeUi("professorMari.handoff.askAboutFaq")}
+    </button>
   );
 
   if (compact) {
@@ -752,6 +790,7 @@ export function HomeFaq({
                             </ul>
                           ) : null}
                           {item.docsAccess ? <FaqDocsAccess compact /> : null}
+                          {askMariButton(item, true)}
                         </div>
                       )}
                     </div>
@@ -809,6 +848,7 @@ export function HomeFaq({
             expanded
             openItemId={openItemId}
             onOpenItemIdChange={setOpenItemId}
+            onAskMari={() => setMobileModalOpen(false)}
             className="max-w-none"
           />
         </Modal>
@@ -989,6 +1029,7 @@ export function HomeFaq({
                             </ul>
                           ) : null}
                           {item.docsAccess ? <FaqDocsAccess /> : null}
+                          {askMariButton(item)}
                         </div>
                       )}
                     </div>
