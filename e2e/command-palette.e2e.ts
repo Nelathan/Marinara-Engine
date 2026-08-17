@@ -40,6 +40,8 @@ test("desktop shortcut opens an empty focused command palette", async ({ page },
   await expect(input).toBeFocused();
   await expect(input).toHaveValue("");
   await expect(omnibar.getByRole("option")).toHaveCount(0);
+  await expect(omnibar.locator('[data-component="GlobalOmnibar.ProfessorAssistantSprite"]')).toBeVisible();
+  await expect(omnibar.locator('[data-component="GlobalOmnibar.ProfessorAssistantBubble"]')).toBeVisible();
 });
 
 test("desktop command result navigates directly to Appearance settings", async ({ page }, testInfo) => {
@@ -84,7 +86,9 @@ test("mobile keeps the command palette button and panel inside the top-bar layou
 
   await searchButton.click();
   const panel = page.locator('[data-component="GlobalOmnibar.Panel"]');
+  const omnibar = page.locator('[data-component="GlobalOmnibar"]');
   await expect(panel).toBeVisible();
+  await expect(omnibar.locator('[data-component="GlobalOmnibar.ProfessorAssistantSprite"]')).toBeVisible();
   const panelBox = await panel.boundingBox();
   expect(panelBox).not.toBeNull();
   expect(panelBox!.x).toBeGreaterThanOrEqual(0);

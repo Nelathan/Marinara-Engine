@@ -13,6 +13,7 @@ import { useUIStore } from "../../stores/ui.store";
 import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import { searchOmnibar, type OmnibarResult } from "../../lib/omnibar-search";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
+import { PROFESSOR_MARI_OMNIBAR_POSITION_STORAGE_KEY } from "../../lib/professor-mari-navigation";
 import { ProfessorMariNavigator } from "../chat/ProfessorMariNavigator";
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
@@ -256,101 +257,102 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div
-      ref={boundaryRef}
       data-component="GlobalOmnibar"
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 p-3 pt-[max(4rem,12vh)] backdrop-blur-sm sm:p-6 sm:pt-[15vh]"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 p-3 pt-[2rem] backdrop-blur-sm sm:p-6 sm:pt-[4rem]"
       onMouseDown={(event) => event.target === event.currentTarget && close()}
     >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="global-omnibar-title"
-        onKeyDown={trapFocus}
-        className="flex h-[min(34rem,calc(100dvh-5rem))] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xl sm:h-[34rem]"
-        data-component="GlobalOmnibar.Panel"
-      >
-        <h2 id="global-omnibar-title" className="sr-only">
-          {t("omnibar.title", "Search Marinara")}
-        </h2>
-        <div className="flex h-14 items-center gap-3 border-b border-[var(--border)] px-4">
-          <Search size={18} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActiveIndex(0);
-            }}
-            role="combobox"
-            aria-expanded="true"
-            aria-autocomplete="list"
-            onKeyDown={onInputKeyDown}
-            aria-label={t("omnibar.inputLabel", "Search Marinara")}
-            aria-controls="global-omnibar-results"
-            aria-activedescendant={results[activeIndex] ? `omnibar-${results[activeIndex].id}` : undefined}
-            placeholder={t("omnibar.placeholder", "Search chats, characters, settings, and more")}
-            className="min-w-0 flex-1 bg-transparent text-base text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
-          />
-          <button
-            type="button"
-            onClick={close}
-            aria-label={t("common.close", "Close")}
-            className="rounded-md p-2 text-[var(--muted-foreground)] hover:bg-[var(--accent)]"
-          >
-            <X size={17} />
-          </button>
-        </div>
+      <div ref={boundaryRef} className="relative h-[calc(100dvh-6rem)] w-full max-w-5xl sm:h-[calc(100dvh-8rem)]">
         <div
-          id="global-omnibar-results"
-          role="listbox"
-          aria-label={t("omnibar.results", "Search results")}
-          className="min-h-0 flex-1 overflow-y-auto p-2"
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="global-omnibar-title"
+          onKeyDown={trapFocus}
+          className="mx-auto mt-[18rem] flex h-[min(34rem,calc(100dvh-23rem))] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xl sm:mt-[16rem] sm:h-[min(34rem,calc(100dvh-20rem))] max-sm:mt-[14rem] max-sm:h-[min(30rem,calc(100dvh-19rem))]"
+          data-component="GlobalOmnibar.Panel"
         >
-          {query.trim() && loading && (
-            <div className="flex min-h-20 items-center justify-center text-sm text-[var(--muted-foreground)]">
-              <Loader2 className="mr-2 animate-spin" size={16} />
-              {t("omnibar.loading", "Loading results")}
-            </div>
-          )}
-          {query.trim() && failed && (
-            <div role="alert" className="p-5 text-center text-sm text-[var(--muted-foreground)]">
-              {t("omnibar.error", "Some results could not be loaded")}
-            </div>
-          )}
-          {query.trim() &&
-            results.map((result, index) => (
-              <button
-                key={result.id}
-                id={`omnibar-${result.id}`}
-                type="button"
-                role="option"
-                aria-selected={index === activeIndex}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => choose(result)}
-                className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${index === activeIndex ? "bg-[var(--accent)]" : "hover:bg-[var(--accent)]/60"}`}
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]/12 text-[var(--primary)]">
-                  {result.category === "professor" ? <Sparkles size={16} /> : <ArrowRight size={16} />}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm text-[var(--foreground)]">
-                  {result.id === "ask-professor-mari"
-                    ? t("omnibar.askProfessorMari", "Ask Professor Mari")
-                    : result.title}
-                </span>
-                <span className="shrink-0 text-xs capitalize text-[var(--muted-foreground)]">
-                  {t(
-                    `omnibar.categories.${result.category}`,
-                    result.category === "professor" ? "Professor Mari" : result.category,
-                  )}
-                </span>
-              </button>
-            ))}
-          {!loading && query.trim() && results.length === 0 && (
-            <div className="p-5 text-center text-sm text-[var(--muted-foreground)]">
-              {t("omnibar.noResults", "No results")}
-            </div>
-          )}
+          <h2 id="global-omnibar-title" className="sr-only">
+            {t("omnibar.title", "Search Marinara")}
+          </h2>
+          <div className="flex h-14 items-center gap-3 border-b border-[var(--border)] px-4">
+            <Search size={18} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setActiveIndex(0);
+              }}
+              role="combobox"
+              aria-expanded="true"
+              aria-autocomplete="list"
+              onKeyDown={onInputKeyDown}
+              aria-label={t("omnibar.inputLabel", "Search Marinara")}
+              aria-controls="global-omnibar-results"
+              aria-activedescendant={results[activeIndex] ? `omnibar-${results[activeIndex].id}` : undefined}
+              placeholder={t("omnibar.placeholder", "Search chats, characters, settings, and more")}
+              className="min-w-0 flex-1 bg-transparent text-base text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+            />
+            <button
+              type="button"
+              onClick={close}
+              aria-label={t("common.close", "Close")}
+              className="rounded-md p-2 text-[var(--muted-foreground)] hover:bg-[var(--accent)]"
+            >
+              <X size={17} />
+            </button>
+          </div>
+          <div
+            id="global-omnibar-results"
+            role="listbox"
+            aria-label={t("omnibar.results", "Search results")}
+            className="min-h-0 flex-1 overflow-y-auto p-2"
+          >
+            {query.trim() && loading && (
+              <div className="flex min-h-20 items-center justify-center text-sm text-[var(--muted-foreground)]">
+                <Loader2 className="mr-2 animate-spin" size={16} />
+                {t("omnibar.loading", "Loading results")}
+              </div>
+            )}
+            {query.trim() && failed && (
+              <div role="alert" className="p-5 text-center text-sm text-[var(--muted-foreground)]">
+                {t("omnibar.error", "Some results could not be loaded")}
+              </div>
+            )}
+            {query.trim() &&
+              results.map((result, index) => (
+                <button
+                  key={result.id}
+                  id={`omnibar-${result.id}`}
+                  type="button"
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => choose(result)}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${index === activeIndex ? "bg-[var(--accent)]" : "hover:bg-[var(--accent)]/60"}`}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]/12 text-[var(--primary)]">
+                    {result.category === "professor" ? <Sparkles size={16} /> : <ArrowRight size={16} />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-[var(--foreground)]">
+                    {result.id === "ask-professor-mari"
+                      ? t("omnibar.askProfessorMari", "Ask Professor Mari")
+                      : result.title}
+                  </span>
+                  <span className="shrink-0 text-xs capitalize text-[var(--muted-foreground)]">
+                    {t(
+                      `omnibar.categories.${result.category}`,
+                      result.category === "professor" ? "Professor Mari" : result.category,
+                    )}
+                  </span>
+                </button>
+              ))}
+            {!loading && query.trim() && results.length === 0 && (
+              <div className="p-5 text-center text-sm text-[var(--muted-foreground)]">
+                {t("omnibar.noResults", "No results")}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <ProfessorMariNavigator
@@ -362,6 +364,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         onOpenProfessor={() => navigate({ kind: "professor" })}
         onOpenDocumentation={() => navigate({ kind: "window", window: "documentation" })}
         onMeaningfulDrag={() => undefined}
+        positionStorageKey={PROFESSOR_MARI_OMNIBAR_POSITION_STORAGE_KEY}
+        defaultPosition={{ x: 0.5, y: 0 }}
+        layout="omnibar"
       />
     </div>,
     document.body,

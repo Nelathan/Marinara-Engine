@@ -7,6 +7,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 ### Added
 
 - Added a global omnibar with `Cmd/Ctrl+K` access for finding chats, resources, settings, navigation targets, and Professor Mari.
+- Professor Mari now owns the omnibar surface. Her draggable avatar and speech bubble stay attached to the search station, with a separate saved position from the homepage navigator.
 - Echo Chamber now exposes an editable message delay in its Agents editor, and extensions can update the same `messageDelaySeconds` agent setting instead of relying on hardcoded reveal timing (#5177).
 - Persona cards can now be referenced by copied ID with `{{persona-21-character-card-ID}}`, resolving the card name in place and adding its authored fields and eligible attached lorebook context to the prompt (#5171).
 - Added **Assistant Reasoning Prefill** alongside the existing visible assistant prefill: compatible OpenAI-style endpoints can now continue hidden reasoning from `reasoning_content` on a partial assistant message, while visible-only prefills keep their existing request shape.

@@ -34,6 +34,7 @@ const PROFESSOR_ASSISTANT_EDGE_MARGIN = 16;
 const PROFESSOR_ASSISTANT_HANDLE_CLEARANCE = 12;
 const PROFESSOR_ASSISTANT_HOOD_GRAB_X = 0.45;
 const PROFESSOR_ASSISTANT_HOOD_GRAB_Y = 0.09;
+const omnibarNavigatorRuntime = { minimized: false, hasAppeared: true };
 
 function readMarinaraEffectsPaused() {
   return typeof document !== "undefined" && document.documentElement.dataset.marinaraEffectsPaused === "true";
@@ -94,10 +95,10 @@ function clampProfessorAssistantPosition(value: number) {
   return Math.max(0, Math.min(1, value));
 }
 
-function readProfessorAssistantPosition(): ProfessorAssistantPosition | null {
+function readProfessorAssistantPosition(storageKey: string): ProfessorAssistantPosition | null {
   if (typeof window === "undefined") return null;
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(PROFESSOR_MARI_NAVIGATOR_POSITION_STORAGE_KEY) ?? "null") as {
+    const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? "null") as {
       x?: unknown;
       y?: unknown;
     } | null;
@@ -118,9 +119,9 @@ function readProfessorAssistantPosition(): ProfessorAssistantPosition | null {
   }
 }
 
-function rememberProfessorAssistantPosition(position: ProfessorAssistantPosition) {
+function rememberProfessorAssistantPosition(storageKey: string, position: ProfessorAssistantPosition) {
   try {
-    window.localStorage.setItem(PROFESSOR_MARI_NAVIGATOR_POSITION_STORAGE_KEY, JSON.stringify(position));
+    window.localStorage.setItem(storageKey, JSON.stringify(position));
   } catch {
     /* Local storage is optional; dragging still works for the current mount. */
   }
@@ -135,6 +136,9 @@ type ProfessorMariNavigatorProps = {
   onOpenProfessor: () => void;
   onOpenDocumentation: () => void;
   onMeaningfulDrag: () => void;
+  positionStorageKey?: string;
+  defaultPosition?: ProfessorAssistantPosition;
+  layout?: "home" | "omnibar";
 };
 
 export function ProfessorMariNavigator({
@@ -146,18 +150,17 @@ export function ProfessorMariNavigator({
   onOpenProfessor,
   onOpenDocumentation,
   onMeaningfulDrag,
+  positionStorageKey = PROFESSOR_MARI_NAVIGATOR_POSITION_STORAGE_KEY,
+  defaultPosition = { x: 0, y: 1 },
+  layout = "home",
 }: ProfessorMariNavigatorProps) {
   const { t } = useTranslation();
   const reduceMotion = useReducedAmbientEffects();
   const effectsPaused = useMarinaraEffectsPaused();
-  const [visible, setVisible] = useState(
-    () =>
-      pageActive && enabled && professorMariNavigatorRuntime.hasAppeared && !professorMariNavigatorRuntime.minimized,
-  );
-  const [minimized, setMinimized] = useState(professorMariNavigatorRuntime.minimized);
-  const [phase, setPhase] = useState<"arriving" | "idle" | "map" | "shrug">(
-    professorMariNavigatorRuntime.hasAppeared ? "idle" : "arriving",
-  );
+  const runtime = layout === "omnibar" ? omnibarNavigatorRuntime : professorMariNavigatorRuntime;
+  const [visible, setVisible] = useState(() => pageActive && enabled && runtime.hasAppeared && !runtime.minimized);
+  const [minimized, setMinimized] = useState(runtime.minimized);
+  const [phase, setPhase] = useState<"arriving" | "idle" | "map" | "shrug">(runtime.hasAppeared ? "idle" : "arriving");
   const [mode, setMode] = useState<"prompt" | "input" | "success" | "failure">("prompt");
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -175,7 +178,9 @@ export function ProfessorMariNavigator({
   const dragAnimationRef = useRef<HTMLSpanElement | null>(null);
   const dragMoveFrameRef = useRef<number | null>(null);
   const pendingDragPositionRef = useRef<ProfessorAssistantPosition | null>(null);
-  const normalizedPositionRef = useRef<ProfessorAssistantPosition | null>(readProfessorAssistantPosition());
+  const normalizedPositionRef = useRef<ProfessorAssistantPosition | null>(
+    readProfessorAssistantPosition(positionStorageKey),
+  );
   const positionRef = useRef<ProfessorAssistantPosition | null>(null);
   const dragLayoutRef = useRef<ProfessorAssistantDragLayout | null>(null);
   const dragRef = useRef<{
@@ -294,8 +299,8 @@ export function ProfessorMariNavigator({
     let normalized = normalizedPositionRef.current;
     if (!normalized) {
       normalized = {
-        x: 0,
-        y: 1,
+        x: defaultPosition.x,
+        y: defaultPosition.y,
       };
       normalizedPositionRef.current = normalized;
     }
@@ -321,7 +326,7 @@ export function ProfessorMariNavigator({
     positionRef.current = nextPosition;
     setDragLayout(nextLayout);
     setDragPosition(nextPosition);
-  }, [boundaryRef, desktopDragEnabled]);
+  }, [boundaryRef, defaultPosition.x, defaultPosition.y, desktopDragEnabled]);
 
   useLayoutEffect(() => {
     if (!visible || minimized || !desktopDragEnabled) return;
@@ -363,8 +368,8 @@ export function ProfessorMariNavigator({
       dragRef.current = null;
       document.documentElement.classList.remove("mari-home-professor-drag-active");
       setDragging(false);
-      if (reduceMotion && pageActive && enabled && !professorMariNavigatorRuntime.minimized) {
-        professorMariNavigatorRuntime.hasAppeared = true;
+      if (reduceMotion && pageActive && enabled && !runtime.minimized) {
+        runtime.hasAppeared = true;
         setMinimized(false);
         setPhase("idle");
         setVisible(true);
@@ -382,12 +387,12 @@ export function ProfessorMariNavigator({
       setVisible(false);
       return;
     }
-    if (professorMariNavigatorRuntime.minimized) {
+    if (runtime.minimized) {
       setMinimized(true);
       setVisible(false);
       return;
     }
-    if (professorMariNavigatorRuntime.hasAppeared) {
+    if (runtime.hasAppeared) {
       setMinimized(false);
       setVisible(true);
       if (phase === "arriving" && !reduceMotion) {
@@ -401,7 +406,7 @@ export function ProfessorMariNavigator({
     appearanceTimerRef.current = window.setTimeout(
       () => {
         appearanceTimerRef.current = null;
-        professorMariNavigatorRuntime.hasAppeared = true;
+        runtime.hasAppeared = true;
         setPhase(reduceMotion ? "idle" : "arriving");
         setVisible(true);
         if (!reduceMotion) {
@@ -414,7 +419,7 @@ export function ProfessorMariNavigator({
       reduceMotion ? 0 : 1_150,
     );
     return clearTimers;
-  }, [clearTimers, effectsPaused, enabled, pageActive, phase, reduceMotion]);
+  }, [clearTimers, effectsPaused, enabled, pageActive, phase, reduceMotion, runtime]);
 
   useEffect(() => {
     if (effectsPaused || !pageActive || !enabled || mode !== "success" || phase !== "map") return;
@@ -522,7 +527,7 @@ export function ProfessorMariNavigator({
       y: layout.maxY === layout.minY ? 0 : (position.y - layout.minY) / (layout.maxY - layout.minY),
     };
     normalizedPositionRef.current = normalized;
-    rememberProfessorAssistantPosition(normalized);
+    rememberProfessorAssistantPosition(positionStorageKey, normalized);
   };
 
   const nudgeProfessor = (event: ReactKeyboardEvent<HTMLSpanElement>) => {
@@ -553,7 +558,7 @@ export function ProfessorMariNavigator({
     normalizedPositionRef.current = normalized;
     positionRef.current = nextPosition;
     setDragPosition(nextPosition);
-    rememberProfessorAssistantPosition(normalized);
+    rememberProfessorAssistantPosition(positionStorageKey, normalized);
   };
 
   const renderedDragPosition = dragging ? positionRef.current : dragPosition;
@@ -584,7 +589,7 @@ export function ProfessorMariNavigator({
         data-tour="home-navigation"
         onClick={() => {
           clearTimers();
-          professorMariNavigatorRuntime.minimized = false;
+          runtime.minimized = false;
           setMinimized(false);
           setMode("input");
           setPhase("idle");
@@ -594,7 +599,12 @@ export function ProfessorMariNavigator({
         }}
         aria-label={t("home.assistant.navigate")}
         title={t("home.assistant.navigate")}
-        className="mari-home-professor-recall absolute bottom-[max(0.65rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-[30] flex h-14 w-14 items-end justify-center overflow-hidden rounded-full border border-[color-mix(in_srgb,oklch(0.73_0.21_345)_54%,var(--border))] bg-[color-mix(in_srgb,oklch(0.73_0.21_345)_12%,var(--card))] p-0.5 shadow-[0_16px_36px_-18px_oklch(0.73_0.21_345/0.72)] transition-[transform,box-shadow,background-color] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,oklch(0.73_0.21_345)_18%,var(--card))] hover:shadow-[0_20px_42px_-16px_oklch(0.73_0.21_345/0.78)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.73_0.21_345)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] active:scale-95 motion-reduce:transition-none sm:bottom-4 sm:right-4"
+        className={cn(
+          "mari-home-professor-recall absolute z-[30] flex h-14 w-14 items-end justify-center overflow-hidden rounded-full border border-[color-mix(in_srgb,oklch(0.73_0.21_345)_54%,var(--border))] bg-[color-mix(in_srgb,oklch(0.73_0.21_345)_12%,var(--card))] p-0.5 shadow-[0_16px_36px_-18px_oklch(0.73_0.21_345/0.72)] transition-[transform,box-shadow,background-color] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,oklch(0.73_0.21_345)_18%,var(--card))] hover:shadow-[0_20px_42px_-16px_oklch(0.73_0.21_345/0.78)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.73_0.21_345)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] active:scale-95 motion-reduce:transition-none",
+          layout === "omnibar"
+            ? "left-1/2 top-2 -translate-x-1/2"
+            : "bottom-[max(0.65rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] sm:bottom-4 sm:right-4",
+        )}
       >
         <img
           src={MARI_ASSISTANT_IDLE}
@@ -609,7 +619,7 @@ export function ProfessorMariNavigator({
   const minimize = () => {
     clearTimers();
     pendingNavigationTargetRef.current = null;
-    professorMariNavigatorRuntime.minimized = true;
+    runtime.minimized = true;
     setMinimized(true);
     setVisible(false);
   };
@@ -649,7 +659,9 @@ export function ProfessorMariNavigator({
         "mari-home-professor-popup pointer-events-none absolute z-[30]",
         desktopDragEnabled
           ? "inset-0"
-          : "bottom-[max(0rem,env(safe-area-inset-bottom))] left-2 right-2 flex items-end justify-end sm:left-5 sm:right-5",
+          : layout === "omnibar"
+            ? "left-2 right-2 top-2 flex flex-col items-center gap-1"
+            : "bottom-[max(0rem,env(safe-area-inset-bottom))] left-2 right-2 flex items-end justify-end sm:left-5 sm:right-5",
       )}
       aria-label={t("home.assistant.landmark")}
       data-dragging={dragging ? "true" : "false"}
@@ -662,7 +674,9 @@ export function ProfessorMariNavigator({
             "pointer-events-auto absolute cursor-grab touch-none select-none active:cursor-grabbing",
         )}
         style={desktopSpriteStyle}
-        data-component="HomeBrowserHub.ProfessorAssistantSprite"
+        data-component={
+          layout === "omnibar" ? "GlobalOmnibar.ProfessorAssistantSprite" : "HomeBrowserHub.ProfessorAssistantSprite"
+        }
         onPointerDown={beginProfessorDrag}
         onPointerMove={moveProfessorDrag}
         onPointerUp={finishProfessorDrag}
@@ -676,7 +690,9 @@ export function ProfessorMariNavigator({
             aria-grabbed={dragging}
             aria-label={t("home.assistant.drag")}
             title={t("home.assistant.drag")}
-            data-component="HomeBrowserHub.ProfessorDragHandle"
+            data-component={
+              layout === "omnibar" ? "GlobalOmnibar.ProfessorDragHandle" : "HomeBrowserHub.ProfessorDragHandle"
+            }
             className={cn(
               "pointer-events-auto absolute left-[45%] top-[-0.45rem] z-[8] flex h-7 w-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center text-[var(--muted-foreground)] opacity-0 drop-shadow-[0_2px_4px_var(--background)] transition-[opacity,color,transform] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:text-[var(--marinara-app-accent-solid)] focus-visible:opacity-100 [@media(pointer:fine)]:group-hover:opacity-100",
               dragging && "!cursor-grabbing !text-[var(--marinara-app-accent-solid)] !opacity-100",
@@ -743,12 +759,16 @@ export function ProfessorMariNavigator({
           "mari-home-professor-popup__bubble pointer-events-auto z-[3] rounded-2xl border border-[color-mix(in_srgb,oklch(0.73_0.21_345)_48%,var(--border))] bg-[var(--card)] px-4 py-3.5 pr-10 shadow-[0_18px_48px_-18px_oklch(0.73_0.21_345/0.7)]",
           desktopDragEnabled
             ? "absolute w-[min(22rem,calc(100%_-_2rem))]"
-            : "relative mb-[5.5rem] -ml-2 w-[min(22rem,calc(100%_-_6.5rem))] sm:mb-[6.5rem] sm:-ml-3",
+            : layout === "omnibar"
+              ? "relative w-[min(22rem,calc(100%_-_1rem))]"
+              : "relative mb-[5.5rem] -ml-2 w-[min(22rem,calc(100%_-_6.5rem))] sm:mb-[6.5rem] sm:-ml-3",
           desktopDragEnabled && !desktopBubblePlacement && "invisible",
           dragging && desktopDragEnabled && "pointer-events-none",
         )}
         style={desktopBubblePlacement?.style}
-        data-component="HomeBrowserHub.ProfessorAssistantBubble"
+        data-component={
+          layout === "omnibar" ? "GlobalOmnibar.ProfessorAssistantBubble" : "HomeBrowserHub.ProfessorAssistantBubble"
+        }
         data-tour="home-navigation"
         data-tail-side={desktopBubblePlacement ? (desktopBubblePlacement.bubbleOnLeft ? "right" : "left") : undefined}
       >
@@ -774,7 +794,7 @@ export function ProfessorMariNavigator({
                 ? t("home.assistant.notFound")
                 : t("home.assistant.prompt")}
         </p>
-        {!dragging && mode === "prompt" ? (
+        {layout === "home" && !dragging && mode === "prompt" ? (
           <button
             type="button"
             onClick={openInput}
@@ -782,7 +802,7 @@ export function ProfessorMariNavigator({
           >
             {t("home.assistant.navigate")}
           </button>
-        ) : !dragging && mode === "input" ? (
+        ) : layout === "home" && !dragging && mode === "input" ? (
           <form onSubmit={submitNavigation} className="relative mt-2">
             <input
               ref={inputRef}
@@ -803,7 +823,7 @@ export function ProfessorMariNavigator({
               <Search size="0.8rem" />
             </button>
           </form>
-        ) : !dragging && mode === "failure" ? (
+        ) : layout === "home" && !dragging && mode === "failure" ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             <button
               type="button"
