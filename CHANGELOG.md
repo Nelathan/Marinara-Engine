@@ -6,6 +6,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Removed the separate "Professor Mari navigation" result from Command Center search. The direct Ask Professor Mari entry remains available.
+
+- The Command Center now uses a connected spring transition when opening Professor Mari, moving the header identity and Mari pane together instead of swapping them abruptly.
+
 - Command Center inline controls now keep their labels aligned with toggles and multi-option choices, and the empty search header no longer refers to pinned actions.
 
 - The full Professor Mari agent now runs inside the omnibar as its own pane: opening Mari from the omnibar keeps the dialog, carries the typed draft and a removable context chip, unifies the header with Mari's identity, persists the conversation across pane switches, and returns to search on close. Opening a created or edited resource from Mari closes the omnibar onto the real editor. The Home and floating Mari surfaces are unchanged.

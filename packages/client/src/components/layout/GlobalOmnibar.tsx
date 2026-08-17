@@ -15,6 +15,7 @@ import {
   Theater,
   X,
 } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
 import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
@@ -209,6 +210,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const extensionCommands = usePersonalExtensionCommands();
   const docs = useDocsCommandSearchProvider(query, { enabled: true });
   const theme = useUIStore((state) => state.theme);
+  const reduceMotion = useReducedMotion();
   const reduceAmbientEffects = useUIStore((state) => state.reduceAmbientEffects);
   const musicPlayerEnabled = useUIStore((state) => state.musicPlayerEnabled);
   const speechToTextEnabled = useUIStore((state) => state.speechToTextEnabled);
@@ -670,7 +672,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       chats: chatRows,
       resources,
       connections: connectionRows,
-      professorNavigationTitle: t("omnibar.professorNavigation"),
       askProfessorTitle: t("omnibar.askProfessorMari"),
     };
   }, [
@@ -1553,7 +1554,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
             )}
             {pane === "mari" ? (
-              <div className="flex min-w-0 flex-1 items-center gap-3 motion-safe:animate-fade-in-up">
+              <motion.div
+                key="omnibar-mari-header"
+                initial={{ opacity: 0, y: -10, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={
+                  reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 440, damping: 28, mass: 0.65 }
+                }
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
                 <img
                   src={PROFESSOR_MARI_PEEK_URL}
                   alt=""
@@ -1564,7 +1573,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <span className="truncate text-base font-semibold text-[var(--foreground)]">
                   {t("omnibar.askProfessorMari", "Ask Professor Mari")}
                 </span>
-              </div>
+              </motion.div>
             ) : (
               <input
                 ref={inputRef}
@@ -1637,9 +1646,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         {mariMounted ? (
-          <div
+          <motion.div
+            key="omnibar-mari-pane"
             data-component="GlobalOmnibar.Mari"
-            className={`relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${pane === "mari" ? "motion-safe:animate-fade-in-up" : "hidden"}`}
+            initial={pane === "mari" ? { opacity: 0, y: -14, scale: 0.985 } : false}
+            animate={pane === "mari" ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -12, scale: 0.995 }}
+            transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
+            className={`relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${pane === "mari" ? "" : "pointer-events-none hidden"}`}
             aria-hidden={pane !== "mari"}
           >
             <Suspense
@@ -1666,7 +1679,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 }}
               />
             </Suspense>
-          </div>
+          </motion.div>
         ) : null}
         {pane === "mari" ? null : pane !== "browse" ? (
           <div className="flex min-h-0 flex-1">

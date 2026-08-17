@@ -1,6 +1,5 @@
 import {
   normalizeProfessorMariNavigationQuery,
-  resolveProfessorMariNavigation,
   type ProfessorMariBrowserTab,
   type ProfessorMariNavigationChat,
   type ProfessorMariNavigationResource,
@@ -91,7 +90,6 @@ export type OmnibarSearchData = {
   }[];
   browserTabs?: readonly ProfessorMariBrowserTab[];
   controls?: readonly OmnibarResult[];
-  professorNavigationTitle?: string;
   askProfessorTitle?: string;
 };
 
@@ -181,17 +179,6 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         icon: "connection",
       });
   }
-  const mariTarget = resolveProfessorMariNavigation(normalized, data.browserTabs, data.resources, data.chats);
-  if (mariTarget)
-    results.push({
-      id: "professor-mari-navigation",
-      title: data.professorNavigationTitle ?? "Professor Mari navigation",
-      category: "professor",
-      target: mariTarget,
-      score: 50,
-      kind: "navigation",
-      icon: "professor",
-    });
   return results
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
     .concat({
