@@ -15,6 +15,10 @@ import {
 import { createSystemCommandDefinitions } from "../../packages/client/src/lib/command-center-system-commands.js";
 import { searchOmnibar } from "../../packages/client/src/lib/omnibar-search.js";
 import { getOmnibarSettingsDestinations } from "../../packages/client/src/lib/omnibar-settings.js";
+import {
+  buildProfessorMariCommandCenterContext,
+  inferProfessorMariCommandCenterCapability,
+} from "../../packages/client/src/lib/professor-mari-command-center-context.js";
 
 const commands: CommandDefinition[] = [
   { id: "home", title: "Home", kind: "navigation", icon: "home", target: { kind: "home" } },
@@ -170,6 +174,34 @@ assert.equal(settingsDestinations.find((setting) => setting.controlId === "font-
 assert.equal(
   settingsDestinations.find((setting) => setting.id === "settings-section:appearance")?.controlId,
   "theme-mode",
+);
+
+assert.equal(inferProfessorMariCommandCenterCapability("make Luna's greeting shorter"), "edit");
+assert.equal(inferProfessorMariCommandCenterCapability("make a new character"), "create");
+assert.equal(inferProfessorMariCommandCenterCapability("which preset is best"), "recommend");
+assert.equal(inferProfessorMariCommandCenterCapability("why did image generation fail"), "repair");
+assert.deepEqual(
+  buildProfessorMariCommandCenterContext("make Luna warmer", {
+    id: "character:luna-id",
+    title: "Luna",
+    category: "character",
+  }),
+  {
+    source: "command-center",
+    capability: "edit",
+    query: "make Luna warmer",
+    selectedResultId: "character:luna-id",
+    resource: { kind: "character", id: "luna-id", label: "Luna" },
+    action: "Selected Command Center result: Luna",
+  },
+);
+assert.deepEqual(
+  buildProfessorMariCommandCenterContext("explain this", {
+    id: "settings-control:theme-mode",
+    title: "Color scheme",
+    category: "settings",
+  }).resource,
+  { kind: "setting", id: "theme-mode", label: "Color scheme" },
 );
 
 // The omnibar reopens on search, never a stale Professor Mari pane: the session

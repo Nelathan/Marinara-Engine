@@ -34,17 +34,17 @@ export const PROFESSOR_MARI_CAPABILITY_CATALOG = {
   },
   create: {
     owner: "workspace",
-    entryPoints: ["home", "floating-assistant", "character-chat"],
+    entryPoints: ["home", "floating-assistant", "command-center", "character-chat"],
     completion: "open-resource",
   },
   edit: {
     owner: "workspace",
-    entryPoints: ["home", "floating-assistant", "character-chat"],
+    entryPoints: ["home", "floating-assistant", "command-center", "character-chat"],
     completion: "show-review",
   },
   repair: {
     owner: "workspace",
-    entryPoints: ["home", "floating-assistant", "chat-error"],
+    entryPoints: ["home", "floating-assistant", "command-center", "chat-error"],
     completion: "show-review",
   },
   navigate: {
@@ -83,6 +83,8 @@ export interface ProfessorMariContextResource {
 export interface ProfessorMariAskContext {
   source: ProfessorMariEntryPoint;
   capability: ProfessorMariCapability;
+  query?: string;
+  selectedResultId?: string;
   resource?: ProfessorMariContextResource;
   field?: string;
   error?: { message: string; code?: string };

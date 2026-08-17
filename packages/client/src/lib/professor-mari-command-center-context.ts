@@ -1,0 +1,66 @@
+import type {
+  ProfessorMariAskContext,
+  ProfessorMariCapability,
+  ProfessorMariContextResource,
+} from "@marinara-engine/shared";
+import type { OmnibarCategory, OmnibarResult } from "./omnibar-search";
+
+const RESOURCE_KIND_BY_CATEGORY: Partial<Record<OmnibarCategory, ProfessorMariContextResource["kind"]>> = {
+  chat: "chat",
+  character: "character",
+  persona: "persona",
+  lorebook: "lorebook",
+  preset: "preset",
+  connection: "connection",
+  agent: "agent",
+  settings: "setting",
+};
+
+const RECOMMEND_QUERY = /\b(?:compare|recommend|which|best|suggest)\b/i;
+const REPAIR_QUERY = /\b(?:broken|error|fail(?:ed|ing|ure)?|fix|repair|troubleshoot|why (?:does|is|did|won't))\b/i;
+const EDIT_QUERY = /\b(?:change|edit|improve|make|rewrite|shorten|update)\b/i;
+const CREATE_QUERY = /\b(?:create|make a new|new)\b/i;
+
+export function inferProfessorMariCommandCenterCapability(query: string): ProfessorMariCapability {
+  if (REPAIR_QUERY.test(query)) return "repair";
+  if (RECOMMEND_QUERY.test(query)) return "recommend";
+  if (CREATE_QUERY.test(query)) return "create";
+  if (EDIT_QUERY.test(query)) return "edit";
+  return "explain";
+}
+
+function resourceIdFromResult(result: Pick<OmnibarResult, "id" | "category">) {
+  const kind = RESOURCE_KIND_BY_CATEGORY[result.category];
+  if (!kind) return null;
+  if (result.id.startsWith("context:")) {
+    const parts = result.id.split(":");
+    return parts.at(-1) ?? null;
+  }
+  if (result.category === "settings") {
+    const parts = result.id.split(":");
+    return parts.at(-1) ?? null;
+  }
+  const separator = result.id.indexOf(":");
+  return separator >= 0 ? result.id.slice(separator + 1) : result.id;
+}
+
+export function buildProfessorMariCommandCenterContext(
+  query: string,
+  selectedResult: Pick<OmnibarResult, "id" | "title" | "category"> | null | undefined,
+): ProfessorMariAskContext {
+  const trimmedQuery = query.trim();
+  const resourceKind = selectedResult ? RESOURCE_KIND_BY_CATEGORY[selectedResult.category] : undefined;
+  const resourceId = selectedResult ? resourceIdFromResult(selectedResult) : null;
+
+  return {
+    source: "command-center",
+    capability: inferProfessorMariCommandCenterCapability(trimmedQuery),
+    query: trimmedQuery || undefined,
+    selectedResultId: selectedResult?.id,
+    resource:
+      selectedResult && resourceKind && resourceId
+        ? { kind: resourceKind, id: resourceId, label: selectedResult.title }
+        : undefined,
+    action: selectedResult ? `Selected Command Center result: ${selectedResult.title}` : undefined,
+  };
+}

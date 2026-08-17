@@ -21,6 +21,8 @@ import { createChatsStorage } from "../storage/chats.storage.js";
 import { createCharactersStorage } from "../storage/characters.storage.js";
 import { createChatPresetsStorage } from "../storage/chat-presets.storage.js";
 import { createLorebooksStorage } from "../storage/lorebooks.storage.js";
+import { createConnectionsStorage } from "../storage/connections.storage.js";
+import { createAgentsStorage } from "../storage/agents.storage.js";
 import { createMariInstructionsStorage } from "../storage/mari-instructions.storage.js";
 import { renderMariMemoryPrompt } from "./mari-instructions-prompt.js";
 import { createMariWorkspaceContextStorage } from "../storage/mari-workspace-context.storage.js";
@@ -2575,7 +2577,15 @@ export class ProfessorMariWorkspaceService {
             ? await createLorebooksStorage(this.app.db).getById(resource.id)
             : resource.kind === "preset"
               ? await createChatPresetsStorage(this.app.db).getById(resource.id)
-              : null;
+              : resource.kind === "chat"
+                ? await createChatsStorage(this.app.db).getById(resource.id)
+                : resource.kind === "connection"
+                  ? await createConnectionsStorage(this.app.db).getById(resource.id)
+                  : resource.kind === "agent"
+                    ? await createAgentsStorage(this.app.db).getByType(resource.id)
+                    : resource.kind === "setting" || resource.kind === "game"
+                      ? { name: resource.label ?? resource.kind }
+                      : null;
     if (!row) {
       throw new Error(
         `The selected ${resource.kind} is no longer available. Remove the context or return to the editor.`,
@@ -2585,6 +2595,8 @@ export class ProfessorMariWorkspaceService {
     const summary = {
       source: context.source,
       capability: context.capability,
+      query: context.query,
+      selectedResultId: context.selectedResultId,
       resource: { kind: resource.kind, id: resource.id, label: currentLabel },
       field: context.field,
       error: context.error,

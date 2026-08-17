@@ -60,6 +60,7 @@ import {
   usePersonalExtensionCommands,
 } from "../../lib/personal-extension-contributions";
 import { resolvePresetArtwork } from "../../lib/preset-artwork";
+import { buildProfessorMariCommandCenterContext } from "../../lib/professor-mari-command-center-context";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { getAvatarCropStyle } from "../../lib/utils";
@@ -196,6 +197,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
+  const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -1349,22 +1351,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setPane(destination);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
-  const openProfessorMari = () => {
+  const openProfessorMari = (selectedResult: RankedOmnibarResult | null = previewResult ?? null) => {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
-    setMariContext(
-      previewResult
-        ? {
-            source: "command-center",
-            capability: "explain",
-            action: `Selected Command Center result: ${previewResult.title} (${previewResult.category}, ${previewResult.id})`,
-          }
-        : null,
-    );
+    const focusResult = selectedResult ?? contextResults[0] ?? null;
+    setMariContext(buildProfessorMariCommandCenterContext(draft, focusResult));
+    setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
     setMariChatOpen(true);
     setMariMounted(true);
-    setDetailResult(null);
-    setSessionValue("detailResultId", null);
     setPane("mari");
   };
   const resultIcon = (result: RankedOmnibarResult) => {
@@ -1427,8 +1421,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
   const previewActions = previewResult
     ? (() => {
-        if (previewResult.control?.type === "choice") return [];
         if (previewResult.command.availability?.status === "requires-admin") return [];
+        const continueWithMariAction = {
+          label: t("commandCenter.actions.continueWithMari", "Continue with Mari"),
+          icon: Sparkles,
+          onSelect: () => openProfessorMari(previewResult),
+        };
+        if (previewResult.control?.type === "choice") return [continueWithMariAction];
         const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
           character: "character",
           persona: "persona",
@@ -1469,10 +1468,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               }
             : null;
         if (previewResult.category === "persona" && previewResult.control?.value === true) {
-          return addToChatAction ? [addToChatAction] : [];
+          return [...(addToChatAction ? [addToChatAction] : []), continueWithMariAction];
         }
         if (previewResult.category === "preset" && previewResult.control?.value === true) {
-          return addToChatAction ? [addToChatAction] : [];
+          return [...(addToChatAction ? [addToChatAction] : []), continueWithMariAction];
         }
         if (previewResult.category === "persona" || previewResult.category === "preset") {
           return [
@@ -1486,6 +1485,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               disabled: resultControlPending(previewResult),
             },
             ...(addToChatAction ? [addToChatAction] : []),
+            continueWithMariAction,
           ];
         }
         if (previewResult.control?.type === "toggle") {
@@ -1499,6 +1499,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               disabled: resultControlPending(previewResult),
             },
             ...(addToChatAction ? [addToChatAction] : []),
+            continueWithMariAction,
           ];
         }
         const requiresSetup = previewResult.command.availability?.status === "requires-capability";
@@ -1523,7 +1524,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 disabled: resultControlPending(previewResult),
               }
             : null;
-        return [...(openAction ? [openAction] : []), ...(addToChatAction ? [addToChatAction] : [])];
+        return [
+          ...(openAction ? [openAction] : []),
+          ...(addToChatAction ? [addToChatAction] : []),
+          continueWithMariAction,
+        ];
       })()
     : [];
 
@@ -1627,7 +1632,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             {pane !== "mari" ? (
               <button
                 type="button"
-                onClick={openProfessorMari}
+                onClick={() => openProfessorMari()}
                 aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
                 title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
                 data-component="GlobalOmnibar.ProfessorMariButton"
@@ -1708,7 +1713,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 onChatWindowOpenChange={(open) => {
                   setMariChatOpen(open);
                   if (!open) {
-                    setPane("results");
+                    setPane(mariReturnPane);
                     requestAnimationFrame(() => inputRef.current?.focus());
                   }
                 }}
@@ -1738,7 +1743,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     </div>
                     <button
                       type="button"
-                      onClick={openProfessorMari}
+                      onClick={() => openProfessorMari()}
                       aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
                       title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
                       className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"

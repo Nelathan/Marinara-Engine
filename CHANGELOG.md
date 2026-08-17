@@ -6,6 +6,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Command Center results can now continue with Professor Mari using the exact search request and a typed, removable resource focus, while returning to the prior result or browse context when Mari closes.
+
 - Command Center search now finds common Settings controls and sections, with a description and direct navigation to the matching Settings location.
 
 - Reworked the empty Command Center into a focused command deck with contextual actions, recent commands, quick controls, category shortcuts, and a compact Professor Mari handoff.

@@ -27,7 +27,7 @@ export function CommandResultPreview({
   const title = preview?.title ?? result.command.title;
   const Icon = getCommandIcon(result.command.icon, result.command.kind);
   const hasFacts = Boolean(preview?.facts?.length);
-  const resolvedActions = actions?.slice(0, 2) ?? [];
+  const resolvedActions = actions?.slice(0, 3) ?? [];
   const hasActions = resolvedActions.length > 0;
   const facts = preview?.facts?.slice(0, 6);
   const tags = preview?.tags ?? preview?.badges;
