@@ -1686,10 +1686,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </div>
               ) : null}
             </div>
-            {previewResult ? (
+            {previewResult && (pane !== "results" || isRichResult(previewResult)) ? (
               <aside
                 data-component="GlobalOmnibar.Detail"
-                className={`min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] ${pane === "results" ? "max-sm:hidden sm:w-[23rem] sm:shrink-0 sm:border-l" : detailOrigin === "results" ? "sm:w-[23rem] sm:shrink-0 sm:border-l" : ""}`}
+                className={`min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] ${pane === "results" ? "max-sm:hidden motion-safe:animate-fade-in-up sm:w-[22rem] sm:shrink-0 sm:border-l" : detailOrigin === "results" ? "sm:w-[22rem] sm:shrink-0 sm:border-l" : ""}`}
               >
                 <CommandResultPreview
                   key={previewResult.id}
