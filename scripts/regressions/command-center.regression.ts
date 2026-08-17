@@ -249,7 +249,6 @@ assert.deepEqual(
     source: "command-center",
     capability: "edit",
     query: "make Luna warmer",
-    selectedResultId: "character:luna-id",
     resource: { kind: "character", id: "luna-id", label: "Luna" },
     action: "Selected Command Center result: Luna",
   },

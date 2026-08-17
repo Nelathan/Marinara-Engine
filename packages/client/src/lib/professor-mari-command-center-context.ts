@@ -56,7 +56,6 @@ export function buildProfessorMariCommandCenterContext(
     source: "command-center",
     capability: inferProfessorMariCommandCenterCapability(trimmedQuery),
     query: trimmedQuery || undefined,
-    selectedResultId: selectedResult?.id,
     resource:
       selectedResult && resourceKind && resourceId
         ? { kind: resourceKind, id: resourceId, label: selectedResult.title }

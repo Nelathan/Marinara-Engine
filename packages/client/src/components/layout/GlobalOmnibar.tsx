@@ -1080,7 +1080,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           });
       }
     }
-    return out.slice(0, 6);
+    return out.slice(0, 12);
   }, [
     activeChat,
     activeChatId,
@@ -1321,8 +1321,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       setPane(detailOrigin);
       requestAnimationFrame(() => inputRef.current?.focus());
     } else if (pane === "mari") {
-      setPane("results");
-      requestAnimationFrame(() => inputRef.current?.focus());
+      setMariChatOpen(false);
+      setPane(mariReturnPane);
+      requestAnimationFrame(() => {
+        const resultId = mariReturnResultIdRef.current;
+        const row = resultId
+          ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
+          : null;
+        (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
+      });
     } else if (pane === "browse") {
       setPane("results");
       setFilter("all");

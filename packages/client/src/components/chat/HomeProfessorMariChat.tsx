@@ -4092,7 +4092,7 @@ export function HomeProfessorMariChat({
   };
 
   const closeChatWindow = useCallback(() => {
-    if (!floatingMode) {
+    if (!floatingMode && !omnibarMode) {
       floatingFollowupEligibleRef.current = false;
       rememberProfessorMariFloatingEnabled(false);
     }
@@ -4103,7 +4103,7 @@ export function HomeProfessorMariChat({
     setMobileFocusMode(false);
     setChatWindowOpen(false);
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  }, [floatingMode, setChatWindowOpen]);
+  }, [floatingMode, omnibarMode, setChatWindowOpen]);
 
   const openChatWindow = useCallback(() => {
     if (!floatingMode) {

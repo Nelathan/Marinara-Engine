@@ -84,7 +84,6 @@ export interface ProfessorMariAskContext {
   source: ProfessorMariEntryPoint;
   capability: ProfessorMariCapability;
   query?: string;
-  selectedResultId?: string;
   resource?: ProfessorMariContextResource;
   field?: string;
   error?: { message: string; code?: string };

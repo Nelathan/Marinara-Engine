@@ -49,7 +49,6 @@ export const professorMariPromptSchema = z.object({
       ]),
       capability: z.enum(["explain", "recommend", "create", "edit", "repair", "navigate"]),
       query: z.string().max(500).optional(),
-      selectedResultId: z.string().max(256).optional(),
       resource: z
         .object({
           kind: z.enum([
