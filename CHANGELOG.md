@@ -6,6 +6,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Character, persona, lorebook, and preset editors can now open the floating Professor Mari assistant with an editable draft and removable resource context. The server validates the resource before Mari receives it.
 - Omnibar search now includes practical FAQ answers and model-aware connection matches. FAQ results open the matching answer with its steps, while documentation results keep their in-context guide and match highlighting.
 - Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
 - Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, resource previews, documentation search, safe inline controls, extension commands, local pins and recency, exact Browse details, and an accessible full-screen mobile browse grid.

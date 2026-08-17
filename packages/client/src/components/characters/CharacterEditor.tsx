@@ -108,10 +108,12 @@ import {
   History,
   RotateCcw,
   Scissors,
+  MessageCircleQuestion,
   MessageCircle,
   Pencil,
   Check,
 } from "lucide-react";
+import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import { cn, copyToClipboard, generateClientId, getAvatarCropStyle } from "../../lib/utils";
 import { normalizeAvatarCrop } from "@marinara-engine/shared";
 import { extractColorsFromImage } from "../../lib/avatar-color-extraction";
@@ -911,6 +913,27 @@ export function CharacterEditor() {
 
   const headerActions = (
     <>
+      <button
+        type="button"
+        onClick={() => {
+          if (!characterId) return;
+          requestProfessorMariOpen({
+            destination: "floating-assistant",
+            draft: localizeUi("professorMari.handoff.explainResourceDraft"),
+            context: {
+              source: "character-editor",
+              capability: "explain",
+              resource: { kind: "character", id: characterId, label: formData.name },
+            },
+          });
+        }}
+        className={headerActionButtonClass}
+        title={localizeUi("professorMari.handoff.ask")}
+        aria-label={localizeUi("professorMari.handoff.ask")}
+      >
+        <MessageCircleQuestion size="1rem" />
+      </button>
+
       <button
         type="button"
         onClick={() => updateExtension("fav", !formData.extensions.fav)}

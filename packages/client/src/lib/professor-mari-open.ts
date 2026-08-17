@@ -13,8 +13,13 @@ export function requestProfessorMariOpen(handoff: string | ProfessorMariHandoff 
   }
 }
 
-export function consumeProfessorMariOpenRequest() {
+export function consumeProfessorMariOpenRequest(destination: "home" | "floating-assistant" = "home") {
+  if ((pendingProfessorMariOpen?.destination ?? "home") !== destination) return null;
   const request = pendingProfessorMariOpen;
   pendingProfessorMariOpen = null;
   return request;
+}
+
+export function peekProfessorMariOpenRequest() {
+  return pendingProfessorMariOpen;
 }

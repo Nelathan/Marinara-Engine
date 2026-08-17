@@ -29,6 +29,47 @@ const promptSchema = z.object({
   connectionId: z.string().optional().nullable(),
   debugMode: z.boolean().optional().default(false),
   existingUserMessageId: z.string().min(1).optional(),
+  context: z
+    .object({
+      source: z.enum([
+        "home",
+        "floating-assistant",
+        "command-center",
+        "faq",
+        "character-chat",
+        "character-editor",
+        "persona-editor",
+        "lorebook-editor",
+        "preset-editor",
+        "connection-editor",
+        "agent-editor",
+        "settings",
+        "game-setup",
+        "chat-error",
+      ]),
+      capability: z.enum(["explain", "recommend", "create", "edit", "repair", "navigate"]),
+      resource: z
+        .object({
+          kind: z.enum([
+            "character",
+            "persona",
+            "lorebook",
+            "preset",
+            "connection",
+            "agent",
+            "setting",
+            "chat",
+            "game",
+          ]),
+          id: z.string().min(1).max(200),
+          label: z.string().max(200).optional(),
+        })
+        .optional(),
+      field: z.string().min(1).max(200).optional(),
+      error: z.object({ message: z.string().min(1).max(2_000), code: z.string().max(200).optional() }).optional(),
+      action: z.string().max(500).optional(),
+    })
+    .optional(),
   attachments: z
     .array(
       z.object({
@@ -256,6 +297,7 @@ export async function professorMariWorkspaceRoutes(app: FastifyInstance) {
         debugMode: body.debugMode,
         attachments: body.attachments,
         existingUserMessageId: body.existingUserMessageId,
+        context: body.context,
         onEvent: send,
       });
       send({ type: "done", data: { ok: true } });

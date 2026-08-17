@@ -12792,6 +12792,34 @@ test("Professor Mari chat fills the mobile home viewport and keeps its composer 
     .toBe(true);
 });
 
+test("character editor hands an editable resource context to floating Professor Mari", async ({ page, request }) => {
+  const name = `Mari handoff character ${Date.now()}`;
+  const response = await request.post("/api/characters", { data: { data: { name } } });
+  expect(response.ok()).toBeTruthy();
+  const character = (await response.json()) as { id: string };
+
+  try {
+    await page.goto("/");
+    await page.evaluate(async (characterId) => {
+      const { useUIStore } = await import("/src/stores/ui.store.ts");
+      useUIStore.getState().openCharacterDetail(characterId);
+    }, character.id);
+
+    await page.getByRole("button", { name: "Ask Professor Mari" }).click();
+    const composer = page.getByPlaceholder("Ask Professor Mari");
+    const context = page.locator('[data-component="HomeProfessorMariChat.HandoffContext"]');
+    await expect(composer).toHaveValue("Explain this resource and suggest useful improvements.");
+    await expect(context).toContainText(name);
+
+    await composer.fill("Explain only the character's scenario.");
+    await expect(composer).toHaveValue("Explain only the character's scenario.");
+    await context.getByRole("button", { name: "Remove workspace context" }).click();
+    await expect(context).toHaveCount(0);
+  } finally {
+    await request.delete(`/api/characters/${character.id}`);
+  }
+});
+
 test("Professor Mari suggestions stay visible after chat history loads", async ({ page }) => {
   const chatResponse = await page.request.get("/api/chats/internal/professor-mari");
   expect(chatResponse.ok()).toBeTruthy();

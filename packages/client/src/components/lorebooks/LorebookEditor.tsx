@@ -77,11 +77,13 @@ import {
   FolderPlus,
   RefreshCw,
   Info,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { cn, copyToClipboard } from "../../lib/utils";
 import { HelpTooltip } from "../ui/HelpTooltip";
 import { SettingsSwitch } from "../panels/settings/SettingControls";
 import { api } from "../../lib/api-client";
+import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import {
   LOCAL_SIDECAR_CONNECTION_ID,
   LIMITS,
@@ -1929,6 +1931,26 @@ export function LorebookEditor() {
           </p>
         </div>
         <div className="mari-editor-actions flex">
+          <button
+            type="button"
+            onClick={() => {
+              if (!lorebookId) return;
+              requestProfessorMariOpen({
+                destination: "floating-assistant",
+                draft: localizeUi("professorMari.handoff.explainResourceDraft"),
+                context: {
+                  source: "lorebook-editor",
+                  capability: "explain",
+                  resource: { kind: "lorebook", id: lorebookId, label: lorebook.name },
+                },
+              });
+            }}
+            className="mari-editor-action inline-flex"
+            title={localizeUi("professorMari.handoff.ask")}
+            aria-label={localizeUi("professorMari.handoff.ask")}
+          >
+            <MessageCircleQuestion size="0.8125rem" />
+          </button>
           <button
             onClick={handleSaveLorebook}
             disabled={!lorebookDirty || saving}

@@ -69,6 +69,7 @@ import {
   Copy,
   Camera,
   Loader2,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { HelpTooltip } from "../ui/HelpTooltip";
@@ -76,6 +77,7 @@ import { DraftNumberInput } from "../ui/DraftNumberInput";
 import { MacroTextarea } from "../ui/MacroTextarea";
 import { applyTextareaQuoteFormat } from "../../lib/textarea-quotes";
 import { api } from "../../lib/api-client";
+import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import { useAgentConfigs, type AgentConfigRow } from "../../hooks/use-agents";
 import {
   isStockMarinaraUniversalPreset,
@@ -559,6 +561,25 @@ export function PresetEditor() {
           placeholder={localizeUi("ui.presets.preseteditor.presetName")}
         />
         <div className="mari-editor-actions flex">
+          <button
+            type="button"
+            onClick={() => {
+              requestProfessorMariOpen({
+                destination: "floating-assistant",
+                draft: localizeUi("professorMari.handoff.explainResourceDraft"),
+                context: {
+                  source: "preset-editor",
+                  capability: "explain",
+                  resource: { kind: "preset", id: presetDetailId, label: data.preset.name },
+                },
+              });
+            }}
+            className="mari-editor-action inline-flex"
+            title={localizeUi("professorMari.handoff.ask")}
+            aria-label={localizeUi("professorMari.handoff.ask")}
+          >
+            <MessageCircleQuestion size="0.8125rem" />
+          </button>
           <button
             onClick={handleSave}
             disabled={updatePreset.isPending}

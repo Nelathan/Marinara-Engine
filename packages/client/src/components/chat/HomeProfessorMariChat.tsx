@@ -69,6 +69,8 @@ import {
   type MariSensitiveFileApproval,
   type MariWorkspaceTraceItem,
   type Message,
+  type ProfessorMariAskContext,
+  type ProfessorMariHandoff,
 } from "@marinara-engine/shared";
 import { useConnections } from "../../hooks/use-connections";
 import { useTrackAchievement } from "../../hooks/use-achievements";
@@ -113,6 +115,11 @@ import {
 } from "./professor-mari-floating-events";
 import { MariSuggestionChips } from "./MariSuggestionChips";
 import { useTranslation, useTranslation as useUiTranslation } from "react-i18next";
+import {
+  consumeProfessorMariOpenRequest,
+  PROFESSOR_MARI_OPEN_EVENT,
+  type ProfessorMariOpenDetail,
+} from "../../lib/professor-mari-open";
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
@@ -3136,6 +3143,7 @@ export function HomeProfessorMariChat({
     [setInputDraft],
   );
   const [attachments, setAttachments] = useState<ProfessorMariAttachment[]>([]);
+  const [handoffContext, setHandoffContext] = useState<ProfessorMariAskContext | null>(null);
   const [isReadingAttachments, setIsReadingAttachments] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(() => readStoredConnectionId());
   const [workspaceStatus, setWorkspaceStatus] = useState<MariWorkspaceStatus | null>(null);
@@ -3366,6 +3374,30 @@ export function HomeProfessorMariChat({
     },
     [onChatWindowOpenChange],
   );
+
+  const applyHandoff = useCallback(
+    (handoff: ProfessorMariHandoff) => {
+      if (handoff.draft !== undefined) setDraft(handoff.draft);
+      setHandoffContext(handoff.context ?? null);
+      setChatWindowOpen(true);
+      if (floatingMode && floatingSmallViewport) setMobileFocusMode(true);
+      focusComposer();
+    },
+    [floatingMode, floatingSmallViewport, focusComposer, setChatWindowOpen, setDraft],
+  );
+
+  useEffect(() => {
+    const destination = floatingMode ? "floating-assistant" : "home";
+    const pending = consumeProfessorMariOpenRequest(destination);
+    if (pending) applyHandoff(pending);
+    const handleOpen = (event: Event) => {
+      const handoff = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
+      if ((handoff.destination ?? "home") !== destination) return;
+      applyHandoff(consumeProfessorMariOpenRequest(destination) ?? handoff);
+    };
+    window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
+    return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
+  }, [applyHandoff, floatingMode]);
 
   useEffect(() => {
     if (professorMariSuggestionsEnabled) return;
@@ -4743,6 +4775,7 @@ export function HomeProfessorMariChat({
             connectionId: effectiveConnectionId,
             debugMode: useUIStore.getState().debugMode,
             attachments,
+            context: handoffContext ?? undefined,
             existingUserMessageId,
           },
           controller.signal,
@@ -4849,7 +4882,7 @@ export function HomeProfessorMariChat({
       }
       return { received, runId };
     },
-    [clearMariPlan, effectiveConnectionId, setMariChips, setMariPlan, workspaceTextThrottle],
+    [clearMariPlan, effectiveConnectionId, handoffContext, setMariChips, setMariPlan, workspaceTextThrottle],
   );
 
   const refreshAfterWorkspaceRun = useCallback(
@@ -5027,6 +5060,7 @@ export function HomeProfessorMariChat({
   const handleSubmit = async (overrideText?: string) => {
     const text = (overrideText ?? draft).trim();
     const submittedAttachments = attachments;
+    const submittedContext = handoffContext;
     const messageText = text || (submittedAttachments.length > 0 ? "Please inspect the attached file." : "");
     if (!messageText || isBusy || regenerationInFlightRef.current || isReadingAttachments) return;
 
@@ -5051,6 +5085,7 @@ export function HomeProfessorMariChat({
       setMariChips(chat.id, []);
       clearMariPlan();
       setAttachments([]);
+      setHandoffContext(null);
       setMessages((current) => [...current, createLocalUserMessage(chat.id, messageText, submittedAttachments)]);
       trackAchievement.mutate("prof_mari_message_sent");
       const { received, runId } = await sendWorkspaceMessage(chat, messageText, submittedAttachments);
@@ -5065,6 +5100,7 @@ export function HomeProfessorMariChat({
       if (isProfessorMariAbortError(error)) return;
       setDraft(text);
       setAttachments(submittedAttachments);
+      setHandoffContext(submittedContext);
       console.error("[Professor Mari] Failed to send", error);
       toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotAnswerRightNow"), {
         description: describeProfessorMariError(error),
@@ -5074,6 +5110,35 @@ export function HomeProfessorMariChat({
       setSending(false);
     }
   };
+
+  const contextSummary = handoffContext ? (
+    <div
+      data-component="HomeProfessorMariChat.HandoffContext"
+      className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2.5 py-2 text-xs"
+    >
+      <Sparkles size="0.8125rem" className="shrink-0 text-[var(--primary)]" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-[var(--foreground)]">
+          {localizeUi("ui.chat.homeprofessormarichat.handoffContextTitle")}
+        </p>
+        <p className="truncate text-[var(--muted-foreground)]">
+          {handoffContext.resource?.label ?? handoffContext.resource?.kind ?? handoffContext.source}
+          {handoffContext.field
+            ? localizeUi("ui.chat.homeprofessormarichat.handoffContextField", { field: handoffContext.field })
+            : ""}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setHandoffContext(null)}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+        aria-label={localizeUi("ui.chat.homeprofessormarichat.removeHandoffContext")}
+        title={localizeUi("ui.chat.homeprofessormarichat.removeHandoffContext")}
+      >
+        <X size="0.75rem" />
+      </button>
+    </div>
+  ) : null;
 
   const renderDisplayMessage = (message: Message) => {
     const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;
@@ -5157,6 +5222,7 @@ export function HomeProfessorMariChat({
         }}
       >
         {showTokenUsage && contextBudget && <ProfessorMariContextBudgetIndicator budget={contextBudget} />}
+        {contextSummary}
         <input
           ref={attachmentInputRef}
           type="file"
@@ -5912,6 +5978,7 @@ export function HomeProfessorMariChat({
                           {showTokenUsage && contextBudget && (
                             <ProfessorMariContextBudgetIndicator budget={contextBudget} />
                           )}
+                          {contextSummary}
                           <input
                             ref={attachmentInputRef}
                             type="file"

@@ -18,6 +18,9 @@ import { parseTextualToolCalls } from "../llm/textual-tool-call-parser.js";
 import { createLLMProvider } from "../llm/provider-registry.js";
 import { getLocalSidecarProvider, LOCAL_SIDECAR_MODEL } from "../llm/local-sidecar.js";
 import { createChatsStorage } from "../storage/chats.storage.js";
+import { createCharactersStorage } from "../storage/characters.storage.js";
+import { createChatPresetsStorage } from "../storage/chat-presets.storage.js";
+import { createLorebooksStorage } from "../storage/lorebooks.storage.js";
 import { createMariInstructionsStorage } from "../storage/mari-instructions.storage.js";
 import { renderMariMemoryPrompt } from "./mari-instructions-prompt.js";
 import { createMariWorkspaceContextStorage } from "../storage/mari-workspace-context.storage.js";
@@ -75,6 +78,7 @@ import type {
   MariWorkspaceStatus,
   MariWorkspaceToolName,
   MariWorkspaceTraceItem,
+  ProfessorMariAskContext,
 } from "@marinara-engine/shared";
 import { getMariDbService } from "../mari-db/mari-db.service.js";
 import { getProfessorMariWorkspaceSkillsService } from "./workspace-skills.service.js";
@@ -2047,12 +2051,14 @@ export class ProfessorMariWorkspaceService {
     debugMode?: boolean;
     attachments?: ProfessorMariPromptAttachment[];
     existingUserMessageId?: string;
+    context?: ProfessorMariAskContext;
     onEvent: PromptEventSink;
   }) {
     if (!this.enabled) throw new Error("Professor Mari workspace mode is disabled.");
     const chatStorage = createChatsStorage(this.app.db);
     const connection = await this.resolveConnection(args.connectionId);
     if (!connection) throw new Error("Set up a language connection before using Professor Mari workspace mode.");
+    const handoffContextPrompt = args.context ? await this.buildHandoffContextPrompt(args.context) : null;
 
     const attachments = normalizeProfessorMariAttachments(args.attachments);
     let userMessage = args.existingUserMessageId ? await chatStorage.getMessage(args.existingUserMessageId) : null;
@@ -2145,7 +2151,7 @@ export class ProfessorMariWorkspaceService {
     try {
       await this.ensureMariCliShim();
       const provider = createProviderForConnection(connection);
-      const messages = await this.buildPromptMessages(args.chatId, connection);
+      const messages = await this.buildPromptMessages(args.chatId, connection, handoffContextPrompt);
       const baseOptions = this.baseChatOptions(connection, controller.signal, (delta) => {
         thinkingText += delta;
         appendTraceThinking(workspaceTrace, delta);
@@ -2409,7 +2415,11 @@ export class ProfessorMariWorkspaceService {
     }
   }
 
-  private async buildPromptMessages(chatId: string, connection: WorkspaceConnection): Promise<ChatMessage[]> {
+  private async buildPromptMessages(
+    chatId: string,
+    connection: WorkspaceConnection,
+    handoffContextPrompt: string | null,
+  ): Promise<ChatMessage[]> {
     const chatStorage = createChatsStorage(this.app.db);
     const history = (await chatStorage.listMessages(chatId)).slice(-MAX_HISTORY_MESSAGES);
     const continuityPrompt = buildRecentWorkspaceContinuityPrompt(history);
@@ -2467,8 +2477,46 @@ export class ProfessorMariWorkspaceService {
     if (attachedContextPrompt) {
       messages.push({ role: "system", content: attachedContextPrompt, contextKind: "injection" });
     }
+    if (handoffContextPrompt) {
+      messages.push({ role: "system", content: handoffContextPrompt, contextKind: "injection" });
+    }
     if (continuityPrompt) messages.push({ role: "system", content: continuityPrompt, contextKind: "injection" });
     return messages;
+  }
+
+  private async buildHandoffContextPrompt(context: ProfessorMariAskContext): Promise<string> {
+    const resource = context.resource;
+    if (!resource) {
+      return `<ask_mari_context>\n${escapeWorkspaceXml(JSON.stringify(context))}\n</ask_mari_context>`;
+    }
+
+    const characters = createCharactersStorage(this.app.db);
+    const row =
+      resource.kind === "character"
+        ? await characters.getById(resource.id)
+        : resource.kind === "persona"
+          ? await characters.getPersona(resource.id)
+          : resource.kind === "lorebook"
+            ? await createLorebooksStorage(this.app.db).getById(resource.id)
+            : resource.kind === "preset"
+              ? await createChatPresetsStorage(this.app.db).getById(resource.id)
+              : null;
+    if (!row) {
+      throw new Error(
+        `The selected ${resource.kind} is no longer available. Remove the context or return to the editor.`,
+      );
+    }
+    const currentLabel = "name" in row && typeof row.name === "string" ? row.name : resource.kind;
+    const summary = {
+      source: context.source,
+      capability: context.capability,
+      resource: { kind: resource.kind, id: resource.id, label: currentLabel },
+      field: context.field,
+      error: context.error,
+      action: context.action,
+      instruction: "Use app_data to read this server-owned resource when the request needs its current content.",
+    };
+    return `<ask_mari_context>\n${escapeWorkspaceXml(JSON.stringify(summary))}\n</ask_mari_context>`;
   }
 
   private async buildSkillsPrompt(): Promise<string | null> {

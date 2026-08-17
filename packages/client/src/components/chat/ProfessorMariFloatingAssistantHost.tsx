@@ -5,6 +5,7 @@ import {
   rememberProfessorMariFloatingEnabled,
 } from "./professor-mari-floating-events";
 import { useChatStore } from "../../stores/chat.store";
+import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
 
 const ProfessorMariFloatingAssistant = lazy(() =>
   import("./HomeProfessorMariChat").then((module) => ({ default: module.ProfessorMariFloatingAssistant })),
@@ -49,6 +50,18 @@ export function ProfessorMariFloatingAssistantHost({ active }: ProfessorMariFloa
       window.removeEventListener(PROFESSOR_MARI_FLOATING_SHOW_EVENT, showFloating);
       window.removeEventListener(PROFESSOR_MARI_FLOATING_HIDE_EVENT, hideFloating);
     };
+  }, []);
+
+  useEffect(() => {
+    const openRequestedProfessor = (event: Event) => {
+      const request = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
+      if (request.destination !== "floating-assistant") return;
+      rememberProfessorMariFloatingEnabled(true);
+      setMounted(true);
+      setVisible(true);
+    };
+    window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessor);
+    return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessor);
   }, []);
 
   useEffect(() => {
