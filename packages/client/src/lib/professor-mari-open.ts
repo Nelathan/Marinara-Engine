@@ -1,12 +1,15 @@
+import type { ProfessorMariHandoff } from "@marinara-engine/shared";
+
 export const PROFESSOR_MARI_OPEN_EVENT = "marinara:home-professor-mari-open";
-export type ProfessorMariOpenDetail = { draft?: string };
+export type ProfessorMariOpenDetail = ProfessorMariHandoff;
 
 let pendingProfessorMariOpen: ProfessorMariOpenDetail | null = null;
 
-export function requestProfessorMariOpen(draft = "") {
-  pendingProfessorMariOpen = { draft };
+export function requestProfessorMariOpen(handoff: string | ProfessorMariHandoff = "") {
+  const request = typeof handoff === "string" ? { draft: handoff } : handoff;
+  pendingProfessorMariOpen = request;
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent<ProfessorMariOpenDetail>(PROFESSOR_MARI_OPEN_EVENT, { detail: { draft } }));
+    window.dispatchEvent(new CustomEvent<ProfessorMariOpenDetail>(PROFESSOR_MARI_OPEN_EVENT, { detail: request }));
   }
 }
 

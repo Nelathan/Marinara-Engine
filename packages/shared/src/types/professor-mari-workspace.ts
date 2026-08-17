@@ -2,6 +2,108 @@
 // Professor Mari Workspace Agent Contracts
 // ──────────────────────────────────────────────
 
+export type ProfessorMariEntryPoint =
+  | "home"
+  | "floating-assistant"
+  | "command-center"
+  | "faq"
+  | "character-chat"
+  | "character-editor"
+  | "persona-editor"
+  | "lorebook-editor"
+  | "preset-editor"
+  | "connection-editor"
+  | "agent-editor"
+  | "settings"
+  | "game-setup"
+  | "chat-error";
+
+export type ProfessorMariCapabilityOwner = "workspace" | "client-navigation";
+export type ProfessorMariCompletionKind = "open-resource" | "show-field" | "show-review" | "return-to-source";
+
+export const PROFESSOR_MARI_CAPABILITY_CATALOG = {
+  explain: {
+    owner: "workspace",
+    entryPoints: ["home", "floating-assistant", "command-center", "character-chat"],
+    completion: "return-to-source",
+  },
+  recommend: {
+    owner: "workspace",
+    entryPoints: ["home", "floating-assistant", "command-center", "character-chat"],
+    completion: "return-to-source",
+  },
+  create: {
+    owner: "workspace",
+    entryPoints: ["home", "floating-assistant", "character-chat"],
+    completion: "open-resource",
+  },
+  edit: {
+    owner: "workspace",
+    entryPoints: ["home", "floating-assistant", "character-chat"],
+    completion: "show-review",
+  },
+  repair: {
+    owner: "workspace",
+    entryPoints: ["home", "floating-assistant"],
+    completion: "show-review",
+  },
+  navigate: {
+    owner: "client-navigation",
+    entryPoints: ["home", "command-center"],
+    completion: "open-resource",
+  },
+} as const satisfies Record<
+  string,
+  {
+    owner: ProfessorMariCapabilityOwner;
+    entryPoints: readonly ProfessorMariEntryPoint[];
+    completion: ProfessorMariCompletionKind;
+  }
+>;
+
+export type ProfessorMariCapability = keyof typeof PROFESSOR_MARI_CAPABILITY_CATALOG;
+
+export type ProfessorMariContextResourceKind =
+  | "character"
+  | "persona"
+  | "lorebook"
+  | "preset"
+  | "connection"
+  | "agent"
+  | "setting"
+  | "chat"
+  | "game";
+
+export interface ProfessorMariContextResource {
+  kind: ProfessorMariContextResourceKind;
+  id: string;
+  label?: string;
+}
+
+export interface ProfessorMariAskContext {
+  source: ProfessorMariEntryPoint;
+  capability: ProfessorMariCapability;
+  resource?: ProfessorMariContextResource;
+  field?: string;
+  error?: { message: string; code?: string };
+  action?: string;
+}
+
+export type ProfessorMariHandoffDestination = "home" | "floating-assistant" | "character-chat";
+
+export type ProfessorMariCompletion =
+  | { kind: "open-resource"; resource: ProfessorMariContextResource }
+  | { kind: "show-field"; resource: ProfessorMariContextResource; field: string }
+  | { kind: "show-review"; reviewId?: string }
+  | { kind: "return-to-source" };
+
+export interface ProfessorMariHandoff {
+  destination?: ProfessorMariHandoffDestination;
+  draft?: string;
+  context?: ProfessorMariAskContext;
+  completion?: ProfessorMariCompletion;
+}
+
 export type MariWorkspaceToolName =
   | "docs_search"
   | "docs_read"

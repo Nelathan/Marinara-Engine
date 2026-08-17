@@ -1,5 +1,10 @@
+import type { ProfessorMariContextResourceKind } from "@marinara-engine/shared";
+
 export type ProfessorMariSettingsTab = "general" | "appearance" | "generations" | "addons" | "import" | "advanced";
-export type ProfessorMariNavigationResourceKind = "character" | "persona" | "preset" | "lorebook" | "agent";
+export type ProfessorMariNavigationResourceKind = Extract<
+  ProfessorMariContextResourceKind,
+  "character" | "persona" | "preset" | "lorebook" | "agent"
+>;
 
 export type ProfessorMariNavigationTarget =
   | { kind: "home" }
