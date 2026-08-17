@@ -10,6 +10,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 - Fixed Command Center hover previews so the desktop results list keeps a stable width when the preview changes.
 
+- Command Center details now open in a right-side inspector without resizing or moving the main search surface, and result rows keep a stable details slot.
+
 - Added reduced-motion-safe transitions for the omnibar backdrop, category filters, and result previews.
 
 - Added a reduced-motion-safe transition between Command Center search and the Professor Mari pane.

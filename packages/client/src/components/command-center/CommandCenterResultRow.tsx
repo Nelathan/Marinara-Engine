@@ -59,8 +59,6 @@ export function CommandCenterResultRow({
   style,
 }: CommandCenterResultRowProps) {
   const hasDetailsAction = Boolean(onDetails && detailsLabel);
-  const hasActions = hasDetailsAction;
-
   return (
     <li
       data-result-id={dataResultId}
@@ -119,21 +117,19 @@ export function CommandCenterResultRow({
         </div>
       ) : null}
 
-      {hasActions ? (
-        <div className="col-start-3 flex h-full shrink-0 items-center justify-end pr-0.5 sm:hidden">
-          {hasDetailsAction ? (
-            <button
-              type="button"
-              aria-label={detailsLabel}
-              title={detailsLabel}
-              onClick={onDetails}
-              className="inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
-            >
-              <ChevronRight className="size-5" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="col-start-3 flex h-full w-9 shrink-0 items-center justify-end pr-0.5">
+        {hasDetailsAction ? (
+          <button
+            type="button"
+            aria-label={detailsLabel}
+            title={detailsLabel}
+            onClick={onDetails}
+            className="inline-flex size-9 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)] sm:size-8"
+          >
+            <ChevronRight className="size-5" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }
