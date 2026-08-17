@@ -12929,6 +12929,12 @@ test("Professor Mari shows the latest context budget when token usage is enabled
       .click();
 
     const window = page.locator('[data-component="HomeProfessorMariChat.Window"]');
+    const trustStrip = window.locator('[data-component="HomeProfessorMariChat.TrustStrip"]');
+    await expect(trustStrip).toContainText("Budget connection");
+    await expect(trustStrip).toContainText("Sandbox ready");
+    await expect(trustStrip).toContainText("0 pending approval");
+    await expect(trustStrip).toContainText("0 skills");
+    await expect(trustStrip).toContainText("0 memories");
     const budget = window.locator('[data-component="HomeProfessorMariChat.ContextBudget"]');
     await expect(budget).toContainText("Context");
     await expect(budget).toContainText("12.3k / 128k tokens");

@@ -1884,6 +1884,118 @@ function ProfessorMariContextBudgetIndicator({ budget }: { budget: ProfessorMari
   );
 }
 
+type ProfessorMariRecovery = {
+  text: string;
+  attachments: ProfessorMariAttachment[];
+  context: ProfessorMariAskContext | null;
+  kind: "provider" | "tool" | "context" | "general";
+};
+
+function classifyProfessorMariFailure(error: unknown): ProfessorMariRecovery["kind"] {
+  const message = getPrivilegedActionErrorMessage(error, "").toLowerCase();
+  if (/context|token|prompt|too large|limit/.test(message)) return "context";
+  if (/tool|sandbox|capability|permission|workspace|shell|file/.test(message)) return "tool";
+  if (/connection|provider|model|api|network|timeout|timed out|remote/.test(message)) return "provider";
+  return "general";
+}
+
+function ProfessorMariTrustStrip({
+  connectionName,
+  contextBudget,
+  sandboxAvailable,
+  pendingApprovalCount,
+  activeSkillCount,
+  activeMemoryCount,
+  onConnectionClick,
+  onContextClick,
+  onApprovalClick,
+  onSkillsClick,
+  onMemoriesClick,
+}: {
+  connectionName: string | null;
+  contextBudget: ProfessorMariContextBudget | null;
+  sandboxAvailable: boolean | null;
+  pendingApprovalCount: number;
+  activeSkillCount: number;
+  activeMemoryCount: number;
+  onConnectionClick: () => void;
+  onContextClick: () => void;
+  onApprovalClick: () => void;
+  onSkillsClick: () => void;
+  onMemoriesClick: () => void;
+}) {
+  const { t: localizeUi } = useUiTranslation();
+  const used = contextBudget ? formatCompactTokenCount(contextBudget.usedTokens) : "-";
+  const maximum = contextBudget ? formatCompactTokenCount(contextBudget.maxTokens) : "-";
+  return (
+    <div
+      data-component="HomeProfessorMariChat.TrustStrip"
+      className="flex min-w-0 flex-wrap items-center gap-1 border-b border-[var(--border)]/45 bg-[var(--background)]/55 px-2 py-1 text-[0.625rem] text-[var(--muted-foreground)] sm:px-3"
+    >
+      <button
+        type="button"
+        onClick={onConnectionClick}
+        className="max-w-full truncate rounded px-1.5 py-1 text-left hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+        title={localizeUi("ui.chat.homeprofessormarichat.trustConnectionTitle")}
+      >
+        <Link size="0.65rem" className="mr-1 inline" />
+        {connectionName ?? localizeUi("ui.chat.homeprofessormarichat.missingConnection")}
+      </button>
+      <button
+        type="button"
+        onClick={onContextClick}
+        className="rounded px-1.5 py-1 tabular-nums hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+        title={localizeUi("ui.chat.homeprofessormarichat.trustContextTitle")}
+      >
+        {contextBudget
+          ? localizeUi("ui.chat.homeprofessormarichat.contextBudgetValue", { used, maximum })
+          : localizeUi("ui.chat.homeprofessormarichat.contextUnavailable")}
+      </button>
+      <span
+        className={cn(
+          "rounded px-1.5 py-1",
+          sandboxAvailable === false ? "text-[var(--destructive)]" : "text-[var(--muted-foreground)]",
+        )}
+        title={localizeUi("ui.chat.homeprofessormarichat.trustSandboxTitle")}
+      >
+        {sandboxAvailable === false
+          ? localizeUi("ui.chat.homeprofessormarichat.sandboxUnavailable")
+          : sandboxAvailable === null
+            ? localizeUi("ui.chat.homeprofessormarichat.sandboxUnknown")
+            : localizeUi("ui.chat.homeprofessormarichat.sandboxAvailable")}
+      </span>
+      <button
+        type="button"
+        onClick={onApprovalClick}
+        disabled={pendingApprovalCount === 0}
+        className={cn(
+          "rounded px-1.5 py-1 hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:cursor-default disabled:opacity-60",
+          pendingApprovalCount > 0 && "font-semibold text-[var(--foreground)]",
+        )}
+        title={localizeUi("ui.chat.homeprofessormarichat.trustApprovalTitle")}
+      >
+        {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", { count: pendingApprovalCount })}
+      </button>
+      <button
+        type="button"
+        onClick={onSkillsClick}
+        className="rounded px-1.5 py-1 hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+        title={localizeUi("ui.chat.homeprofessormarichat.openSkills")}
+      >
+        {localizeUi("ui.chat.homeprofessormarichat.activeSkills", { count: activeSkillCount })}
+      </button>
+      <button
+        type="button"
+        onClick={onMemoriesClick}
+        className="rounded px-1.5 py-1 hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+        title={localizeUi("ui.chat.homeprofessormarichat.openMemories")}
+      >
+        {localizeUi("ui.chat.homeprofessormarichat.activeMemories", { count: activeMemoryCount })}
+      </button>
+    </div>
+  );
+}
+
 export function ProfessorMariPixelScene({ active }: { active: boolean }) {
   return (
     <div className="mari-professor-pixel-scene" data-state={active ? "active" : "idle"} aria-hidden="true">
@@ -3271,6 +3383,7 @@ export function HomeProfessorMariChat({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadedMessagesChatId, setLoadedMessagesChatId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [recovery, setRecovery] = useState<ProfessorMariRecovery | null>(null);
   const [connectionMenuOpen, setConnectionMenuOpen] = useState(false);
   const [historyPickerOpen, setHistoryPickerOpen] = useState(false);
   const [contextViewerOpen, setContextViewerOpen] = useState(false);
@@ -5194,10 +5307,13 @@ export function HomeProfessorMariChat({
     [chatId, isBusy, loadMessages, localizeUi],
   );
 
-  const handleSubmit = async (overrideText?: string) => {
+  const handleSubmit = async (
+    overrideText?: string,
+    overrideRecovery?: Pick<ProfessorMariRecovery, "attachments" | "context">,
+  ) => {
     const text = (overrideText ?? draft).trim();
-    const submittedAttachments = attachments;
-    const submittedContext = handoffContext;
+    const submittedAttachments = overrideRecovery?.attachments ?? attachments;
+    const submittedContext = overrideRecovery?.context ?? handoffContext;
     const messageText = text || (submittedAttachments.length > 0 ? "Please inspect the attached file." : "");
     if (!messageText || isBusy || regenerationInFlightRef.current || isReadingAttachments) return;
 
@@ -5226,6 +5342,7 @@ export function HomeProfessorMariChat({
       setMessages((current) => [...current, createLocalUserMessage(chat.id, messageText, submittedAttachments)]);
       trackAchievement.mutate("prof_mari_message_sent");
       const { received, runId } = await sendWorkspaceMessage(chat, messageText, submittedAttachments);
+      setRecovery(null);
       void refreshAfterWorkspaceRun(chat.id, runId);
       if (!received) {
         toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariDidNotReceiveAReplyFromThe"), {
@@ -5238,6 +5355,12 @@ export function HomeProfessorMariChat({
       setDraft(text);
       setAttachments(submittedAttachments);
       setHandoffContext(submittedContext);
+      setRecovery({
+        text: messageText,
+        attachments: submittedAttachments,
+        context: submittedContext,
+        kind: classifyProfessorMariFailure(error),
+      });
       console.error("[Professor Mari] Failed to send", error);
       toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotAnswerRightNow"), {
         description: describeProfessorMariError(error),
@@ -5247,6 +5370,77 @@ export function HomeProfessorMariChat({
       setSending(false);
     }
   };
+
+  const retryRecovery = () => {
+    if (!recovery) return;
+    setDraft(recovery.text);
+    setAttachments(recovery.attachments);
+    setHandoffContext(recovery.context);
+    void handleSubmit(recovery.text, recovery);
+  };
+
+  const openPendingApprovals = useCallback(() => {
+    void refreshWorkspaceStatus().then(() => {
+      document
+        .querySelector('[data-component="HomeProfessorMariChat.Recovery"]')
+        ?.scrollIntoView({ behavior: "smooth" });
+      document.querySelector('[data-component="HomeProfessorMariChat.Transcript"]')?.scrollTo({
+        top: document.querySelector('[data-component="HomeProfessorMariChat.Transcript"]')?.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+  }, [refreshWorkspaceStatus]);
+
+  const trustStrip = (
+    <ProfessorMariTrustStrip
+      connectionName={workspaceStatus?.connection?.name ?? effectiveConnection?.name ?? null}
+      contextBudget={contextBudget}
+      sandboxAvailable={workspaceStatus?.shellSandbox.available ?? null}
+      pendingApprovalCount={pendingChangeReviews.length}
+      activeSkillCount={activeSkillCount}
+      activeMemoryCount={activeMemoryCount}
+      onConnectionClick={() => setConnectionMenuOpen(true)}
+      onContextClick={() => void handleOpenContextViewer()}
+      onApprovalClick={openPendingApprovals}
+      onSkillsClick={() => {
+        setChatHistoryOpen(false);
+        setMemoriesMenuOpen(false);
+        setSkillsMenuOpen(true);
+      }}
+      onMemoriesClick={() => {
+        setChatHistoryOpen(false);
+        setSkillsMenuOpen(false);
+        setMemoriesMenuOpen(true);
+      }}
+    />
+  );
+
+  const recoveryNotice = recovery ? (
+    <div
+      data-component="HomeProfessorMariChat.Recovery"
+      className="mb-2 flex items-start gap-2 rounded-lg border border-[var(--destructive)]/35 bg-[var(--destructive)]/8 px-2.5 py-2 text-xs"
+      role="alert"
+    >
+      <AlertTriangle size="0.8rem" className="mt-0.5 shrink-0 text-[var(--destructive)]" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-[var(--foreground)]">
+          {localizeUi(`ui.chat.homeprofessormarichat.recovery.${recovery.kind}`)}
+        </p>
+        <p className="mt-0.5 text-[var(--muted-foreground)]">
+          {localizeUi("ui.chat.homeprofessormarichat.recoveryDescription")}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={retryRecovery}
+        disabled={isBusy}
+        className="mari-chrome-control mari-chrome-control--small shrink-0 px-2 text-[0.625rem]"
+      >
+        <RefreshCw size="0.7rem" />
+        {localizeUi("ui.chat.homeprofessormarichat.retry")}
+      </button>
+    </div>
+  ) : null;
 
   const contextSummary = handoffContext ? (
     <div
@@ -5391,8 +5585,10 @@ export function HomeProfessorMariChat({
           void handleSubmit();
         }}
       >
+        {trustStrip}
         {showTokenUsage && contextBudget && <ProfessorMariContextBudgetIndicator budget={contextBudget} />}
         {contextSummary}
+        {recoveryNotice}
         <input
           ref={attachmentInputRef}
           type="file"
@@ -6095,6 +6291,7 @@ export function HomeProfessorMariChat({
                             )}
                           </div>
                         </div>
+                        {trustStrip}
 
                         <div
                           ref={setTranscriptScrollNode}
@@ -6149,6 +6346,7 @@ export function HomeProfessorMariChat({
                             <ProfessorMariContextBudgetIndicator budget={contextBudget} />
                           )}
                           {contextSummary}
+                          {recoveryNotice}
                           <input
                             ref={attachmentInputRef}
                             type="file"
