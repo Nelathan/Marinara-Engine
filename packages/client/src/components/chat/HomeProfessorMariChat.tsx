@@ -30,6 +30,7 @@ import {
   Link,
   Loader2,
   MessageCircle,
+  ExternalLink,
   PackagePlus,
   Palette,
   Pencil,
@@ -60,6 +61,7 @@ import {
   type MariGuidedPlanStep,
   type MariSuggestionChip,
   type MariWorkspaceSkillDetail,
+  type MariWorkspaceActionResult,
   type MariWorkspaceSkillsResponse,
   type MariInstructionDetail,
   type MariInstructionsResponse,
@@ -75,6 +77,9 @@ import {
 import { useConnections } from "../../hooks/use-connections";
 import { useTrackAchievement } from "../../hooks/use-achievements";
 import { chatKeys } from "../../hooks/use-chats";
+import { characterKeys } from "../../hooks/use-characters";
+import { lorebookKeys } from "../../hooks/use-lorebooks";
+import { presetKeys } from "../../hooks/use-presets";
 import { useMariWorkspaceContext } from "../../hooks/use-mari-workspace-context";
 import { MariAttachButton } from "./MariAttachButton";
 import { MariChatHistoryPicker } from "./MariChatHistoryPicker";
@@ -104,6 +109,7 @@ import { applyInlineMarkdown, renderMarkdownBlocks } from "../../lib/markdown";
 import { rafThrottle } from "../../lib/raf-throttle";
 import { prepareImageAttachment } from "../../lib/chat-attachment-images";
 import { cn } from "../../lib/utils";
+import { executeStateNavigation } from "../../lib/state-navigation";
 import { ProfessorMariWorkingWindow } from "../ui/ProfessorMariWorkingWindow";
 import { MacroTextarea } from "../ui/MacroTextarea";
 import { SettingsSwitch } from "../panels/settings/SettingControls";
@@ -542,6 +548,27 @@ function getMessageWorkspaceTrace(message: Message): MariWorkspaceTraceItem[] | 
   if (!Array.isArray(trace)) return null;
   const items = trace.filter(isWorkspaceTraceItem);
   return items.length > 0 ? items : null;
+}
+
+function isMariWorkspaceActionResult(value: unknown): value is MariWorkspaceActionResult {
+  const result = asRecord(value);
+  const resource = asRecord(result?.resource);
+  return (
+    (result?.status === "created" || result?.status === "updated") &&
+    typeof result.summary === "string" &&
+    !!resource &&
+    ["character", "persona", "lorebook", "preset"].includes(String(resource.kind)) &&
+    typeof resource.id === "string" &&
+    resource.id.length > 0 &&
+    Array.isArray(result.changedFields) &&
+    result.changedFields.every((field) => typeof field === "string")
+  );
+}
+
+function getMessageWorkspaceActionResults(message: Message): MariWorkspaceActionResult[] {
+  const extra = toMessageExtra(message);
+  const results = extra?.mariWorkspaceActionResults;
+  return Array.isArray(results) ? results.filter(isMariWorkspaceActionResult) : [];
 }
 
 type WorkspaceTimelineItem =
@@ -1563,6 +1590,49 @@ const MARI_MESSAGE_ACTIONS_CLASS =
 const MARI_MESSAGE_ACTION_BUTTON_CLASS =
   "rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)] focus-visible:text-[var(--primary)]";
 
+function MariWorkspaceActionResultRow({
+  result,
+  onOpen,
+  onReview,
+}: {
+  result: MariWorkspaceActionResult;
+  onOpen: (result: MariWorkspaceActionResult) => void;
+  onReview: (reviewId: string) => void;
+}) {
+  const { t: localizeUi } = useUiTranslation();
+  return (
+    <div className="mt-2 flex min-w-0 items-center gap-2 border-l-2 border-[var(--primary)]/50 pl-2 text-xs">
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium text-[var(--foreground)]">{result.summary}</p>
+        {result.changedFields.length > 0 && (
+          <p className="truncate text-[0.6875rem] text-[var(--muted-foreground)]">
+            {localizeUi("ui.chat.homeprofessormarichat.changedFields", {
+              fields: result.changedFields.join(", "),
+            })}
+          </p>
+        )}
+      </div>
+      {result.reviewId && (
+        <button
+          type="button"
+          onClick={() => onReview(result.reviewId!)}
+          className="shrink-0 rounded-md px-2 py-1 font-medium text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+        >
+          {localizeUi("ui.chat.homeprofessormarichat.reviewResult")}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => onOpen(result)}
+        className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2 py-1 font-medium text-[var(--primary-foreground)]"
+      >
+        <ExternalLink size="0.7rem" />
+        {localizeUi("ui.chat.homeprofessormarichat.openResult")}
+      </button>
+    </div>
+  );
+}
+
 const CompactMariMessage = memo(function CompactMariMessage({
   message,
   thinking,
@@ -1571,6 +1641,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onRegenerate,
   canRegenerate = false,
   onRemoveAttachment,
+  onOpenActionResult,
+  onReviewActionResult,
 }: {
   message: Message;
   thinking?: string | null;
@@ -1579,10 +1651,13 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onRegenerate?: (messageId: string) => void;
   canRegenerate?: boolean;
   onRemoveAttachment?: (messageId: string, attachmentIndex: number) => void;
+  onOpenActionResult: (result: MariWorkspaceActionResult) => void;
+  onReviewActionResult: (reviewId: string) => void;
 }) {
   const { t: localizeUi } = useUiTranslation();
   const content = message.content ?? "";
   const attachments = getProfessorMariAttachments(message);
+  const actionResults = getMessageWorkspaceActionResults(message);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(content);
 
@@ -1674,6 +1749,14 @@ const CompactMariMessage = memo(function CompactMariMessage({
     return (
       <div className="group">
         <WorkspaceTimelineList items={timelineItemsFromTrace(workspaceTrace, message)} active={false} openReasoning />
+        {actionResults.map((result) => (
+          <MariWorkspaceActionResultRow
+            key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
+            result={result}
+            onOpen={onOpenActionResult}
+            onReview={onReviewActionResult}
+          />
+        ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
           <div className={MARI_MESSAGE_ACTIONS_CLASS}>
             {onRegenerate && canRegenerate && (
@@ -1708,6 +1791,14 @@ const CompactMariMessage = memo(function CompactMariMessage({
     <>
       <TranscriptRow className="group" marker={<MariAvatar />}>
         <CompactMarkdown content={content} />
+        {actionResults.map((result) => (
+          <MariWorkspaceActionResultRow
+            key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
+            result={result}
+            onOpen={onOpenActionResult}
+            onReview={onReviewActionResult}
+          />
+        ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
           <div className={MARI_MESSAGE_ACTIONS_CLASS}>
             {onRegenerate && canRegenerate && (
@@ -2381,8 +2472,9 @@ function WorkspaceApprovalCard({
     row: { index: number; table: string; id: string; action: string },
   ) => Promise<{ before: MariPromptRenderSide; after: MariPromptRenderSide } | null>;
 }) {
+  let card: ReactNode;
   if (approval.kind === "dependency_install") {
-    return (
+    card = (
       <DependencyWorkspaceApprovalCard
         approval={approval}
         busy={busy}
@@ -2391,9 +2483,8 @@ function WorkspaceApprovalCard({
         onDiscard={onRestore}
       />
     );
-  }
-  if (approval.kind === "sensitive_file") {
-    return (
+  } else if (approval.kind === "sensitive_file") {
+    card = (
       <SensitiveFileWorkspaceApprovalCard
         approval={approval}
         busy={busy}
@@ -2402,18 +2493,24 @@ function WorkspaceApprovalCard({
         onDiscard={onRestore}
       />
     );
+  } else {
+    card = (
+      <DatabaseWorkspaceApprovalCard
+        approval={approval}
+        busy={busy}
+        disabled={disabled}
+        onKeep={onKeep}
+        onKeepEnable={onKeepEnable}
+        onRestore={onRestore}
+        onRejectRows={onRejectRows}
+        onRenderPrompt={onRenderPrompt}
+      />
+    );
   }
   return (
-    <DatabaseWorkspaceApprovalCard
-      approval={approval}
-      busy={busy}
-      disabled={disabled}
-      onKeep={onKeep}
-      onKeepEnable={onKeepEnable}
-      onRestore={onRestore}
-      onRejectRows={onRejectRows}
-      onRenderPrompt={onRenderPrompt}
-    />
+    <div id={`mari-workspace-review-${approval.id}`} data-review-id={approval.id}>
+      {card}
+    </div>
   );
 }
 
@@ -3582,6 +3679,27 @@ export function HomeProfessorMariChat({
     // its full message page history on each Mari workspace change (#4703).
     await qc.invalidateQueries();
   }, [qc]);
+
+  const invalidateActionResult = useCallback(
+    async (result: MariWorkspaceActionResult) => {
+      if (result.resource.kind === "character") {
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: characterKeys.all }),
+          qc.invalidateQueries({ queryKey: characterKeys.detail(result.resource.id) }),
+        ]);
+      } else if (result.resource.kind === "persona") {
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: characterKeys.personas }),
+          qc.invalidateQueries({ queryKey: characterKeys.personaDetail(result.resource.id) }),
+        ]);
+      } else if (result.resource.kind === "lorebook") {
+        await qc.invalidateQueries({ queryKey: lorebookKeys.all });
+      } else {
+        await qc.invalidateQueries({ queryKey: presetKeys.all });
+      }
+    },
+    [qc],
+  );
 
   useEffect(() => {
     void fetchSidecarStatus();
@@ -4857,6 +4975,13 @@ export function HomeProfessorMariChat({
               if (steps.length > 0) setMariPlan(chat.id, steps);
               else clearMariPlan();
             }
+          } else if (event.type === "metadata") {
+            const data = asRecord(event.data);
+            if (isMariWorkspaceActionResult(data?.actionResult)) {
+              void invalidateActionResult(data.actionResult).catch((error) => {
+                console.error("[Professor Mari] Failed to refresh action result", error);
+              });
+            }
           } else if (event.type === "done") {
             received = true;
           } else if (event.type === "error") {
@@ -4882,7 +5007,15 @@ export function HomeProfessorMariChat({
       }
       return { received, runId };
     },
-    [clearMariPlan, effectiveConnectionId, handoffContext, setMariChips, setMariPlan, workspaceTextThrottle],
+    [
+      clearMariPlan,
+      effectiveConnectionId,
+      handoffContext,
+      invalidateActionResult,
+      setMariChips,
+      setMariPlan,
+      workspaceTextThrottle,
+    ],
   );
 
   const refreshAfterWorkspaceRun = useCallback(
@@ -5140,6 +5273,37 @@ export function HomeProfessorMariChat({
     </div>
   ) : null;
 
+  const openActionResult = useCallback(
+    async (result: MariWorkspaceActionResult) => {
+      await invalidateActionResult(result).catch((error) => {
+        console.error("[Professor Mari] Failed to refresh action result before opening", error);
+        toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariAppliedAWorkspaceChangeButAppData"), {
+          description: describeProfessorMariError(error),
+          duration: 12_000,
+        });
+      });
+      executeStateNavigation({
+        kind: "resource",
+        resource: result.resource.kind,
+        id: result.resource.id,
+      });
+      if (floatingMode) closeChatWindow();
+    },
+    [closeChatWindow, floatingMode, invalidateActionResult, localizeUi],
+  );
+
+  const reviewActionResult = useCallback(
+    async (reviewId: string) => {
+      await refreshWorkspaceStatus().catch(() => undefined);
+      window.requestAnimationFrame(() => {
+        const review = document.getElementById(`mari-workspace-review-${reviewId}`);
+        review?.scrollIntoView({ behavior: "smooth", block: "center" });
+        review?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+      });
+    },
+    [refreshWorkspaceStatus],
+  );
+
   const renderDisplayMessage = (message: Message) => {
     const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;
     return (
@@ -5152,6 +5316,8 @@ export function HomeProfessorMariChat({
         onRegenerate={canManageMessage ? handleRegenerateMessage : undefined}
         canRegenerate={canManageMessage && !isBusy && message.id === messages[messages.length - 1]?.id}
         onRemoveAttachment={canManageMessage && !isBusy ? handleRemoveAttachment : undefined}
+        onOpenActionResult={openActionResult}
+        onReviewActionResult={reviewActionResult}
       />
     );
   };

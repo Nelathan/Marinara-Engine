@@ -104,6 +104,24 @@ export interface ProfessorMariHandoff {
   completion?: ProfessorMariCompletion;
 }
 
+export type MariWorkspaceActionResourceKind = Extract<
+  ProfessorMariContextResourceKind,
+  "character" | "persona" | "lorebook" | "preset"
+>;
+
+export interface MariWorkspaceActionResult {
+  status: "created" | "updated";
+  resource: {
+    kind: MariWorkspaceActionResourceKind;
+    id: string;
+    label?: string;
+  };
+  changedFields: string[];
+  editorTarget?: string;
+  reviewId?: string;
+  summary: string;
+}
+
 export type MariWorkspaceToolName =
   | "docs_search"
   | "docs_read"
@@ -577,7 +595,10 @@ export type MariWorkspacePromptEvent =
   | { type: "tool_update"; data: { id?: string; name?: string; output?: string } }
   | { type: "tool_end"; data: { id?: string; name?: string; isError?: boolean; output?: string } }
   | { type: "approval_pending"; data: MariWorkspacePendingApproval }
-  | { type: "metadata"; data: Record<string, unknown> }
+  | {
+      type: "metadata";
+      data: Record<string, unknown> & { actionResult?: MariWorkspaceActionResult };
+    }
   | { type: "suggestions"; data: MariSuggestionChip[] }
   | { type: "plan"; data: MariGuidedPlanStep[] }
   | { type: "done"; data?: unknown }

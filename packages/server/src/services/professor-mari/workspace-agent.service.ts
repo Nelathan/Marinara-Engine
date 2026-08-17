@@ -69,6 +69,7 @@ import {
 } from "@marinara-engine/shared";
 import type {
   MariDbCommandResult,
+  MariWorkspaceActionResult,
   MariDbReadTruncation,
   MariDependencyTarget,
   MariGuidedPlanStep,
@@ -126,6 +127,77 @@ export type WorkspaceCommandResult = {
   output: string;
   success: boolean;
 };
+
+type WorkspaceCommandExecution = {
+  output: string;
+  actionResult?: MariWorkspaceActionResult;
+};
+
+const ACTION_RESULT_TABLES = {
+  characters: "character",
+  personas: "persona",
+  lorebooks: "lorebook",
+  prompt_presets: "preset",
+} as const satisfies Record<string, MariWorkspaceActionResult["resource"]["kind"]>;
+
+const ACTION_RESULT_CHILD_TABLES = {
+  lorebook_entries: { kind: "lorebook", parentId: "lorebookId" },
+  prompt_sections: { kind: "preset", parentId: "presetId" },
+  prompt_groups: { kind: "preset", parentId: "presetId" },
+  choice_blocks: { kind: "preset", parentId: "presetId" },
+} as const;
+
+function actionResultLabel(row: Record<string, unknown> | null | undefined): string | undefined {
+  const data = isRecord(row?.data) ? row.data : null;
+  const value = row?.name ?? row?.title ?? data?.name;
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 200) : undefined;
+}
+
+function changedActionResultFields(
+  before: Record<string, unknown> | null | undefined,
+  after: Record<string, unknown> | null | undefined,
+): string[] {
+  if (!after) return [];
+  const beforeData = isRecord(before?.data) ? before.data : null;
+  const afterData = isRecord(after.data) ? after.data : null;
+  const sourceBefore = afterData ? beforeData : before;
+  const sourceAfter = afterData ?? after;
+  return Object.keys(sourceAfter)
+    .filter((key) => !["id", "createdAt", "updatedAt"].includes(key))
+    .filter((key) => JSON.stringify(sourceBefore?.[key]) !== JSON.stringify(sourceAfter[key]))
+    .slice(0, 20);
+}
+
+export function buildMariWorkspaceActionResult(
+  action: string,
+  result: MariDbCommandResult,
+): MariWorkspaceActionResult | null {
+  if (!result.ok || result.mode !== "apply") return null;
+  const preview = result.summary?.preview ?? [];
+  const primary = preview.find(
+    (change) => change.table in ACTION_RESULT_TABLES || change.table in ACTION_RESULT_CHILD_TABLES,
+  );
+  if (!primary || primary.action === "delete") return null;
+  const directKind = ACTION_RESULT_TABLES[primary.table as keyof typeof ACTION_RESULT_TABLES];
+  const child = ACTION_RESULT_CHILD_TABLES[primary.table as keyof typeof ACTION_RESULT_CHILD_TABLES];
+  const kind = directKind ?? child.kind;
+  const parentRow = primary.after ?? primary.before;
+  const id = directKind ? primary.id : parentRow?.[child.parentId];
+  if (typeof id !== "string" || !id) return null;
+  const status =
+    directKind && (primary.action === "insert" || action.toLowerCase().endsWith(".create")) ? "created" : "updated";
+  const label = actionResultLabel(primary.after) ?? actionResultLabel(primary.before);
+  const changedFields = changedActionResultFields(primary.before, primary.after);
+  const resourceLabel = label ? `${kind} “${label}”` : kind;
+  return {
+    status,
+    resource: { kind, id, ...(label ? { label } : {}) },
+    changedFields,
+    ...(changedFields[0] ? { editorTarget: changedFields[0] } : {}),
+    ...(result.approval?.status === "pending" && result.approval.id ? { reviewId: result.approval.id } : {}),
+    summary: `${status === "created" ? "Created" : "Updated"} ${resourceLabel}.`,
+  };
+}
 
 type WorkspaceToolDefinition = {
   name: MariWorkspaceToolName;
@@ -2108,6 +2180,7 @@ export class ProfessorMariWorkspaceService {
     let latestUsage: LLMUsage | undefined;
     let latestFinishReason: string | null = null;
     const commandResultsForContinuity: WorkspaceCommandResult[] = [];
+    const workspaceActionResults: MariWorkspaceActionResult[] = [];
     let assistantMessagePersisted = false;
 
     const persistAssistantMessage = async () => {
@@ -2127,6 +2200,7 @@ export class ProfessorMariWorkspaceService {
       const storedTrace = sanitizeTraceForStorage(workspaceTrace);
       if (thinkingText.trim()) extraUpdate.thinking = thinkingText;
       if (storedTrace.length > 0) extraUpdate.mariWorkspaceTimeline = storedTrace;
+      if (workspaceActionResults.length > 0) extraUpdate.mariWorkspaceActionResults = workspaceActionResults;
       const continuity = buildWorkspaceContinuitySnapshot({
         userText: promptText,
         assistantText: persistedText,
@@ -2301,6 +2375,7 @@ export class ProfessorMariWorkspaceService {
           workspaceTrace,
           args.onEvent,
           mutationAuthorizationContext,
+          workspaceActionResults,
         );
         commandResultsForContinuity.push(...commandResults);
 
@@ -2633,12 +2708,15 @@ ${sections.join("\n\n")}
     trace: MariWorkspaceTraceItem[],
     onEvent: PromptEventSink,
     authorizationContext: { directUserText: string; previousAssistantText?: string | null },
+    actionResults: MariWorkspaceActionResult[],
   ): Promise<WorkspaceCommandResult[]> {
     const results: WorkspaceCommandResult[] = [];
     for (let index = 0; index < commands.length; ) {
       const command = commands[index]!;
       if (!isReadOnlyWorkspaceCommand(command)) {
-        results.push(await this.executeWorkspaceCommand(command, signal, trace, onEvent, authorizationContext));
+        results.push(
+          await this.executeWorkspaceCommand(command, signal, trace, onEvent, authorizationContext, actionResults),
+        );
         index += 1;
         continue;
       }
@@ -2653,7 +2731,9 @@ ${sections.join("\n\n")}
       }
       results.push(
         ...(await Promise.all(
-          group.map((entry) => this.executeWorkspaceCommand(entry, signal, trace, onEvent, authorizationContext)),
+          group.map((entry) =>
+            this.executeWorkspaceCommand(entry, signal, trace, onEvent, authorizationContext, actionResults),
+          ),
         )),
       );
     }
@@ -2666,6 +2746,7 @@ ${sections.join("\n\n")}
     trace: MariWorkspaceTraceItem[],
     onEvent: PromptEventSink,
     authorizationContext: { directUserText: string; previousAssistantText?: string | null },
+    actionResults: MariWorkspaceActionResult[],
   ): Promise<WorkspaceCommandResult> {
     const input = command.arguments;
     upsertTraceTool(trace, {
@@ -2686,7 +2767,8 @@ ${sections.join("\n\n")}
         if (validationIssue) throw new Error(validationIssue);
         return this.runWorkspaceCommand(command, signal);
       };
-      const output = isReadOnlyWorkspaceCommand(command) ? await run() : await this.serializeWorkspaceMutation(run);
+      const execution = isReadOnlyWorkspaceCommand(command) ? await run() : await this.serializeWorkspaceMutation(run);
+      const output = typeof execution === "string" ? execution : execution.output;
       const compacted = compactOutput(output);
       upsertTraceTool(trace, {
         id: command.id,
@@ -2696,6 +2778,10 @@ ${sections.join("\n\n")}
         updatedAt: Date.now(),
       });
       onEvent({ type: "tool_end", data: { id: command.id, name: command.name, isError: false, output: compacted } });
+      if (typeof execution !== "string" && execution.actionResult) {
+        actionResults.push(execution.actionResult);
+        onEvent({ type: "metadata", data: { actionResult: execution.actionResult } });
+      }
       return { id: command.id, name: command.name, input, output: compacted, success: true };
     } catch (err) {
       const output = err instanceof Error ? err.message : String(err);
@@ -2719,7 +2805,10 @@ ${sections.join("\n\n")}
     }
   }
 
-  private async runWorkspaceCommand(command: WorkspaceCommandCall, signal: AbortSignal): Promise<string> {
+  private async runWorkspaceCommand(
+    command: WorkspaceCommandCall,
+    signal: AbortSignal,
+  ): Promise<WorkspaceCommandExecution | string> {
     switch (command.name) {
       case "docs_search": {
         const query = stringArg(command.arguments, "query");
@@ -3231,7 +3320,7 @@ ${sections.join("\n\n")}
     return output;
   }
 
-  private async commandAppData(args: Record<string, unknown>): Promise<string> {
+  private async commandAppData(args: Record<string, unknown>): Promise<WorkspaceCommandExecution> {
     const action = typeof args.action === "string" ? args.action : "unknown";
     const result = await getMariDbService(this.app.db).executeAction({
       ...args,
@@ -3255,7 +3344,7 @@ ${sections.join("\n\n")}
       ].join("\n"),
     );
     if (result.ok === false) throw new Error(output);
-    return output;
+    return { output, actionResult: buildMariWorkspaceActionResult(action, result) ?? undefined };
   }
 
   private buildLocalSidecarConnection(): WorkspaceConnection {
