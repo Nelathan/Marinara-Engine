@@ -3311,6 +3311,7 @@ type HomeProfessorMariChatProps = {
   attachedFooter?: boolean;
   chatWindowOpen?: boolean;
   embeddedTab?: boolean;
+  omnibarMode?: boolean;
   floatingMode?: boolean;
   launchHidden?: boolean;
   initialAskContext?: ProfessorMariAskContext | null;
@@ -3324,6 +3325,7 @@ export function HomeProfessorMariChat({
   attachedFooter = false,
   chatWindowOpen: controlledChatWindowOpen,
   embeddedTab = false,
+  omnibarMode = false,
   floatingMode = false,
   launchHidden = false,
   initialAskContext = null,
@@ -6187,27 +6189,38 @@ export function HomeProfessorMariChat({
                       <div
                         className={cn(
                           "flex h-full min-h-0 min-w-0 flex-col overflow-hidden border bg-[var(--background)]",
-                          embeddedTab
-                            ? "rounded-2xl border-[color-mix(in_srgb,oklch(0.73_0.21_345)_28%,var(--border))] shadow-[0_24px_70px_-42px_oklch(0.73_0.21_345/0.8)]"
-                            : "rounded-none border-0 sm:rounded-xl sm:border sm:border-[var(--border)]/70 sm:shadow-2xl",
+                          omnibarMode
+                            ? "rounded-none border-0 bg-transparent shadow-none"
+                            : embeddedTab
+                              ? "rounded-2xl border-[color-mix(in_srgb,oklch(0.73_0.21_345)_28%,var(--border))] shadow-[0_24px_70px_-42px_oklch(0.73_0.21_345/0.8)]"
+                              : "rounded-none border-0 sm:rounded-xl sm:border sm:border-[var(--border)]/70 sm:shadow-2xl",
                         )}
                       >
-                        <div className="flex min-h-12 items-center justify-between gap-2 border-b border-[var(--border)]/60 bg-[var(--card)]/80 px-2 pt-2 sm:px-3 sm:py-2">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-[oklch(0.73_0.21_345/0.4)] bg-[oklch(0.73_0.21_345/0.1)] shadow-[0_0_18px_oklch(0.73_0.21_345/0.18)]">
-                              <img src={MARI_AVATAR_URL} alt="" className="h-full w-full object-cover" />
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block truncate text-xs font-bold text-[var(--foreground)]">
-                                {localizeUi("ui.chat.homefaq.professorMari")}
+                        <div
+                          className={cn(
+                            "flex min-h-12 items-center justify-between gap-2 border-b border-[var(--border)]/60 px-2 pt-2 sm:px-3 sm:py-2",
+                            omnibarMode ? "bg-transparent" : "bg-[var(--card)]/80",
+                          )}
+                        >
+                          {omnibarMode ? (
+                            <div />
+                          ) : (
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-[oklch(0.73_0.21_345/0.4)] bg-[oklch(0.73_0.21_345/0.1)] shadow-[0_0_18px_oklch(0.73_0.21_345/0.18)]">
+                                <img src={MARI_AVATAR_URL} alt="" className="h-full w-full object-cover" />
                               </span>
-                              <span className="block truncate text-[0.625rem] text-[var(--muted-foreground)]">
-                                {isBusy
-                                  ? localizeUi("ui.chat.homeprofessormarichat.workingOnIt")
-                                  : localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
+                              <span className="min-w-0">
+                                <span className="block truncate text-xs font-bold text-[var(--foreground)]">
+                                  {localizeUi("ui.chat.homefaq.professorMari")}
+                                </span>
+                                <span className="block truncate text-[0.625rem] text-[var(--muted-foreground)]">
+                                  {isBusy
+                                    ? localizeUi("ui.chat.homeprofessormarichat.workingOnIt")
+                                    : localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
+                                </span>
                               </span>
-                            </span>
-                          </div>
+                            </div>
+                          )}
                           <div className="flex shrink-0 items-center gap-1">
                             <button
                               type="button"

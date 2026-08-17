@@ -1533,6 +1533,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <OmnibarProfessorMariChat
                 pageActive
                 embeddedTab
+                omnibarMode
                 launchHidden
                 initialAskContext={mariContext}
                 chatWindowOpen={mariChatOpen}
