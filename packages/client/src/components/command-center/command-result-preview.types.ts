@@ -1,4 +1,6 @@
 import type { CommandResult } from "../../lib/command-center";
+import type { CSSProperties } from "react";
+import type { CommandCenterMediaKind } from "./CommandCenterMedia";
 
 export type CommandCenterPreviewKind =
   | "chat"
@@ -18,6 +20,8 @@ export interface CommandCenterPreviewFact {
 export interface CommandCenterPreviewMedia {
   src: string;
   alt: string;
+  kind?: CommandCenterMediaKind;
+  avatarCropStyle?: CSSProperties;
 }
 
 export interface CommandCenterPreviewData {
@@ -38,6 +42,7 @@ export interface RichCommandResult extends CommandResult {
 
 export interface CommandResultPreviewAction {
   label: string;
+  shortcut?: string;
   onSelect: (result: RichCommandResult) => void;
   disabled?: boolean;
 }

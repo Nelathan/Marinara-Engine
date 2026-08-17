@@ -6,8 +6,14 @@ import {
   type ProfessorMariNavigationResource,
   type ProfessorMariNavigationTarget,
 } from "./professor-mari-navigation";
+import type {
+  CommandCenterResultGroupId,
+  CommandCenterResultMedia,
+  CommandCenterResultMetadata,
+  CommandIcon,
+  CommandKind,
+} from "./command-center";
 import type { CommandCenterPreviewData } from "../components/command-center/command-result-preview.types";
-import type { CommandIcon, CommandKind } from "./command-center";
 
 export type OmnibarCategory =
   | "navigation"
@@ -30,6 +36,9 @@ export type OmnibarResult = {
   aliases?: readonly string[];
   description?: string;
   preview?: CommandCenterPreviewData;
+  metadata?: readonly CommandCenterResultMetadata[];
+  media?: CommandCenterResultMedia;
+  group?: CommandCenterResultGroupId;
   source?: string;
   snippet?: string;
   path?: string;
@@ -78,6 +87,7 @@ export type OmnibarSearchData = {
     model?: string;
     isDefault?: boolean;
     imagePath?: string | null;
+    preview?: CommandCenterPreviewData;
   }[];
   browserTabs?: readonly ProfessorMariBrowserTab[];
   controls?: readonly OmnibarResult[];
@@ -108,7 +118,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
     if (score >= 0)
       results.push({
         ...command,
-        category: command.id.startsWith("settings") ? "settings" : "navigation",
+        category: command.kind === "settings" ? "settings" : "navigation",
         kind: command.kind,
         icon: command.icon,
         availability: command.availability,
@@ -165,16 +175,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         category: "connection",
         target: { kind: "panel", panel: "connections" },
         score,
-        preview: {
-          kind: "connection",
-          title: connection.name,
-          subtitle: connection.provider,
-          media: connection.imagePath ? { src: connection.imagePath, alt: connection.name } : undefined,
-          facts: [
-            ...(connection.model ? [{ label: "Model", value: connection.model }] : []),
-            ...(connection.isDefault ? [{ label: "Status", value: "Default connection" }] : []),
-          ],
-        },
+        preview: connection.preview,
         kind: "settings",
         icon: "connection",
       });

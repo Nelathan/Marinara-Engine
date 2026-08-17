@@ -15,6 +15,7 @@ export interface CommandCenterSegmentedChoiceProps<T extends string> {
   label: string;
   options: readonly CommandCenterChoiceOption<T>[];
   onValueChange: (value: T) => void;
+  variant?: "default" | "compact";
   disabled?: boolean;
   loading?: boolean;
   className?: string;
@@ -25,12 +26,14 @@ export function CommandCenterSegmentedChoice<T extends string>({
   label,
   options,
   onValueChange,
+  variant = "default",
   disabled = false,
   loading = false,
   className,
 }: CommandCenterSegmentedChoiceProps<T>) {
   const labelId = useId();
   const unavailable = disabled || loading;
+  const compact = variant === "compact";
   const selectedOption = options.find((option) => option.value === value && !option.disabled);
   const fallbackOption = options.find((option) => !option.disabled);
   const tabStopValue = selectedOption?.value ?? fallbackOption?.value;
@@ -63,7 +66,8 @@ export function CommandCenterSegmentedChoice<T extends string>({
       aria-labelledby={labelId}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex min-w-0 max-w-full flex-wrap rounded-md border border-[var(--border)] bg-[var(--secondary)] p-0.5",
+        "inline-flex min-w-0 max-w-full rounded-md border border-[var(--border)] bg-[var(--secondary)] p-0.5",
+        compact ? "w-full flex-nowrap overflow-x-auto overscroll-x-contain" : "flex-wrap",
         unavailable && "opacity-50",
         className,
       )}
@@ -86,8 +90,8 @@ export function CommandCenterSegmentedChoice<T extends string>({
             onClick={() => onValueChange(option.value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "inline-flex min-h-8 min-w-0 items-center justify-center gap-1.5 rounded px-2.5 text-xs font-semibold transition-colors",
-              "max-md:min-h-11 max-md:min-w-11 max-md:flex-1 max-md:px-3",
+              "inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded px-3 text-xs font-semibold transition-colors sm:min-h-8",
+              compact ? "shrink-0" : "min-w-0 max-md:flex-1",
               "focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
               "disabled:cursor-not-allowed",
               selected
@@ -100,7 +104,7 @@ export function CommandCenterSegmentedChoice<T extends string>({
             ) : OptionIcon ? (
               <OptionIcon className="size-3.5 shrink-0" aria-hidden="true" />
             ) : null}
-            <span className="min-w-0 truncate">{option.label}</span>
+            <span className="min-w-0 whitespace-normal break-words text-center leading-4">{option.label}</span>
           </button>
         );
       })}

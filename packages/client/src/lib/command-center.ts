@@ -25,6 +25,85 @@ export type CommandIcon =
   | "backups"
   | "speech";
 
+export type CommandCenterCategoryFilter =
+  | "all"
+  | "chats"
+  | "characters"
+  | "personas"
+  | "lorebooks"
+  | "presets"
+  | "connections"
+  | "agents"
+  | "settings"
+  | "docs";
+
+export type CommandCenterResultCategory =
+  | "navigation"
+  | "chat"
+  | "character"
+  | "persona"
+  | "lorebook"
+  | "preset"
+  | "connection"
+  | "agent"
+  | "settings"
+  | "professor"
+  | "docs";
+
+export type CommandCenterResultGroupId =
+  | "pinned"
+  | "recent"
+  | "quick-controls"
+  | "create-navigation"
+  | "navigation"
+  | Exclude<CommandCenterCategoryFilter, "all">
+  | "professor-fallback";
+
+export interface CommandCenterResultMetadata {
+  label: string;
+  value: string | number;
+}
+
+export interface CommandCenterResultMedia {
+  src: string;
+  alt: string;
+}
+
+export type CommandCenterPreviewKind = Exclude<CommandCenterResultCategory, "navigation" | "professor" | "settings">;
+
+export interface CommandCenterPreviewData {
+  kind: CommandCenterPreviewKind;
+  title?: string;
+  categoryLabel?: string;
+  subtitle?: string;
+  description?: string;
+  media?: CommandCenterResultMedia;
+  accent?: string;
+  badges?: readonly string[];
+  facts?: readonly CommandCenterResultMetadata[];
+}
+
+export interface CommandCenterPresentableResult {
+  id: string;
+  category: CommandCenterResultCategory;
+  control?: unknown;
+  metadata?: readonly CommandCenterResultMetadata[];
+  media?: CommandCenterResultMedia;
+  group?: CommandCenterResultGroupId;
+}
+
+export interface CommandCenterResultGroup<T extends CommandCenterPresentableResult> {
+  id: CommandCenterResultGroupId;
+  results: T[];
+}
+
+export interface CommandCenterPresentation<T extends CommandCenterPresentableResult> {
+  filter: CommandCenterCategoryFilter;
+  results: T[];
+  groups: CommandCenterResultGroup<T>[];
+  categoryAvailability: Record<CommandCenterCategoryFilter, number>;
+}
+
 export interface CommandDefinition {
   id: string;
   title: string;
@@ -76,6 +155,32 @@ interface CommandStorage {
 }
 
 export const COMMAND_RANKING_STORAGE_KEY = "marinara:command-center:ranking:v1";
+export const COMMAND_CENTER_MAX_RESULTS = 75;
+export const COMMAND_CENTER_CATEGORY_FILTERS: readonly CommandCenterCategoryFilter[] = [
+  "all",
+  "chats",
+  "characters",
+  "personas",
+  "lorebooks",
+  "presets",
+  "connections",
+  "agents",
+  "settings",
+  "docs",
+];
+export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGroupId[] = [
+  "navigation",
+  "chats",
+  "characters",
+  "personas",
+  "lorebooks",
+  "presets",
+  "connections",
+  "agents",
+  "settings",
+  "docs",
+  "professor-fallback",
+];
 const MAX_PINNED_COMMANDS = 50;
 const MAX_RECENT_COMMANDS = 100;
 const MAX_COMMAND_ID_LENGTH = 256;
@@ -205,4 +310,101 @@ export function rankCommandResults<T extends CommandResult>(
     })
     .sort((a, b) => b.rankingScore - a.rankingScore || a.index - b.index)
     .map(({ index: _index, ...result }) => result);
+}
+
+const FILTER_CATEGORY: Record<Exclude<CommandCenterCategoryFilter, "all">, CommandCenterResultCategory> = {
+  chats: "chat",
+  characters: "character",
+  personas: "persona",
+  lorebooks: "lorebook",
+  presets: "preset",
+  connections: "connection",
+  agents: "agent",
+  settings: "settings",
+  docs: "docs",
+};
+
+const CATEGORY_GROUP: Partial<Record<CommandCenterResultCategory, CommandCenterResultGroupId>> = {
+  navigation: "navigation",
+  chat: "chats",
+  character: "characters",
+  persona: "personas",
+  lorebook: "lorebooks",
+  preset: "presets",
+  connection: "connections",
+  agent: "agents",
+  settings: "settings",
+  docs: "docs",
+  professor: "navigation",
+};
+
+export function presentCommandCenterResults<T extends CommandCenterPresentableResult>(
+  rankedResults: readonly T[],
+  options: {
+    query: string;
+    filter?: CommandCenterCategoryFilter;
+    rankingState?: CommandRankingState;
+  },
+): CommandCenterPresentation<T> {
+  const filter = options.filter ?? "all";
+  const uniqueResults: T[] = [];
+  const seenIds = new Set<string>();
+  for (const result of rankedResults) {
+    if (seenIds.has(result.id)) continue;
+    seenIds.add(result.id);
+    uniqueResults.push(result);
+  }
+  const categoryAvailability = Object.fromEntries(
+    COMMAND_CENTER_CATEGORY_FILTERS.map((category) => [
+      category,
+      category === "all"
+        ? uniqueResults.length
+        : uniqueResults.filter((result) => result.category === FILTER_CATEGORY[category]).length,
+    ]),
+  ) as Record<CommandCenterCategoryFilter, number>;
+  const results = uniqueResults
+    .filter((result) => filter === "all" || result.category === FILTER_CATEGORY[filter])
+    .slice(0, COMMAND_CENTER_MAX_RESULTS);
+  const groups = new Map<CommandCenterResultGroupId, T[]>();
+  const addToGroup = (id: CommandCenterResultGroupId, result: T) => {
+    const group = groups.get(id);
+    if (group) group.push(result);
+    else groups.set(id, [result]);
+  };
+
+  if (!options.query.trim()) {
+    const ranking = normalizeCommandRankingState(options.rankingState);
+    const pinnedIds = new Set(ranking.pinnedIds);
+    const recentIds = new Set(ranking.recent.map((entry) => entry.id));
+    for (const result of results) {
+      if (pinnedIds.has(result.id)) addToGroup("pinned", result);
+      else if (recentIds.has(result.id)) addToGroup("recent", result);
+      else if (result.control) addToGroup("quick-controls", result);
+      else addToGroup("create-navigation", result);
+    }
+    return {
+      filter,
+      results,
+      groups: (["pinned", "recent", "quick-controls", "create-navigation"] as const).flatMap((id) => {
+        const groupResults = groups.get(id);
+        return groupResults ? [{ id, results: groupResults }] : [];
+      }),
+      categoryAvailability,
+    };
+  }
+
+  for (const result of results) {
+    const group =
+      result.id === "ask-professor-mari" ? "professor-fallback" : (CATEGORY_GROUP[result.category] ?? "navigation");
+    addToGroup(group, result);
+  }
+  return {
+    filter,
+    results,
+    groups: COMMAND_CENTER_SEARCH_GROUP_ORDER.flatMap((id) => {
+      const groupResults = groups.get(id);
+      return groupResults ? [{ id, results: groupResults }] : [];
+    }),
+    categoryAvailability,
+  };
 }

@@ -1,4 +1,4 @@
-import { Loader2, ToggleLeft, ToggleRight, type LucideIcon } from "lucide-react";
+import { Loader2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -7,6 +7,8 @@ export interface CommandCenterToggleProps {
   label: string;
   onCheckedChange: (checked: boolean) => void;
   icon?: LucideIcon;
+  stateLabel?: string;
+  variant?: "default" | "compact";
   disabled?: boolean;
   loading?: boolean;
   className?: string;
@@ -17,29 +19,25 @@ export function CommandCenterToggle({
   label,
   onCheckedChange,
   icon: Icon,
+  stateLabel,
+  variant = "default",
   disabled = false,
   loading = false,
   className,
 }: CommandCenterToggleProps) {
-  const StateIcon = checked ? ToggleRight : ToggleLeft;
   const unavailable = disabled || loading;
+  const compact = variant === "compact";
 
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
+    <label
       aria-busy={loading || undefined}
-      disabled={unavailable}
-      onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "inline-flex min-h-9 min-w-0 items-center gap-2 rounded-md border px-2.5 text-xs font-semibold transition-colors",
-        "max-md:min-h-11 max-md:px-3",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-md text-xs font-semibold transition-colors sm:min-h-9",
+        compact ? "w-full px-2" : "border border-[var(--border)] bg-[var(--secondary)] px-2.5",
+        unavailable ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[var(--accent)]",
         checked
-          ? "border-[color-mix(in_srgb,var(--primary)_45%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_14%,var(--secondary))] text-[var(--foreground)] hover:bg-[color-mix(in_srgb,var(--primary)_20%,var(--secondary))]"
-          : "border-[var(--border)] bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
+          ? "text-[var(--foreground)]"
+          : "text-[var(--secondary-foreground)] hover:text-[var(--accent-foreground)]",
         className,
       )}
     >
@@ -48,16 +46,32 @@ export function CommandCenterToggle({
       ) : Icon ? (
         <Icon className="size-4 shrink-0" aria-hidden="true" />
       ) : null}
-      <span className="min-w-0 truncate">{label}</span>
-      {!loading ? (
-        <StateIcon
-          className={cn(
-            "ml-auto size-4 shrink-0",
-            checked ? "text-[var(--primary)]" : "text-[var(--muted-foreground)]",
-          )}
-          aria-hidden="true"
-        />
+      <span className={compact ? "sr-only" : "min-w-0 flex-1 break-words"}>{label}</span>
+      {stateLabel ? (
+        <span className="w-14 shrink-0 text-right text-[var(--muted-foreground)]">{stateLabel}</span>
       ) : null}
-    </button>
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        disabled={unavailable}
+        onChange={(event) => onCheckedChange(event.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        className={cn(
+          "relative h-5 w-9 shrink-0 rounded-full border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--ring)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--background)]",
+          checked ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[var(--border)] bg-[var(--muted)]",
+        )}
+        aria-hidden="true"
+      >
+        <span
+          className={cn(
+            "absolute left-0.5 top-0.5 size-3.5 rounded-full bg-[var(--background)] shadow-sm transition-transform",
+            checked && "translate-x-4",
+          )}
+        />
+      </span>
+    </label>
   );
 }

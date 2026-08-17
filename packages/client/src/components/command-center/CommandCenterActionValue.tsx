@@ -9,6 +9,8 @@ export interface CommandCenterActionValueProps {
   icon: LucideIcon;
   onClick: () => void;
   value?: string | number;
+  valueIcon?: LucideIcon;
+  variant?: "default" | "compact";
   tone?: CommandCenterActionTone;
   disabled?: boolean;
   loading?: boolean;
@@ -29,11 +31,15 @@ export function CommandCenterActionValue({
   icon: Icon,
   onClick,
   value,
+  valueIcon: ValueIcon,
+  variant = "default",
   tone = "neutral",
   disabled = false,
   loading = false,
   className,
 }: CommandCenterActionValueProps) {
+  const compact = variant === "compact";
+
   return (
     <button
       type="button"
@@ -41,8 +47,8 @@ export function CommandCenterActionValue({
       disabled={disabled || loading}
       onClick={onClick}
       className={cn(
-        "inline-flex min-h-9 min-w-0 items-center gap-2 rounded-md border px-2.5 text-xs font-semibold transition-colors",
-        "max-md:min-h-11 max-md:px-3",
+        "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-md text-xs font-semibold transition-colors sm:min-h-9",
+        compact ? "px-2" : "border px-2.5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
         "disabled:cursor-not-allowed disabled:opacity-50",
         toneClasses[tone],
@@ -54,9 +60,15 @@ export function CommandCenterActionValue({
       ) : (
         <Icon className="size-4 shrink-0" aria-hidden="true" />
       )}
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="min-w-0 flex-1 break-words text-left">{label}</span>
       {value !== undefined ? (
-        <span className="ml-auto max-w-32 truncate rounded-sm bg-[var(--background)]/55 px-1.5 py-0.5 text-[0.6875rem] font-medium tabular-nums text-[var(--muted-foreground)] ring-1 ring-inset ring-[var(--border)]">
+        <span
+          className={cn(
+            "ml-auto inline-flex max-w-40 shrink-0 items-center gap-1 break-words text-right text-[0.6875rem] font-medium tabular-nums text-[var(--muted-foreground)]",
+            !compact && "rounded-sm bg-[var(--background)]/55 px-1.5 py-0.5 ring-1 ring-inset ring-[var(--border)]",
+          )}
+        >
+          {ValueIcon ? <ValueIcon className="size-3.5 shrink-0" aria-hidden="true" /> : null}
           {value}
         </span>
       ) : null}

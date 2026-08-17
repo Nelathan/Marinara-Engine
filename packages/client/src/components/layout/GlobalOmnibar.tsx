@@ -1,44 +1,87 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Loader2, Pin, Search, X } from "lucide-react";
+import type { ChatMode } from "@marinara-engine/shared";
+import { ChevronLeft, Gamepad2, LayoutGrid, Loader2, MessageCircle, Search, Theater, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
-import { useChats } from "../../hooks/use-chats";
+import { useAgentConfigs } from "../../hooks/use-agents";
 import { useCharacters, usePersonas } from "../../hooks/use-characters";
+import { useChats } from "../../hooks/use-chats";
+import { useConnections } from "../../hooks/use-connections";
+import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { useLorebooks } from "../../hooks/use-lorebooks";
 import { usePresets } from "../../hooks/use-presets";
-import { useConnections } from "../../hooks/use-connections";
-import { useAgentConfigs } from "../../hooks/use-agents";
-import { useChatStore } from "../../stores/chat.store";
-import { useUIStore } from "../../stores/ui.store";
-import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
-import { searchOmnibar, type OmnibarResult } from "../../lib/omnibar-search";
-import { createSystemCommandDefinitions } from "../../lib/command-center-system-commands";
+import { parseCharacterDisplayData } from "../../lib/character-display";
 import {
-  activatePersonalExtensionCommand,
-  usePersonalExtensionCommands,
-} from "../../lib/personal-extension-contributions";
-import { executeStateNavigation } from "../../lib/state-navigation";
-import {
+  COMMAND_CENTER_CATEGORY_FILTERS,
+  presentCommandCenterResults,
   rankCommandResults,
   readCommandRankingState,
   recordCommandUse,
   setCommandPinned,
   writeCommandRankingState,
+  type CommandCenterCategoryFilter,
+  type CommandCenterResultGroupId,
   type CommandRankingState,
 } from "../../lib/command-center";
+import { createSystemCommandDefinitions } from "../../lib/command-center-system-commands";
 import { getCommandIcon } from "../../lib/command-icons";
-import { parseCharacterDisplayData } from "../../lib/character-display";
+import { searchOmnibar, type OmnibarCategory, type OmnibarResult } from "../../lib/omnibar-search";
+import {
+  activatePersonalExtensionCommand,
+  usePersonalExtensionCommands,
+} from "../../lib/personal-extension-contributions";
+import { resolvePresetArtwork } from "../../lib/preset-artwork";
+import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
+import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
+import { executeStateNavigation } from "../../lib/state-navigation";
+import { getAvatarCropStyle } from "../../lib/utils";
+import { useChatStore } from "../../stores/chat.store";
+import { useUIStore } from "../../stores/ui.store";
+import { CommandCenterBrowseGrid } from "../command-center/CommandCenterBrowseGrid";
+import { CommandCenterResultRow } from "../command-center/CommandCenterResultRow";
 import { CommandCenterSegmentedChoice } from "../command-center/CommandCenterSegmentedChoice";
 import { CommandCenterToggle } from "../command-center/CommandCenterToggle";
 import { CommandResultPreview } from "../command-center/CommandResultPreview";
+import {
+  getCommandCenterCategoryVisual,
+  getCommandCenterChatModeVisual,
+  type CommandCenterCategoryLabels,
+  type CommandCenterChatModeLabels,
+} from "../command-center/command-center-visuals";
 import type { RichCommandResult } from "../command-center/command-result-preview.types";
-import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
-import { PROFESSOR_MARI_OMNIBAR_POSITION_STORAGE_KEY } from "../../lib/professor-mari-navigation";
-import { ProfessorMariNavigator } from "../chat/ProfessorMariNavigator";
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
-type RankedOmnibarResult = OmnibarResult & { command: RichCommandResult["command"] };
+const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
+const BROWSE_BATCH_SIZE = 48;
+
+type OmnibarPane = "results" | "browse" | "detail";
+type DetailOrigin = Exclude<OmnibarPane, "detail">;
+type BrowseFilter = Exclude<CommandCenterCategoryFilter, "all" | "settings" | "docs">;
+type RankedOmnibarResult = OmnibarResult & {
+  command: RichCommandResult["command"];
+};
+
+const FILTER_CATEGORY: Partial<Record<CommandCenterCategoryFilter, OmnibarCategory>> = {
+  chats: "chat",
+  characters: "character",
+  personas: "persona",
+  lorebooks: "lorebook",
+  presets: "preset",
+  connections: "connection",
+  agents: "agent",
+  settings: "settings",
+  docs: "docs",
+};
+
+const BROWSE_FILTERS: readonly BrowseFilter[] = [
+  "chats",
+  "characters",
+  "personas",
+  "lorebooks",
+  "presets",
+  "connections",
+  "agents",
+];
 
 function readNamedRow(value: unknown) {
   if (typeof value !== "object" || value === null || !("id" in value) || typeof value.id !== "string") return null;
@@ -46,14 +89,21 @@ function readNamedRow(value: unknown) {
   return { id: value.id, name };
 }
 
-function safeColor(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const color = value.trim();
-  return /^(?:#[\da-f]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)|hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\))$/i.test(
-    color,
-  )
-    ? color
-    : undefined;
+function isRichResult(result: RankedOmnibarResult) {
+  return Boolean(
+    result.preview &&
+    (result.preview.description ||
+      result.preview.media ||
+      result.preview.facts?.length ||
+      result.command.availability?.status !== "available"),
+  );
+}
+
+function resultMetadata(result: RankedOmnibarResult, categoryLabel: string) {
+  if (result.control?.type === "choice") return result.control.label;
+  return (
+    result.preview?.subtitle ?? result.preview?.facts?.[0]?.value?.toString() ?? result.description ?? categoryLabel
+  );
 }
 
 export function GlobalOmnibar() {
@@ -78,12 +128,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const ui = useUIStore.getState;
   const inputRef = useRef<HTMLInputElement>(null);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const boundaryRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<CommandCenterCategoryFilter>("all");
+  const [pane, setPane] = useState<OmnibarPane>("results");
   const [activeResultId, setActiveResultId] = useState<string | null>(null);
-  const [mobileDetail, setMobileDetail] = useState(false);
+  const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
+  const [detailOrigin, setDetailOrigin] = useState<DetailOrigin>("results");
+  const [browseSelectedId, setBrowseSelectedId] = useState<string | null>(null);
+  const [browseLimit, setBrowseLimit] = useState(BROWSE_BATCH_SIZE);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -104,107 +160,136 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const showTokenUsage = useUIStore((state) => state.showTokenUsage);
   const userStatus = useUIStore((state) => state.userStatus);
 
-  const data = useMemo(
+  const categoryLabels = useMemo<CommandCenterCategoryLabels>(
     () => ({
-      commands: [
-        { id: "home", title: t("home.title", "Home"), target: { kind: "home" } as const, aliases: ["start"] },
-        { id: "chats", title: t("ui.layout.chats", "Chats"), target: { kind: "chats" } as const },
-        {
-          id: "characters",
-          title: t("ui.layout.characters", "Characters"),
-          target: { kind: "panel", panel: "characters" } as const,
-        },
-        {
-          id: "personas",
-          title: t("ui.layout.personas", "Personas"),
-          target: { kind: "panel", panel: "personas" } as const,
-        },
-        {
-          id: "lorebooks",
-          title: t("ui.layout.lorebooks", "Lorebooks"),
-          target: { kind: "panel", panel: "lorebooks" } as const,
-        },
-        {
-          id: "presets",
-          title: t("ui.layout.presets", "Presets"),
-          target: { kind: "panel", panel: "presets" } as const,
-        },
-        {
-          id: "connections",
-          title: t("ui.layout.connections", "Connections"),
-          target: { kind: "panel", panel: "connections" } as const,
-        },
-        { id: "agents", title: t("ui.layout.agents", "Agents"), target: { kind: "panel", panel: "agents" } as const },
-        {
-          id: "settings-general",
-          title: t("settings.application.title", "Settings"),
-          target: { kind: "settings", tab: "general" } as const,
-          aliases: ["preferences"],
-        },
-        {
-          id: "settings-appearance",
-          title: t("settings.appearance.title", "Appearance"),
-          target: { kind: "settings", tab: "appearance" } as const,
-        },
-        {
-          id: "settings-generations",
-          title: t("settings.generations.title", "Generations"),
-          target: { kind: "settings", tab: "generations" } as const,
-        },
-        {
-          id: "settings-addons",
-          title: t("settings.addons.title", "Add-ons"),
-          target: { kind: "settings", tab: "addons" } as const,
-        },
-        {
-          id: "settings-import",
-          title: t("settings.import.title", "Import"),
-          target: { kind: "settings", tab: "import" } as const,
-        },
-        {
-          id: "settings-advanced",
-          title: t("settings.advanced.title", "Advanced"),
-          target: { kind: "settings", tab: "advanced" } as const,
-        },
-        ...createSystemCommandDefinitions((key, fallback) => t(`commandCenter.system.${key}`, fallback)).map(
-          (command) => ({
-            id: command.id,
-            title: command.title,
-            kind: command.kind,
-            icon: command.icon,
-            aliases: command.aliases,
-            target: command.target,
-            category: command.kind === "settings" ? ("settings" as const) : ("navigation" as const),
-            score: 160,
-            availability: command.availability,
-          }),
-        ),
-        ...extensionCommands.map((command) => ({
-          ...command,
-          target: { kind: "home" } as const,
-          category: "navigation" as const,
-          score: 140,
-        })),
-      ].map((command) => ({
+      navigation: t("omnibar.categories.navigation", "Navigation"),
+      chat: t("omnibar.categories.chat", "Chats"),
+      character: t("omnibar.categories.character", "Characters"),
+      persona: t("omnibar.categories.persona", "Personas"),
+      lorebook: t("omnibar.categories.lorebook", "Lorebooks"),
+      preset: t("omnibar.categories.preset", "Presets"),
+      connection: t("omnibar.categories.connection", "Connections"),
+      agent: t("omnibar.categories.agent", "Agents"),
+      settings: t("omnibar.categories.settings", "Settings"),
+      professor: t("omnibar.categories.professor", "Professor Mari"),
+      docs: t("omnibar.categories.docs", "Docs"),
+    }),
+    [t],
+  );
+  const chatModeLabels = useMemo<CommandCenterChatModeLabels>(
+    () => ({
+      conversation: t("home.recentChats.mode.conversation", "Conversation"),
+      roleplay: t("home.recentChats.mode.roleplay", "Roleplay"),
+      game: t("home.recentChats.mode.game", "Game"),
+    }),
+    [t],
+  );
+  const filterLabels = useMemo<Record<CommandCenterCategoryFilter, string>>(
+    () => ({
+      all: t("commandCenter.filters.all", "All"),
+      chats: t("commandCenter.filters.chats", "Chats"),
+      characters: t("commandCenter.filters.characters", "Characters"),
+      personas: t("commandCenter.filters.personas", "Personas"),
+      lorebooks: t("commandCenter.filters.lorebooks", "Lorebooks"),
+      presets: t("commandCenter.filters.presets", "Presets"),
+      connections: t("commandCenter.filters.connections", "Connections"),
+      agents: t("commandCenter.filters.agents", "Agents"),
+      settings: t("commandCenter.filters.settings", "Settings"),
+      docs: t("commandCenter.filters.docs", "Docs"),
+    }),
+    [t],
+  );
+  const groupLabels = useMemo<Record<CommandCenterResultGroupId, string>>(
+    () => ({
+      pinned: t("commandCenter.groups.pinned", "Pinned"),
+      recent: t("commandCenter.groups.recent", "Recent"),
+      "quick-controls": t("commandCenter.groups.quickControls", "Quick controls"),
+      "create-navigation": t("commandCenter.groups.suggested", "Suggested"),
+      navigation: t("commandCenter.groups.navigation", "Navigation"),
+      chats: filterLabels.chats,
+      characters: filterLabels.characters,
+      personas: filterLabels.personas,
+      lorebooks: filterLabels.lorebooks,
+      presets: filterLabels.presets,
+      connections: filterLabels.connections,
+      agents: filterLabels.agents,
+      settings: filterLabels.settings,
+      docs: filterLabels.docs,
+      "professor-fallback": t("commandCenter.groups.askMari", "Ask Professor Mari"),
+    }),
+    [filterLabels, t],
+  );
+
+  const characterById = useMemo(
+    () =>
+      new Map(
+        (characters.data ?? []).flatMap((item) => {
+          const row = readNamedRow(item);
+          return row ? [[row.id, item] as const] : [];
+        }),
+      ),
+    [characters.data],
+  );
+
+  const data = useMemo(() => {
+    const commands = [
+      {
+        id: "home",
+        title: t("home.title", "Home"),
+        kind: "navigation" as const,
+        icon: "home" as const,
+        target: { kind: "home" } as const,
+        aliases: ["start"],
+      },
+      {
+        id: "chats",
+        title: t("ui.layout.chats", "Chats"),
+        kind: "navigation" as const,
+        icon: "chats" as const,
+        target: { kind: "chats" } as const,
+      },
+      ...createSystemCommandDefinitions((key, fallback) => t(`commandCenter.system.${key}`, fallback)).map(
+        (command) => ({
+          id: command.id,
+          title: command.title,
+          kind: command.kind,
+          icon: command.icon,
+          aliases: command.aliases,
+          target: command.target,
+          availability: command.availability,
+        }),
+      ),
+      ...extensionCommands.map((command) => ({
         ...command,
-        category:
-          "category" in command && command.category
-            ? command.category
-            : command.id.startsWith("settings")
-              ? ("settings" as const)
-              : ("navigation" as const),
-        score: "score" in command && typeof command.score === "number" ? command.score : 160,
+        target: { kind: "home" } as const,
       })),
-      professorNavigationTitle: t("omnibar.professorNavigation"),
-      askProfessorTitle: t("omnibar.askProfessorMari"),
-      chats: (chats.data ?? []).map((chat) => ({
+    ];
+    const chatRows = (chats.data ?? []).map((chat) => {
+      const linked = characterById.get(chat.characterIds?.[0] ?? "") as Record<string, unknown> | undefined;
+      const linkedDisplay = linked
+        ? parseCharacterDisplayData({
+            data: linked.data,
+            comment: linked.comment as string | null | undefined,
+          })
+        : null;
+      const avatarPath = linked && typeof linked.avatarPath === "string" ? linked.avatarPath : undefined;
+      return {
         id: chat.id,
         name: chat.name,
         mode: chat.mode,
         preview: {
           kind: "chat" as const,
           title: chat.name,
-          categoryLabel: t(`home.recentChats.mode.${chat.mode}`, chat.mode),
+          categoryLabel: chatModeLabels[chat.mode],
+          subtitle: linkedDisplay?.name,
+          media: avatarPath
+            ? {
+                src: avatarPath,
+                alt: linkedDisplay?.name ?? chat.name,
+                kind: "avatar" as const,
+                avatarCropStyle: getAvatarCropStyle(linkedDisplay?.avatarCrop),
+              }
+            : undefined,
           facts: [
             {
               label: t("commandCenter.preview.lastUpdated", "Last updated"),
@@ -212,80 +297,98 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             },
           ],
         },
-      })),
-      resources: [
-        ...(characters.data ?? []).flatMap((item) => {
-          const row = readNamedRow(item);
-          const display = parseCharacterDisplayData({
-            data: (item as Record<string, unknown>).data,
-            comment: (item as Record<string, unknown>).comment as string | null | undefined,
-          });
-          return row
-            ? [
-                {
-                  kind: "character" as const,
-                  ...row,
-                  name: display.name,
-                  description: display.description ?? undefined,
-                  preview: {
-                    kind: "character" as const,
-                    title: row.name,
-                    description: display.description ?? undefined,
-                    categoryLabel: t("omnibar.categories.character", "Character"),
-                    media:
-                      typeof (item as Record<string, unknown>).avatarPath === "string"
-                        ? { src: (item as unknown as { avatarPath: string }).avatarPath, alt: display.name }
-                        : undefined,
-                  },
-                },
-              ]
-            : [];
-        }),
-        ...(personas.data ?? []).map((item) => ({
-          kind: "persona" as const,
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          preview: {
-            kind: "persona" as const,
-            title: item.name,
-            description: item.description,
-            media:
-              typeof (item as unknown as Record<string, unknown>).avatarPath === "string"
-                ? { src: (item as unknown as { avatarPath: string }).avatarPath, alt: item.name }
+      };
+    });
+    const resources = [
+      ...(characters.data ?? []).flatMap((item) => {
+        const row = readNamedRow(item);
+        if (!row) return [];
+        const record = item as Record<string, unknown>;
+        const display = parseCharacterDisplayData({
+          data: record.data,
+          comment: record.comment as string | null | undefined,
+        });
+        const avatarPath = typeof record.avatarPath === "string" ? record.avatarPath : undefined;
+        return [
+          {
+            kind: "character" as const,
+            ...row,
+            name: display.name,
+            description: display.description ?? undefined,
+            preview: {
+              kind: "character" as const,
+              title: display.name,
+              description: display.description ?? undefined,
+              categoryLabel: categoryLabels.character,
+              media: avatarPath
+                ? {
+                    src: avatarPath,
+                    alt: display.name,
+                    kind: "avatar" as const,
+                    avatarCropStyle: getAvatarCropStyle(display.avatarCrop),
+                  }
                 : undefined,
-            facts: item.comment ? [{ label: t("commandCenter.preview.note", "Note"), value: item.comment }] : [],
-            accent: safeColor(item.nameColor),
+            },
           },
-        })),
-        ...(lorebooks.data ?? []).map((item) => ({
-          kind: "lorebook" as const,
-          id: item.id,
-          name: item.name,
+        ];
+      }),
+      ...(personas.data ?? []).map((item) => ({
+        kind: "persona" as const,
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        preview: {
+          kind: "persona" as const,
+          title: item.name,
           description: item.description,
-          preview: {
-            kind: "lorebook" as const,
-            title: item.name,
-            description: item.description,
-            facts: [
-              {
-                label: t("commandCenter.preview.status", "Status"),
-                value:
-                  String(item.enabled) === "true"
-                    ? t("commandCenter.values.enabled", "Enabled")
-                    : t("commandCenter.values.disabled", "Disabled"),
-              },
-              { label: t("commandCenter.preview.category", "Category"), value: item.category },
-            ],
-          },
-        })),
-        ...(presets.data ?? []).map((item) => ({
+          categoryLabel: categoryLabels.persona,
+          media: item.avatarPath
+            ? {
+                src: item.avatarPath,
+                alt: item.name,
+                kind: "avatar" as const,
+                avatarCropStyle: getAvatarCropStyle(item.avatarCrop),
+              }
+            : undefined,
+          facts: item.comment ? [{ label: t("commandCenter.preview.note", "Note"), value: item.comment }] : [],
+          accent: item.nameColor,
+        },
+      })),
+      ...(lorebooks.data ?? []).map((item) => ({
+        kind: "lorebook" as const,
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        preview: {
+          kind: "lorebook" as const,
+          title: item.name,
+          description: item.description,
+          categoryLabel: categoryLabels.lorebook,
+          media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
+          facts: [
+            {
+              label: t("commandCenter.preview.status", "Status"),
+              value: item.enabled
+                ? t("commandCenter.values.enabled", "Enabled")
+                : t("commandCenter.values.disabled", "Disabled"),
+            },
+            { label: t("commandCenter.preview.category", "Category"), value: item.category },
+          ],
+        },
+      })),
+      ...(presets.data ?? []).map((item) => {
+        const artwork = resolvePresetArtwork(item);
+        return {
           kind: "preset" as const,
           id: item.id,
           name: item.name,
+          description: item.description,
           preview: {
             kind: "preset" as const,
             title: item.name,
+            description: item.description,
+            categoryLabel: categoryLabels.preset,
+            media: artwork ? { src: artwork, alt: item.name, kind: "artwork" as const } : undefined,
             facts: [
               {
                 label: t("commandCenter.preview.type", "Type"),
@@ -293,60 +396,112 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               },
             ],
           },
-        })),
-        ...(agents.data ?? []).map((item) => ({
+        };
+      }),
+      ...(agents.data ?? []).map((item) => ({
+        kind: "agent" as const,
+        id: item.type,
+        name: item.name,
+        aliases: [item.type],
+        description: item.description,
+        preview: {
           kind: "agent" as const,
-          id: item.type,
-          name: item.name,
-          aliases: [item.type],
+          title: item.name,
           description: item.description,
+          categoryLabel: categoryLabels.agent,
+          media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
+          facts: [
+            {
+              label: t("commandCenter.preview.status", "Status"),
+              value:
+                item.enabled === "true"
+                  ? t("commandCenter.values.enabled", "Enabled")
+                  : t("commandCenter.values.disabled", "Disabled"),
+            },
+            { label: t("commandCenter.preview.phase", "Phase"), value: item.phase },
+          ],
+        },
+      })),
+    ];
+    const connectionRows = (connections.data ?? []).flatMap((item) => {
+      const row = readNamedRow(item);
+      if (!row) return [];
+      const record = item as Record<string, unknown>;
+      const provider = typeof record.provider === "string" ? record.provider : undefined;
+      const model = typeof record.model === "string" ? record.model : undefined;
+      const imagePath = typeof record.imagePath === "string" ? record.imagePath : undefined;
+      return [
+        {
+          ...row,
+          provider,
+          model,
+          isDefault: record.isDefault === true,
+          imagePath,
           preview: {
-            kind: "agent" as const,
-            title: item.name,
-            description: item.description,
+            kind: "connection" as const,
+            title: row.name,
+            categoryLabel: categoryLabels.connection,
+            subtitle: provider,
+            media: imagePath ? { src: imagePath, alt: row.name, kind: "artwork" as const } : undefined,
             facts: [
-              {
-                label: t("commandCenter.preview.status", "Status"),
-                value:
-                  String(item.enabled) === "true"
-                    ? t("commandCenter.values.enabled", "Enabled")
-                    : t("commandCenter.values.disabled", "Disabled"),
-              },
-              { label: t("commandCenter.preview.phase", "Phase"), value: item.phase },
+              ...(model ? [{ label: t("commandCenter.preview.model", "Model"), value: model }] : []),
+              ...(record.isDefault === true
+                ? [
+                    {
+                      label: t("commandCenter.preview.status", "Status"),
+                      value: t("commandCenter.preview.defaultConnection", "Default connection"),
+                    },
+                  ]
+                : []),
             ],
           },
-        })),
-      ],
-      connections: (connections.data ?? []).flatMap((item) => {
-        const row = readNamedRow(item);
-        const record = item as Record<string, unknown>;
-        return row
-          ? [
-              {
-                ...row,
-                provider: typeof record.provider === "string" ? record.provider : undefined,
-                model: typeof record.model === "string" ? record.model : undefined,
-                isDefault: record.isDefault === true,
-                imagePath: typeof record.imagePath === "string" ? record.imagePath : null,
-              },
-            ]
-          : [];
-      }),
-    }),
-    [
-      agents.data,
-      characters.data,
-      chats.data,
-      connections.data,
-      extensionCommands,
-      lorebooks.data,
-      personas.data,
-      presets.data,
-      t,
-    ],
-  );
+        },
+      ];
+    });
+    return {
+      commands,
+      chats: chatRows,
+      resources,
+      connections: connectionRows,
+      professorNavigationTitle: t("omnibar.professorNavigation"),
+      askProfessorTitle: t("omnibar.askProfessorMari"),
+    };
+  }, [
+    agents.data,
+    categoryLabels,
+    characterById,
+    characters.data,
+    chatModeLabels,
+    chats.data,
+    connections.data,
+    extensionCommands,
+    lorebooks.data,
+    personas.data,
+    presets.data,
+    t,
+  ]);
+
   const controls = useMemo<OmnibarResult[]>(() => {
     const set = useUIStore.getState;
+    const toggleRows = [
+      [
+        "reduceAmbientEffects",
+        "commandCenter.controls.reducedEffects",
+        reduceAmbientEffects,
+        set().setReduceAmbientEffects,
+      ],
+      ["musicPlayerEnabled", "commandCenter.controls.musicPlayer", musicPlayerEnabled, set().setMusicPlayerEnabled],
+      ["speechToTextEnabled", "commandCenter.controls.speechToText", speechToTextEnabled, set().setSpeechToTextEnabled],
+      [
+        "notificationSoundsOnlyWhenUnfocused",
+        "commandCenter.controls.unfocusedSounds",
+        notificationSoundsOnlyWhenUnfocused,
+        set().setNotificationSoundsOnlyWhenUnfocused,
+      ],
+      ["showTimestamps", "commandCenter.controls.timestamps", showTimestamps, set().setShowTimestamps],
+      ["showModelName", "commandCenter.controls.modelName", showModelName, set().setShowModelName],
+      ["showTokenUsage", "commandCenter.controls.tokenUsage", showTokenUsage, set().setShowTokenUsage],
+    ] as const;
     return [
       {
         id: "control:theme",
@@ -361,35 +516,26 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             { value: "dark", label: t("commandCenter.values.dark", "Dark") },
             { value: "light", label: t("commandCenter.values.light", "Light") },
           ],
-          onChange: (value: string | boolean) => set().setTheme(String(value) as "dark" | "light"),
+          onChange: (value) => set().setTheme(String(value) as "dark" | "light"),
         },
       },
-      ...(
-        [
-          [
-            "reduceAmbientEffects",
-            "commandCenter.controls.reducedEffects",
-            reduceAmbientEffects,
-            set().setReduceAmbientEffects,
-          ],
-          ["musicPlayerEnabled", "commandCenter.controls.musicPlayer", musicPlayerEnabled, set().setMusicPlayerEnabled],
-          [
-            "speechToTextEnabled",
-            "commandCenter.controls.speechToText",
-            speechToTextEnabled,
-            set().setSpeechToTextEnabled,
-          ],
-          [
-            "notificationSoundsOnlyWhenUnfocused",
-            "commandCenter.controls.unfocusedSounds",
-            notificationSoundsOnlyWhenUnfocused,
-            set().setNotificationSoundsOnlyWhenUnfocused,
-          ],
-          ["showTimestamps", "commandCenter.controls.timestamps", showTimestamps, set().setShowTimestamps],
-          ["showModelName", "commandCenter.controls.modelName", showModelName, set().setShowModelName],
-          ["showTokenUsage", "commandCenter.controls.tokenUsage", showTokenUsage, set().setShowTokenUsage],
-        ] as const
-      ).map(([id, key, value, onChange]) => ({
+      {
+        id: "control:presence",
+        title: t("commandCenter.controls.presence", "Presence"),
+        category: "settings",
+        score: 175,
+        control: {
+          type: "choice",
+          label: t("commandCenter.controls.presence", "Presence"),
+          value: userStatus,
+          options: (["active", "idle", "dnd", "invisible"] as const).map((value) => ({
+            value,
+            label: t(`commandCenter.presence.${value}`, value),
+          })),
+          onChange: (value) => set().setUserStatusManual(String(value) as typeof userStatus),
+        },
+      },
+      ...toggleRows.map(([id, key, value, onChange]) => ({
         id: `control:${id}`,
         title: t(key, id),
         category: "settings" as const,
@@ -398,23 +544,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           type: "toggle" as const,
           label: t(key, id),
           value,
-          onChange: (nextValue: string | boolean) => onChange(Boolean(nextValue)),
-        },
-      })),
-      ...(["active", "idle", "dnd", "invisible"] as const).map((status) => ({
-        id: `control:presence:${status}`,
-        title: t(`commandCenter.presence.${status}`, status),
-        category: "settings" as const,
-        score: 160,
-        control: {
-          type: "choice" as const,
-          label: t("commandCenter.controls.presence", "Presence"),
-          value: userStatus,
-          options: ["active", "idle", "dnd", "invisible"].map((value) => ({
-            value,
-            label: t(`commandCenter.presence.${value}`, value),
-          })),
-          onChange: (value: string | boolean) => set().setUserStatusManual(value as typeof status),
+          onChange: (nextValue: string | boolean) => onChange(nextValue === true),
         },
       })),
     ];
@@ -430,6 +560,56 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     theme,
     userStatus,
   ]);
+
+  const searchableEntityResults = useMemo<OmnibarResult[]>(
+    () => [
+      ...data.chats.map((item) => ({
+        id: `chat:${item.id}`,
+        title: item.name,
+        category: "chat" as const,
+        target: { kind: "chat", chatId: item.id } as const,
+        score: 1,
+        preview: item.preview,
+        kind: "chat" as const,
+        icon: "chats" as const,
+      })),
+      ...data.resources.map((item) => ({
+        id: `${item.kind}:${item.id}`,
+        title: item.name,
+        category: item.kind,
+        target: { kind: "resource", resource: item.kind, id: item.id } as const,
+        score: 1,
+        description: item.description,
+        preview: item.preview,
+        kind: "resource" as const,
+        icon: item.kind,
+      })),
+      ...data.connections.map((item) => ({
+        id: `connection:${item.id}`,
+        title: item.name,
+        category: "connection" as const,
+        target: { kind: "panel", panel: "connections" } as const,
+        score: 1,
+        preview: item.preview,
+        kind: "settings" as const,
+        icon: "connection" as const,
+      })),
+    ],
+    [data.chats, data.connections, data.resources],
+  );
+  const searchableCommandResults = useMemo<OmnibarResult[]>(
+    () =>
+      data.commands.map((command) => ({
+        ...command,
+        category: command.kind === "settings" ? ("settings" as const) : ("navigation" as const),
+        score: 160,
+      })),
+    [data.commands],
+  );
+  const allLocalResults = useMemo(
+    () => [...controls, ...searchableCommandResults, ...searchableEntityResults],
+    [controls, searchableCommandResults, searchableEntityResults],
+  );
   const searchResults = useMemo<OmnibarResult[]>(
     () => [
       ...searchOmnibar(query, { ...data, controls }),
@@ -450,68 +630,26 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     ],
     [controls, data, docs.results, query, t],
   );
-  const rawResults = useMemo<OmnibarResult[]>(
-    () =>
-      query.trim()
-        ? searchResults
-        : [
-            ...controls,
-            ...data.commands,
-            ...data.chats
-              .filter(
-                (item) =>
-                  ranking.pinnedIds.includes(`chat:${item.id}`) ||
-                  ranking.recent.some((entry) => entry.id === `chat:${item.id}`),
-              )
-              .map((item) => ({
-                id: `chat:${item.id}`,
-                title: item.name,
-                category: "chat" as const,
-                target: { kind: "chat", chatId: item.id } as const,
-                score: 1,
-                preview: item.preview,
-              })),
-            ...data.resources
-              .filter(
-                (item) =>
-                  ranking.pinnedIds.includes(`${item.kind}:${item.id}`) ||
-                  ranking.recent.some((entry) => entry.id === `${item.kind}:${item.id}`),
-              )
-              .map((item) => ({
-                id: `${item.kind}:${item.id}`,
-                title: item.name,
-                category: item.kind,
-                target: { kind: "resource", resource: item.kind, id: item.id } as const,
-                score: 1,
-                preview: item.preview,
-              })),
-            ...data.connections
-              .filter(
-                (item) =>
-                  ranking.pinnedIds.includes(`connection:${item.id}`) ||
-                  ranking.recent.some((entry) => entry.id === `connection:${item.id}`),
-              )
-              .map((item) => ({
-                id: `connection:${item.id}`,
-                title: item.name,
-                category: "connection" as const,
-                target: { kind: "panel", panel: "connections" } as const,
-                score: 1,
-              })),
-          ].filter((result, index, all) => all.findIndex((candidate) => candidate.id === result.id) === index),
-    [
-      controls,
-      data.chats,
-      data.commands,
-      data.connections,
-      data.resources,
-      query,
-      ranking.pinnedIds,
-      ranking.recent,
-      searchResults,
-    ],
-  );
-  const results = useMemo<RankedOmnibarResult[]>(() => {
+  const idleResults = useMemo(() => {
+    const byId = new Map(allLocalResults.map((result) => [result.id, result]));
+    const selected: OmnibarResult[] = [];
+    const add = (id: string) => {
+      const result = byId.get(id);
+      if (result && !selected.some((item) => item.id === id)) selected.push(result);
+    };
+    ranking.pinnedIds.forEach(add);
+    ranking.recent.forEach((entry) => add(entry.id));
+    ["control:theme", "control:presence", "create-character", "create-chat", "create-persona", "documentation"].forEach(
+      add,
+    );
+    for (const result of searchableCommandResults) {
+      if (selected.length >= 4) break;
+      add(result.id);
+    }
+    return selected.slice(0, 4);
+  }, [allLocalResults, ranking.pinnedIds, ranking.recent, searchableCommandResults]);
+  const rawResults = query.trim() ? searchResults : idleResults;
+  const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
     return rankCommandResults(
       rawResults.map((result) => ({
@@ -541,17 +679,47 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       ranking,
     ).map(({ result }) => ({ ...sourceById.get(result.command.id)!, command: result.command }));
   }, [ranking, rawResults]);
+  const presentation = useMemo(
+    () =>
+      presentCommandCenterResults(rankedResults, {
+        query,
+        filter,
+        rankingState: ranking,
+      }),
+    [filter, query, rankedResults, ranking],
+  );
+  const browseAvailability = useMemo(
+    () =>
+      Object.fromEntries(
+        COMMAND_CENTER_CATEGORY_FILTERS.map((item) => [
+          item,
+          item === "all"
+            ? allLocalResults.length
+            : allLocalResults.filter((result) => result.category === FILTER_CATEGORY[item]).length,
+        ]),
+      ) as Record<CommandCenterCategoryFilter, number>,
+    [allLocalResults],
+  );
+  const tabAvailability = query.trim() ? presentation.categoryAvailability : browseAvailability;
+  const availableFilters = COMMAND_CENTER_CATEGORY_FILTERS.filter(
+    (item) => item === "all" || item === filter || tabAvailability[item] > 0,
+  );
+  const results = presentation.results;
+  const activeIndex = results.findIndex((result) => result.id === activeResultId);
+  const activeResult = activeIndex >= 0 ? results[activeIndex] : undefined;
   const loading =
     [chats, characters, personas, lorebooks, presets, connections, agents].some((item) => item.isLoading) ||
     docs.isSearching;
   const failed =
     [chats, characters, personas, lorebooks, presets, connections, agents].some((item) => item.isError) || docs.isError;
-  const activeIndex = Math.max(
-    0,
-    results.findIndex((result) => result.id === activeResultId),
+  const browseFilter = BROWSE_FILTERS.includes(filter as BrowseFilter)
+    ? (filter as BrowseFilter)
+    : (BROWSE_FILTERS.find((item) => browseAvailability[item] > 0) ?? "characters");
+  const browseResults = useMemo(
+    () => searchableEntityResults.filter((result) => result.category === FILTER_CATEGORY[browseFilter]),
+    [browseFilter, searchableEntityResults],
   );
-  const activeResult = results[activeIndex];
-  const isMobileViewport = () => window.matchMedia("(max-width: 639px)").matches;
+  const visibleBrowseResults = browseResults.slice(0, browseLimit);
 
   useEffect(() => {
     if (!results.length) {
@@ -567,7 +735,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     return () => restoreRef.current?.focus();
   }, []);
 
-  const close = onClose;
+  useEffect(() => {
+    if (!activeResultId || pane !== "results") return;
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(activeResultId)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeResultId, pane]);
+
+  useEffect(() => {
+    if (pane !== "detail" || (detailOrigin !== "browse" && !window.matchMedia("(max-width: 639px)").matches)) return;
+    requestAnimationFrame(() => backButtonRef.current?.focus());
+  }, [detailOrigin, pane]);
+
   const navigate = (target: ProfessorMariNavigationTarget) => {
     if (
       ui().editorDirty &&
@@ -576,6 +755,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return false;
     executeStateNavigation(target);
     return true;
+  };
+  const recordUse = (id: string) => {
+    const next = recordCommandUse(ranking, id);
+    setRanking(next);
+    writeCommandRankingState(next);
   };
   const runSystemAction = (result: OmnibarResult) => {
     const definition = createSystemCommandDefinitions((key, fallback) =>
@@ -605,10 +789,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     if (result.control) return;
     if (result.id.startsWith("personal-extension:")) {
       if (activatePersonalExtensionCommand(result.id)) {
-        const next = recordCommandUse(ranking, result.id);
-        setRanking(next);
-        writeCommandRankingState(next);
-        close();
+        recordUse(result.id);
+        onClose();
       }
       return;
     }
@@ -617,17 +799,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         initialDoc: result.path,
         initialSearchTerm: query.trim().slice(0, 200),
       });
-      const next = recordCommandUse(ranking, result.id);
-      setRanking(next);
-      writeCommandRankingState(next);
-      close();
+      recordUse(result.id);
+      onClose();
       return;
     }
     if (runSystemAction(result)) {
-      const next = recordCommandUse(ranking, result.id);
-      setRanking(next);
-      writeCommandRankingState(next);
-      close();
+      recordUse(result.id);
+      onClose();
       return;
     }
     if (result.id === "ask-professor-mari") {
@@ -636,7 +814,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       ui().closeAllDetails();
       ui().closeRightPanel();
       requestProfessorMariOpen(query.trim());
-      close();
+      onClose();
       return;
     }
     if (result.category === "connection") {
@@ -646,45 +824,92 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       )
         return;
       ui().openConnectionDetail(result.id.slice("connection:".length));
-      const next = recordCommandUse(ranking, result.id);
-      setRanking(next);
-      writeCommandRankingState(next);
-      close();
+      recordUse(result.id);
+      onClose();
       return;
     }
     if (result.target && navigate(result.target)) {
-      const next = recordCommandUse(ranking, result.id);
-      setRanking(next);
-      writeCommandRankingState(next);
-      close();
+      recordUse(result.id);
+      onClose();
     }
   };
-  const resolveWithProfessorMari = (value: string) => {
-    const result = searchOmnibar(value, data).find((item) => item.id === "professor-mari-navigation");
-    return result?.target ?? null;
+  const showResultDetail = (result: RankedOmnibarResult, origin: DetailOrigin = "results") => {
+    setActiveResultId(result.id);
+    setDetailResult(result);
+    setDetailOrigin(origin);
+    setPane("detail");
+  };
+  const selectResult = (result: RankedOmnibarResult) => {
+    setActiveResultId(result.id);
+    if (result.control?.type === "toggle") result.control.onChange(result.control.value !== true);
+    else if (result.control?.type === "choice") return;
+    else choose(result);
+  };
+  const handleEscape = () => {
+    if (pane === "detail") {
+      setDetailResult(null);
+      setPane(detailOrigin);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else if (pane === "browse") {
+      setPane("results");
+      setFilter("all");
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else if (query || filter !== "all") {
+      setQuery("");
+      setFilter("all");
+      setActiveResultId(null);
+    } else onClose();
+  };
+  const pinActiveResult = () => {
+    if (!activeResult) return;
+    const next = setCommandPinned(ranking, activeResult.id, !ranking.pinnedIds.includes(activeResult.id));
+    setRanking(next);
+    writeCommandRankingState(next);
+  };
+  const moveSelection = (index: number) => {
+    const next = results[index];
+    setActiveResultId(next?.id ?? null);
+    if (pane === "detail") setDetailResult(next ?? null);
   };
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") close();
-    else if (event.key === "ArrowDown") {
+    if (event.key === "Escape") {
       event.preventDefault();
-      setActiveResultId(results[Math.min(activeIndex + 1, Math.max(results.length - 1, 0))]?.id ?? null);
-    } else if (event.key === "ArrowUp") {
+      handleEscape();
+    } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
       event.preventDefault();
-      setActiveResultId(results[Math.max(activeIndex - 1, 0)]?.id ?? null);
-    } else if (event.key === "Enter" && activeResult) {
+      pinActiveResult();
+    } else if (pane !== "browse" && event.key === "ArrowDown") {
       event.preventDefault();
-      if (activeResult.control) {
-        setMobileDetail(true);
-        requestAnimationFrame(() =>
-          panelRef.current?.querySelector<HTMLElement>("[role='switch'], [role='radio']")?.focus(),
-        );
-      } else choose(activeResult);
+      moveSelection(Math.min(Math.max(activeIndex, -1) + 1, results.length - 1));
+    } else if (pane !== "browse" && event.key === "ArrowUp") {
+      event.preventDefault();
+      moveSelection(Math.max(activeIndex < 0 ? 0 : activeIndex - 1, 0));
+    } else if (pane !== "browse" && event.key === "Home") {
+      event.preventDefault();
+      moveSelection(0);
+    } else if (pane !== "browse" && event.key === "End") {
+      event.preventDefault();
+      moveSelection(results.length - 1);
+    } else if (pane === "results" && event.key === "Enter" && activeResult) {
+      event.preventDefault();
+      if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
+      else if (activeResult.control?.type === "choice") return;
+      else choose(activeResult);
+    } else if (
+      pane === "results" &&
+      event.key === "ArrowRight" &&
+      activeResult &&
+      (activeResult.control?.type === "choice" || isRichResult(activeResult))
+    ) {
+      event.preventDefault();
+      showResultDetail(activeResult);
     }
   };
   const trapFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
     if (event.key === "Escape") {
       event.preventDefault();
-      close();
+      handleEscape();
       return;
     }
     if (event.key !== "Tab") return;
@@ -703,234 +928,417 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     event.preventDefault();
     focusable[next]?.focus();
   };
+  const setCategoryFilter = (nextFilter: CommandCenterCategoryFilter) => {
+    setFilter(nextFilter);
+    setDetailResult(null);
+    setActiveResultId(null);
+    setBrowseSelectedId(null);
+    setBrowseLimit(BROWSE_BATCH_SIZE);
+    if (!query.trim() && BROWSE_FILTERS.includes(nextFilter as BrowseFilter)) setPane("browse");
+    else if (pane === "detail") setPane("results");
+    if (pane === "browse" && !BROWSE_FILTERS.includes(nextFilter as BrowseFilter)) setPane("results");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+  const openBrowse = () => {
+    if (!BROWSE_FILTERS.includes(filter as BrowseFilter)) setFilter(browseFilter);
+    setPane("browse");
+    setBrowseLimit(BROWSE_BATCH_SIZE);
+  };
+  const leaveDetail = () => {
+    const destination = pane === "detail" ? detailOrigin : "results";
+    setDetailResult(null);
+    if (pane === "browse") setFilter("all");
+    setPane(destination);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+  const openProfessorMari = () => {
+    const draft = query.trim();
+    if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
+    useChatStore.getState().setActiveChatId(null);
+    ui().closeAllDetails();
+    ui().closeRightPanel();
+    requestProfessorMariOpen(draft);
+    onClose();
+  };
+  const resultIcon = (result: RankedOmnibarResult) => {
+    if (result.category === "chat") {
+      const mode = data.chats.find((chat) => `chat:${chat.id}` === result.id)?.mode;
+      if (mode === "roleplay") return Theater;
+      if (mode === "game") return Gamepad2;
+      return MessageCircle;
+    }
+    return getCommandIcon(result.command.icon, result.command.kind);
+  };
+  const resultVisual = (result: RankedOmnibarResult) => {
+    if (result.category === "chat") {
+      const mode = data.chats.find((chat) => `chat:${chat.id}` === result.id)?.mode;
+      if (mode) return getCommandCenterChatModeVisual(mode as ChatMode, chatModeLabels);
+    }
+    return getCommandCenterCategoryVisual(result.category, categoryLabels);
+  };
+  const liveMessage = loading
+    ? t("commandCenter.live.loading", "Loading results")
+    : failed
+      ? t("commandCenter.live.partialFailure", "{{count}} results. Some sources could not be loaded.", {
+          count: results.length,
+        })
+      : t("commandCenter.live.resultCount", "{{count}} results", { count: results.length });
+  const previewResult = detailResult ?? (activeResult && isRichResult(activeResult) ? activeResult : null);
 
   return createPortal(
     <div
       data-component="GlobalOmnibar"
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 p-3 pt-[2rem] backdrop-blur-sm sm:p-6 sm:pt-[4rem]"
-      onMouseDown={(event) => event.target === event.currentTarget && close()}
+      data-pane={pane}
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 sm:px-6 sm:pt-[10vh]"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
-      <div ref={boundaryRef} className="relative h-[calc(100dvh-2rem)] w-full max-w-6xl sm:h-[calc(100dvh-8rem)]">
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="global-omnibar-title"
-          onKeyDown={trapFocus}
-          className="mx-auto mt-4 flex h-full w-full flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-2xl sm:mt-12 sm:h-[min(42rem,calc(100dvh-10rem))]"
-          data-component="GlobalOmnibar.Panel"
-        >
-          <h2 id="global-omnibar-title" className="sr-only">
-            {t("omnibar.title", "Search Marinara")}
-          </h2>
-          <div className="flex h-14 items-center gap-3 border-b border-[var(--border)] px-4">
-            <Search size={18} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-omnibar-title"
+        onKeyDown={trapFocus}
+        data-component="GlobalOmnibar.Panel"
+        className={`flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl sm:h-auto sm:max-h-[min(44rem,80dvh)] sm:rounded-lg sm:border sm:border-[var(--border)] ${pane === "detail" || (pane === "results" && previewResult) ? "sm:max-w-[60rem]" : query.trim() ? "sm:max-w-[52rem]" : "sm:max-w-[46rem]"}`}
+      >
+        <h2 id="global-omnibar-title" className="sr-only">
+          {t("omnibar.title", "Search Marinara")}
+        </h2>
+        <header className="shrink-0 pt-[env(safe-area-inset-top)]">
+          <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4">
+            {pane !== "results" ? (
+              <button
+                ref={backButtonRef}
+                type="button"
+                onClick={leaveDetail}
+                aria-label={
+                  pane === "detail" && detailOrigin === "browse"
+                    ? t("commandCenter.backToBrowse", "Back to browse")
+                    : t("commandCenter.backToResults", "Back to results")
+                }
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            ) : (
+              <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
+            )}
             <input
               ref={inputRef}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
+                setFilter("all");
+                setPane("results");
+                setDetailResult(null);
                 setActiveResultId(null);
               }}
-              role="combobox"
-              aria-expanded="true"
-              aria-autocomplete="list"
-              onKeyDown={onInputKeyDown}
+              type="search"
               aria-label={t("omnibar.inputLabel", "Search Marinara")}
-              aria-controls="global-omnibar-results"
-              aria-activedescendant={activeResult ? `omnibar-${activeResult.id}` : undefined}
+              onKeyDown={onInputKeyDown}
               placeholder={t("commandCenter.placeholder", "Search Marinara commands, chats, resources, and guides")}
-              className="min-w-0 flex-1 bg-transparent text-base text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+              className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)]"
             />
             <button
               type="button"
-              onClick={close}
-              aria-label={t("common.close", "Close")}
-              className="rounded-md p-2 text-[var(--muted-foreground)] hover:bg-[var(--accent)]"
+              onClick={openProfessorMari}
+              aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+              title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+              data-component="GlobalOmnibar.ProfessorMariButton"
+              className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
             >
-              <X size={17} />
+              <img
+                src={PROFESSOR_MARI_PEEK_URL}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+              />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.close", "Close")}
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+            >
+              <X size={18} />
             </button>
           </div>
+          {query.trim() || pane === "browse" ? (
+            <div
+              role="toolbar"
+              aria-label={t("commandCenter.filters.label", "Result categories")}
+              data-component="GlobalOmnibar.Filters"
+              className="flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
+            >
+              {(pane === "browse" ? BROWSE_FILTERS : availableFilters).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  aria-pressed={pane === "browse" ? browseFilter === item : filter === item}
+                  onClick={() => setCategoryFilter(item)}
+                  className={`min-h-8 shrink-0 rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${(pane === "browse" ? browseFilter === item : filter === item) ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"}`}
+                >
+                  {filterLabels[item]}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </header>
+
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {liveMessage}
+        </div>
+
+        {pane !== "browse" ? (
           <div className="flex min-h-0 flex-1">
             <div
+              ref={listRef}
               id="global-omnibar-results"
-              role="listbox"
               aria-label={t("omnibar.results", "Search results")}
-              className={`min-h-0 w-full overflow-y-auto p-2 sm:w-[min(28rem,42%)] sm:border-r sm:border-[var(--border)] ${mobileDetail ? "hidden sm:block" : ""}`}
+              data-component="GlobalOmnibar.Results"
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-sm:hidden") : ""}`}
             >
-              {!query.trim() && (
-                <div className="px-3 pb-2 pt-1 text-xs text-[var(--muted-foreground)]">
-                  {t("commandCenter.initialHint", "Pinned, recent, and useful controls")}
-                  <span className="mt-1 block text-[0.6875rem] opacity-80">
-                    {t("commandCenter.keyboardHint", "Enter open, arrows move, Tab navigate, Esc close")}
+              {!query.trim() && BROWSE_FILTERS.some((item) => browseAvailability[item] > 0) ? (
+                <div className="mb-1 flex items-center justify-between gap-3 px-2 pb-1">
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {t("commandCenter.initialHint", "Pinned, recent, and useful actions")}
                   </span>
+                  <button
+                    type="button"
+                    onClick={openBrowse}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  >
+                    <LayoutGrid size={15} aria-hidden="true" />
+                    {t("commandCenter.browse", "Browse")}
+                  </button>
                 </div>
-              )}
-              {query.trim() && loading && (
-                <div className="flex min-h-20 items-center justify-center text-sm text-[var(--muted-foreground)]">
+              ) : null}
+              {query.trim() && loading && results.length === 0 ? (
+                <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
                   <Loader2 className="mr-2 animate-spin" size={16} />
                   {t("omnibar.loading", "Loading results")}
                 </div>
-              )}
-              {query.trim() && failed && (
-                <div role="alert" className="p-5 text-center text-sm text-[var(--muted-foreground)]">
+              ) : null}
+              {failed ? (
+                <div role="status" className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
                   {t("omnibar.error", "Some results could not be loaded")}
                 </div>
-              )}
-              {results.map((result, resultIndex) => {
-                const Icon = getCommandIcon(result.command?.icon, result.command?.kind ?? "navigation");
-                return (
-                  <div key={result.id} role="presentation" className="min-w-0">
-                    {(!query.trim() || resultIndex === 0) &&
-                    (resultIndex === 0 || results[resultIndex - 1]?.category !== result.category) ? (
-                      <div className="px-3 pb-1 pt-3 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
-                        {t(`omnibar.categories.${result.category}`, result.category)}
-                      </div>
-                    ) : null}
-                    <div
-                      role="presentation"
-                      onMouseEnter={() => setActiveResultId(result.id)}
-                      className={`group flex min-h-12 w-full items-center gap-3 rounded-md px-3 py-2 text-left ${result.id === activeResultId ? "bg-[var(--accent)]" : "hover:bg-[var(--accent)]/60"}`}
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]/12 text-[var(--primary)]">
-                        <Icon size={16} />
-                      </span>
-                      <button
-                        type="button"
-                        id={`omnibar-${result.id}`}
-                        role="option"
-                        aria-selected={result.id === activeResultId}
-                        data-command-option
-                        onClick={() => {
-                          setActiveResultId(result.id);
-                          if (result.control || isMobileViewport()) setMobileDetail(true);
-                          else choose(result);
-                        }}
-                        className="min-w-0 flex-1 truncate text-left text-sm text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-[var(--primary)]"
-                      >
-                        {result.id === "ask-professor-mari"
-                          ? t("omnibar.askProfessorMari", "Ask Professor Mari")
-                          : result.title}
-                      </button>
-                      <span className="shrink-0 text-xs capitalize text-[var(--muted-foreground)]">
-                        {t(
-                          `omnibar.categories.${result.category}`,
-                          result.category === "professor" ? "Professor Mari" : result.category,
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={
-                          ranking.pinnedIds.includes(result.id)
-                            ? t("commandCenter.unpin", "Unpin")
-                            : t("commandCenter.pin", "Pin")
-                        }
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          const next = setCommandPinned(ranking, result.id, !ranking.pinnedIds.includes(result.id));
-                          setRanking(next);
-                          writeCommandRankingState(next);
-                        }}
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--secondary)] focus-visible:opacity-100 sm:min-h-9 sm:min-w-9 sm:opacity-0 sm:group-hover:opacity-100"
-                      >
-                        <Pin size={14} fill={ranking.pinnedIds.includes(result.id) ? "currentColor" : "none"} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              {!loading && query.trim() && results.length === 0 && (
-                <div className="p-5 text-center text-sm text-[var(--muted-foreground)]">
-                  {t("omnibar.noResults", "No results")}
-                </div>
-              )}
-            </div>
-            <div className={`min-h-0 flex-1 ${mobileDetail ? "block" : "hidden sm:block"}`}>
-              {activeResult ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setMobileDetail(false)}
-                    className="m-3 inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--border)] px-3 text-sm sm:hidden"
+              ) : null}
+              {presentation.groups.map((group) => (
+                <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
+                  <h3
+                    id={`omnibar-group-${group.id}`}
+                    className="px-2 pb-1 pt-2 text-xs font-semibold text-[var(--muted-foreground)]"
                   >
-                    <ChevronLeft size={16} />
-                    {t("commandCenter.backToResults", "Back to results")}
-                  </button>
-                  <CommandResultPreview
-                    result={
-                      {
-                        command: activeResult.command,
-                        score: activeResult.score,
-                        preview: activeResult.preview,
-                      } as RichCommandResult
-                    }
-                    statusLabel={
-                      activeResult.command.availability?.status === "requires-capability"
-                        ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                            capability: activeResult.command.availability.capability ?? "capability",
-                          })
-                        : activeResult.command.availability?.status === "requires-admin"
-                          ? t("commandCenter.adminRequired", "Administrator access required")
-                          : undefined
-                    }
-                    openAction={
-                      activeResult.control
-                        ? undefined
-                        : {
-                            label:
-                              activeResult.command.availability?.status === "requires-capability"
-                                ? t("commandCenter.setup", "Set up")
-                                : t("commandCenter.open", "Open"),
-                            onSelect: () => choose(activeResult),
-                            disabled:
-                              activeResult.command.availability?.status === "requires-admin" ||
-                              (activeResult.command.availability?.status === "requires-capability" &&
-                                (!activeResult.target || !activeResult.command.availability.setupTarget)),
+                    {groupLabels[group.id]}
+                  </h3>
+                  <ul className="space-y-0.5">
+                    {group.results.map((result) => {
+                      const visual = resultVisual(result);
+                      const pinned = ranking.pinnedIds.includes(result.id);
+                      const selected = result.id === activeResult?.id;
+                      const hasDetails = selected && (result.control?.type === "choice" || isRichResult(result));
+                      const currentChoice =
+                        result.control?.type === "choice"
+                          ? result.control.options?.find((option) => option.value === String(result.control?.value))
+                              ?.label
+                          : undefined;
+                      const setupStatus =
+                        result.command.availability?.status === "requires-capability"
+                          ? t("commandCenter.setup", "Set up")
+                          : result.command.availability?.status === "requires-admin"
+                            ? t("commandCenter.adminRequired", "Administrator access required")
+                            : undefined;
+                      return (
+                        <CommandCenterResultRow
+                          key={result.id}
+                          dataResultId={result.id}
+                          id={`omnibar-${result.id}`}
+                          title={
+                            result.id === "ask-professor-mari"
+                              ? t("omnibar.askProfessorMari", "Ask Professor Mari")
+                              : result.title
                           }
-                    }
-                  />
-                  {activeResult.control?.type === "toggle" && (
-                    <div className="border-t border-[var(--border)] p-4">
-                      <CommandCenterToggle
-                        label={activeResult.control.label}
-                        checked={Boolean(activeResult.control.value)}
-                        onCheckedChange={(value) => activeResult.control?.onChange(value)}
-                      />
-                    </div>
-                  )}
-                  {activeResult.control?.type === "choice" && (
-                    <div className="border-t border-[var(--border)] p-4">
-                      <CommandCenterSegmentedChoice
-                        label={activeResult.control.label}
-                        value={String(activeResult.control.value)}
-                        options={(activeResult.control.options ?? []).map((option) => ({ ...option }))}
-                        onValueChange={(value) => activeResult.control?.onChange(value)}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-[var(--muted-foreground)]">
-                  {t("commandCenter.selectResult", "Select a result to see details")}
+                          metadata={resultMetadata(result, visual.label)}
+                          icon={resultIcon(result)}
+                          selected={selected}
+                          onSelect={() => selectResult(result)}
+                          onMouseEnter={() => setActiveResultId(result.id)}
+                          mediaSrc={result.preview?.media?.src}
+                          mediaKind={result.preview?.media?.kind}
+                          avatarCropStyle={result.preview?.media?.avatarCropStyle}
+                          groupClassName={visual.groupClassName}
+                          accent={result.preview?.accent}
+                          currentChoice={currentChoice}
+                          setupStatus={setupStatus}
+                          enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
+                          detailsLabel={
+                            hasDetails
+                              ? t("commandCenter.detailsFor", "Details for {{title}}", { title: result.title })
+                              : undefined
+                          }
+                          onDetails={hasDetails ? () => showResultDetail(result) : undefined}
+                          control={
+                            result.control?.type === "toggle" ? (
+                              <CommandCenterToggle
+                                label={result.control.label}
+                                checked={Boolean(result.control.value)}
+                                stateLabel={
+                                  result.control.value
+                                    ? t("commandCenter.values.enabled", "Enabled")
+                                    : t("commandCenter.values.disabled", "Disabled")
+                                }
+                                onCheckedChange={(value) => result.control?.onChange(value)}
+                                variant="compact"
+                                className="w-full"
+                              />
+                            ) : undefined
+                          }
+                          pinned={pinned}
+                          pinLabel={pinned ? t("commandCenter.unpin", "Unpin") : t("commandCenter.pin", "Pin")}
+                          onPinChange={(nextPinned) => {
+                            const next = setCommandPinned(ranking, result.id, nextPinned);
+                            setRanking(next);
+                            writeCommandRankingState(next);
+                          }}
+                        />
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+              {!loading && query.trim() && results.length === 0 ? (
+                <div className="flex min-h-32 flex-col items-center justify-center px-4 text-center">
+                  <Search size={20} className="mb-2 text-[var(--muted-foreground)]" aria-hidden="true" />
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    {t("commandCenter.noResults", "No matching commands")}
+                  </p>
                 </div>
-              )}
+              ) : null}
             </div>
+            {previewResult ? (
+              <aside
+                data-component="GlobalOmnibar.Detail"
+                className={`min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] ${pane === "results" ? "max-sm:hidden sm:w-[23rem] sm:shrink-0 sm:border-l" : detailOrigin === "results" ? "sm:w-[23rem] sm:shrink-0 sm:border-l" : ""}`}
+              >
+                <CommandResultPreview
+                  result={
+                    {
+                      command: previewResult.command,
+                      score: previewResult.score,
+                      preview: previewResult.preview,
+                    } as RichCommandResult
+                  }
+                  variant="compact"
+                  statusLabel={
+                    previewResult.command.availability?.status === "requires-capability"
+                      ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
+                          capability:
+                            previewResult.command.availability.capability ??
+                            t("commandCenter.capability", "capability"),
+                        })
+                      : previewResult.command.availability?.status === "requires-admin"
+                        ? t("commandCenter.adminRequired", "Administrator access required")
+                        : undefined
+                  }
+                  openAction={
+                    previewResult.control
+                      ? undefined
+                      : {
+                          label:
+                            previewResult.command.availability?.status === "requires-capability"
+                              ? t("commandCenter.setup", "Set up")
+                              : t("commandCenter.open", "Open"),
+                          shortcut: "↵",
+                          onSelect: () => choose(previewResult),
+                          disabled:
+                            previewResult.command.availability?.status === "requires-admin" ||
+                            (previewResult.command.availability?.status === "requires-capability" &&
+                              (!previewResult.target || !previewResult.command.availability.setupTarget)),
+                        }
+                  }
+                />
+                {previewResult.control?.type === "choice" ? (
+                  <div className="border-t border-[var(--border)] p-3">
+                    <CommandCenterSegmentedChoice
+                      label={previewResult.control.label}
+                      value={String(previewResult.control.value)}
+                      options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
+                      onValueChange={(value) => previewResult.control?.onChange(value)}
+                      variant="compact"
+                    />
+                  </div>
+                ) : null}
+              </aside>
+            ) : null}
           </div>
-        </div>
+        ) : (
+          <div
+            data-component="GlobalOmnibar.Browse"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--foreground)]">{filterLabels[browseFilter]}</h2>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {t("commandCenter.browseCount", "{{count}} items", {
+                    count: browseResults.length,
+                  })}
+                </p>
+              </div>
+            </div>
+            <CommandCenterBrowseGrid
+              ariaLabel={filterLabels[browseFilter]}
+              selectedId={browseSelectedId}
+              onSelectedIdChange={setBrowseSelectedId}
+              results={visibleBrowseResults.map((result) => {
+                const command = {
+                  ...result,
+                  command: {
+                    id: result.id,
+                    title: result.title,
+                    kind: result.kind ?? "resource",
+                    icon: result.icon ?? "command",
+                    target: result.target,
+                    availability: { status: "available" as const },
+                  },
+                } as RankedOmnibarResult;
+                const visual = resultVisual(command);
+                return {
+                  id: result.id,
+                  title: result.title,
+                  metadata: resultMetadata(command, visual.label),
+                  icon: resultIcon(command),
+                  groupVisual: visual.groupClassName,
+                  media: result.preview?.media
+                    ? {
+                        src: result.preview.media.src,
+                        kind: result.preview.media.kind,
+                        avatarCropStyle: result.preview.media.avatarCropStyle,
+                        accent: result.preview.accent,
+                      }
+                    : undefined,
+                  onSelect: () => {
+                    setBrowseSelectedId(result.id);
+                    showResultDetail(command, "browse");
+                  },
+                };
+              })}
+              emptyTitle={t("commandCenter.browseEmpty", "No items in this category")}
+              hasMore={visibleBrowseResults.length < browseResults.length}
+              loadMoreLabel={t("commandCenter.loadMore", "Load more")}
+              onLoadMore={() => setBrowseLimit((value) => value + BROWSE_BATCH_SIZE)}
+            />
+          </div>
+        )}
+
+        <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
+          <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
+          <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
+          <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
+        </footer>
       </div>
-      <ProfessorMariNavigator
-        pageActive
-        enabled
-        boundaryRef={boundaryRef}
-        onResolve={resolveWithProfessorMari}
-        onNavigate={navigate}
-        onOpenProfessor={() => navigate({ kind: "professor" })}
-        onOpenDocumentation={() => navigate({ kind: "window", window: "documentation" })}
-        onMeaningfulDrag={() => undefined}
-        positionStorageKey={PROFESSOR_MARI_OMNIBAR_POSITION_STORAGE_KEY}
-        defaultPosition={{ x: 0.5, y: 0 }}
-        layout="omnibar"
-      />
     </div>,
     document.body,
   );
