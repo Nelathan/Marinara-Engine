@@ -1512,6 +1512,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <motion.div
+      ref={panelRef}
       data-component="GlobalOmnibar"
       data-pane={pane}
       className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm sm:px-6 sm:pt-[10vh]"
@@ -1519,546 +1520,592 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       animate={{ opacity: 1 }}
       transition={reduceMotion ? { duration: 0 } : { duration: 0.12, ease: "easeOut" }}
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onKeyDown={trapFocus}
     >
-      <div ref={panelRef} className="relative w-full sm:max-w-[44rem]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-omnibar-title"
+        data-component="GlobalOmnibar.Panel"
+        className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)] sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60"
+      >
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="global-omnibar-title"
-          onKeyDown={trapFocus}
-          data-component="GlobalOmnibar.Panel"
-          className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)] sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60"
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-44 bg-[radial-gradient(120%_100%_at_12%_0%,oklch(0.72_0.16_255/0.12),transparent_60%),radial-gradient(120%_100%_at_88%_0%,oklch(0.73_0.21_345/0.11),transparent_60%)]"
-          />
-          <h2 id="global-omnibar-title" className="sr-only">
-            {t("omnibar.title", "Search Marinara")}
-          </h2>
-          <header className="shrink-0 pt-[env(safe-area-inset-top)]">
-            <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4">
-              {pane !== "results" ? (
-                <button
-                  ref={backButtonRef}
-                  type="button"
-                  onClick={leaveDetail}
-                  aria-label={
-                    pane === "detail" && detailOrigin === "browse"
-                      ? t("commandCenter.backToBrowse", "Back to browse")
-                      : t("commandCenter.backToResults", "Back to results")
-                  }
-                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-              ) : (
-                <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
-              )}
-              <AnimatePresence initial={false} mode="wait">
-                {pane === "mari" ? (
-                  <motion.div
-                    key="omnibar-mari-header"
-                    initial={reduceMotion ? false : { opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={reduceMotion ? undefined : { opacity: 0, x: -10 }}
-                    transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
-                    className="flex min-w-0 flex-1 items-center gap-3"
-                  >
-                    <img
-                      src={PROFESSOR_MARI_PEEK_URL}
-                      alt=""
-                      aria-hidden="true"
-                      draggable={false}
-                      className="size-9 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--primary)]/30 ring-offset-2 ring-offset-[var(--card)]"
-                    />
-                    <span className="truncate text-base font-semibold text-[var(--foreground)]">
-                      {t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                    </span>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="omnibar-search-header"
-                    initial={reduceMotion ? false : { opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={reduceMotion ? undefined : { opacity: 0, x: 10 }}
-                    transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
-                    className="flex min-w-0 flex-1"
-                  >
-                    <input
-                      ref={inputRef}
-                      value={query}
-                      onChange={(event) => {
-                        setQuery(event.target.value);
-                        setFilter("all");
-                        setPane("results");
-                        setDetailResult(null);
-                        setActiveResultId(null);
-                      }}
-                      type="search"
-                      aria-label={t("omnibar.inputLabel", "Search Marinara")}
-                      onKeyDown={onInputKeyDown}
-                      placeholder={t(
-                        "commandCenter.placeholder",
-                        "Search Marinara commands, chats, resources, and guides",
-                      )}
-                      className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)]"
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              {pane !== "mari" ? (
-                <button
-                  type="button"
-                  onClick={openProfessorMari}
-                  aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                  title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                  data-component="GlobalOmnibar.ProfessorMariButton"
-                  className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-44 bg-[radial-gradient(120%_100%_at_12%_0%,oklch(0.72_0.16_255/0.12),transparent_60%),radial-gradient(120%_100%_at_88%_0%,oklch(0.73_0.21_345/0.11),transparent_60%)]"
+        />
+        <h2 id="global-omnibar-title" className="sr-only">
+          {t("omnibar.title", "Search Marinara")}
+        </h2>
+        <header className="shrink-0 pt-[env(safe-area-inset-top)]">
+          <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4">
+            {pane !== "results" ? (
+              <button
+                ref={backButtonRef}
+                type="button"
+                onClick={leaveDetail}
+                aria-label={
+                  pane === "detail" && detailOrigin === "browse"
+                    ? t("commandCenter.backToBrowse", "Back to browse")
+                    : t("commandCenter.backToResults", "Back to results")
+                }
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            ) : (
+              <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
+            )}
+            <AnimatePresence initial={false} mode="wait">
+              {pane === "mari" ? (
+                <motion.div
+                  key="omnibar-mari-header"
+                  initial={reduceMotion ? false : { opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, x: -10 }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
+                  className="flex min-w-0 flex-1 items-center gap-3"
                 >
                   <img
                     src={PROFESSOR_MARI_PEEK_URL}
                     alt=""
                     aria-hidden="true"
                     draggable={false}
-                    className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+                    className="size-9 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--primary)]/30 ring-offset-2 ring-offset-[var(--card)]"
                   />
-                </button>
-              ) : null}
+                  <span className="truncate text-base font-semibold text-[var(--foreground)]">
+                    {t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                  </span>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="omnibar-search-header"
+                  initial={reduceMotion ? false : { opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, x: 10 }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
+                  className="flex min-w-0 flex-1"
+                >
+                  <input
+                    ref={inputRef}
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setFilter("all");
+                      setPane("results");
+                      setDetailResult(null);
+                      setActiveResultId(null);
+                    }}
+                    type="search"
+                    aria-label={t("omnibar.inputLabel", "Search Marinara")}
+                    onKeyDown={onInputKeyDown}
+                    placeholder={t(
+                      "commandCenter.placeholder",
+                      "Search Marinara commands, chats, resources, and guides",
+                    )}
+                    className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)]"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {pane !== "mari" ? (
               <button
                 type="button"
-                onClick={onClose}
-                aria-label={t("common.close", "Close")}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+                onClick={openProfessorMari}
+                aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                data-component="GlobalOmnibar.ProfessorMariButton"
+                className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
               >
-                <X size={18} />
-              </button>
-            </div>
-            {(query.trim() || pane === "browse") && pane !== "mari" ? (
-              <motion.div
-                initial={reduceMotion ? false : { opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
-                role="toolbar"
-                aria-label={t("commandCenter.filters.label", "Result categories")}
-                data-component="GlobalOmnibar.Filters"
-                className="flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
-              >
-                {(pane === "browse" ? BROWSE_FILTERS : availableFilters).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-pressed={pane === "browse" ? browseFilter === item : filter === item}
-                    onClick={() => setCategoryFilter(item)}
-                    className={`min-h-8 shrink-0 rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${(pane === "browse" ? browseFilter === item : filter === item) ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"}`}
-                  >
-                    {filterLabels[item]}
-                  </button>
-                ))}
-              </motion.div>
-            ) : null}
-          </header>
-
-          <div className="sr-only" aria-live="polite" aria-atomic="true">
-            {liveMessage}
-          </div>
-
-          {mariMounted ? (
-            <motion.div
-              key="omnibar-mari-pane"
-              data-component="GlobalOmnibar.Mari"
-              initial={pane === "mari" ? { opacity: 0, y: -14, scale: 0.985 } : false}
-              animate={pane === "mari" ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -12, scale: 0.995 }}
-              transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
-              className={`min-h-0 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${pane === "mari" ? "relative flex-1" : "pointer-events-none absolute inset-0"}`}
-              aria-hidden={pane !== "mari"}
-            >
-              <Suspense
-                fallback={
-                  <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
-                    <Loader2 className="mr-2 animate-spin" size={16} />
-                    {t("omnibar.loading", "Loading results")}
-                  </div>
-                }
-              >
-                <OmnibarProfessorMariChat
-                  pageActive
-                  embeddedTab
-                  omnibarMode
-                  launchHidden
-                  initialAskContext={mariContext}
-                  chatWindowOpen={mariChatOpen}
-                  onChatWindowOpenChange={(open) => {
-                    setMariChatOpen(open);
-                    if (!open) {
-                      setPane("results");
-                      requestAnimationFrame(() => inputRef.current?.focus());
-                    }
-                  }}
+                <img
+                  src={PROFESSOR_MARI_PEEK_URL}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
                 />
-              </Suspense>
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.close", "Close")}
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          {(query.trim() || pane === "browse") && pane !== "mari" ? (
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
+              role="toolbar"
+              aria-label={t("commandCenter.filters.label", "Result categories")}
+              data-component="GlobalOmnibar.Filters"
+              className="flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
+            >
+              {(pane === "browse" ? BROWSE_FILTERS : availableFilters).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  aria-pressed={pane === "browse" ? browseFilter === item : filter === item}
+                  onClick={() => setCategoryFilter(item)}
+                  className={`min-h-8 shrink-0 rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${(pane === "browse" ? browseFilter === item : filter === item) ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"}`}
+                >
+                  {filterLabels[item]}
+                </button>
+              ))}
             </motion.div>
           ) : null}
-          {pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
-            <div className="flex min-h-0 flex-1">
-              <div
-                ref={listRef}
-                id="global-omnibar-results"
-                aria-label={t("omnibar.results", "Search results")}
-                data-component="GlobalOmnibar.Results"
-                className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-sm:hidden") : ""}`}
-              >
-                {!query.trim() ? (
-                  <div className="border-b border-[var(--border)] px-3 pb-3 pt-3 motion-safe:animate-fade-in-up">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-[var(--foreground)]">
-                          {t("commandCenter.deck.title", "Command Center")}
-                        </p>
-                        <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                          {t("commandCenter.deck.subtitle", "Jump, create, change, or ask Professor Mari.")}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={openProfessorMari}
-                        aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                        title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                        className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
-                      >
-                        <img
-                          src={PROFESSOR_MARI_PEEK_URL}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                          className="absolute left-1/2 top-0 h-20 w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
-                        />
-                      </button>
-                    </div>
-                    <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                      {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => {
-                            setFilter(item);
-                            setPane("browse");
-                            setBrowseLimit(BROWSE_BATCH_SIZE);
-                          }}
-                          className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--secondary)] px-2.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/40 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                        >
-                          <LayoutGrid size={13} aria-hidden="true" />
-                          {filterLabels[item]}
-                          <span className="text-[0.625rem] text-[var(--muted-foreground)]">
-                            {browseAvailability[item]}
-                          </span>
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={openBrowse}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                      >
-                        <Compass size={13} aria-hidden="true" />
-                        {t("commandCenter.browse", "Browse")}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                {query.trim() && loading && results.length === 0 ? (
-                  <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
-                    <Loader2 className="mr-2 animate-spin" size={16} />
-                    {t("omnibar.loading", "Loading results")}
-                  </div>
-                ) : null}
-                {failed ? (
-                  <div role="status" className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
-                    {t("omnibar.error", "Some results could not be loaded")}
-                  </div>
-                ) : null}
-                {presentation.groups.map((group) => {
-                  const GroupIcon =
-                    group.id === "context"
-                      ? Compass
-                      : group.id === "recent"
-                        ? Clock3
-                        : group.id === "quick-controls"
-                          ? SlidersHorizontal
-                          : group.id === "pinned"
-                            ? Sparkles
-                            : LayoutGrid;
-                  return (
-                    <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
-                      <div className="flex items-center gap-1.5 px-3 pb-1 pt-3">
-                        <GroupIcon size={12} className="text-[var(--primary)]" aria-hidden="true" />
-                        <h3
-                          id={`omnibar-group-${group.id}`}
-                          className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]"
-                        >
-                          {groupLabels[group.id]}
-                        </h3>
-                        <span className="text-[0.625rem] text-[var(--muted-foreground)]/70">
-                          {group.results.length}
-                        </span>
-                      </div>
-                      <ul className="space-y-0.5 px-1">
-                        {group.results.map((result, rowIndex) => {
-                          const visual = resultVisual(result);
-                          const selected = result.id === activeResult?.id;
-                          const hasDetails = result.control?.type === "choice" || isRichResult(result);
-                          const currentChoice =
-                            result.control?.type === "choice"
-                              ? result.control.options?.find((option) => option.value === String(result.control?.value))
-                                  ?.label
-                              : undefined;
-                          const setupStatus =
-                            result.command.availability?.status === "requires-capability"
-                              ? t("commandCenter.setup", "Set up")
-                              : result.command.availability?.status === "requires-admin"
-                                ? t("commandCenter.adminRequired", "Administrator access required")
-                                : undefined;
-                          return (
-                            <CommandCenterResultRow
-                              key={result.id}
-                              className="motion-safe:animate-omnibar-row-in"
-                              style={{ animationDelay: `${Math.min(rowIndex, 8) * 22}ms` }}
-                              dataResultId={result.id}
-                              id={`omnibar-${result.id}`}
-                              title={
-                                result.id === "ask-professor-mari"
-                                  ? t("omnibar.askProfessorMari", "Ask Professor Mari")
-                                  : result.title
-                              }
-                              metadata={resultMetadata(result, visual.label)}
-                              tertiaryMetadata={
-                                result.preview?.status?.label ??
-                                result.preview?.badges?.[0] ??
-                                result.preview?.metadataLine
-                              }
-                              description={result.description ?? result.preview?.description}
-                              icon={resultIcon(result)}
-                              selected={selected}
-                              onSelect={() => selectResult(result)}
-                              onMouseEnter={() => setActiveResultId(result.id)}
-                              mediaSrc={result.preview?.media?.src}
-                              mediaKind={result.preview?.media?.kind}
-                              avatarCropStyle={result.preview?.media?.avatarCropStyle}
-                              groupClassName={visual.groupClassName}
-                              accent={result.preview?.accent}
-                              currentChoice={currentChoice}
-                              setupStatus={setupStatus}
-                              enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
-                              detailsLabel={
-                                hasDetails
-                                  ? t("commandCenter.detailsFor", "Details for {{title}}", { title: result.title })
-                                  : undefined
-                              }
-                              onDetails={hasDetails ? () => showResultDetail(result) : undefined}
-                              control={
-                                result.control?.type === "choice" ? (
-                                  <CommandCenterSegmentedChoice
-                                    label={result.control.label}
-                                    value={String(result.control.value)}
-                                    options={(result.control.options ?? []).map((option) => ({ ...option }))}
-                                    onValueChange={(value) => result.control?.onChange(value)}
-                                    variant="compact"
-                                  />
-                                ) : result.category === "persona" || result.category === "preset" ? (
-                                  <CommandCenterActionValue
-                                    label={
-                                      result.category === "persona"
-                                        ? t("commandCenter.actions.activatePersona", "Activate persona")
-                                        : t("commandCenter.actions.setDefaultPreset", "Set default preset")
-                                    }
-                                    icon={result.category === "persona" ? Play : ArrowRight}
-                                    value={
-                                      result.control?.value === true
-                                        ? t("commandCenter.values.active", "Active")
-                                        : undefined
-                                    }
-                                    onClick={() => {
-                                      if (result.control?.type === "toggle") result.control.onChange(true);
-                                    }}
-                                    disabled={result.control?.value === true || resultControlPending(result)}
-                                    loading={resultControlPending(result)}
-                                    variant="compact"
-                                    tone="primary"
-                                    className="justify-end"
-                                  />
-                                ) : result.control?.type === "toggle" ? (
-                                  <CommandCenterToggle
-                                    label={result.control.label}
-                                    checked={Boolean(result.control.value)}
-                                    stateLabel={
-                                      result.control.value
-                                        ? t("commandCenter.values.enabled", "Enabled")
-                                        : t("commandCenter.values.disabled", "Disabled")
-                                    }
-                                    onCheckedChange={(value) => result.control?.onChange(value)}
-                                    disabled={resultControlPending(result)}
-                                    loading={resultControlPending(result)}
-                                    variant="compact"
-                                    className="justify-end"
-                                  />
-                                ) : undefined
-                              }
-                            />
-                          );
-                        })}
-                      </ul>
-                    </section>
-                  );
-                })}
-                {!loading && query.trim() && results.length === 0 ? (
-                  <div className="flex min-h-32 flex-col items-center justify-center px-4 text-center">
-                    <Search size={20} className="mb-2 text-[var(--muted-foreground)]" aria-hidden="true" />
-                    <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {t("commandCenter.noResults", "No matching commands")}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-              {pane === "detail" && previewResult ? (
-                <aside
-                  data-component="GlobalOmnibar.Detail"
-                  className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] sm:hidden"
-                >
-                  <AnimatePresence initial={false} mode="wait">
-                    {previewResult ? (
-                      <motion.div
-                        key={previewResult.id}
-                        initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
-                        transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
-                      >
-                        <CommandResultPreview
-                          result={
-                            {
-                              command: previewResult.command,
-                              score: previewResult.score,
-                              preview: previewResult.preview,
-                            } as RichCommandResult
-                          }
-                          variant="compact"
-                          statusLabel={
-                            previewResult.command.availability?.status === "requires-capability"
-                              ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                                  capability:
-                                    previewResult.command.availability.capability ??
-                                    t("commandCenter.capability", "capability"),
-                                })
-                              : previewResult.command.availability?.status === "requires-admin"
-                                ? t("commandCenter.adminRequired", "Administrator access required")
-                                : undefined
-                          }
-                          actions={previewActions}
-                        />
-                        {previewResult.control?.type === "choice" ? (
-                          <div className="border-t border-[var(--border)] p-3">
-                            <CommandCenterSegmentedChoice
-                              label={previewResult.control.label}
-                              value={String(previewResult.control.value)}
-                              options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
-                              onValueChange={(value) => previewResult.control?.onChange(value)}
-                              variant="compact"
-                            />
-                          </div>
-                        ) : null}
-                        {previewResult.control?.type === "toggle" &&
-                        previewResult.category !== "persona" &&
-                        previewResult.category !== "preset" ? (
-                          <div className="border-t border-[var(--border)] p-3">
-                            <CommandCenterToggle
-                              label={previewResult.control.label}
-                              checked={Boolean(previewResult.control.value)}
-                              stateLabel={
-                                previewResult.control.value
-                                  ? t("commandCenter.values.enabled", "Enabled")
-                                  : t("commandCenter.values.disabled", "Disabled")
-                              }
-                              onCheckedChange={(value) => previewResult.control?.onChange(value)}
-                              disabled={resultControlPending(previewResult)}
-                              loading={resultControlPending(previewResult)}
-                              variant="compact"
-                              className="w-full"
-                            />
-                          </div>
-                        ) : null}
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </aside>
-              ) : null}
-            </div>
-          ) : (
-            <div
-              data-component="GlobalOmnibar.Browse"
-              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${pane === "detail" ? "max-sm:hidden" : ""}`}
+        </header>
+
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {liveMessage}
+        </div>
+
+        {mariMounted ? (
+          <motion.div
+            key="omnibar-mari-pane"
+            data-component="GlobalOmnibar.Mari"
+            initial={pane === "mari" ? { opacity: 0, y: -14, scale: 0.985 } : false}
+            animate={pane === "mari" ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -12, scale: 0.995 }}
+            transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
+            className={`min-h-0 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${pane === "mari" ? "relative flex-1" : "pointer-events-none absolute inset-0"}`}
+            aria-hidden={pane !== "mari"}
+          >
+            <Suspense
+              fallback={
+                <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
+                  <Loader2 className="mr-2 animate-spin" size={16} />
+                  {t("omnibar.loading", "Loading results")}
+                </div>
+              }
             >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-[var(--foreground)]">{filterLabels[browseFilter]}</h2>
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    {t("commandCenter.browseCount", "{{count}} items", {
-                      count: browseResults.length,
-                    })}
+              <OmnibarProfessorMariChat
+                pageActive
+                embeddedTab
+                omnibarMode
+                launchHidden
+                initialAskContext={mariContext}
+                chatWindowOpen={mariChatOpen}
+                onChatWindowOpenChange={(open) => {
+                  setMariChatOpen(open);
+                  if (!open) {
+                    setPane("results");
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }
+                }}
+              />
+            </Suspense>
+          </motion.div>
+        ) : null}
+        {pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
+          <div className="flex min-h-0 flex-1">
+            <div
+              ref={listRef}
+              id="global-omnibar-results"
+              aria-label={t("omnibar.results", "Search results")}
+              data-component="GlobalOmnibar.Results"
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-xl:hidden") : ""}`}
+            >
+              {!query.trim() ? (
+                <div className="border-b border-[var(--border)] px-3 pb-3 pt-3 motion-safe:animate-fade-in-up">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[var(--foreground)]">
+                        {t("commandCenter.deck.title", "Command Center")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                        {t("commandCenter.deck.subtitle", "Jump, create, change, or ask Professor Mari.")}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openProfessorMari}
+                      aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                      title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                      className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+                    >
+                      <img
+                        src={PROFESSOR_MARI_PEEK_URL}
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                        className="absolute left-1/2 top-0 h-20 w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+                      />
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => {
+                          setFilter(item);
+                          setPane("browse");
+                          setBrowseLimit(BROWSE_BATCH_SIZE);
+                        }}
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--secondary)] px-2.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/40 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      >
+                        <LayoutGrid size={13} aria-hidden="true" />
+                        {filterLabels[item]}
+                        <span className="text-[0.625rem] text-[var(--muted-foreground)]">
+                          {browseAvailability[item]}
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={openBrowse}
+                      className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                    >
+                      <Compass size={13} aria-hidden="true" />
+                      {t("commandCenter.browse", "Browse")}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {query.trim() && loading && results.length === 0 ? (
+                <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
+                  <Loader2 className="mr-2 animate-spin" size={16} />
+                  {t("omnibar.loading", "Loading results")}
+                </div>
+              ) : null}
+              {failed ? (
+                <div role="status" className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
+                  {t("omnibar.error", "Some results could not be loaded")}
+                </div>
+              ) : null}
+              {presentation.groups.map((group) => {
+                const GroupIcon =
+                  group.id === "context"
+                    ? Compass
+                    : group.id === "recent"
+                      ? Clock3
+                      : group.id === "quick-controls"
+                        ? SlidersHorizontal
+                        : group.id === "pinned"
+                          ? Sparkles
+                          : LayoutGrid;
+                return (
+                  <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
+                    <div className="flex items-center gap-1.5 px-3 pb-1 pt-3">
+                      <GroupIcon size={12} className="text-[var(--primary)]" aria-hidden="true" />
+                      <h3
+                        id={`omnibar-group-${group.id}`}
+                        className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]"
+                      >
+                        {groupLabels[group.id]}
+                      </h3>
+                      <span className="text-[0.625rem] text-[var(--muted-foreground)]/70">{group.results.length}</span>
+                    </div>
+                    <ul className="space-y-0.5 px-1">
+                      {group.results.map((result, rowIndex) => {
+                        const visual = resultVisual(result);
+                        const selected = result.id === activeResult?.id;
+                        const hasDetails = result.control?.type === "choice" || isRichResult(result);
+                        const currentChoice =
+                          result.control?.type === "choice"
+                            ? result.control.options?.find((option) => option.value === String(result.control?.value))
+                                ?.label
+                            : undefined;
+                        const setupStatus =
+                          result.command.availability?.status === "requires-capability"
+                            ? t("commandCenter.setup", "Set up")
+                            : result.command.availability?.status === "requires-admin"
+                              ? t("commandCenter.adminRequired", "Administrator access required")
+                              : undefined;
+                        return (
+                          <CommandCenterResultRow
+                            key={result.id}
+                            className="motion-safe:animate-omnibar-row-in"
+                            style={{ animationDelay: `${Math.min(rowIndex, 8) * 22}ms` }}
+                            dataResultId={result.id}
+                            id={`omnibar-${result.id}`}
+                            title={
+                              result.id === "ask-professor-mari"
+                                ? t("omnibar.askProfessorMari", "Ask Professor Mari")
+                                : result.title
+                            }
+                            metadata={resultMetadata(result, visual.label)}
+                            tertiaryMetadata={
+                              result.preview?.status?.label ??
+                              result.preview?.badges?.[0] ??
+                              result.preview?.metadataLine
+                            }
+                            description={result.description ?? result.preview?.description}
+                            icon={resultIcon(result)}
+                            selected={selected}
+                            onSelect={() => selectResult(result)}
+                            onMouseEnter={() => setActiveResultId(result.id)}
+                            mediaSrc={result.preview?.media?.src}
+                            mediaKind={result.preview?.media?.kind}
+                            avatarCropStyle={result.preview?.media?.avatarCropStyle}
+                            groupClassName={visual.groupClassName}
+                            accent={result.preview?.accent}
+                            currentChoice={currentChoice}
+                            setupStatus={setupStatus}
+                            enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
+                            detailsLabel={
+                              hasDetails
+                                ? t("commandCenter.detailsFor", "Details for {{title}}", { title: result.title })
+                                : undefined
+                            }
+                            onDetails={hasDetails ? () => showResultDetail(result) : undefined}
+                            control={
+                              result.control?.type === "choice" ? (
+                                <CommandCenterSegmentedChoice
+                                  label={result.control.label}
+                                  value={String(result.control.value)}
+                                  options={(result.control.options ?? []).map((option) => ({ ...option }))}
+                                  onValueChange={(value) => result.control?.onChange(value)}
+                                  variant="compact"
+                                />
+                              ) : result.category === "persona" || result.category === "preset" ? (
+                                <CommandCenterActionValue
+                                  label={
+                                    result.category === "persona"
+                                      ? t("commandCenter.actions.activatePersona", "Activate persona")
+                                      : t("commandCenter.actions.setDefaultPreset", "Set default preset")
+                                  }
+                                  icon={result.category === "persona" ? Play : ArrowRight}
+                                  value={
+                                    result.control?.value === true
+                                      ? t("commandCenter.values.active", "Active")
+                                      : undefined
+                                  }
+                                  onClick={() => {
+                                    if (result.control?.type === "toggle") result.control.onChange(true);
+                                  }}
+                                  disabled={result.control?.value === true || resultControlPending(result)}
+                                  loading={resultControlPending(result)}
+                                  variant="compact"
+                                  tone="primary"
+                                  className="justify-end"
+                                />
+                              ) : result.control?.type === "toggle" ? (
+                                <CommandCenterToggle
+                                  label={result.control.label}
+                                  checked={Boolean(result.control.value)}
+                                  stateLabel={
+                                    result.control.value
+                                      ? t("commandCenter.values.enabled", "Enabled")
+                                      : t("commandCenter.values.disabled", "Disabled")
+                                  }
+                                  onCheckedChange={(value) => result.control?.onChange(value)}
+                                  disabled={resultControlPending(result)}
+                                  loading={resultControlPending(result)}
+                                  variant="compact"
+                                  className="justify-end"
+                                />
+                              ) : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </ul>
+                  </section>
+                );
+              })}
+              {!loading && query.trim() && results.length === 0 ? (
+                <div className="flex min-h-32 flex-col items-center justify-center px-4 text-center">
+                  <Search size={20} className="mb-2 text-[var(--muted-foreground)]" aria-hidden="true" />
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    {t("commandCenter.noResults", "No matching commands")}
                   </p>
                 </div>
+              ) : null}
+            </div>
+            {pane === "detail" && previewResult ? (
+              <aside
+                data-component="GlobalOmnibar.Detail"
+                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] xl:hidden"
+              >
+                <AnimatePresence initial={false} mode="wait">
+                  {previewResult ? (
+                    <motion.div
+                      key={previewResult.id}
+                      initial={reduceMotion ? false : { opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
+                      transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
+                    >
+                      <CommandResultPreview
+                        result={
+                          {
+                            command: previewResult.command,
+                            score: previewResult.score,
+                            preview: previewResult.preview,
+                          } as RichCommandResult
+                        }
+                        variant="compact"
+                        statusLabel={
+                          previewResult.command.availability?.status === "requires-capability"
+                            ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
+                                capability:
+                                  previewResult.command.availability.capability ??
+                                  t("commandCenter.capability", "capability"),
+                              })
+                            : previewResult.command.availability?.status === "requires-admin"
+                              ? t("commandCenter.adminRequired", "Administrator access required")
+                              : undefined
+                        }
+                        actions={previewActions}
+                      />
+                      {previewResult.control?.type === "choice" ? (
+                        <div className="border-t border-[var(--border)] p-3">
+                          <CommandCenterSegmentedChoice
+                            label={previewResult.control.label}
+                            value={String(previewResult.control.value)}
+                            options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
+                            onValueChange={(value) => previewResult.control?.onChange(value)}
+                            variant="compact"
+                          />
+                        </div>
+                      ) : null}
+                      {previewResult.control?.type === "toggle" &&
+                      previewResult.category !== "persona" &&
+                      previewResult.category !== "preset" ? (
+                        <div className="border-t border-[var(--border)] p-3">
+                          <CommandCenterToggle
+                            label={previewResult.control.label}
+                            checked={Boolean(previewResult.control.value)}
+                            stateLabel={
+                              previewResult.control.value
+                                ? t("commandCenter.values.enabled", "Enabled")
+                                : t("commandCenter.values.disabled", "Disabled")
+                            }
+                            onCheckedChange={(value) => previewResult.control?.onChange(value)}
+                            disabled={resultControlPending(previewResult)}
+                            loading={resultControlPending(previewResult)}
+                            variant="compact"
+                            className="w-full"
+                          />
+                        </div>
+                      ) : null}
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </aside>
+            ) : null}
+          </div>
+        ) : (
+          <div
+            data-component="GlobalOmnibar.Browse"
+            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${pane === "detail" ? "max-xl:hidden" : ""}`}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--foreground)]">{filterLabels[browseFilter]}</h2>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {t("commandCenter.browseCount", "{{count}} items", {
+                    count: browseResults.length,
+                  })}
+                </p>
               </div>
-              <CommandCenterBrowseGrid
-                ariaLabel={filterLabels[browseFilter]}
-                selectedId={browseSelectedId}
-                onSelectedIdChange={setBrowseSelectedId}
-                results={visibleBrowseResults.map((result) => {
-                  const command = {
-                    ...result,
-                    command: {
-                      id: result.id,
-                      title: result.title,
-                      kind: result.kind ?? "resource",
-                      icon: result.icon ?? "command",
-                      target: result.target,
-                      availability: { status: "available" as const },
-                    },
-                  } as RankedOmnibarResult;
-                  const visual = resultVisual(command);
-                  return {
+            </div>
+            <CommandCenterBrowseGrid
+              ariaLabel={filterLabels[browseFilter]}
+              selectedId={browseSelectedId}
+              onSelectedIdChange={setBrowseSelectedId}
+              results={visibleBrowseResults.map((result) => {
+                const command = {
+                  ...result,
+                  command: {
                     id: result.id,
                     title: result.title,
-                    metadata: resultMetadata(command, visual.label),
-                    description: result.description ?? result.preview?.description,
-                    status: result.preview?.status?.label,
-                    tags: result.preview?.tags ?? result.preview?.badges,
-                    secondaryState: result.preview?.metadataLine ?? result.preview?.supportingInfo,
-                    icon: resultIcon(command),
-                    groupVisual: visual.groupClassName,
-                    media: result.preview?.media
-                      ? {
-                          src: result.preview.media.src,
-                          kind: result.preview.media.kind,
-                          avatarCropStyle: result.preview.media.avatarCropStyle,
-                          accent: result.preview.accent,
-                        }
-                      : undefined,
-                    onSelect: () => {
-                      setBrowseSelectedId(result.id);
-                      showResultDetail(command, "browse");
-                    },
-                  };
-                })}
-                emptyTitle={t("commandCenter.browseEmpty", "No items in this category")}
-                hasMore={visibleBrowseResults.length < browseResults.length}
-                loadMoreLabel={t("commandCenter.loadMore", "Load more")}
-                onLoadMore={() => setBrowseLimit(browseLimit + BROWSE_BATCH_SIZE)}
-              />
-            </div>
-          )}
+                    kind: result.kind ?? "resource",
+                    icon: result.icon ?? "command",
+                    target: result.target,
+                    availability: { status: "available" as const },
+                  },
+                } as RankedOmnibarResult;
+                const visual = resultVisual(command);
+                return {
+                  id: result.id,
+                  title: result.title,
+                  metadata: resultMetadata(command, visual.label),
+                  description: result.description ?? result.preview?.description,
+                  status: result.preview?.status?.label,
+                  tags: result.preview?.tags ?? result.preview?.badges,
+                  secondaryState: result.preview?.metadataLine ?? result.preview?.supportingInfo,
+                  icon: resultIcon(command),
+                  groupVisual: visual.groupClassName,
+                  media: result.preview?.media
+                    ? {
+                        src: result.preview.media.src,
+                        kind: result.preview.media.kind,
+                        avatarCropStyle: result.preview.media.avatarCropStyle,
+                        accent: result.preview.accent,
+                      }
+                    : undefined,
+                  onSelect: () => {
+                    setBrowseSelectedId(result.id);
+                    showResultDetail(command, "browse");
+                  },
+                };
+              })}
+              emptyTitle={t("commandCenter.browseEmpty", "No items in this category")}
+              hasMore={visibleBrowseResults.length < browseResults.length}
+              loadMoreLabel={t("commandCenter.loadMore", "Load more")}
+              onLoadMore={() => setBrowseLimit(browseLimit + BROWSE_BATCH_SIZE)}
+            />
+          </div>
+        )}
 
-          {pane === "detail" && detailOrigin === "browse" && previewResult ? (
-            <aside
-              data-component="GlobalOmnibar.Detail"
-              className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] sm:hidden"
+        {pane === "detail" && detailOrigin === "browse" && previewResult ? (
+          <aside
+            data-component="GlobalOmnibar.Detail"
+            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] xl:hidden"
+          >
+            <CommandResultPreview
+              result={
+                {
+                  command: previewResult.command,
+                  score: previewResult.score,
+                  preview: previewResult.preview,
+                } as RichCommandResult
+              }
+              variant="compact"
+              statusLabel={
+                previewResult.command.availability?.status === "requires-capability"
+                  ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
+                      capability:
+                        previewResult.command.availability.capability ?? t("commandCenter.capability", "capability"),
+                    })
+                  : previewResult.command.availability?.status === "requires-admin"
+                    ? t("commandCenter.adminRequired", "Administrator access required")
+                    : undefined
+              }
+              actions={previewActions}
+            />
+          </aside>
+        ) : null}
+
+        {pane !== "mari" ? (
+          <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
+            <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
+            <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
+          </footer>
+        ) : null}
+      </div>
+
+      {pane === "detail" && previewResult ? (
+        <motion.aside
+          data-component="GlobalOmnibar.ExternalDetail"
+          initial={reduceMotion ? false : { opacity: 0, x: -18 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={reduceMotion ? undefined : { opacity: 0, x: -18 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
+          className="fixed left-[calc(50%+23rem)] top-[10vh] hidden h-[min(44rem,80dvh)] w-[22rem] overflow-y-auto overscroll-contain rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 xl:block"
+        >
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={previewResult.id}
+              initial={reduceMotion ? false : { opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
             >
               <CommandResultPreview
                 result={
@@ -2081,92 +2128,41 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 }
                 actions={previewActions}
               />
-            </aside>
-          ) : null}
-
-          {pane !== "mari" ? (
-            <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
-              <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
-              <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
-            </footer>
-          ) : null}
-        </div>
-
-        {pane === "detail" && previewResult ? (
-          <motion.aside
-            data-component="GlobalOmnibar.ExternalDetail"
-            initial={reduceMotion ? false : { opacity: 0, x: -18 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, x: -18 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
-            className="absolute left-full top-0 ml-3 hidden h-full w-[22rem] overflow-y-auto overscroll-contain rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 sm:block"
-          >
-            <AnimatePresence initial={false} mode="wait">
-              <motion.div
-                key={previewResult.id}
-                initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
-              >
-                <CommandResultPreview
-                  result={
-                    {
-                      command: previewResult.command,
-                      score: previewResult.score,
-                      preview: previewResult.preview,
-                    } as RichCommandResult
-                  }
-                  variant="compact"
-                  statusLabel={
-                    previewResult.command.availability?.status === "requires-capability"
-                      ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                          capability:
-                            previewResult.command.availability.capability ??
-                            t("commandCenter.capability", "capability"),
-                        })
-                      : previewResult.command.availability?.status === "requires-admin"
-                        ? t("commandCenter.adminRequired", "Administrator access required")
-                        : undefined
-                  }
-                  actions={previewActions}
-                />
-                {previewResult.control?.type === "choice" ? (
-                  <div className="border-t border-[var(--border)] p-3">
-                    <CommandCenterSegmentedChoice
-                      label={previewResult.control.label}
-                      value={String(previewResult.control.value)}
-                      options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
-                      onValueChange={(value) => previewResult.control?.onChange(value)}
-                      variant="compact"
-                    />
-                  </div>
-                ) : null}
-                {previewResult.control?.type === "toggle" &&
-                previewResult.category !== "persona" &&
-                previewResult.category !== "preset" ? (
-                  <div className="border-t border-[var(--border)] p-3">
-                    <CommandCenterToggle
-                      label={previewResult.control.label}
-                      checked={Boolean(previewResult.control.value)}
-                      stateLabel={
-                        previewResult.control.value
-                          ? t("commandCenter.values.enabled", "Enabled")
-                          : t("commandCenter.values.disabled", "Disabled")
-                      }
-                      onCheckedChange={(value) => previewResult.control?.onChange(value)}
-                      disabled={resultControlPending(previewResult)}
-                      loading={resultControlPending(previewResult)}
-                      variant="compact"
-                      className="w-full"
-                    />
-                  </div>
-                ) : null}
-              </motion.div>
-            </AnimatePresence>
-          </motion.aside>
-        ) : null}
-      </div>
+              {previewResult.control?.type === "choice" ? (
+                <div className="border-t border-[var(--border)] p-3">
+                  <CommandCenterSegmentedChoice
+                    label={previewResult.control.label}
+                    value={String(previewResult.control.value)}
+                    options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
+                    onValueChange={(value) => previewResult.control?.onChange(value)}
+                    variant="compact"
+                  />
+                </div>
+              ) : null}
+              {previewResult.control?.type === "toggle" &&
+              previewResult.category !== "persona" &&
+              previewResult.category !== "preset" ? (
+                <div className="border-t border-[var(--border)] p-3">
+                  <CommandCenterToggle
+                    label={previewResult.control.label}
+                    checked={Boolean(previewResult.control.value)}
+                    stateLabel={
+                      previewResult.control.value
+                        ? t("commandCenter.values.enabled", "Enabled")
+                        : t("commandCenter.values.disabled", "Disabled")
+                    }
+                    onCheckedChange={(value) => previewResult.control?.onChange(value)}
+                    disabled={resultControlPending(previewResult)}
+                    loading={resultControlPending(previewResult)}
+                    variant="compact"
+                    className="w-full"
+                  />
+                </div>
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
+        </motion.aside>
+      ) : null}
     </motion.div>,
     document.body,
   );
