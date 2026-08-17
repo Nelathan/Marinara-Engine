@@ -1408,38 +1408,55 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ) : (
               <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
             )}
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setFilter("all");
-                setPane("results");
-                setDetailResult(null);
-                setActiveResultId(null);
-              }}
-              type="search"
-              aria-label={t("omnibar.inputLabel", "Search Marinara")}
-              onKeyDown={onInputKeyDown}
-              placeholder={t("commandCenter.placeholder", "Search Marinara commands, chats, resources, and guides")}
-              className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)]"
-            />
-            <button
-              type="button"
-              onClick={openProfessorMari}
-              aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-              title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-              data-component="GlobalOmnibar.ProfessorMariButton"
-              className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
-            >
-              <img
-                src={PROFESSOR_MARI_PEEK_URL}
-                alt=""
-                aria-hidden="true"
-                draggable={false}
-                className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+            {pane === "mari" ? (
+              <div className="flex min-w-0 flex-1 items-center gap-2.5 motion-safe:animate-fade-in-up">
+                <img
+                  src={PROFESSOR_MARI_PEEK_URL}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  className="size-8 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--border)]"
+                />
+                <span className="truncate text-base font-semibold text-[var(--foreground)]">
+                  {t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                </span>
+              </div>
+            ) : (
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setFilter("all");
+                  setPane("results");
+                  setDetailResult(null);
+                  setActiveResultId(null);
+                }}
+                type="search"
+                aria-label={t("omnibar.inputLabel", "Search Marinara")}
+                onKeyDown={onInputKeyDown}
+                placeholder={t("commandCenter.placeholder", "Search Marinara commands, chats, resources, and guides")}
+                className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)]"
               />
-            </button>
+            )}
+            {pane !== "mari" ? (
+              <button
+                type="button"
+                onClick={openProfessorMari}
+                aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                data-component="GlobalOmnibar.ProfessorMariButton"
+                className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+              >
+                <img
+                  src={PROFESSOR_MARI_PEEK_URL}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+                />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onClose}
@@ -1478,7 +1495,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         {pane === "mari" ? (
           <div
             data-component="GlobalOmnibar.Mari"
-            className="relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)]"
+            className="relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] motion-safe:animate-fade-in-up"
           >
             <Suspense
               fallback={
