@@ -11,6 +11,7 @@ import {
   Sparkles,
   FileText,
   VenetianMask,
+  Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -111,6 +112,7 @@ export function TopBar() {
   const musicPlayerEnabled = useUIStore((s) => s.musicPlayerEnabled);
   const characterLibraryOpen = useUIStore((s) => s.characterLibraryOpen);
   const cardLibraryKind = useUIStore((s) => s.cardLibraryKind);
+  const setOmnibarOpen = useUIStore((s) => s.setOmnibarOpen);
   const headerRef = useRef<HTMLElement | null>(null);
   const leftControlsRef = useRef<HTMLDivElement | null>(null);
   const rightNavRef = useRef<HTMLElement | null>(null);
@@ -423,6 +425,15 @@ export function TopBar() {
         </button>
 
         <PersonalExtensionTopbarButtons />
+        <button
+          type="button"
+          onClick={() => setOmnibarOpen(true)}
+          aria-label={localize("Search")}
+          title={localize("Search")}
+          className={cn(TOPBAR_PANEL_BUTTON_CLASS, "text-[var(--muted-foreground)] hover:bg-[var(--accent)]")}
+        >
+          <Search size={15} aria-hidden="true" />
+        </button>
         <PersonalExtensionContributionsMenu />
       </nav>
     </header>

@@ -914,6 +914,7 @@ interface UIState {
   centerCompact: boolean;
   /** Transient request for the chat sidebar to focus a fixed mode shortcut. */
   chatModeShortcutRequest: { mode: ChatModeShortcut; token: number } | null;
+  omnibarOpen: boolean;
 
   // Actions
   toggleSidebar: () => void;
@@ -1103,6 +1104,7 @@ interface UIState {
   setTextStrokeColor: (v: string) => void;
   setCenterCompact: (v: boolean) => void;
   requestChatModeShortcut: (mode: ChatModeShortcut) => void;
+  setOmnibarOpen: (open: boolean) => void;
   setVisualTheme: (v: VisualTheme) => void;
   setConvoGradientField: (scheme: "dark" | "light", field: "from" | "to", value: string) => void;
   resetAppearanceSettings: () => void;
@@ -1557,6 +1559,7 @@ export const useUIStore = create<UIState>()(
       recentUserActivities: [],
       centerCompact: false,
       chatModeShortcutRequest: null,
+      omnibarOpen: false,
 
       // Impersonate settings defaults
       impersonatePromptTemplate: "",
@@ -2175,6 +2178,7 @@ export const useUIStore = create<UIState>()(
             token: (state.chatModeShortcutRequest?.token ?? 0) + 1,
           },
         })),
+      setOmnibarOpen: (open) => set({ omnibarOpen: open }),
 
       // Settings actions
       setFontSize: (size) => set({ fontSize: size }),

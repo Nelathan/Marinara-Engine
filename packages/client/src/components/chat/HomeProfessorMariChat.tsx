@@ -3284,6 +3284,10 @@ export function HomeProfessorMariChat({
     });
   }, []);
 
+  useEffect(() => {
+    if (controlledChatWindowOpen) focusComposer();
+  }, [controlledChatWindowOpen, focusComposer]);
+
   useLayoutEffect(() => {
     resizeComposer(embeddedTextareaRef.current);
     resizeComposer(floatingTextareaRef.current);
