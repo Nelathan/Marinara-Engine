@@ -133,16 +133,16 @@ export function CommandResultPreview({
           )}
 
           {hasFacts && preview && (
-            <dl
-              className={cn(
-                "mt-3 grid grid-cols-1 gap-x-5 gap-y-2 border-t border-[var(--border)] pt-3",
-                !compact && "sm:grid-cols-2",
-              )}
-            >
+            <dl className={cn("mt-3 grid grid-cols-1 gap-2", !compact && "sm:grid-cols-2")}>
               {facts?.map((fact, index) => (
-                <div key={`${fact.label}-${index}`} className="min-w-0">
-                  <dt className="text-xs font-medium text-[var(--muted-foreground)]">{fact.label}</dt>
-                  <dd className="break-words text-sm leading-5 text-[var(--foreground)]">{fact.value}</dd>
+                <div
+                  key={`${fact.label}-${index}`}
+                  className="min-w-0 rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-3 py-2 ring-1 ring-inset ring-[var(--border)]/60"
+                >
+                  <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
+                    {fact.label}
+                  </dt>
+                  <dd className="mt-0.5 break-words text-sm leading-5 text-[var(--foreground)]">{fact.value}</dd>
                 </div>
               ))}
             </dl>

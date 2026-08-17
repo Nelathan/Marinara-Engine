@@ -1553,13 +1553,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
             )}
             {pane === "mari" ? (
-              <div className="flex min-w-0 flex-1 items-center gap-2.5 motion-safe:animate-fade-in-up">
+              <div className="flex min-w-0 flex-1 items-center gap-3 motion-safe:animate-fade-in-up">
                 <img
                   src={PROFESSOR_MARI_PEEK_URL}
                   alt=""
                   aria-hidden="true"
                   draggable={false}
-                  className="size-8 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--border)]"
+                  className="size-9 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--primary)]/30 ring-offset-2 ring-offset-[var(--card)]"
                 />
                 <span className="truncate text-base font-semibold text-[var(--foreground)]">
                   {t("omnibar.askProfessorMari", "Ask Professor Mari")}
@@ -1738,7 +1738,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     {groupLabels[group.id]}
                   </h3>
                   <ul className="space-y-0.5">
-                    {group.results.map((result) => {
+                    {group.results.map((result, rowIndex) => {
                       const visual = resultVisual(result);
                       const selected = result.id === activeResult?.id;
                       const hasDetails = selected && (result.control?.type === "choice" || isRichResult(result));
@@ -1756,6 +1756,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       return (
                         <CommandCenterResultRow
                           key={result.id}
+                          className="motion-safe:animate-omnibar-row-in"
+                          style={{ animationDelay: `${Math.min(rowIndex, 8) * 22}ms` }}
                           dataResultId={result.id}
                           id={`omnibar-${result.id}`}
                           title={
@@ -1794,7 +1796,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                                 options={(result.control.options ?? []).map((option) => ({ ...option }))}
                                 onValueChange={(value) => result.control?.onChange(value)}
                                 variant="compact"
-                                className="border-0 bg-transparent"
                               />
                             ) : result.category === "persona" || result.category === "preset" ? (
                               <CommandCenterActionValue

@@ -46,7 +46,7 @@ export function CommandCenterToggle({
       ) : Icon ? (
         <Icon className="size-4 shrink-0" aria-hidden="true" />
       ) : null}
-      <span className={cn("min-w-0 break-words", compact ? "truncate" : "flex-1")}>{label}</span>
+      <span className={cn("min-w-0 break-words", compact ? "sr-only" : "flex-1")}>{label}</span>
       {compact && stateLabel ? (
         <span className="hidden shrink-0 truncate text-right text-[var(--muted-foreground)] sm:inline">
           {stateLabel}

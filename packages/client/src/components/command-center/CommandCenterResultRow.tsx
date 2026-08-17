@@ -29,6 +29,7 @@ export interface CommandCenterResultRowProps {
   onMouseEnter?: MouseEventHandler<HTMLLIElement>;
   onMouseLeave?: MouseEventHandler<HTMLLIElement>;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function CommandCenterResultRow({
@@ -55,6 +56,7 @@ export function CommandCenterResultRow({
   onMouseEnter,
   onMouseLeave,
   className,
+  style,
 }: CommandCenterResultRowProps) {
   const hasDetailsAction = Boolean(onDetails && detailsLabel);
   const hasActions = hasDetailsAction;
@@ -65,6 +67,7 @@ export function CommandCenterResultRow({
       data-command-center-result-row
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      style={style}
       className={cn(
         "group grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center rounded-xl transition-colors",
         "min-h-14 sm:h-[3.25rem]",
@@ -117,16 +120,16 @@ export function CommandCenterResultRow({
       ) : null}
 
       {hasActions ? (
-        <div className="col-start-3 flex h-full shrink-0 items-center justify-end pr-0.5">
+        <div className="col-start-3 flex h-full shrink-0 items-center justify-end pr-0.5 sm:hidden">
           {hasDetailsAction ? (
             <button
               type="button"
               aria-label={detailsLabel}
               title={detailsLabel}
               onClick={onDetails}
-              className="inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)] sm:size-8"
+              className="inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
             >
-              <ChevronRight className="size-4" aria-hidden="true" />
+              <ChevronRight className="size-5" aria-hidden="true" />
             </button>
           ) : null}
         </div>

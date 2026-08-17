@@ -66,8 +66,8 @@ export function CommandCenterSegmentedChoice<T extends string>({
       aria-labelledby={labelId}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex min-w-0 max-w-full rounded-md border border-[var(--border)] bg-[var(--secondary)] p-0.5",
-        compact ? "w-full flex-nowrap overflow-x-auto overscroll-x-contain" : "flex-wrap",
+        "inline-flex min-w-0 max-w-full gap-0.5 rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--foreground)_5%,var(--secondary))] p-0.5 shadow-inner",
+        compact ? "w-full flex-nowrap overflow-x-auto overscroll-x-contain [scrollbar-width:none]" : "flex-wrap",
         unavailable && "opacity-50",
         className,
       )}
@@ -90,13 +90,13 @@ export function CommandCenterSegmentedChoice<T extends string>({
             onClick={() => onValueChange(option.value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded px-3 text-xs font-semibold transition-colors sm:min-h-8",
+              "inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all sm:min-h-7",
               compact ? "shrink-0" : "min-w-0 max-md:flex-1",
               "focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
               "disabled:cursor-not-allowed",
               selected
                 ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm"
-                : "text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
+                : "text-[var(--muted-foreground)] hover:bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] hover:text-[var(--foreground)]",
             )}
           >
             {loading && selected ? (
