@@ -203,6 +203,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
+  const mariReturnResultIdRef = useRef<string | null>(null);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -1427,6 +1428,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const focusResult = selectedResult ?? contextResults[0] ?? null;
     setMariContext(buildProfessorMariCommandCenterContext(draft, focusResult));
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
+    mariReturnResultIdRef.current = focusResult?.id ?? activeResultId;
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
@@ -1784,7 +1786,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   setMariChatOpen(open);
                   if (!open) {
                     setPane(mariReturnPane);
-                    requestAnimationFrame(() => inputRef.current?.focus());
+                    requestAnimationFrame(() => {
+                      const resultId = mariReturnResultIdRef.current;
+                      const row = resultId
+                        ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
+                        : null;
+                      (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
+                    });
                   }
                 }}
               />

@@ -5468,6 +5468,9 @@ export function HomeProfessorMariChat({
             ? localizeUi("ui.chat.homeprofessormarichat.handoffContextField", { field: handoffContext.field })
             : ""}
         </p>
+        {handoffContext.query ? (
+          <p className="mt-0.5 line-clamp-2 text-[var(--muted-foreground)]/80">{handoffContext.query}</p>
+        ) : null}
       </div>
       <button
         type="button"
@@ -5495,9 +5498,9 @@ export function HomeProfessorMariChat({
         resource: result.resource.kind,
         id: result.resource.id,
       });
-      if (floatingMode) closeChatWindow();
+      if (floatingMode || omnibarMode) closeChatWindow();
     },
-    [closeChatWindow, floatingMode, invalidateActionResult, localizeUi],
+    [closeChatWindow, floatingMode, invalidateActionResult, localizeUi, omnibarMode],
   );
 
   const reviewActionResult = useCallback(

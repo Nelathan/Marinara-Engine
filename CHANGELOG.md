@@ -10,6 +10,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 - Command Center now finds resource names inside natural requests and ranks the open editor and active-chat resources higher without using an LLM.
 
+- Professor Mari's Command Center focus now shows the carried request, restores focus to the source result on return, and closes the omnibar onto resources opened from completed workspace actions.
+
 - Command Center search now finds common Settings controls and sections, with a description and direct navigation to the matching Settings location.
 
 - Reworked the empty Command Center into a focused command deck with contextual actions, recent commands, quick controls, category shortcuts, and a compact Professor Mari handoff.
