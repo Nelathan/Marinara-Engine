@@ -21,9 +21,17 @@ import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-
 import { useChats } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
+import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
 import { useLorebooks, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { parseCharacterDisplayData } from "../../lib/character-display";
+import { isLanguageGenerationConnection } from "../../lib/connection-filters";
+import { resolveChatResourceDropAction } from "../../lib/chat-resource-drop-capabilities";
+import {
+  requestChatResourceAssignment,
+  type ChatResourceDragKind,
+  type ChatResourceDragPayload,
+} from "../../lib/chat-resource-drag";
 import {
   COMMAND_CENTER_CATEGORY_FILTERS,
   presentCommandCenterResults,
@@ -50,6 +58,7 @@ import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { getAvatarCropStyle } from "../../lib/utils";
+import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
 import { useChatStore } from "../../stores/chat.store";
 import { useUIStore } from "../../stores/ui.store";
 import { CommandCenterBrowseGrid } from "../command-center/CommandCenterBrowseGrid";
@@ -153,6 +162,7 @@ export function GlobalOmnibar() {
 
 function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  const localize = useLocalizedUiText();
   const ui = useUIStore.getState;
   const inputRef = useRef<HTMLInputElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
@@ -193,6 +203,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const showModelName = useUIStore((state) => state.showModelName);
   const showTokenUsage = useUIStore((state) => state.showTokenUsage);
   const userStatus = useUIStore((state) => state.userStatus);
+  const activeChat = useChatStore((state) => state.activeChat);
 
   const categoryLabels = useMemo<CommandCenterCategoryLabels>(
     () => ({
@@ -792,9 +803,41 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => [...controls, ...searchableCommandResults, ...searchableEntityResults],
     [controls, searchableCommandResults, searchableEntityResults],
   );
-  const searchResults = useMemo<OmnibarResult[]>(
-    () => [
+  const searchResults = useMemo<OmnibarResult[]>(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const faqResults =
+      normalizedQuery.length < 2
+        ? []
+        : HOME_FAQ_ITEMS.flatMap((item) => {
+            const searchText = getFaqSearchText(item, localize);
+            if (!searchText.includes(normalizedQuery)) return [];
+            const question = `${item.question} ${localize(item.question)}`.toLowerCase();
+            const score = question.includes(normalizedQuery) ? 230 : 130;
+            return [
+              {
+                id: `faq:${item.id}`,
+                title: localize(item.question),
+                category: "docs" as const,
+                score,
+                description: localize(item.answer),
+                preview: {
+                  kind: "docs" as const,
+                  title: localize(item.question),
+                  categoryLabel: t("omnibar.faq", "FAQ"),
+                  description: localize(item.answer),
+                  facts: (item.bullets ?? []).slice(0, 6).map((bullet) => ({
+                    label: t("omnibar.faq.step", "Useful step"),
+                    value: localize(bullet),
+                  })),
+                },
+                kind: "resource" as const,
+                icon: "documentation" as const,
+              } satisfies OmnibarResult,
+            ];
+          });
+    return [
       ...searchOmnibar(query, { ...data, controls }),
+      ...faqResults,
       ...docs.results.map((result) => ({
         ...result,
         category: "docs" as const,
@@ -816,9 +859,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         kind: "resource" as const,
         icon: "documentation" as const,
       })),
-    ],
-    [controls, data, docs.results, query, t],
-  );
+    ];
+  }, [controls, data, docs.results, localize, query, t]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -996,6 +1038,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         initialDoc: result.path,
         initialSearchTerm: query.trim().slice(0, 200),
       });
+      recordUse(result.id);
+      onClose();
+      return;
+    }
+    if (result.id.startsWith("faq:")) {
+      ui().openModal("faq-viewer", { initialItemId: result.id.slice("faq:".length) });
       recordUse(result.id);
       onClose();
       return;
@@ -1223,8 +1271,51 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     ? (() => {
         if (previewResult.control?.type === "choice") return [];
         if (previewResult.command.availability?.status === "requires-admin") return [];
-        if (previewResult.category === "persona" && previewResult.control?.value === true) return [];
-        if (previewResult.category === "preset" && previewResult.control?.value === true) return [];
+        const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
+          character: "character",
+          persona: "persona",
+          lorebook: "lorebook",
+          preset: "preset",
+          connection: "connection",
+          agent: "agent",
+        };
+        const resourceKind = resourceKinds[previewResult.category];
+        const resourceId = resourceKind ? previewResult.id.slice(previewResult.id.indexOf(":") + 1) : "";
+        const connection =
+          resourceKind === "connection"
+            ? (connections.data ?? []).find((item) => readNamedRow(item)?.id === resourceId)
+            : undefined;
+        const payload: ChatResourceDragPayload | null = resourceKind
+          ? {
+              version: 1,
+              kind: resourceKind,
+              ids: [resourceId],
+              label: previewResult.title,
+              ...(connection && !isLanguageGenerationConnection(connection)
+                ? { unsupported: "connection-kind" as const }
+                : {}),
+            }
+          : null;
+        const canAddToChat =
+          payload && activeChat && resolveChatResourceDropAction(payload, activeChat)?.type !== "blocked";
+        const addToChatAction =
+          payload && canAddToChat
+            ? {
+                label: t("commandCenter.actions.addToThisChat", "Add to this chat"),
+                icon: MessageCircle,
+                onSelect: () => {
+                  requestChatResourceAssignment(payload);
+                  recordUse(previewResult.id);
+                  onClose();
+                },
+              }
+            : null;
+        if (previewResult.category === "persona" && previewResult.control?.value === true) {
+          return addToChatAction ? [addToChatAction] : [];
+        }
+        if (previewResult.category === "preset" && previewResult.control?.value === true) {
+          return addToChatAction ? [addToChatAction] : [];
+        }
         if (previewResult.category === "persona" || previewResult.category === "preset") {
           return [
             {
@@ -1236,6 +1327,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               onSelect: () => previewResult.control?.onChange(true),
               disabled: resultControlPending(previewResult),
             },
+            ...(addToChatAction ? [addToChatAction] : []),
           ];
         }
         if (previewResult.control?.type === "toggle") {
@@ -1248,26 +1340,32 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               onSelect: () => previewResult.control?.onChange(previewResult.control.value !== true),
               disabled: resultControlPending(previewResult),
             },
+            ...(addToChatAction ? [addToChatAction] : []),
           ];
         }
         const requiresSetup = previewResult.command.availability?.status === "requires-capability";
-        if (!previewResult.target || (requiresSetup && !previewResult.command.availability?.setupTarget)) return [];
-        return [
-          {
-            label:
-              previewResult.category === "chat"
-                ? t("commandCenter.actions.resumeChat", "Resume chat")
-                : previewResult.category === "character"
-                  ? t("commandCenter.actions.editCharacter", "Edit character")
-                  : previewResult.category === "docs"
-                    ? t("commandCenter.actions.openDocs", "Open documentation")
-                    : t("commandCenter.open", "Open"),
-            icon:
-              previewResult.category === "chat" ? Play : previewResult.category === "character" ? Edit3 : FolderOpen,
-            onSelect: () => choose(previewResult),
-            disabled: resultControlPending(previewResult),
-          },
-        ];
+        const openAction =
+          previewResult.target && (!requiresSetup || previewResult.command.availability?.setupTarget)
+            ? {
+                label:
+                  previewResult.category === "chat"
+                    ? t("commandCenter.actions.resumeChat", "Resume chat")
+                    : previewResult.category === "character"
+                      ? t("commandCenter.actions.editCharacter", "Edit character")
+                      : previewResult.category === "docs"
+                        ? t("commandCenter.actions.openDocs", "Open documentation")
+                        : t("commandCenter.open", "Open"),
+                icon:
+                  previewResult.category === "chat"
+                    ? Play
+                    : previewResult.category === "character"
+                      ? Edit3
+                      : FolderOpen,
+                onSelect: () => choose(previewResult),
+                disabled: resultControlPending(previewResult),
+              }
+            : null;
+        return [...(openAction ? [openAction] : []), ...(addToChatAction ? [addToChatAction] : [])];
       })()
     : [];
 

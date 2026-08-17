@@ -7,7 +7,7 @@ import { Modal } from "../ui/Modal";
 import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
 import { useTranslation as useUiTranslation } from "react-i18next";
 
-interface HomeFaqItem {
+export interface HomeFaqItem {
   id: string;
   category: string;
   question: string;
@@ -40,7 +40,7 @@ const QUICK_FIXES = [
   "If Game Mode setup keeps failing, switch to a stronger model before changing prompts or presets.",
 ];
 
-const HOME_FAQ_ITEMS: HomeFaqItem[] = [
+export const HOME_FAQ_ITEMS: HomeFaqItem[] = [
   {
     id: "connect-model",
     category: "Top Issue",
@@ -543,7 +543,7 @@ const CATEGORY_STYLES: Record<string, string> = {
   Misc: "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)]",
 };
 
-function getFaqSearchText(item: HomeFaqItem, localize: (englishText: string) => string) {
+export function getFaqSearchText(item: HomeFaqItem, localize: (englishText: string) => string) {
   const values = [item.category, item.question, item.answer, ...(item.bullets ?? [])];
   return [...values, ...values.map(localize)].join(" ").toLowerCase();
 }

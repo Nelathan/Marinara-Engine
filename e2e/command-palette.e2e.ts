@@ -187,6 +187,51 @@ test("desktop exposes inline entity controls and rich character information", as
   }
 });
 
+test("Command Center can add a character to the active chat", async ({ page, request }, testInfo) => {
+  const suffix = Date.now().toString(36);
+  const name = `Command Chat Character ${suffix}`;
+  const characterResponse = await request.post("/api/characters", {
+    data: { data: { name } },
+  });
+  expect(characterResponse.ok()).toBeTruthy();
+  const character = (await characterResponse.json()) as { id: string };
+  const chatResponse = await request.post("/api/chats", {
+    data: { name: `Command Chat ${suffix}`, mode: "conversation", characterIds: [] },
+  });
+  expect(chatResponse.ok()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+
+  try {
+    await page.evaluate(async (chatId) => {
+      const module = await import("/src/stores/chat.store.ts");
+      module.useChatStore.getState().setActiveChatId(chatId);
+    }, chat.id);
+    await expect(page.locator("[data-chat-resource-drop-surface]")).toBeVisible();
+    await page.keyboard.press("Control+k");
+    const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+    await omnibar.getByRole("searchbox", { name: "Search Marinara" }).fill(name);
+    const row = omnibar.locator("[data-command-center-result-row]").filter({ hasText: name });
+    if (testInfo.project.name.includes("mobile")) await row.getByRole("button", { name: new RegExp(name) }).click();
+    else await row.hover();
+    await expect(omnibar.getByRole("button", { name: "Add to this chat", exact: true })).toBeVisible();
+    await omnibar.getByRole("button", { name: "Add to this chat", exact: true }).click();
+
+    await expect(omnibar).toBeHidden();
+    await expect
+      .poll(async () => {
+        const response = await request.get(`/api/chats/${chat.id}`);
+        const stored = (await response.json()) as { characterIds?: string[] | string };
+        return typeof stored.characterIds === "string" ? JSON.parse(stored.characterIds) : (stored.characterIds ?? []);
+      })
+      .toContain(character.id);
+  } finally {
+    await Promise.all([
+      request.delete(`/api/chats/${chat.id}`).catch(() => undefined),
+      request.delete(`/api/characters/${character.id}`).catch(() => undefined),
+    ]);
+  }
+});
+
 test("browse detail shows the exact selected entity and returns to its browse position", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("desktop"), "Browse detail is covered on desktop.");
 

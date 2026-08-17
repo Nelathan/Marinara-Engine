@@ -52,6 +52,9 @@ const AgentWriteApprovalModal = lazy(() =>
 const DocsViewerModal = lazy(() =>
   import("../modals/DocsViewerModal").then((module) => ({ default: module.DocsViewerModal })),
 );
+const FaqViewerModal = lazy(() =>
+  import("../modals/FaqViewerModal").then((module) => ({ default: module.FaqViewerModal })),
+);
 const AboutMeViewerModal = lazy(() =>
   import("../modals/AboutMeViewerModal").then((module) => ({ default: module.AboutMeViewerModal })),
 );
@@ -130,6 +133,15 @@ export function ModalRenderer() {
           onClose={closeModal}
           initialDoc={(modal?.props?.initialDoc as string | null) ?? null}
           initialSearchTerm={(modal?.props?.initialSearchTerm as string) ?? ""}
+        />
+      );
+      break;
+    case "faq-viewer":
+      content = (
+        <FaqViewerModal
+          open
+          onClose={closeModal}
+          initialItemId={(modal?.props?.initialItemId as string | null) ?? null}
         />
       );
       break;

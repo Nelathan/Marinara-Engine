@@ -168,7 +168,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
       });
   }
   for (const connection of data.connections) {
-    const score = scoreText(normalized, [connection.name]);
+    const score = scoreText(normalized, [connection.name, connection.provider ?? "", connection.model ?? ""]);
     if (score >= 0)
       results.push({
         id: `connection:${connection.id}`,
