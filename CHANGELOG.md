@@ -6,14 +6,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
-- Professor Mari now uses a consistent, theme-aware composer treatment across Home, floating chat, and normal Conversation and Roleplay chats, with clearer accessible labels for composer actions.
-
-- Professor Mari now shows selected connection, context use, sandbox state, pending approvals, enabled skills, and enabled memories in a compact trust strip. Provider, tool, context, and other request failures keep the request available with a localized retry action.
-- FAQ answers, Command Center selections, and the Recent Chats load error can now open Professor Mari with an editable, grounded draft and typed source context without sending a model request.
-- Professor Mari suggestion chips now reject incomplete structured output and clear stale guided plans when chats switch, restart, or stop; guided completion keeps any text already in the draft.
-
-- Professor Mari workspace results now show direct Open and Review actions for created or updated characters, personas, lorebooks, and presets, and refresh the matching app data before opening it.
-- Character, persona, lorebook, and preset editors can now open the floating Professor Mari assistant with an editable draft and removable resource context. The server validates the resource before Mari receives it.
+- Professor Mari now has consistent composer and trust-strip treatment across Home, floating chat, and normal Mari chat, with accessible actions, selected connection and context status, pending approvals, enabled Skills and Memories, and localized retry recovery.
+- FAQ answers, Command Center selections, editor surfaces, and Recent Chats errors can now hand off an editable, grounded draft with typed, removable context without sending a model request; the server validates handoff payloads.
+- Professor Mari workspace results now show direct Open and Review actions for created or updated characters, personas, lorebooks, and presets, and refresh matching app data before opening it.
+- Professor Mari suggestion chips and guided plans now reject malformed or excessive output, stay scoped to the current Mari chat, clear stale plans on chat changes or interruption, and preserve typed draft text.
 - Omnibar search now includes practical FAQ answers and model-aware connection matches. FAQ results open the matching answer with its steps, while documentation results keep their in-context guide and match highlighting.
 - Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
 - Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, resource previews, documentation search, safe inline controls, extension commands, local pins and recency, exact Browse details, and an accessible full-screen mobile browse grid.

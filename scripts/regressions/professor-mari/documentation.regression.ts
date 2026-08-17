@@ -9,6 +9,7 @@ import {
   searchCanonicalDocumentation,
 } from "../../../packages/server/src/services/professor-mari/documentation-tools.js";
 import { parseAssistantWorkspaceAction } from "../../../packages/server/src/services/professor-mari/workspace-agent.service.js";
+import { professorMariPromptSchema } from "../../../packages/server/src/routes/professor-mari-workspace.routes.js";
 
 const workspaceRoot = await mkdtemp(join(tmpdir(), "marinara-doc-tools-"));
 
@@ -199,6 +200,30 @@ try {
   );
   assert.equal(textualAction.commands[0]?.name, "docs_read");
   assert.equal(textualAction.commands[0]?.arguments.heading, "Proxy timeout");
+
+  const handoff = professorMariPromptSchema.safeParse({
+    chatId: "mari-workspace",
+    message: "Explain this character's greeting.",
+    context: {
+      source: "character-editor",
+      capability: "explain",
+      resource: { kind: "character", id: "character-1", label: "Luna" },
+      field: "firstMessage",
+      action: "Explain the selected greeting",
+    },
+  });
+  assert.equal(handoff.success, true, "valid contextual handoffs pass the server schema");
+
+  const invalidHandoff = professorMariPromptSchema.safeParse({
+    chatId: "mari-workspace",
+    message: "Explain this.",
+    context: {
+      source: "character-editor",
+      capability: "explain",
+      resource: { kind: "character", id: "" },
+    },
+  });
+  assert.equal(invalidHandoff.success, false, "empty resource IDs are rejected at the handoff boundary");
 
   const linkedWorkspaceRoot = await mkdtemp(join(tmpdir(), "marinara-doc-tools-linked-workspace-"));
   const externalDocsRoot = await mkdtemp(join(tmpdir(), "marinara-doc-tools-external-docs-"));

@@ -23,7 +23,7 @@ import {
   MAX_CONTEXT_LABEL_LENGTH,
 } from "../services/storage/mari-workspace-context.storage.js";
 
-const promptSchema = z.object({
+export const professorMariPromptSchema = z.object({
   chatId: z.string().min(1),
   message: z.string().min(1),
   connectionId: z.string().optional().nullable(),
@@ -267,7 +267,7 @@ export async function professorMariWorkspaceRoutes(app: FastifyInstance) {
 
   app.post("/prompt", async (req, reply) => {
     if (!privileged(req, reply)) return;
-    const body = promptSchema.parse(req.body);
+    const body = professorMariPromptSchema.parse(req.body);
     const service = getProfessorMariWorkspaceService(app);
     startSseReply(reply, { "X-Accel-Buffering": "no" });
     reply.raw.flushHeaders?.();

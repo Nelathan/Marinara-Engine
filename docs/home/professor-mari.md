@@ -12,9 +12,19 @@ You talk to her in plain language. Type a message in the box, then press Enter t
 
 Sending your very first message to her unlocks the **Hello World** achievement.
 
-## What she can do
+## Ask Mari from your current work
 
 Professor Mari is more than a question box. She can explain the app, help you get set up, and make things for you when you ask.
+
+You can open Mari from the place where you need help. These entry points create an editable draft and attach a small, typed context summary. The attached context is removable before you send the message.
+
+- **Character**, **Persona**, **Lorebook**, and **Preset** editors: ask about the open resource or a selected field.
+- **FAQ** answers: use **Ask Professor Mari** to include the matched question and its written answer as the starting point.
+- **Command Center**: search with `Cmd/Ctrl+K`, select a result, then use **Ask Professor Mari** to include the selected result in the draft. Search does not send a model request by itself.
+- **Recent Chats** and other error states: use **Ask Professor Mari** beside **Retry** to send the error description and the requested repair action.
+- The **floating assistant**, normal Professor Mari character chat, and Home workspace chat use the same handoff format.
+
+Remove a context item when it is not relevant. Mari resolves larger resource content on the server under the context budget after you send the message. She does not receive a full resource just because you opened an editor.
 
 Ask her for help with any of these:
 
@@ -36,6 +46,10 @@ She reads an item before she edits it, and she asks for missing details when you
 On an empty Professor Mari chat, starter chips such as **Create a Character**, **Create a Lorebook**, and **Create a Persona** help begin common tasks. During a guided creation or edit, the chips change to match the next step. Clicking a chip fills the input draft; you can edit that draft before sending it.
 
 Guided flows ask one focused question at a time instead of presenting a long form all at once.
+
+For a complete create or edit request, Mari can return a bounded guided plan. Each step has a small set of suggestions. Selecting one fills the current draft and advances the plan locally. Your text remains in the draft when you change a suggestion. The plan belongs to the current Mari chat, so switching chats, restarting, stopping a run, or completing the plan clears stale steps. Malformed or excessive suggestions are discarded, and the chips are disabled while Mari is working.
+
+Suggestions are available only in Professor Mari chats. Other characters do not receive Mari's chips.
 
 ## She can also read and edit the app's own files
 
@@ -88,6 +102,8 @@ A few things to know:
 - Brand new items, like a fresh character or lorebook, usually skip this step. Nothing existing was overwritten, so there is nothing to undo.
 - A review card expires on its own after 10 minutes if you do not answer it.
 - Characters and personas also keep their own version history inside their editors. You can restore an older version there as a second safety net.
+
+When Mari creates or updates a character, persona, lorebook, or preset, the result can show **Open**. Use it to open the exact resource after the app refreshes its data. An updated result can also show **Review** when a review is pending. **Review** opens the pending change controls. New items usually have no review because no existing item was overwritten.
 
 Two higher-risk changes wait instead of being applied first:
 
@@ -144,6 +160,14 @@ If you leave her chat window open and then move to another page, Professor Mari 
 
 On a phone or a narrow screen, she becomes a small round avatar you can drag around. Tap it to reopen the full chat. On a wide screen, a small draggable **Ask Professor Mari** window appears. Each version has a control to dismiss the bubble for the rest of your session.
 
+## Trust and recovery status
+
+The compact trust strip in the Mari header shows the selected connection, the context budget, sandbox availability, pending approvals, enabled Skills, and enabled Memories. Use these indicators before a request when you need to check what Mari can access.
+
+Mari keeps consequential workspace changes behind the existing server approval and review rules. The trust strip does not grant extra access. Sensitive file changes, dependency changes, shell limits, and app-data validation remain server enforced.
+
+When a request fails, the transcript keeps the failure reason and shows **Retry** when the request can be sent again. Fix the shown connection, sandbox, capability, or remote-access problem first, then retry. A retry does not silently start from a search, FAQ, or error state. It remains a user action.
+
 ## Her FAQ is separate from the chat
 
 Next to her chat card, the Home screen shows an **FAQ** panel. This is a fixed, written list of questions and answers. It is not the AI chat.
@@ -166,7 +190,10 @@ Professor Mari is a helper, not the full documentation. Keep these limits in min
 
 ## Troubleshooting
 
-- No reply at all: check that a connection is selected using the link icon. If none is set up, open the **Connections** panel and add one.
+- No reply at all: check the connection shown in the trust strip or select one using the link icon. If none is set up, open the **Connections** panel and add one.
+- A handoff has the wrong item: remove the context item, restart or switch to the correct Mari chat, and open the handoff again from the source surface. Context is scoped to the handoff and current Mari chat.
+- A result does not appear in an editor: use **Open** on the result card. Mari may have completed the command while the resource list was stale.
+- A request fails: read the failure status, correct the named setup problem, and use **Retry**. Ask Mari again from the original source only when the context itself is no longer correct.
 - "You haven't set up a connection yet" pop-up message: pick a connection from the link icon dropdown, or add one first.
 - She cannot read your attached image: your model must support image input. Switch to a connection whose model can see images.
 - Fandom lookups fail: these need an internet connection, since Fandom is an outside website.

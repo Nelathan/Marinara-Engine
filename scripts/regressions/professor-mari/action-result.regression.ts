@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 
 import type { MariDbCommandResult } from "@marinara-engine/shared";
-import { buildMariWorkspaceActionResult } from "../../../packages/server/src/services/professor-mari/workspace-agent.service.js";
+import {
+  buildMariWorkspaceActionResult,
+  parseAssistantWorkspaceAction,
+} from "../../../packages/server/src/services/professor-mari/workspace-agent.service.js";
 
 function result(table: string, action: "insert" | "update" | "replace"): MariDbCommandResult {
   return {
@@ -58,5 +61,21 @@ assert.equal(presetSectionResult?.resource.id, "parent-preset-id");
 const dryRun = { ...result("characters", "insert"), mode: "dry-run" as const };
 assert.equal(buildMariWorkspaceActionResult("character.create", dryRun), null);
 assert.equal(buildMariWorkspaceActionResult("theme.create", result("themes", "insert")), null);
+
+const parsedAction = parseAssistantWorkspaceAction(
+  JSON.stringify({
+    say: "I updated Luna.",
+    commands: [{ name: "app_data", arguments: { action: "character.update" } }],
+    stop: true,
+  }),
+);
+assert.equal(parsedAction.protocolValid, true, "structured action output remains valid");
+assert.equal(parsedAction.commands[0]?.name, "app_data", "app-data action calls are retained");
+
+const malformedAction = parseAssistantWorkspaceAction(
+  '<delete_everything>{"action":"delete"}</delete_everything>',
+);
+assert.equal(malformedAction.protocolValid, false, "unknown action tools are rejected");
+assert.equal(malformedAction.commands.length, 0, "rejected action tools cannot reach execution");
 
 console.log("Professor Mari action-result regression checks passed.");
