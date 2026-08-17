@@ -1042,9 +1042,7 @@ const movementResult = resolveCombatSessionAction(
   },
   movementProposal,
 );
-const movementEffect = movementResult.events
-  .flatMap((event) => event.effects)
-  .find((effect) => effect.type === "move");
+const movementEffect = movementResult.events.flatMap((event) => event.effects).find((effect) => effect.type === "move");
 assert.equal(movementEffect?.sourceId, "hero");
 assert.equal(movementEffect?.targetId, "ally", "movement history must identify the unit that actually moved");
 
@@ -1118,7 +1116,13 @@ assert.ok(
 );
 
 const unknownType = normalizeManeuverProposal(
-  { effects: [{ type: "telepathy", targetId: "hero" }, { type: "heal", targetId: "hero", amount: 3 }], narration: "" },
+  {
+    effects: [
+      { type: "telepathy", targetId: "hero" },
+      { type: "heal", targetId: "hero", amount: 3 },
+    ],
+    narration: "",
+  },
   tacticalNormalizationContext,
 );
 assert.equal(unknownType.proposal?.effects.length, 1, "an unknown effect type must not take the valid effects with it");

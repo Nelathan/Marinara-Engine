@@ -10209,7 +10209,9 @@ export async function gameRoutes(app: FastifyInstance) {
                 hp: unit.hp,
               })),
             ],
-      objectiveIds: session.objectives.filter((objective) => objective.status === "active").map((objective) => objective.id),
+      objectiveIds: session.objectives
+        .filter((objective) => objective.status === "active")
+        .map((objective) => objective.id),
     };
     const options = gameGenOptions(
       conn.model ?? "",
@@ -10275,7 +10277,11 @@ export async function gameRoutes(app: FastifyInstance) {
       );
       return null;
     } catch (error) {
-      logger.warn(error, "Combat maneuver adjudication failed for chat %s; falling back to deterministic resolution", chatId);
+      logger.warn(
+        error,
+        "Combat maneuver adjudication failed for chat %s; falling back to deterministic resolution",
+        chatId,
+      );
       return null;
     }
   }
@@ -10380,9 +10386,7 @@ export async function gameRoutes(app: FastifyInstance) {
       }
       const actionMatchesStyle =
         !existing ||
-        ("style" in request.action
-          ? request.action.style === existing.style
-          : existing.style === "tactical");
+        ("style" in request.action ? request.action.style === existing.style : existing.style === "tactical");
       if (!actionMatchesStyle) {
         return reply.status(409).send({
           error: `Combat action does not match the active ${existing?.style ?? "unknown"} session`,
