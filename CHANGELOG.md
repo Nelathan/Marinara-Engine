@@ -10,6 +10,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 - Fixed Command Center hover previews so the desktop results list keeps a stable width when the preview changes.
 
+- Added reduced-motion-safe transitions for the omnibar backdrop, category filters, and result previews.
+
+- Added a reduced-motion-safe transition between Command Center search and the Professor Mari pane.
+
 - Removed the separate "Professor Mari navigation" result from Command Center search. The direct Ask Professor Mari entry remains available.
 
 - The Command Center now uses a connected spring transition when opening Professor Mari, moving the header identity and Mari pane together instead of swapping them abruptly.
