@@ -185,6 +185,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setBrowseLimit = (value: number) => setSessionValue("browseLimit", value);
   const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
+  const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
@@ -1216,6 +1217,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         : null,
     );
     setMariChatOpen(true);
+    setMariMounted(true);
     setDetailResult(null);
     setSessionValue("detailResultId", null);
     setPane("mari");
@@ -1502,10 +1504,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           {liveMessage}
         </div>
 
-        {pane === "mari" ? (
+        {mariMounted ? (
           <div
             data-component="GlobalOmnibar.Mari"
-            className="relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] motion-safe:animate-fade-in-up"
+            className={`relative min-h-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${pane === "mari" ? "motion-safe:animate-fade-in-up" : "hidden"}`}
+            aria-hidden={pane !== "mari"}
           >
             <Suspense
               fallback={
@@ -1531,7 +1534,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               />
             </Suspense>
           </div>
-        ) : pane !== "browse" ? (
+        ) : null}
+        {pane === "mari" ? null : pane !== "browse" ? (
           <div className="flex min-h-0 flex-1">
             <div
               ref={listRef}
@@ -1804,10 +1808,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
-          <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
-          <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
-        </footer>
+        {pane !== "mari" ? (
+          <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
+            <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
+            <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
+          </footer>
+        ) : null}
       </div>
     </div>,
     document.body,
