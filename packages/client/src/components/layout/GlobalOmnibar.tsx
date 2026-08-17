@@ -31,7 +31,6 @@ import {
   readCommandCenterSessionState,
   readCommandRankingState,
   recordCommandUse,
-  setCommandPinned,
   writeCommandRankingState,
   writeCommandCenterSessionState,
   type CommandCenterCategoryFilter,
@@ -172,9 +171,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setBrowseSelectedId = (value: string | null) => setSessionValue("browseSelectedId", value);
   const setBrowseLimit = (value: number) => setSessionValue("browseLimit", value);
   const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
-  const [hoverPreview, setHoverPreview] = useState<RankedOmnibarResult | null>(null);
-  const [keyboardPreview, setKeyboardPreview] = useState<RankedOmnibarResult | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -830,7 +826,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       const result = byId.get(id);
       if (result && !selected.some((item) => item.id === id)) selected.push(result);
     };
-    ranking.pinnedIds.forEach(add);
     ranking.recent.forEach((entry) => add(entry.id));
     ["control:theme", "control:presence", "create-character", "create-chat", "create-persona", "documentation"].forEach(
       add,
@@ -840,7 +835,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       add(result.id);
     }
     return selected.slice(0, 4);
-  }, [allLocalResults, ranking.pinnedIds, ranking.recent, searchableCommandResults]);
+  }, [allLocalResults, ranking.recent, searchableCommandResults]);
   const rawResults = query.trim() ? searchResults : idleResults;
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
@@ -1070,15 +1065,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       setSessionValue("detailResultId", null);
     } else onClose();
   };
-  const pinActiveResult = () => {
-    if (!activeResult) return;
-    const next = setCommandPinned(ranking, activeResult.id, !ranking.pinnedIds.includes(activeResult.id));
-    setRanking(next);
-    writeCommandRankingState(next);
-  };
   const moveSelection = (index: number) => {
     const next = results[index];
-    selectWithKeyboard(next);
+    setActiveResultId(next?.id ?? null);
     if (pane === "detail") {
       setDetailResult(next ?? null);
       setSessionValue("detailResultId", next?.id ?? null);
@@ -1088,9 +1077,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     if (event.key === "Escape") {
       event.preventDefault();
       handleEscape();
-    } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
-      event.preventDefault();
-      pinActiveResult();
     } else if (pane !== "browse" && event.key === "ArrowDown") {
       event.preventDefault();
       moveSelection(Math.min(Math.max(activeIndex, -1) + 1, results.length - 1));
@@ -1222,8 +1208,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   }, [results, searchableEntityResults]);
   const resolveCurrentResult = (result: RankedOmnibarResult | null) =>
     result ? (currentResultById.get(result.id) ?? null) : null;
-  const previewResult =
-    resolveCurrentResult(detailResult) ?? resolveCurrentResult(hoverPreview) ?? resolveCurrentResult(keyboardPreview);
+  // Always show the detail panel for whatever result is currently selected.
+  const previewResult = resolveCurrentResult(detailResult) ?? resolveCurrentResult(activeResult ?? null);
 
   useEffect(() => {
     if (!detailResultId) {
@@ -1232,35 +1218,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
     setDetailResult(currentResultById.get(detailResultId) ?? null);
   }, [currentResultById, detailResultId]);
-
-  const clearHoverTimer = () => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    hoverTimerRef.current = null;
-  };
-  const scheduleHoverPreview = (result: RankedOmnibarResult) => {
-    clearHoverTimer();
-    if (!window.matchMedia("(pointer: fine)").matches) return;
-    setActiveResultId(result.id);
-    setKeyboardPreview(null);
-    setHoverPreview(null);
-    hoverTimerRef.current = setTimeout(() => {
-      setHoverPreview(result);
-      hoverTimerRef.current = null;
-    }, 400);
-  };
-  const selectWithKeyboard = (result: RankedOmnibarResult | undefined) => {
-    clearHoverTimer();
-    setKeyboardPreview(result && isRichResult(result) ? result : null);
-    setHoverPreview(result && isRichResult(result) ? result : null);
-    setActiveResultId(result?.id ?? null);
-  };
-  useEffect(() => clearHoverTimer, []);
-  useEffect(() => {
-    clearHoverTimer();
-    setHoverPreview(null);
-    setKeyboardPreview(null);
-    setDetailResult(null);
-  }, [filter, query, results, searchableEntityResults]);
 
   const previewActions = previewResult
     ? (() => {
@@ -1465,7 +1422,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   <ul className="space-y-0.5">
                     {group.results.map((result) => {
                       const visual = resultVisual(result);
-                      const pinned = ranking.pinnedIds.includes(result.id);
                       const selected = result.id === activeResult?.id;
                       const hasDetails = selected && (result.control?.type === "choice" || isRichResult(result));
                       const currentChoice =
@@ -1497,8 +1453,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                           icon={resultIcon(result)}
                           selected={selected}
                           onSelect={() => selectResult(result)}
-                          onMouseEnter={() => scheduleHoverPreview(result)}
-                          onMouseLeave={clearHoverTimer}
+                          onMouseEnter={() => setActiveResultId(result.id)}
                           mediaSrc={result.preview?.media?.src}
                           mediaKind={result.preview?.media?.kind}
                           avatarCropStyle={result.preview?.media?.avatarCropStyle}
@@ -1553,13 +1508,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                               />
                             ) : undefined
                           }
-                          pinned={pinned}
-                          pinLabel={pinned ? t("commandCenter.unpin", "Unpin") : t("commandCenter.pin", "Pin")}
-                          onPinChange={(nextPinned) => {
-                            const next = setCommandPinned(ranking, result.id, nextPinned);
-                            setRanking(next);
-                            writeCommandRankingState(next);
-                          }}
                         />
                       );
                     })}
@@ -1677,7 +1625,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   status: result.preview?.status?.label,
                   tags: result.preview?.tags ?? result.preview?.badges,
                   secondaryState: result.preview?.metadataLine ?? result.preview?.supportingInfo,
-                  pinned: ranking.pinnedIds.includes(result.id),
                   icon: resultIcon(command),
                   groupVisual: visual.groupClassName,
                   media: result.preview?.media
@@ -1704,7 +1651,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
         <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
           <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
-          <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
           <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
         </footer>
       </div>

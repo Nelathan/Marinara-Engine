@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { ChevronRight, Pin, type LucideIcon } from "lucide-react";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,6 @@ export interface CommandCenterBrowseResult {
   description?: ReactNode;
   status?: ReactNode;
   tags?: readonly ReactNode[];
-  pinned?: boolean;
   secondaryState?: ReactNode;
   media?: CommandCenterBrowseMedia;
   groupVisual?: string;
@@ -187,7 +186,7 @@ export function CommandCenterBrowseGrid({
                     src={result.media?.src}
                     kind={result.media?.kind}
                     avatarCropStyle={result.media?.avatarCropStyle}
-                    groupClassName={cn(result.groupVisual, result.pinned && "border-[var(--primary)]/60")}
+                    groupClassName={result.groupVisual}
                     accent={result.media?.accent}
                     className="h-full w-full"
                   />
@@ -200,13 +199,6 @@ export function CommandCenterBrowseGrid({
                     >
                       {result.title}
                     </div>
-                    {result.pinned ? (
-                      <Pin
-                        className="mt-0.5 size-3.5 shrink-0 text-[var(--primary)]"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      />
-                    ) : null}
                   </div>
                   {result.metadata ? (
                     <div className="mt-1 line-clamp-2 break-words text-xs leading-4 text-[var(--muted-foreground)]">

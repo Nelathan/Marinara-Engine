@@ -1,5 +1,5 @@
 import type { MouseEventHandler, ReactNode } from "react";
-import { ChevronRight, CornerDownLeft, Pin, Settings2, type LucideIcon } from "lucide-react";
+import { ChevronRight, CornerDownLeft, Settings2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -26,9 +26,6 @@ export interface CommandCenterResultRowProps {
   setupStatus?: string;
   detailsLabel?: string;
   onDetails?: () => void;
-  pinned?: boolean;
-  pinLabel?: string;
-  onPinChange?: (pinned: boolean) => void;
   onMouseEnter?: MouseEventHandler<HTMLLIElement>;
   onMouseLeave?: MouseEventHandler<HTMLLIElement>;
   className?: string;
@@ -55,16 +52,12 @@ export function CommandCenterResultRow({
   setupStatus,
   detailsLabel,
   onDetails,
-  pinned = false,
-  pinLabel,
-  onPinChange,
   onMouseEnter,
   onMouseLeave,
   className,
 }: CommandCenterResultRowProps) {
-  const hasPinAction = Boolean(pinLabel && onPinChange);
   const hasDetailsAction = Boolean(onDetails && detailsLabel);
-  const hasActions = hasPinAction || hasDetailsAction;
+  const hasActions = hasDetailsAction;
 
   return (
     <li
@@ -130,25 +123,6 @@ export function CommandCenterResultRow({
               className="inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)] sm:size-8"
             >
               <ChevronRight className="size-4" aria-hidden="true" />
-            </button>
-          ) : null}
-          {hasPinAction ? (
-            <button
-              type="button"
-              aria-label={pinLabel}
-              title={pinLabel}
-              aria-pressed={pinned}
-              onClick={() => onPinChange?.(!pinned)}
-              className={cn(
-                "inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)] sm:size-8",
-                pinned
-                  ? "text-[var(--primary)] sm:opacity-100"
-                  : selected
-                    ? "opacity-60 sm:opacity-60"
-                    : "opacity-60 sm:opacity-0 sm:group-hover:opacity-70 sm:focus-visible:opacity-100",
-              )}
-            >
-              <Pin className="size-3.5" fill={pinned ? "currentColor" : "none"} aria-hidden="true" />
             </button>
           ) : null}
         </div>
