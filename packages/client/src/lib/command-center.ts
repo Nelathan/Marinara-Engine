@@ -155,6 +155,7 @@ interface CommandStorage {
 }
 
 export const COMMAND_RANKING_STORAGE_KEY = "marinara:command-center:ranking:v1";
+export const COMMAND_CENTER_SESSION_STORAGE_KEY = "marinara:command-center:session:v1";
 export const COMMAND_CENTER_MAX_RESULTS = 75;
 export const COMMAND_CENTER_CATEGORY_FILTERS: readonly CommandCenterCategoryFilter[] = [
   "all",
@@ -186,6 +187,86 @@ const MAX_RECENT_COMMANDS = 100;
 const MAX_COMMAND_ID_LENGTH = 256;
 const MAX_USE_COUNT = 10_000;
 const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+export type CommandCenterPane = "results" | "browse" | "detail";
+export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail">;
+
+export interface CommandCenterSessionState {
+  query: string;
+  filter: CommandCenterCategoryFilter;
+  pane: CommandCenterPane;
+  activeResultId: string | null;
+  detailResultId: string | null;
+  detailOrigin: CommandCenterDetailOrigin;
+  browseSelectedId: string | null;
+  browseLimit: number;
+}
+
+export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
+  query: "",
+  filter: "all",
+  pane: "results",
+  activeResultId: null,
+  detailResultId: null,
+  detailOrigin: "results",
+  browseSelectedId: null,
+  browseLimit: 48,
+};
+
+function getCommandCenterSessionStorage(): CommandStorage | null {
+  return getBrowserStorage();
+}
+
+export function normalizeCommandCenterSessionState(value: unknown): CommandCenterSessionState {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const filter = COMMAND_CENTER_CATEGORY_FILTERS.includes(source.filter as CommandCenterCategoryFilter)
+    ? (source.filter as CommandCenterCategoryFilter)
+    : "all";
+  const pane = source.pane === "browse" || source.pane === "detail" ? source.pane : "results";
+  const detailOrigin = source.detailOrigin === "browse" ? "browse" : "results";
+  const stringOrNull = (next: unknown) => (typeof next === "string" && next.trim() ? next.trim() : null);
+  const browseLimit =
+    typeof source.browseLimit === "number" && Number.isFinite(source.browseLimit)
+      ? Math.max(48, Math.min(480, Math.floor(source.browseLimit)))
+      : DEFAULT_COMMAND_CENTER_SESSION_STATE.browseLimit;
+
+  return {
+    query: typeof source.query === "string" ? source.query.slice(0, 500) : "",
+    filter,
+    pane,
+    activeResultId: stringOrNull(source.activeResultId),
+    detailResultId: stringOrNull(source.detailResultId),
+    detailOrigin,
+    browseSelectedId: stringOrNull(source.browseSelectedId),
+    browseLimit,
+  };
+}
+
+export function readCommandCenterSessionState(
+  storage: CommandStorage | null = getCommandCenterSessionStorage(),
+): CommandCenterSessionState {
+  if (!storage) return DEFAULT_COMMAND_CENTER_SESSION_STATE;
+  try {
+    return normalizeCommandCenterSessionState(
+      JSON.parse(storage.getItem(COMMAND_CENTER_SESSION_STORAGE_KEY) ?? "null"),
+    );
+  } catch {
+    return DEFAULT_COMMAND_CENTER_SESSION_STATE;
+  }
+}
+
+export function writeCommandCenterSessionState(
+  state: CommandCenterSessionState,
+  storage: CommandStorage | null = getCommandCenterSessionStorage(),
+): boolean {
+  if (!storage) return false;
+  try {
+    storage.setItem(COMMAND_CENTER_SESSION_STORAGE_KEY, JSON.stringify(normalizeCommandCenterSessionState(state)));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function normalizeCommandId(value: unknown): string | null {
   if (typeof value !== "string") return null;

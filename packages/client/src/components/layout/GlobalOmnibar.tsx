@@ -28,11 +28,14 @@ import {
   COMMAND_CENTER_CATEGORY_FILTERS,
   presentCommandCenterResults,
   rankCommandResults,
+  readCommandCenterSessionState,
   readCommandRankingState,
   recordCommandUse,
   setCommandPinned,
   writeCommandRankingState,
+  writeCommandCenterSessionState,
   type CommandCenterCategoryFilter,
+  type CommandCenterSessionState,
   type CommandCenterResultGroupId,
   type CommandRankingState,
 } from "../../lib/command-center";
@@ -157,14 +160,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<CommandCenterCategoryFilter>("all");
-  const [pane, setPane] = useState<OmnibarPane>("results");
-  const [activeResultId, setActiveResultId] = useState<string | null>(null);
+  const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
+  const { query, filter, pane, activeResultId, detailOrigin, browseSelectedId, browseLimit, detailResultId } = session;
+  const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
+    setSession((current) => ({ ...current, [key]: value }));
+  const setQuery = (value: string) => setSessionValue("query", value);
+  const setFilter = (value: CommandCenterCategoryFilter) => setSessionValue("filter", value);
+  const setPane = (value: OmnibarPane) => setSessionValue("pane", value);
+  const setActiveResultId = (value: string | null) => setSessionValue("activeResultId", value);
+  const setDetailOrigin = (value: DetailOrigin) => setSessionValue("detailOrigin", value);
+  const setBrowseSelectedId = (value: string | null) => setSessionValue("browseSelectedId", value);
+  const setBrowseLimit = (value: number) => setSessionValue("browseLimit", value);
   const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
-  const [detailOrigin, setDetailOrigin] = useState<DetailOrigin>("results");
-  const [browseSelectedId, setBrowseSelectedId] = useState<string | null>(null);
-  const [browseLimit, setBrowseLimit] = useState(BROWSE_BATCH_SIZE);
   const [hoverPreview, setHoverPreview] = useState<RankedOmnibarResult | null>(null);
   const [keyboardPreview, setKeyboardPreview] = useState<RankedOmnibarResult | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -908,11 +915,20 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const visibleBrowseResults = browseResults.slice(0, browseLimit);
 
   useEffect(() => {
+    writeCommandCenterSessionState(session);
+  }, [session]);
+
+  useEffect(() => {
     if (!results.length) {
-      setActiveResultId(null);
+      setSession((current) => (current.activeResultId === null ? current : { ...current, activeResultId: null }));
       return;
     }
-    if (!activeResultId || !results.some((result) => result.id === activeResultId)) setActiveResultId(results[0]!.id);
+    if (!activeResultId || !results.some((result) => result.id === activeResultId)) {
+      const firstResultId = results[0]!.id;
+      setSession((current) =>
+        current.activeResultId === firstResultId ? current : { ...current, activeResultId: firstResultId },
+      );
+    }
   }, [activeResultId, results]);
 
   useEffect(() => {
@@ -1022,6 +1038,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const showResultDetail = (result: RankedOmnibarResult, origin: DetailOrigin = "results") => {
     setActiveResultId(result.id);
     setDetailResult(result);
+    setSessionValue("detailResultId", result.id);
     setDetailOrigin(origin);
     setPane("detail");
   };
@@ -1038,16 +1055,19 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const handleEscape = () => {
     if (pane === "detail") {
       setDetailResult(null);
+      setSessionValue("detailResultId", null);
       setPane(detailOrigin);
       requestAnimationFrame(() => inputRef.current?.focus());
     } else if (pane === "browse") {
       setPane("results");
       setFilter("all");
+      setSessionValue("detailResultId", null);
       requestAnimationFrame(() => inputRef.current?.focus());
     } else if (query || filter !== "all") {
       setQuery("");
       setFilter("all");
       setActiveResultId(null);
+      setSessionValue("detailResultId", null);
     } else onClose();
   };
   const pinActiveResult = () => {
@@ -1059,7 +1079,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const moveSelection = (index: number) => {
     const next = results[index];
     selectWithKeyboard(next);
-    if (pane === "detail") setDetailResult(next ?? null);
+    if (pane === "detail") {
+      setDetailResult(next ?? null);
+      setSessionValue("detailResultId", next?.id ?? null);
+    }
   };
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -1121,6 +1144,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setCategoryFilter = (nextFilter: CommandCenterCategoryFilter) => {
     setFilter(nextFilter);
     setDetailResult(null);
+    setSessionValue("detailResultId", null);
     setActiveResultId(null);
     setBrowseSelectedId(null);
     setBrowseLimit(BROWSE_BATCH_SIZE);
@@ -1137,6 +1161,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const leaveDetail = () => {
     const destination = pane === "detail" ? detailOrigin : "results";
     setDetailResult(null);
+    setSessionValue("detailResultId", null);
     if (pane === "browse") setFilter("all");
     setPane(destination);
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -1199,6 +1224,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     result ? (currentResultById.get(result.id) ?? null) : null;
   const previewResult =
     resolveCurrentResult(detailResult) ?? resolveCurrentResult(hoverPreview) ?? resolveCurrentResult(keyboardPreview);
+
+  useEffect(() => {
+    if (!detailResultId) {
+      setDetailResult(null);
+      return;
+    }
+    setDetailResult(currentResultById.get(detailResultId) ?? null);
+  }, [currentResultById, detailResultId]);
 
   const clearHoverTimer = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
@@ -1664,7 +1697,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               emptyTitle={t("commandCenter.browseEmpty", "No items in this category")}
               hasMore={visibleBrowseResults.length < browseResults.length}
               loadMoreLabel={t("commandCenter.loadMore", "Load more")}
-              onLoadMore={() => setBrowseLimit((value) => value + BROWSE_BATCH_SIZE)}
+              onLoadMore={() => setBrowseLimit(browseLimit + BROWSE_BATCH_SIZE)}
             />
           </div>
         )}
