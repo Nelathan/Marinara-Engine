@@ -4,6 +4,8 @@ import type { OmnibarCategory } from "@/lib/omnibar-search";
 
 export type CommandCenterVisualTone = "neutral" | "cool" | "warm" | "playful" | "natural";
 
+export type CommandCenterStatusTone = "neutral" | "success" | "warning" | "danger";
+
 export interface CommandCenterVisual {
   label: string;
   tone: CommandCenterVisualTone;
@@ -14,32 +16,29 @@ export type CommandCenterCategoryLabels = Record<OmnibarCategory, string>;
 export type CommandCenterChatModeLabels = Record<ChatMode, string>;
 
 const CATEGORY_VISUALS: Record<OmnibarCategory, Omit<CommandCenterVisual, "label">> = {
-  navigation: {
-    tone: "neutral",
-    groupClassName: "mari-panel-gradient--settings",
-  },
-  chat: { tone: "playful", groupClassName: "mari-panel-gradient--backgrounds" },
-  character: { tone: "playful", groupClassName: "mari-panel-gradient--characters" },
-  persona: { tone: "natural", groupClassName: "mari-panel-gradient--personas" },
-  lorebook: { tone: "warm", groupClassName: "mari-panel-gradient--lorebooks" },
-  preset: { tone: "playful", groupClassName: "mari-panel-gradient--presets" },
-  connection: { tone: "cool", groupClassName: "mari-panel-gradient--connections" },
-  agent: { tone: "playful", groupClassName: "mari-panel-gradient--agents" },
-  settings: { tone: "neutral", groupClassName: "mari-panel-gradient--settings" },
+  navigation: { tone: "neutral", groupClassName: "border-[color-mix(in_srgb,var(--foreground)_18%,var(--border))]" },
+  chat: { tone: "playful", groupClassName: "border-[color-mix(in_srgb,#22d3ee_35%,var(--border))]" },
+  character: { tone: "playful", groupClassName: "border-[color-mix(in_srgb,#fb7185_35%,var(--border))]" },
+  persona: { tone: "natural", groupClassName: "border-[color-mix(in_srgb,#2dd4bf_35%,var(--border))]" },
+  lorebook: { tone: "warm", groupClassName: "border-[color-mix(in_srgb,#fbbf24_35%,var(--border))]" },
+  preset: { tone: "playful", groupClassName: "border-[color-mix(in_srgb,#a78bfa_35%,var(--border))]" },
+  connection: { tone: "cool", groupClassName: "border-[color-mix(in_srgb,#60a5fa_35%,var(--border))]" },
+  agent: { tone: "playful", groupClassName: "border-[color-mix(in_srgb,#c084fc_35%,var(--border))]" },
+  settings: { tone: "neutral", groupClassName: "border-[color-mix(in_srgb,var(--foreground)_18%,var(--border))]" },
   professor: {
     tone: "playful",
-    groupClassName: "[--mari-panel-gradient-start:var(--primary)] [--mari-panel-gradient-end:var(--primary)]",
+    groupClassName: "border-[color-mix(in_srgb,var(--primary)_45%,var(--border))]",
   },
   docs: {
     tone: "neutral",
-    groupClassName: "mari-panel-gradient--settings",
+    groupClassName: "border-[color-mix(in_srgb,var(--foreground)_18%,var(--border))]",
   },
 };
 
 const CHAT_MODE_VISUALS: Record<ChatMode, Omit<CommandCenterVisual, "label">> = {
-  conversation: { tone: "cool", groupClassName: "mari-panel-gradient--connections" },
-  roleplay: { tone: "warm", groupClassName: "mari-panel-gradient--lorebooks" },
-  game: { tone: "playful", groupClassName: "mari-panel-gradient--characters" },
+  conversation: { tone: "cool", groupClassName: "border-[color-mix(in_srgb,#22d3ee_35%,var(--border))]" },
+  roleplay: { tone: "warm", groupClassName: "border-[color-mix(in_srgb,#fb923c_35%,var(--border))]" },
+  game: { tone: "playful", groupClassName: "border-[color-mix(in_srgb,#f472b6_35%,var(--border))]" },
 };
 
 export function getCommandCenterCategoryVisual(
@@ -60,4 +59,18 @@ export function getValidatedCommandCenterAccent(accent: string | null | undefine
   const value = accent?.trim();
   if (!value || value.length > 64 || typeof CSS === "undefined" || !CSS.supports("color", value)) return undefined;
   return value;
+}
+
+export function getCommandCenterStatusClass(tone: CommandCenterStatusTone = "neutral"): string {
+  const colors: Record<CommandCenterStatusTone, string> = {
+    neutral:
+      "text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted-foreground))] bg-[color-mix(in_srgb,var(--foreground)_7%,var(--background))]",
+    success:
+      "text-[color-mix(in_srgb,var(--foreground)_72%,#3fbf78)] bg-[color-mix(in_srgb,#3fbf78_12%,var(--background))]",
+    warning:
+      "text-[color-mix(in_srgb,var(--foreground)_72%,#d49a35)] bg-[color-mix(in_srgb,#d49a35_12%,var(--background))]",
+    danger:
+      "text-[color-mix(in_srgb,var(--foreground)_72%,var(--destructive))] bg-[color-mix(in_srgb,var(--destructive)_12%,var(--background))]",
+  };
+  return colors[tone];
 }

@@ -144,6 +144,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
     const score = scoreText(normalized, [resource.name, ...(resource.aliases ?? [])]);
     if (score >= 0)
       results.push({
+        ...resource,
         id: `${resource.kind}:${resource.id}`,
         title: resource.name,
         category: resource.kind,

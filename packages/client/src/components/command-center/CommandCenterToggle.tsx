@@ -33,7 +33,7 @@ export function CommandCenterToggle({
       aria-busy={loading || undefined}
       className={cn(
         "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-md text-xs font-semibold transition-colors sm:min-h-9",
-        compact ? "w-full px-2" : "border border-[var(--border)] bg-[var(--secondary)] px-2.5",
+        compact ? "w-full justify-end px-1" : "border border-[var(--border)] bg-[var(--secondary)] px-2.5",
         unavailable ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[var(--accent)]",
         checked
           ? "text-[var(--foreground)]"
@@ -47,8 +47,8 @@ export function CommandCenterToggle({
         <Icon className="size-4 shrink-0" aria-hidden="true" />
       ) : null}
       <span className={compact ? "sr-only" : "min-w-0 flex-1 break-words"}>{label}</span>
-      {stateLabel ? (
-        <span className="w-14 shrink-0 text-right text-[var(--muted-foreground)]">{stateLabel}</span>
+      {compact && stateLabel ? (
+        <span className="w-14 shrink-0 truncate text-right text-[var(--muted-foreground)]">{stateLabel}</span>
       ) : null}
       <input
         type="checkbox"

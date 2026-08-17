@@ -141,6 +141,52 @@ test("query changes reset the command category filter to All", async ({ page }, 
   await expect(toolbar.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
 });
 
+test("desktop keeps a stable shell and compact result lanes for rich results", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Stable Command Center geometry is covered on desktop.");
+
+  await page.keyboard.press("Control+k");
+  const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+  const panel = omnibar.locator('[data-component="GlobalOmnibar.Panel"]');
+  const input = omnibar.getByRole("searchbox", { name: "Search Marinara" });
+  await input.fill("character");
+  const characterRow = omnibar.locator("[data-command-center-result-row]").first();
+  await expect(characterRow).toBeVisible();
+  const initialBox = await panel.boundingBox();
+  expect(initialBox).not.toBeNull();
+  expect(initialBox!.width).toBeCloseTo(960, -1);
+  await characterRow.hover();
+  await page.waitForTimeout(450);
+  await expect(omnibar.locator('[data-component="GlobalOmnibar.Detail"]')).toBeVisible();
+  const richBox = await panel.boundingBox();
+  expect(richBox).not.toBeNull();
+  expect(richBox!.width).toBeCloseTo(initialBox!.width, 0);
+  await expect(characterRow.getByRole("button", { name: /Pin|Unpin/ })).toHaveCSS("width", "32px");
+});
+
+test("desktop exposes inline entity controls and rich character information", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Entity Command Center controls are covered on desktop.");
+
+  const name = `Command Character ${Date.now()}`;
+  const response = await page.request.post("/api/characters", {
+    data: { data: { name, description: "A richly mapped test character", tags: ["test-tag"] } },
+  });
+  expect(response.ok()).toBeTruthy();
+  const character = (await response.json()) as { id: string };
+  try {
+    await page.reload();
+    await page.keyboard.press("Control+k");
+    const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+    await omnibar.getByRole("searchbox", { name: "Search Marinara" }).fill(name);
+    await omnibar.locator("[data-command-center-result-row]").filter({ hasText: name }).hover();
+    await page.waitForTimeout(450);
+    const detail = omnibar.locator('[data-component="GlobalOmnibar.Detail"]');
+    await expect(detail).toContainText("A richly mapped test character");
+    await expect(detail.getByRole("button", { name: "Edit character", exact: true })).toBeVisible();
+  } finally {
+    await page.request.delete(`/api/characters/${character.id}`);
+  }
+});
+
 test("browse detail shows the exact selected entity and returns to its browse position", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("desktop"), "Browse detail is covered on desktop.");
 

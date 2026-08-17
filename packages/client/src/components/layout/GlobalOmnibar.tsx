@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type { ChatMode } from "@marinara-engine/shared";
-import { ChevronLeft, Gamepad2, LayoutGrid, Loader2, MessageCircle, Search, Theater, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  Edit3,
+  FolderOpen,
+  Gamepad2,
+  LayoutGrid,
+  Loader2,
+  MessageCircle,
+  Play,
+  Search,
+  Theater,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
-import { useCharacters, usePersonas } from "../../hooks/use-characters";
+import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
 import { useChats } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
-import { useLorebooks } from "../../hooks/use-lorebooks";
-import { usePresets } from "../../hooks/use-presets";
+import { useLorebooks, useUpdateLorebook } from "../../hooks/use-lorebooks";
+import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { parseCharacterDisplayData } from "../../lib/character-display";
 import {
   COMMAND_CENTER_CATEGORY_FILTERS,
@@ -38,6 +51,7 @@ import { getAvatarCropStyle } from "../../lib/utils";
 import { useChatStore } from "../../stores/chat.store";
 import { useUIStore } from "../../stores/ui.store";
 import { CommandCenterBrowseGrid } from "../command-center/CommandCenterBrowseGrid";
+import { CommandCenterActionValue } from "../command-center/CommandCenterActionValue";
 import { CommandCenterResultRow } from "../command-center/CommandCenterResultRow";
 import { CommandCenterSegmentedChoice } from "../command-center/CommandCenterSegmentedChoice";
 import { CommandCenterToggle } from "../command-center/CommandCenterToggle";
@@ -87,6 +101,17 @@ function readNamedRow(value: unknown) {
   if (typeof value !== "object" || value === null || !("id" in value) || typeof value.id !== "string") return null;
   const name = "name" in value && typeof value.name === "string" ? value.name : value.id;
   return { id: value.id, name };
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function formatDate(value: unknown) {
+  const date = typeof value === "string" ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime())
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)
+    : undefined;
 }
 
 function isRichResult(result: RankedOmnibarResult) {
@@ -140,6 +165,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [detailOrigin, setDetailOrigin] = useState<DetailOrigin>("results");
   const [browseSelectedId, setBrowseSelectedId] = useState<string | null>(null);
   const [browseLimit, setBrowseLimit] = useState(BROWSE_BATCH_SIZE);
+  const [hoverPreview, setHoverPreview] = useState<RankedOmnibarResult | null>(null);
+  const [keyboardPreview, setKeyboardPreview] = useState<RankedOmnibarResult | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
   const characters = useCharacters();
@@ -148,6 +176,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const presets = usePresets();
   const connections = useConnections();
   const agents = useAgentConfigs();
+  const activatePersona = useActivatePersona();
+  const updateLorebook = useUpdateLorebook();
+  const setDefaultPreset = useSetDefaultPreset();
   const extensionCommands = usePersonalExtensionCommands();
   const docs = useDocsCommandSearchProvider(query, { enabled: true });
   const theme = useUIStore((state) => state.theme);
@@ -230,6 +261,17 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       ),
     [characters.data],
   );
+  const personaById = useMemo(() => new Map((personas.data ?? []).map((item) => [item.id, item])), [personas.data]);
+  const connectionById = useMemo(
+    () =>
+      new Map(
+        (connections.data ?? []).flatMap((item) => {
+          const row = readNamedRow(item);
+          return row ? [[row.id, row] as const] : [];
+        }),
+      ),
+    [connections.data],
+  );
 
   const data = useMemo(() => {
     const commands = [
@@ -265,14 +307,19 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })),
     ];
     const chatRows = (chats.data ?? []).map((chat) => {
-      const linked = characterById.get(chat.characterIds?.[0] ?? "") as Record<string, unknown> | undefined;
-      const linkedDisplay = linked
-        ? parseCharacterDisplayData({
-            data: linked.data,
-            comment: linked.comment as string | null | undefined,
-          })
-        : null;
-      const avatarPath = linked && typeof linked.avatarPath === "string" ? linked.avatarPath : undefined;
+      const linkedCharacters = (chat.characterIds ?? []).slice(0, 2).flatMap((id) => {
+        const linked = characterById.get(id) as Record<string, unknown> | undefined;
+        if (!linked) return [];
+        const display = parseCharacterDisplayData({
+          data: linked.data,
+          comment: linked.comment as string | null | undefined,
+        });
+        return [{ display, avatarPath: readString(linked.avatarPath) }];
+      });
+      const linkedDisplay = linkedCharacters[0]?.display;
+      const connection = chat.connectionId ? connectionById.get(chat.connectionId) : undefined;
+      const persona = chat.personaId ? personaById.get(chat.personaId) : undefined;
+      const updated = formatDate(chat.lastMessageAt ?? chat.updatedAt);
       return {
         id: chat.id,
         name: chat.name,
@@ -281,10 +328,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           kind: "chat" as const,
           title: chat.name,
           categoryLabel: chatModeLabels[chat.mode],
-          subtitle: linkedDisplay?.name,
-          media: avatarPath
+          subtitle: linkedCharacters.map((item) => item.display.name).join(", ") || undefined,
+          media: linkedCharacters[0]?.avatarPath
             ? {
-                src: avatarPath,
+                src: linkedCharacters[0].avatarPath,
                 alt: linkedDisplay?.name ?? chat.name,
                 kind: "avatar" as const,
                 avatarCropStyle: getAvatarCropStyle(linkedDisplay?.avatarCrop),
@@ -293,8 +340,25 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           facts: [
             {
               label: t("commandCenter.preview.lastUpdated", "Last updated"),
-              value: new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(chat.updatedAt)),
+              value: updated ?? t("commandCenter.values.unknown", "Unknown"),
             },
+            ...(connection
+              ? [{ label: t("commandCenter.preview.connection", "Connection"), value: connection.name }]
+              : []),
+            ...(persona ? [{ label: t("commandCenter.preview.persona", "Persona"), value: persona.name }] : []),
+            ...(chat.metadata?.tags?.length
+              ? [{ label: t("commandCenter.preview.tags", "Tags"), value: chat.metadata.tags.join(", ") }]
+              : []),
+            ...(chat.metadata?.enableAgents !== undefined
+              ? [
+                  {
+                    label: t("commandCenter.preview.agents", "Agents"),
+                    value: chat.metadata.enableAgents
+                      ? t("commandCenter.values.enabled", "Enabled")
+                      : t("commandCenter.values.disabled", "Disabled"),
+                  },
+                ]
+              : []),
           ],
         },
       };
@@ -315,6 +379,35 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...row,
             name: display.name,
             description: display.description ?? undefined,
+            badges: [
+              ...((display.tags ?? []).length
+                ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: (display.tags ?? []).join(", ") })]
+                : []),
+              ...(display.creator
+                ? [t("commandCenter.preview.creatorValue", "Creator: {{creator}}", { creator: display.creator })]
+                : []),
+              ...(readString(record.version)
+                ? [
+                    t("commandCenter.preview.versionValue", "Version: {{version}}", {
+                      version: readString(record.version),
+                    }),
+                  ]
+                : []),
+              ...(display.comment
+                ? [t("commandCenter.preview.commentValue", "Comment: {{comment}}", { comment: display.comment })]
+                : []),
+            ],
+            facts: [
+              ...(display.creator
+                ? [{ label: t("commandCenter.preview.creator", "Creator"), value: display.creator }]
+                : []),
+              ...(readString(record.version)
+                ? [{ label: t("commandCenter.preview.version", "Version"), value: readString(record.version)! }]
+                : []),
+              ...(display.comment
+                ? [{ label: t("commandCenter.preview.comment", "Comment"), value: display.comment }]
+                : []),
+            ],
             preview: {
               kind: "character" as const,
               title: display.name,
@@ -350,8 +443,28 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 avatarCropStyle: getAvatarCropStyle(item.avatarCrop),
               }
             : undefined,
-          facts: item.comment ? [{ label: t("commandCenter.preview.note", "Note"), value: item.comment }] : [],
+          facts: [
+            ...(item.creator ? [{ label: t("commandCenter.preview.creator", "Creator"), value: item.creator }] : []),
+            ...(item.personaVersion
+              ? [{ label: t("commandCenter.preview.version", "Version"), value: item.personaVersion }]
+              : []),
+            ...(item.comment ? [{ label: t("commandCenter.preview.note", "Note"), value: item.comment }] : []),
+          ],
+          badges: [
+            ...(item.tags?.length
+              ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: item.tags.join(", ") })]
+              : []),
+            ...(item.isActive ? [t("commandCenter.values.active", "Active")] : []),
+          ],
           accent: item.nameColor,
+        },
+        control: {
+          type: "toggle" as const,
+          label: item.isActive
+            ? t("commandCenter.actions.activePersona", "Active persona")
+            : t("commandCenter.actions.activatePersona", "Activate persona"),
+          value: item.isActive,
+          onChange: (value: string | boolean) => value === true && !item.isActive && activatePersona.mutate(item.id),
         },
       })),
       ...(lorebooks.data ?? []).map((item) => ({
@@ -373,7 +486,26 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 : t("commandCenter.values.disabled", "Disabled"),
             },
             { label: t("commandCenter.preview.category", "Category"), value: item.category },
+            { label: t("commandCenter.preview.tokenBudget", "Token budget"), value: item.tokenBudget },
+            { label: t("commandCenter.preview.entryLimit", "Entry limit"), value: item.entryLimit },
+            {
+              label: t("commandCenter.preview.scope", "Scope"),
+              value: item.isGlobal
+                ? t("commandCenter.values.global", "Global")
+                : t("commandCenter.values.scoped", "Scoped"),
+            },
           ],
+          badges: item.tags?.length
+            ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: item.tags.join(", ") })]
+            : [],
+        },
+        control: {
+          type: "toggle" as const,
+          label: item.enabled
+            ? t("commandCenter.actions.disableLorebook", "Disable lorebook")
+            : t("commandCenter.actions.enableLorebook", "Enable lorebook"),
+          value: item.enabled,
+          onChange: (value: string | boolean) => updateLorebook.mutate({ id: item.id, enabled: value === true }),
         },
       })),
       ...(presets.data ?? []).map((item) => {
@@ -394,7 +526,21 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 label: t("commandCenter.preview.type", "Type"),
                 value: t("commandCenter.preview.promptPreset", "Prompt preset"),
               },
+              { label: t("commandCenter.preview.author", "Author"), value: item.author },
+              { label: t("commandCenter.preview.wrapFormat", "Wrap format"), value: item.wrapFormat },
+              { label: t("commandCenter.preview.sections", "Sections"), value: item.sectionOrder.length },
+              { label: t("commandCenter.preview.groups", "Groups"), value: item.groupOrder.length },
             ],
+            badges: item.isDefault ? [t("commandCenter.values.default", "Default")] : [],
+          },
+          control: {
+            type: "toggle" as const,
+            label: item.isDefault
+              ? t("commandCenter.actions.defaultPreset", "Default preset")
+              : t("commandCenter.actions.setDefaultPreset", "Set default preset"),
+            value: item.isDefault,
+            onChange: (value: string | boolean) =>
+              value === true && !item.isDefault && setDefaultPreset.mutate(item.id),
           },
         };
       }),
@@ -419,6 +565,20 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   : t("commandCenter.values.disabled", "Disabled"),
             },
             { label: t("commandCenter.preview.phase", "Phase"), value: item.phase },
+            { label: t("commandCenter.preview.type", "Type"), value: item.type },
+            ...(item.connectionId
+              ? [
+                  {
+                    label: t("commandCenter.preview.connection", "Connection"),
+                    value: connectionById.get(item.connectionId)?.name ?? item.connectionId,
+                  },
+                ]
+              : []),
+          ],
+          badges: [
+            item.enabled === "true"
+              ? t("commandCenter.values.enabled", "Enabled")
+              : t("commandCenter.values.disabled", "Disabled"),
           ],
         },
       })),
@@ -445,6 +605,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             media: imagePath ? { src: imagePath, alt: row.name, kind: "artwork" as const } : undefined,
             facts: [
               ...(model ? [{ label: t("commandCenter.preview.model", "Model"), value: model }] : []),
+              ...(provider ? [{ label: t("commandCenter.preview.provider", "Provider"), value: provider }] : []),
+              ...(readString(record.context)
+                ? [{ label: t("commandCenter.preview.context", "Context"), value: readString(record.context)! }]
+                : []),
+              ...(readString(record.maxContext)
+                ? [
+                    {
+                      label: t("commandCenter.preview.maxContext", "Max context"),
+                      value: readString(record.maxContext)!,
+                    },
+                  ]
+                : []),
               ...(record.isDefault === true
                 ? [
                     {
@@ -474,11 +646,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     chatModeLabels,
     chats.data,
     connections.data,
+    connectionById,
     extensionCommands,
     lorebooks.data,
+    personaById,
     personas.data,
+    activatePersona,
     presets.data,
+    setDefaultPreset,
     t,
+    updateLorebook,
   ]);
 
   const controls = useMemo<OmnibarResult[]>(() => {
@@ -574,6 +751,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "chats" as const,
       })),
       ...data.resources.map((item) => ({
+        ...item,
         id: `${item.kind}:${item.id}`,
         title: item.name,
         category: item.kind,
@@ -583,6 +761,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         preview: item.preview,
         kind: "resource" as const,
         icon: item.kind,
+        control: "control" in item ? item.control : undefined,
       })),
       ...data.connections.map((item) => ({
         id: `connection:${item.id}`,
@@ -621,7 +800,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           title: result.title,
           categoryLabel: result.source,
           description: result.snippet,
-          facts: result.line ? [{ label: t("commandCenter.preview.line", "Line"), value: result.line }] : [],
+          facts: [
+            ...(result.source
+              ? [{ label: t("commandCenter.preview.category", "Category"), value: result.source }]
+              : []),
+            ...(result.path ? [{ label: t("commandCenter.preview.source", "Source"), value: result.path }] : []),
+            ...(result.line ? [{ label: t("commandCenter.preview.line", "Line"), value: result.line }] : []),
+            ...(result.snippet ? [{ label: t("commandCenter.preview.match", "Match"), value: result.snippet }] : []),
+          ],
         },
         target: { kind: "window", window: "documentation" } as const,
         kind: "resource" as const,
@@ -840,6 +1026,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setPane("detail");
   };
   const selectResult = (result: RankedOmnibarResult) => {
+    if (!result.control && isRichResult(result) && window.matchMedia("(pointer: coarse)").matches) {
+      showResultDetail(result);
+      return;
+    }
     setActiveResultId(result.id);
     if (result.control?.type === "toggle") result.control.onChange(result.control.value !== true);
     else if (result.control?.type === "choice") return;
@@ -868,7 +1058,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   };
   const moveSelection = (index: number) => {
     const next = results[index];
-    setActiveResultId(next?.id ?? null);
+    selectWithKeyboard(next);
     if (pane === "detail") setDetailResult(next ?? null);
   };
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -976,6 +1166,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
     return getCommandCenterCategoryVisual(result.category, categoryLabels);
   };
+  const resultControlPending = (result: RankedOmnibarResult) =>
+    (result.category === "persona" && activatePersona.isPending) ||
+    (result.category === "lorebook" && updateLorebook.isPending) ||
+    (result.category === "preset" && setDefaultPreset.isPending);
   const liveMessage = loading
     ? t("commandCenter.live.loading", "Loading results")
     : failed
@@ -983,7 +1177,109 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           count: results.length,
         })
       : t("commandCenter.live.resultCount", "{{count}} results", { count: results.length });
-  const previewResult = detailResult ?? (activeResult && isRichResult(activeResult) ? activeResult : null);
+  const currentResultById = useMemo(() => {
+    const current = new Map(results.map((result) => [result.id, result] as const));
+    for (const result of searchableEntityResults) {
+      if (current.has(result.id)) continue;
+      current.set(result.id, {
+        ...result,
+        command: {
+          id: result.id,
+          title: result.title,
+          kind: result.kind ?? "resource",
+          icon: result.icon ?? "command",
+          target: result.target,
+          availability: { status: "available" as const },
+        },
+      } as RankedOmnibarResult);
+    }
+    return current;
+  }, [results, searchableEntityResults]);
+  const resolveCurrentResult = (result: RankedOmnibarResult | null) =>
+    result ? (currentResultById.get(result.id) ?? null) : null;
+  const previewResult =
+    resolveCurrentResult(detailResult) ?? resolveCurrentResult(hoverPreview) ?? resolveCurrentResult(keyboardPreview);
+
+  const clearHoverTimer = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = null;
+  };
+  const scheduleHoverPreview = (result: RankedOmnibarResult) => {
+    clearHoverTimer();
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    setActiveResultId(result.id);
+    setKeyboardPreview(null);
+    setHoverPreview(null);
+    hoverTimerRef.current = setTimeout(() => {
+      setHoverPreview(result);
+      hoverTimerRef.current = null;
+    }, 400);
+  };
+  const selectWithKeyboard = (result: RankedOmnibarResult | undefined) => {
+    clearHoverTimer();
+    setKeyboardPreview(result && isRichResult(result) ? result : null);
+    setHoverPreview(result && isRichResult(result) ? result : null);
+    setActiveResultId(result?.id ?? null);
+  };
+  useEffect(() => clearHoverTimer, []);
+  useEffect(() => {
+    clearHoverTimer();
+    setHoverPreview(null);
+    setKeyboardPreview(null);
+    setDetailResult(null);
+  }, [filter, query, results, searchableEntityResults]);
+
+  const previewActions = previewResult
+    ? (() => {
+        if (previewResult.control?.type === "choice") return [];
+        if (previewResult.command.availability?.status === "requires-admin") return [];
+        if (previewResult.category === "persona" && previewResult.control?.value === true) return [];
+        if (previewResult.category === "preset" && previewResult.control?.value === true) return [];
+        if (previewResult.category === "persona" || previewResult.category === "preset") {
+          return [
+            {
+              label:
+                previewResult.category === "persona"
+                  ? t("commandCenter.actions.activatePersona", "Activate persona")
+                  : t("commandCenter.actions.setDefaultPreset", "Set default preset"),
+              icon: previewResult.category === "persona" ? Play : ArrowRight,
+              onSelect: () => previewResult.control?.onChange(true),
+              disabled: resultControlPending(previewResult),
+            },
+          ];
+        }
+        if (previewResult.control?.type === "toggle") {
+          return [
+            {
+              label: previewResult.control.value
+                ? t("commandCenter.actions.disable", "Disable")
+                : t("commandCenter.actions.enable", "Enable"),
+              icon: ArrowRight,
+              onSelect: () => previewResult.control?.onChange(previewResult.control.value !== true),
+              disabled: resultControlPending(previewResult),
+            },
+          ];
+        }
+        const requiresSetup = previewResult.command.availability?.status === "requires-capability";
+        if (!previewResult.target || (requiresSetup && !previewResult.command.availability?.setupTarget)) return [];
+        return [
+          {
+            label:
+              previewResult.category === "chat"
+                ? t("commandCenter.actions.resumeChat", "Resume chat")
+                : previewResult.category === "character"
+                  ? t("commandCenter.actions.editCharacter", "Edit character")
+                  : previewResult.category === "docs"
+                    ? t("commandCenter.actions.openDocs", "Open documentation")
+                    : t("commandCenter.open", "Open"),
+            icon:
+              previewResult.category === "chat" ? Play : previewResult.category === "character" ? Edit3 : FolderOpen,
+            onSelect: () => choose(previewResult),
+            disabled: resultControlPending(previewResult),
+          },
+        ];
+      })()
+    : [];
 
   return createPortal(
     <div
@@ -999,7 +1295,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         aria-labelledby="global-omnibar-title"
         onKeyDown={trapFocus}
         data-component="GlobalOmnibar.Panel"
-        className={`flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl sm:h-auto sm:max-h-[min(44rem,80dvh)] sm:rounded-lg sm:border sm:border-[var(--border)] ${pane === "detail" || (pane === "results" && previewResult) ? "sm:max-w-[60rem]" : query.trim() ? "sm:max-w-[52rem]" : "sm:max-w-[46rem]"}`}
+        className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)] sm:max-w-[60rem] sm:rounded-lg sm:border sm:border-[var(--border)]"
       >
         <h2 id="global-omnibar-title" className="sr-only">
           {t("omnibar.title", "Search Marinara")}
@@ -1161,10 +1457,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                               : result.title
                           }
                           metadata={resultMetadata(result, visual.label)}
+                          tertiaryMetadata={
+                            result.preview?.status?.label ?? result.preview?.badges?.[0] ?? result.preview?.metadataLine
+                          }
+                          description={result.description ?? result.preview?.description}
                           icon={resultIcon(result)}
                           selected={selected}
                           onSelect={() => selectResult(result)}
-                          onMouseEnter={() => setActiveResultId(result.id)}
+                          onMouseEnter={() => scheduleHoverPreview(result)}
+                          onMouseLeave={clearHoverTimer}
                           mediaSrc={result.preview?.media?.src}
                           mediaKind={result.preview?.media?.kind}
                           avatarCropStyle={result.preview?.media?.avatarCropStyle}
@@ -1180,7 +1481,29 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                           }
                           onDetails={hasDetails ? () => showResultDetail(result) : undefined}
                           control={
-                            result.control?.type === "toggle" ? (
+                            result.category === "persona" || result.category === "preset" ? (
+                              <CommandCenterActionValue
+                                label={
+                                  result.category === "persona"
+                                    ? t("commandCenter.actions.activatePersona", "Activate persona")
+                                    : t("commandCenter.actions.setDefaultPreset", "Set default preset")
+                                }
+                                icon={result.category === "persona" ? Play : ArrowRight}
+                                value={
+                                  result.control?.value === true
+                                    ? t("commandCenter.values.active", "Active")
+                                    : undefined
+                                }
+                                onClick={() => {
+                                  if (result.control?.type === "toggle") result.control.onChange(true);
+                                }}
+                                disabled={result.control?.value === true || resultControlPending(result)}
+                                loading={resultControlPending(result)}
+                                variant="compact"
+                                tone="primary"
+                                className="w-full justify-end"
+                              />
+                            ) : result.control?.type === "toggle" ? (
                               <CommandCenterToggle
                                 label={result.control.label}
                                 checked={Boolean(result.control.value)}
@@ -1190,6 +1513,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                                     : t("commandCenter.values.disabled", "Disabled")
                                 }
                                 onCheckedChange={(value) => result.control?.onChange(value)}
+                                disabled={resultControlPending(result)}
+                                loading={resultControlPending(result)}
                                 variant="compact"
                                 className="w-full"
                               />
@@ -1223,6 +1548,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 className={`min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] ${pane === "results" ? "max-sm:hidden sm:w-[23rem] sm:shrink-0 sm:border-l" : detailOrigin === "results" ? "sm:w-[23rem] sm:shrink-0 sm:border-l" : ""}`}
               >
                 <CommandResultPreview
+                  key={previewResult.id}
                   result={
                     {
                       command: previewResult.command,
@@ -1242,22 +1568,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                         ? t("commandCenter.adminRequired", "Administrator access required")
                         : undefined
                   }
-                  openAction={
-                    previewResult.control
-                      ? undefined
-                      : {
-                          label:
-                            previewResult.command.availability?.status === "requires-capability"
-                              ? t("commandCenter.setup", "Set up")
-                              : t("commandCenter.open", "Open"),
-                          shortcut: "↵",
-                          onSelect: () => choose(previewResult),
-                          disabled:
-                            previewResult.command.availability?.status === "requires-admin" ||
-                            (previewResult.command.availability?.status === "requires-capability" &&
-                              (!previewResult.target || !previewResult.command.availability.setupTarget)),
-                        }
-                  }
+                  actions={previewActions}
                 />
                 {previewResult.control?.type === "choice" ? (
                   <div className="border-t border-[var(--border)] p-3">
@@ -1267,6 +1578,26 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
                       onValueChange={(value) => previewResult.control?.onChange(value)}
                       variant="compact"
+                    />
+                  </div>
+                ) : null}
+                {previewResult.control?.type === "toggle" &&
+                previewResult.category !== "persona" &&
+                previewResult.category !== "preset" ? (
+                  <div className="border-t border-[var(--border)] p-3">
+                    <CommandCenterToggle
+                      label={previewResult.control.label}
+                      checked={Boolean(previewResult.control.value)}
+                      stateLabel={
+                        previewResult.control.value
+                          ? t("commandCenter.values.enabled", "Enabled")
+                          : t("commandCenter.values.disabled", "Disabled")
+                      }
+                      onCheckedChange={(value) => previewResult.control?.onChange(value)}
+                      disabled={resultControlPending(previewResult)}
+                      loading={resultControlPending(previewResult)}
+                      variant="compact"
+                      className="w-full"
                     />
                   </div>
                 ) : null}
@@ -1309,6 +1640,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   id: result.id,
                   title: result.title,
                   metadata: resultMetadata(command, visual.label),
+                  description: result.description ?? result.preview?.description,
+                  status: result.preview?.status?.label,
+                  tags: result.preview?.tags ?? result.preview?.badges,
+                  secondaryState: result.preview?.metadataLine ?? result.preview?.supportingInfo,
+                  pinned: ranking.pinnedIds.includes(result.id),
                   icon: resultIcon(command),
                   groupVisual: visual.groupClassName,
                   media: result.preview?.media

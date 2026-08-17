@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronRight, Pin, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,11 @@ export interface CommandCenterBrowseResult {
   id: string;
   title: string;
   metadata?: ReactNode;
+  description?: ReactNode;
+  status?: ReactNode;
+  tags?: readonly ReactNode[];
+  pinned?: boolean;
+  secondaryState?: ReactNode;
   media?: CommandCenterBrowseMedia;
   groupVisual?: string;
   icon: LucideIcon;
@@ -156,36 +161,90 @@ export function CommandCenterBrowseGrid({
                 onClick={result.onSelect}
                 onKeyDown={(event) => handleKeyDown(event, result, index)}
                 className={cn(
-                  "group min-h-11 w-full min-w-0 overflow-hidden rounded-md border bg-[var(--card)] text-left transition-[border-color,background-color,box-shadow,transform]",
-                  "hover:border-[color-mix(in_srgb,var(--primary)_45%,var(--border))] hover:bg-[var(--accent)]/35 active:scale-[0.99]",
+                  "group min-h-11 w-full min-w-0 overflow-hidden rounded-md border bg-[var(--card)] text-left transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out",
+                  "hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--primary)_45%,var(--border))] hover:bg-[var(--accent)]/35 active:translate-y-0 active:scale-[0.99]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
-                  selected ? "border-[var(--primary)]" : "border-[var(--border)]",
+                  "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+                  result.groupVisual,
+                  selected
+                    ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_35%,transparent)]"
+                    : "border-[var(--border)]",
                 )}
               >
-                <div className="h-24 w-full overflow-hidden bg-[var(--muted)]">
+                <div
+                  className={cn(
+                    "w-full overflow-hidden bg-[var(--muted)]",
+                    result.media?.kind === "artwork"
+                      ? "aspect-[16/10]"
+                      : result.media?.kind === "avatar"
+                        ? "aspect-square"
+                        : "aspect-[4/3]",
+                  )}
+                >
                   <CommandCenterMedia
                     size="grid"
                     icon={result.icon}
                     src={result.media?.src}
                     kind={result.media?.kind}
                     avatarCropStyle={result.media?.avatarCropStyle}
-                    groupClassName={result.groupVisual}
+                    groupClassName={cn(result.groupVisual, result.pinned && "border-[var(--primary)]/60")}
                     accent={result.media?.accent}
                     className="h-full w-full"
                   />
                 </div>
-                <div className="min-w-0 px-2.5 py-2">
-                  <div
-                    data-command-center-browse-title
-                    className="truncate text-sm font-semibold leading-5 text-[var(--foreground)]"
-                  >
-                    {result.title}
+                <div className="min-w-0 px-2.5 pb-2.5 pt-2">
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div
+                      data-command-center-browse-title
+                      className="line-clamp-2 min-h-10 min-w-0 break-words text-sm font-semibold leading-5 text-[var(--foreground)]"
+                    >
+                      {result.title}
+                    </div>
+                    {result.pinned ? (
+                      <Pin
+                        className="mt-0.5 size-3.5 shrink-0 text-[var(--primary)]"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                   </div>
                   {result.metadata ? (
-                    <div className="mt-0.5 truncate text-xs leading-4 text-[var(--muted-foreground)]">
+                    <div className="mt-1 line-clamp-2 break-words text-xs leading-4 text-[var(--muted-foreground)]">
                       {result.metadata}
                     </div>
                   ) : null}
+                  {result.description ? (
+                    <div className="mt-1 line-clamp-2 break-words text-xs leading-4 text-[var(--muted-foreground)]/80">
+                      {result.description}
+                    </div>
+                  ) : null}
+                  {result.status || result.tags?.length ? (
+                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
+                      {result.status ? (
+                        <span className="min-w-0 max-w-full break-words text-[0.6875rem] font-semibold leading-4 text-[var(--primary)]">
+                          {result.status}
+                        </span>
+                      ) : null}
+                      {result.tags?.map((tag, tagIndex) => (
+                        <span
+                          key={`${result.id}-tag-${tagIndex}`}
+                          className="max-w-full break-words rounded-sm border border-[var(--border)] bg-[var(--secondary)] px-1.5 py-0.5 text-[0.6875rem] leading-4 text-[var(--muted-foreground)]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {result.secondaryState ? (
+                    <div className="mt-2 flex min-h-11 items-center justify-between gap-2 border-t border-[var(--border)]/70 pt-1.5 text-xs text-[var(--muted-foreground)]">
+                      <span className="min-w-0 flex-1 break-words">{result.secondaryState}</span>
+                      <ChevronRight className="size-4 shrink-0 text-[var(--primary)]" aria-hidden="true" />
+                    </div>
+                  ) : (
+                    <div className="flex min-h-11 items-end justify-end pt-1">
+                      <ChevronRight className="size-4 text-[var(--muted-foreground)]" aria-hidden="true" />
+                    </div>
+                  )}
                 </div>
               </button>
             </li>

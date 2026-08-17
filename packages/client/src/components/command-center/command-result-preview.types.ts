@@ -1,5 +1,6 @@
 import type { CommandResult } from "../../lib/command-center";
 import type { CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
 import type { CommandCenterMediaKind } from "./CommandCenterMedia";
 
 export type CommandCenterPreviewKind =
@@ -28,11 +29,16 @@ export interface CommandCenterPreviewData {
   kind: CommandCenterPreviewKind;
   title?: string;
   categoryLabel?: string;
+  eyebrow?: string;
   subtitle?: string;
   description?: string;
   media?: CommandCenterPreviewMedia;
   accent?: string;
   badges?: readonly string[];
+  tags?: readonly string[];
+  status?: { label: string; tone?: "neutral" | "success" | "warning" | "danger" };
+  metadataLine?: string;
+  supportingInfo?: string;
   facts?: readonly CommandCenterPreviewFact[];
 }
 
@@ -42,6 +48,7 @@ export interface RichCommandResult extends CommandResult {
 
 export interface CommandResultPreviewAction {
   label: string;
+  icon?: LucideIcon;
   shortcut?: string;
   onSelect: (result: RichCommandResult) => void;
   disabled?: boolean;

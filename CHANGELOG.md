@@ -7,10 +7,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 ### Added
 
 - Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
-- Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, semantic icons, resource previews, documentation search, safe inline controls, extension commands, and local pins and recency.
-- Command Center capability setup, documentation passage opening, keyboard semantics, mobile pin controls, and extension command guidance are now aligned with their supported actions.
-- Professor Mari now has a fixed peek action in the Command Center header, where she stays visible without covering search results or preview text.
-- The Command Center now uses a compact Spotlight-style search with grouped results, category filters, inline safe settings, exact item details with preserved Browse return state, accessible result controls, and a full-screen mobile browse grid.
+- Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, resource previews, documentation search, safe inline controls, extension commands, local pins and recency, exact Browse details, and an accessible full-screen mobile browse grid.
+- Command Center previews now show richer entity information, stable desktop sizing, category-specific safe actions, quiet media tints, delayed hover details, and a fixed Professor Mari header action that preserves the search handoff.
 - Echo Chamber now exposes an editable message delay in its Agents editor, and extensions can update the same `messageDelaySeconds` agent setting instead of relying on hardcoded reveal timing (#5177).
 - Persona cards can now be referenced by copied ID with `{{persona-21-character-card-ID}}`, resolving the card name in place and adding its authored fields and eligible attached lorebook context to the prompt (#5171).
 - Added **Assistant Reasoning Prefill** alongside the existing visible assistant prefill: compatible OpenAI-style endpoints can now continue hidden reasoning from `reasoning_content` on a partial assistant message, while visible-only prefills keep their existing request shape.
