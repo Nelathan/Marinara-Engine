@@ -54,6 +54,7 @@ import {
 import { createSystemCommandDefinitions } from "../../lib/command-center-system-commands";
 import { getCommandIcon } from "../../lib/command-icons";
 import { searchOmnibar, type OmnibarCategory, type OmnibarResult } from "../../lib/omnibar-search";
+import { getOmnibarSettingsDestinations } from "../../lib/omnibar-settings";
 import {
   activatePersonalExtensionCommand,
   usePersonalExtensionCommands,
@@ -714,7 +715,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       ["showModelName", "commandCenter.controls.modelName", showModelName, set().setShowModelName],
       ["showTokenUsage", "commandCenter.controls.tokenUsage", showTokenUsage, set().setShowTokenUsage],
     ] as const;
+    const settingsDestinations = getOmnibarSettingsDestinations().map((setting) => ({
+      id: setting.id,
+      title: setting.title,
+      category: "settings" as const,
+      score: 165,
+      aliases: setting.aliases,
+      target: {
+        kind: "settings" as const,
+        tab: setting.tab,
+        controlId: setting.controlId,
+      },
+      description: `${setting.sectionLabel} · ${setting.description}`,
+      kind: "settings" as const,
+      icon: "settings" as const,
+    }));
     return [
+      ...settingsDestinations,
       {
         id: "control:theme",
         title: t("commandCenter.controls.theme", "Theme"),

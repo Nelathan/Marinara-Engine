@@ -14,6 +14,7 @@ import {
 } from "../../packages/client/src/lib/command-center.js";
 import { createSystemCommandDefinitions } from "../../packages/client/src/lib/command-center-system-commands.js";
 import { searchOmnibar } from "../../packages/client/src/lib/omnibar-search.js";
+import { getOmnibarSettingsDestinations } from "../../packages/client/src/lib/omnibar-settings.js";
 
 const commands: CommandDefinition[] = [
   { id: "home", title: "Home", kind: "navigation", icon: "home", target: { kind: "home" } },
@@ -158,6 +159,18 @@ const categorizedCommands = searchOmnibar("command", {
 });
 assert.equal(categorizedCommands.find((result) => result.id === "custom-settings-command")?.category, "settings");
 assert.equal(categorizedCommands.find((result) => result.id === "settings-looking-navigation")?.category, "navigation");
+
+const settingsDestinations = getOmnibarSettingsDestinations();
+const streamingSetting = settingsDestinations.find((setting) => setting.controlId === "streaming-speed");
+assert.deepEqual(streamingSetting && { tab: streamingSetting.tab, controlId: streamingSetting.controlId }, {
+  tab: "general",
+  controlId: "streaming-speed",
+});
+assert.equal(settingsDestinations.find((setting) => setting.controlId === "font-family")?.sectionLabel, "Text & Scale");
+assert.equal(
+  settingsDestinations.find((setting) => setting.id === "settings-section:appearance")?.controlId,
+  "theme-mode",
+);
 
 // The omnibar reopens on search, never a stale Professor Mari pane: the session
 // normalizer must reset an unsupported persisted pane back to "results".
