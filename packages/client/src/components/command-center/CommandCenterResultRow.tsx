@@ -110,7 +110,11 @@ export function CommandCenterResultRow({
         </span>
       </button>
 
-      {control ? <div className="col-start-2 w-24 shrink-0 pr-1 sm:w-28">{control}</div> : null}
+      {control ? (
+        <div className="col-start-2 flex min-w-0 max-w-[min(48vw,16rem)] shrink-0 items-center justify-end pr-1">
+          {control}
+        </div>
+      ) : null}
 
       {hasActions ? (
         <div className="col-start-3 flex h-full shrink-0 items-center justify-end pr-0.5">

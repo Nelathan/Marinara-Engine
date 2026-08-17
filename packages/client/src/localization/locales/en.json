@@ -321,7 +321,7 @@
   "commandCenter.groups.quickControls": "Quick controls",
   "commandCenter.groups.recent": "Recent",
   "commandCenter.groups.suggested": "Suggested",
-  "commandCenter.initialHint": "Pinned, recent, and useful controls",
+  "commandCenter.initialHint": "Recent and useful controls",
   "commandCenter.keyboard.escape": "Esc back",
   "commandCenter.keyboard.move": "Arrow keys move",
   "commandCenter.keyboard.pin": "Cmd/Ctrl+P pin",

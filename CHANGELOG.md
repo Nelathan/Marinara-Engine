@@ -6,6 +6,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Command Center inline controls now keep their labels aligned with toggles and multi-option choices, and the empty search header no longer refers to pinned actions.
+
 - The full Professor Mari agent now runs inside the omnibar as its own pane: opening Mari from the omnibar keeps the dialog, carries the typed draft and a removable context chip, unifies the header with Mari's identity, persists the conversation across pane switches, and returns to search on close. Opening a created or edited resource from Mari closes the omnibar onto the real editor. The Home and floating Mari surfaces are unchanged.
 - Redesigned the omnibar surface: a narrower rounded floating panel with a warm top gradient wash, an inviting empty-state greeting that also opens Professor Mari, result previews that appear only for rich results instead of a permanent side column, softer selection pills, and reduced-motion-safe entrance animation.
 - Professor Mari now has consistent composer and trust-strip treatment across Home, floating chat, and normal Mari chat, with accessible actions, selected connection and context status, pending approvals, enabled Skills and Memories, and localized retry recovery.

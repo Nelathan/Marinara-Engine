@@ -218,6 +218,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const showTokenUsage = useUIStore((state) => state.showTokenUsage);
   const userStatus = useUIStore((state) => state.userStatus);
   const activeChat = useChatStore((state) => state.activeChat);
+  const openCharacterId = useUIStore((state) => state.characterDetailId);
+  const openPersonaId = useUIStore((state) => state.personaDetailId);
+  const openLorebookId = useUIStore((state) => state.lorebookDetailId);
+  const openPresetId = useUIStore((state) => state.presetDetailId);
+  const openConnectionId = useUIStore((state) => state.connectionDetailId);
+  const openAgentId = useUIStore((state) => state.agentDetailId);
 
   const categoryLabels = useMemo<CommandCenterCategoryLabels>(
     () => ({
@@ -260,6 +266,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   );
   const groupLabels = useMemo<Record<CommandCenterResultGroupId, string>>(
     () => ({
+      context: t("commandCenter.groups.context", "On this screen"),
       pinned: t("commandCenter.groups.pinned", "Pinned"),
       recent: t("commandCenter.groups.recent", "Recent"),
       "quick-controls": t("commandCenter.groups.quickControls", "Quick controls"),
@@ -892,7 +899,120 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
     return selected.slice(0, 4);
   }, [allLocalResults, ranking.recent, searchableCommandResults]);
-  const rawResults = query.trim() ? searchResults : idleResults;
+  // Context-aware results: read the app's current location (active chat, open
+  // editor) and surface direct jumps to whatever is on screen and under it.
+  const contextResults = useMemo<OmnibarResult[]>(() => {
+    const out: OmnibarResult[] = [];
+    const push = (result: OmnibarResult) => {
+      if (!out.some((item) => item.id === result.id)) out.push(result);
+    };
+    const nameOf = (map: Map<string, unknown>, id: string) => readNamedRow(map.get(id))?.name;
+    const listName = (list: readonly unknown[] | undefined, id: string) =>
+      readNamedRow((list ?? []).find((item) => readNamedRow(item)?.id === id))?.name;
+
+    if (openCharacterId) {
+      const name = nameOf(characterById, openCharacterId);
+      if (name)
+        push({
+          id: `context:character:${openCharacterId}`,
+          title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
+          category: "character",
+          target: { kind: "resource", resource: "character", id: openCharacterId },
+          score: 0,
+          group: "context",
+          icon: "character",
+        });
+    }
+    for (const [id, kind, list, icon] of [
+      [openPersonaId, "persona", personas.data, "persona"],
+      [openLorebookId, "lorebook", lorebooks.data, "lorebook"],
+      [openPresetId, "preset", presets.data, "preset"],
+      [openAgentId, "agent", agents.data, "agent"],
+    ] as const) {
+      if (!id) continue;
+      const name = listName(list, id);
+      if (!name) continue;
+      push({
+        id: `context:${kind}:${id}`,
+        title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
+        category: kind,
+        target: { kind: "resource", resource: kind, id },
+        score: 0,
+        group: "context",
+        icon,
+      });
+    }
+    if (openConnectionId) {
+      const name = connectionById.get(openConnectionId)?.name;
+      if (name)
+        push({
+          id: `connection:${openConnectionId}`,
+          title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
+          category: "connection",
+          score: 0,
+          group: "context",
+          icon: "connection",
+        });
+    }
+    if (activeChat) {
+      push({
+        id: `context:chat:${activeChat.id}`,
+        title: t("commandCenter.context.currentChat", "Current chat: {{name}}", { name: activeChat.name }),
+        category: "chat",
+        target: { kind: "chat", chatId: activeChat.id },
+        score: 0,
+        group: "context",
+        icon: "chats",
+      });
+      for (const characterId of activeChat.characterIds ?? []) {
+        const name = nameOf(characterById, characterId);
+        if (!name) continue;
+        push({
+          id: `context:chat-character:${characterId}`,
+          title: name,
+          category: "character",
+          target: { kind: "resource", resource: "character", id: characterId },
+          score: 0,
+          group: "context",
+          icon: "character",
+        });
+      }
+      if (activeChat.personaId) {
+        const name = nameOf(personaById, activeChat.personaId);
+        if (name)
+          push({
+            id: `context:chat-persona:${activeChat.personaId}`,
+            title: name,
+            category: "persona",
+            target: { kind: "resource", resource: "persona", id: activeChat.personaId },
+            score: 0,
+            group: "context",
+            icon: "persona",
+          });
+      }
+    }
+    return out.slice(0, 6);
+  }, [
+    activeChat,
+    agents.data,
+    characterById,
+    connectionById,
+    lorebooks.data,
+    openAgentId,
+    openCharacterId,
+    openConnectionId,
+    openLorebookId,
+    openPersonaId,
+    openPresetId,
+    personaById,
+    personas.data,
+    presets.data,
+    t,
+  ]);
+  const rawResults = useMemo(
+    () => (query.trim() ? searchResults : [...contextResults, ...idleResults]),
+    [contextResults, idleResults, query, searchResults],
+  );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
     return rankCommandResults(
@@ -1586,7 +1706,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               {!query.trim() && BROWSE_FILTERS.some((item) => browseAvailability[item] > 0) ? (
                 <div className="mb-1 flex items-center justify-between gap-3 px-2 pb-1">
                   <span className="text-xs text-[var(--muted-foreground)]">
-                    {t("commandCenter.initialHint", "Pinned, recent, and useful actions")}
+                    {t("commandCenter.initialHint", "Recent and useful actions")}
                   </span>
                   <button
                     type="button"
@@ -1667,7 +1787,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                           }
                           onDetails={hasDetails ? () => showResultDetail(result) : undefined}
                           control={
-                            result.category === "persona" || result.category === "preset" ? (
+                            result.control?.type === "choice" ? (
+                              <CommandCenterSegmentedChoice
+                                label={result.control.label}
+                                value={String(result.control.value)}
+                                options={(result.control.options ?? []).map((option) => ({ ...option }))}
+                                onValueChange={(value) => result.control?.onChange(value)}
+                                variant="compact"
+                                className="border-0 bg-transparent"
+                              />
+                            ) : result.category === "persona" || result.category === "preset" ? (
                               <CommandCenterActionValue
                                 label={
                                   result.category === "persona"
@@ -1687,7 +1816,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                                 loading={resultControlPending(result)}
                                 variant="compact"
                                 tone="primary"
-                                className="w-full justify-end"
+                                className="justify-end"
                               />
                             ) : result.control?.type === "toggle" ? (
                               <CommandCenterToggle
@@ -1702,7 +1831,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                                 disabled={resultControlPending(result)}
                                 loading={resultControlPending(result)}
                                 variant="compact"
-                                className="w-full"
+                                className="justify-end"
                               />
                             ) : undefined
                           }
