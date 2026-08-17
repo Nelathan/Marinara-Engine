@@ -59,6 +59,7 @@ import { showConfirmDialog } from "../../lib/app-dialogs";
 import { HOME_CHAT_MODE_ACCENTS } from "../../lib/home-chat-mode-style";
 import { parseCharacterDisplayData } from "../../lib/character-display";
 import { resolveCapabilityPackageDisplay } from "../../lib/capability-package-localization";
+import { executeStateNavigation } from "../../lib/state-navigation";
 import {
   resolveProfessorMariNavigation,
   type ProfessorMariBrowserTab,
@@ -1312,32 +1313,6 @@ export function HomeBrowserHub({
       useChatStore.getState().setActiveChatId(target.chatId);
       return;
     }
-    if (target.kind === "panel") {
-      ui.openRightPanel(target.panel);
-      return;
-    }
-    if (target.kind === "settings") {
-      ui.setSettingsTab(target.tab);
-      ui.setSettingsTargetControlId(target.controlId ?? null);
-      ui.openRightPanel("settings");
-      return;
-    }
-    if (target.kind === "surface") {
-      if (target.surface === "card-downloads") ui.openBotBrowser();
-      else if (target.surface === "character-library") ui.openCharacterLibrary();
-      else if (target.surface === "persona-library") ui.openPersonaLibrary();
-      else if (target.surface === "agent-catalog") ui.openAgentCatalog();
-      else ui.openGameAssetsBrowser();
-      return;
-    }
-    if (target.kind === "resource") {
-      if (target.resource === "character") ui.openCharacterDetail(target.id);
-      else if (target.resource === "persona") ui.openPersonaDetail(target.id);
-      else if (target.resource === "preset") ui.openPresetDetail(target.id);
-      else if (target.resource === "lorebook") ui.openLorebookDetail(target.id);
-      else ui.openAgentDetail(target.id);
-      return;
-    }
     if (target.kind === "window") {
       if (target.window === "discord") {
         trackHomeAction("discord_clicked");
@@ -1345,17 +1320,17 @@ export function HomeBrowserHub({
       } else if (target.window === "support") {
         trackHomeAction("kofi_clicked");
         window.open("https://ko-fi.com/marinara_spaghetti", "_blank", "noopener,noreferrer");
-      } else if (target.window === "documentation") ui.openModal("docs-viewer");
-      else if (target.window === "faq") setFaqOpen(true);
+      } else if (target.window === "faq") setFaqOpen(true);
       else if (target.window === "widgets") setWidgetManagerOpen(true);
-      else if (target.window === "tutorial") ui.setHasCompletedOnboarding(false);
-      else {
+      else if (target.window === "credits") {
         trackHomeAction("credits_viewed");
         onOpenCredits();
-      }
-      return;
+      } else executeStateNavigation(target);
+    } else if (target.kind === "package") {
+      selectTab(target.packageId);
+    } else {
+      executeStateNavigation(target);
     }
-    selectTab(target.packageId);
   };
   const resolveWithProfessorMari = (query: string) =>
     resolveProfessorMariNavigation(query, professorMariBrowserTabs, professorMariResources, chats.data ?? []);

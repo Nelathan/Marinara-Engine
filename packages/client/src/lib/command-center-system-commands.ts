@@ -1,0 +1,251 @@
+import {
+  defineCommand,
+  resolveCommandCenterTitles,
+  type CommandCenterTitleSource,
+  type DeclarativeCommandDefinition,
+} from "./command-center-definitions";
+
+const AVAILABLE = { status: "available" } as const;
+
+export function createPhase4CommandDefinitions(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
+  const title = resolveCommandCenterTitles(source);
+
+  return [
+    defineCommand({
+      id: "create-character",
+      title: title.createCharacter,
+      kind: "action",
+      icon: "character",
+      aliases: ["new character", "new card"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "create-character" },
+    }),
+    defineCommand({
+      id: "create-persona",
+      title: title.createPersona,
+      kind: "action",
+      icon: "persona",
+      aliases: ["new persona", "new profile"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "create-persona" },
+    }),
+    defineCommand({
+      id: "create-lorebook",
+      title: title.createLorebook,
+      kind: "action",
+      icon: "lorebook",
+      aliases: ["new lorebook", "new world book", "new world info"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "create-lorebook" },
+    }),
+    defineCommand({
+      id: "create-preset",
+      title: title.createPreset,
+      kind: "action",
+      icon: "preset",
+      aliases: ["new preset", "new prompt preset"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "create-preset" },
+    }),
+    defineCommand({
+      id: "create-connection",
+      title: title.createConnection,
+      kind: "action",
+      icon: "connection",
+      aliases: ["new connection", "add provider"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "create-connection" },
+    }),
+    defineCommand({
+      id: "create-agent",
+      title: title.createAgent,
+      kind: "action",
+      icon: "music",
+      aliases: ["new agent", "add agent"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "resource", resource: "agent", id: "__new__" } },
+    }),
+    defineCommand({
+      id: "documentation",
+      title: title.documentation,
+      kind: "navigation",
+      icon: "documentation",
+      aliases: ["docs", "manual", "guides"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "window", window: "documentation" } },
+    }),
+    defineCommand({
+      id: "help",
+      title: title.help,
+      kind: "navigation",
+      icon: "documentation",
+      aliases: ["faq", "support", "getting started"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "docs-viewer", props: { initialDoc: "FAQ.md" } },
+    }),
+    defineCommand({
+      id: "game-assets",
+      title: title.gameAssets,
+      kind: "resource",
+      icon: "game-assets",
+      aliases: ["asset browser", "sprites", "backgrounds", "music library"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "surface", surface: "game-assets" } },
+    }),
+    defineCommand({
+      id: "card-browser",
+      title: title.cardBrowser,
+      kind: "resource",
+      icon: "character",
+      aliases: ["download cards", "browse bots", "character browser"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "surface", surface: "card-downloads" } },
+    }),
+    defineCommand({
+      id: "character-library",
+      title: title.characterLibrary,
+      kind: "resource",
+      icon: "character",
+      aliases: ["character cards", "character collection"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "surface", surface: "character-library" } },
+    }),
+    defineCommand({
+      id: "persona-library",
+      title: title.personaLibrary,
+      kind: "resource",
+      icon: "persona",
+      aliases: ["persona cards", "persona collection"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "surface", surface: "persona-library" } },
+    }),
+    defineCommand({
+      id: "agent-library",
+      title: title.agentLibrary,
+      kind: "resource",
+      icon: "package",
+      aliases: ["agent catalog", "agent packages", "download agents"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "surface", surface: "agent-catalog" } },
+    }),
+  ];
+}
+
+export function createPhase5SystemCommands(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
+  const title = resolveCommandCenterTitles(source);
+
+  return [
+    defineCommand({
+      id: "spotify-settings",
+      title: title.spotify,
+      kind: "settings",
+      icon: "music",
+      aliases: ["spotify integration", "music provider", "music dj"],
+      availability: { status: "requires-capability", capability: "spotify", setupTarget: true },
+      action: { kind: "navigate", target: { kind: "resource", resource: "agent", id: "spotify" } },
+    }),
+    defineCommand({
+      id: "tts-settings",
+      title: title.textToSpeech,
+      kind: "settings",
+      icon: "speech",
+      aliases: ["tts", "speech", "voice settings", "elevenlabs", "pockettts"],
+      availability: { status: "requires-capability", capability: "tts", setupTarget: true },
+      action: { kind: "navigate", target: { kind: "panel", panel: "connections" } },
+    }),
+    defineCommand({
+      id: "settings",
+      title: title.settings,
+      kind: "settings",
+      icon: "settings",
+      aliases: ["preferences", "configuration"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "settings", tab: "general" } },
+    }),
+    defineCommand({
+      id: "integrations",
+      title: title.connections,
+      kind: "settings",
+      icon: "connection",
+      aliases: ["integrations", "providers", "api keys", "models"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "panel", panel: "connections" } },
+    }),
+    defineCommand({
+      id: "extensions",
+      title: title.extensions,
+      kind: "settings",
+      icon: "extensions",
+      aliases: ["personal extensions", "addons", "plugins"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "panel", panel: "extensions" } },
+    }),
+    defineCommand({
+      id: "packages",
+      title: title.packages,
+      kind: "resource",
+      icon: "package",
+      aliases: ["capability packages", "agent packages", "catalog"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "surface", surface: "agent-catalog" } },
+    }),
+    defineCommand({
+      id: "import-data",
+      title: title.importData,
+      kind: "settings",
+      icon: "upload",
+      aliases: ["restore profile", "import marinara", "data transfer"],
+      availability: AVAILABLE,
+      action: { kind: "navigate", target: { kind: "settings", tab: "import" } },
+    }),
+    defineCommand({
+      id: "import-sillytavern",
+      title: title.importSillyTavern,
+      kind: "action",
+      icon: "upload",
+      aliases: ["st import", "bulk import", "import chats"],
+      availability: AVAILABLE,
+      action: { kind: "modal", modal: "st-bulk-import" },
+    }),
+    defineCommand({
+      id: "updates",
+      title: title.updates,
+      kind: "settings",
+      icon: "updates",
+      aliases: ["check for updates", "release channel", "version"],
+      availability: AVAILABLE,
+      action: {
+        kind: "navigate",
+        target: { kind: "settings", tab: "advanced", controlId: "release-channel" },
+      },
+    }),
+    defineCommand({
+      id: "diagnostics",
+      title: title.diagnostics,
+      kind: "settings",
+      icon: "diagnostics",
+      aliases: ["system information", "support details", "bug report", "gpu info"],
+      availability: AVAILABLE,
+      action: {
+        kind: "navigate",
+        target: { kind: "settings", tab: "advanced", controlId: "copy-support-diagnostics" },
+      },
+    }),
+    defineCommand({
+      id: "backups",
+      title: title.backups,
+      kind: "settings",
+      icon: "backups",
+      aliases: ["backup", "export", "archive", "automatic backups"],
+      availability: AVAILABLE,
+      action: {
+        kind: "navigate",
+        target: { kind: "settings", tab: "advanced", controlId: "automatic-backups" },
+      },
+    }),
+  ];
+}
+
+export function createSystemCommandDefinitions(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
+  return [...createPhase4CommandDefinitions(source), ...createPhase5SystemCommands(source)];
+}

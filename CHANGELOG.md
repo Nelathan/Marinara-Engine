@@ -6,7 +6,9 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
-- Added a global omnibar with `Cmd/Ctrl+K` access for finding chats, resources, settings, navigation targets, and Professor Mari.
+- Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
+- Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, semantic icons, resource previews, documentation search, safe inline controls, extension commands, and local pins and recency.
+- Command Center capability setup, documentation passage opening, keyboard semantics, mobile pin controls, and extension command guidance are now aligned with their supported actions.
 - Professor Mari now owns the omnibar surface. Her draggable avatar and speech bubble stay attached to the search station, with a separate saved position from the homepage navigator.
 - Echo Chamber now exposes an editable message delay in its Agents editor, and extensions can update the same `messageDelaySeconds` agent setting instead of relying on hardcoded reveal timing (#5177).
 - Persona cards can now be referenced by copied ID with `{{persona-21-character-card-ID}}`, resolving the card name in place and adding its authored fields and eligible attached lorebook context to the prompt (#5171).

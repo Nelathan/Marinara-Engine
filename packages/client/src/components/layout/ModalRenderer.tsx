@@ -125,7 +125,12 @@ export function ModalRenderer() {
       break;
     case "docs-viewer":
       content = (
-        <DocsViewerModal open onClose={closeModal} initialDoc={(modal?.props?.initialDoc as string | null) ?? null} />
+        <DocsViewerModal
+          open
+          onClose={closeModal}
+          initialDoc={(modal?.props?.initialDoc as string | null) ?? null}
+          initialSearchTerm={(modal?.props?.initialSearchTerm as string) ?? ""}
+        />
       );
       break;
     case "about-me-viewer":

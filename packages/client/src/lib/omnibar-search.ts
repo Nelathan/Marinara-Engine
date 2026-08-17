@@ -6,6 +6,8 @@ import {
   type ProfessorMariNavigationResource,
   type ProfessorMariNavigationTarget,
 } from "./professor-mari-navigation";
+import type { CommandCenterPreviewData } from "../components/command-center/command-result-preview.types";
+import type { CommandIcon, CommandKind } from "./command-center";
 
 export type OmnibarCategory =
   | "navigation"
@@ -17,20 +19,68 @@ export type OmnibarCategory =
   | "connection"
   | "agent"
   | "settings"
-  | "professor";
+  | "professor"
+  | "docs";
 export type OmnibarResult = {
   id: string;
   title: string;
   category: OmnibarCategory;
   target?: ProfessorMariNavigationTarget;
   score: number;
+  aliases?: readonly string[];
+  description?: string;
+  preview?: CommandCenterPreviewData;
+  source?: string;
+  snippet?: string;
+  path?: string;
+  line?: number | null;
+  control?: {
+    type: "toggle" | "choice";
+    label: string;
+    value: string | boolean;
+    options?: readonly { value: string; label: string }[];
+    onChange: (value: string | boolean) => void;
+  };
+  kind?: CommandKind;
+  icon?: CommandIcon;
+  availability?:
+    | "available"
+    | "unavailable"
+    | { status: "available" | "requires-capability" | "requires-admin"; capability?: string; setupTarget?: boolean };
 };
 export type OmnibarSearchData = {
-  commands: readonly { id: string; title: string; target: ProfessorMariNavigationTarget; aliases?: string[] }[];
-  chats: readonly ProfessorMariNavigationChat[];
-  resources: readonly ProfessorMariNavigationResource[];
-  connections: readonly { id: string; name: string }[];
+  commands: readonly {
+    id: string;
+    title: string;
+    target?: ProfessorMariNavigationTarget;
+    aliases?: readonly string[];
+    kind?: CommandKind;
+    icon?: CommandIcon;
+    availability?: {
+      status: "available" | "requires-capability" | "requires-admin";
+      capability?: string;
+      setupTarget?: boolean;
+    };
+  }[];
+  chats: readonly (ProfessorMariNavigationChat & {
+    mode?: string;
+    description?: string;
+    preview?: CommandCenterPreviewData;
+  })[];
+  resources: readonly (ProfessorMariNavigationResource & {
+    description?: string;
+    preview?: CommandCenterPreviewData;
+  })[];
+  connections: readonly {
+    id: string;
+    name: string;
+    provider?: string;
+    model?: string;
+    isDefault?: boolean;
+    imagePath?: string | null;
+  }[];
   browserTabs?: readonly ProfessorMariBrowserTab[];
+  controls?: readonly OmnibarResult[];
   professorNavigationTitle?: string;
   askProfessorTitle?: string;
 };
@@ -49,10 +99,21 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
   const normalized = normalizeProfessorMariNavigationQuery(query);
   if (!normalized) return [];
   const results: OmnibarResult[] = [];
+  for (const control of data.controls ?? []) {
+    const score = scoreText(normalized, [control.title, ...(control.aliases ?? [])]);
+    if (score >= 0) results.push({ ...control, score });
+  }
   for (const command of data.commands) {
     const score = scoreText(normalized, [command.title, ...(command.aliases ?? [])]);
     if (score >= 0)
-      results.push({ ...command, category: command.id.startsWith("settings") ? "settings" : "navigation", score });
+      results.push({
+        ...command,
+        category: command.id.startsWith("settings") ? "settings" : "navigation",
+        kind: command.kind,
+        icon: command.icon,
+        availability: command.availability,
+        score,
+      });
   }
   for (const chat of data.chats) {
     const score = scoreText(normalized, [chat.name]);
@@ -63,6 +124,10 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         category: "chat",
         target: { kind: "chat", chatId: chat.id },
         score,
+        description: chat.description,
+        preview: chat.preview,
+        kind: "chat",
+        icon: "chats",
       });
   }
   for (const resource of data.resources) {
@@ -74,6 +139,21 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         category: resource.kind,
         target: { kind: "resource", resource: resource.kind, id: resource.id },
         score,
+        description: resource.description,
+        preview: resource.preview,
+        kind: "resource",
+        icon:
+          resource.kind === "character"
+            ? "character"
+            : resource.kind === "persona"
+              ? "persona"
+              : resource.kind === "lorebook"
+                ? "lorebook"
+                : resource.kind === "preset"
+                  ? "preset"
+                  : resource.kind === "agent"
+                    ? "agent"
+                    : "package",
       });
   }
   for (const connection of data.connections) {
@@ -85,6 +165,18 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         category: "connection",
         target: { kind: "panel", panel: "connections" },
         score,
+        preview: {
+          kind: "connection",
+          title: connection.name,
+          subtitle: connection.provider,
+          media: connection.imagePath ? { src: connection.imagePath, alt: connection.name } : undefined,
+          facts: [
+            ...(connection.model ? [{ label: "Model", value: connection.model }] : []),
+            ...(connection.isDefault ? [{ label: "Status", value: "Default connection" }] : []),
+          ],
+        },
+        kind: "settings",
+        icon: "connection",
       });
   }
   const mariTarget = resolveProfessorMariNavigation(normalized, data.browserTabs, data.resources, data.chats);
@@ -95,6 +187,8 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
       category: "professor",
       target: mariTarget,
       score: 50,
+      kind: "navigation",
+      icon: "professor",
     });
   return results
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title) || a.id.localeCompare(b.id))

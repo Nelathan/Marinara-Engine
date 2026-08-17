@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("desktop shortcut opens an empty focused command palette", async ({ page }, testInfo) => {
+test("desktop shortcut opens a focused command palette with useful initial options", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("desktop"), "The keyboard shortcut is covered on desktop.");
 
   await page.keyboard.press("Control+k");
@@ -39,9 +39,26 @@ test("desktop shortcut opens an empty focused command palette", async ({ page },
   await expect(omnibar.getByRole("dialog", { name: "Search Marinara" })).toBeVisible();
   await expect(input).toBeFocused();
   await expect(input).toHaveValue("");
-  await expect(omnibar.getByRole("option")).toHaveCount(0);
+  await expect(omnibar.getByRole("option").first()).toBeVisible();
+  await expect(omnibar.getByRole("option").filter({ hasText: "Theme" })).toBeVisible();
   await expect(omnibar.locator('[data-component="GlobalOmnibar.ProfessorAssistantSprite"]')).toBeVisible();
   await expect(omnibar.locator('[data-component="GlobalOmnibar.ProfessorAssistantBubble"]')).toBeVisible();
+});
+
+test("desktop command palette can toggle a setting without closing", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Setting controls are covered on desktop.");
+
+  await page.keyboard.press("Control+k");
+  const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+  await omnibar.getByRole("combobox", { name: "Search Marinara" }).fill("reduced effects");
+  await omnibar
+    .getByRole("presentation")
+    .filter({ hasText: "Reduced ambient effects" })
+    .locator("[data-command-option]")
+    .click();
+  await expect(omnibar.getByRole("switch", { name: "Reduced ambient effects" })).toBeVisible();
+  await omnibar.getByRole("switch", { name: "Reduced ambient effects" }).click();
+  await expect(omnibar).toBeVisible();
 });
 
 test("desktop command result navigates directly to Appearance settings", async ({ page }, testInfo) => {
@@ -50,7 +67,7 @@ test("desktop command result navigates directly to Appearance settings", async (
   await page.keyboard.press("Control+k");
   const omnibar = page.locator('[data-component="GlobalOmnibar"]');
   await omnibar.getByRole("combobox", { name: "Search Marinara" }).fill("Appearance");
-  await omnibar.getByRole("option", { name: /^Appearance Settings$/ }).click();
+  await omnibar.getByRole("option").filter({ hasText: "Appearance" }).click();
 
   await expect(omnibar).toBeHidden();
   await expect(page.getByRole("tab", { name: "Appearance", exact: true })).toHaveAttribute("aria-selected", "true");
@@ -63,7 +80,7 @@ test("Ask Professor Mari opens her Home tab with an unsent draft", async ({ page
   await page.keyboard.press("Control+k");
   const omnibar = page.locator('[data-component="GlobalOmnibar"]');
   await omnibar.getByRole("combobox", { name: "Search Marinara" }).fill(draft);
-  await omnibar.getByRole("option", { name: /^Ask Professor Mari Professor Mari$/ }).click();
+  await omnibar.getByRole("option").filter({ hasText: "Ask Professor Mari" }).locator("[data-command-option]").click();
 
   const professorTab = page.getByRole("tab", { name: "Professor", exact: true });
   await expect(professorTab).toHaveAttribute("aria-selected", "true");
