@@ -1817,6 +1817,17 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else if (pane !== "browse" && event.key === "End") {
       event.preventDefault();
       moveSelection(results.length - 1);
+    } else if (
+      mariEnabled &&
+      (pane === "results" || pane === "detail") &&
+      event.key === "Enter" &&
+      (event.metaKey || event.ctrlKey) &&
+      activeResult &&
+      activeResult.command.availability?.status !== "requires-admin"
+    ) {
+      // Continue the selected result with Mari without opening the detail pane first.
+      event.preventDefault();
+      openProfessorMari(resolveCurrentResult(activeResult));
     } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
       event.preventDefault();
       if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
@@ -2838,6 +2849,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         {pane !== "mari" ? (
           <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
             <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
+            {mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
+              <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
+            ) : null}
             <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
           </footer>
         ) : null}
