@@ -35,7 +35,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
 import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
-import { useChats, useChatMessageCount, useChatMessagePeek, useUpdateChat } from "../../hooks/use-chats";
+import { useChats, useChatMessageCount, useChatMessagePeek, useCreateChat, useUpdateChat } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
@@ -83,6 +83,7 @@ import {
 } from "../../lib/personal-extension-contributions";
 import { resolvePresetArtwork } from "../../lib/preset-artwork";
 import { omnibarCompletionActions, type OmnibarCompletionAction } from "../../lib/omnibar-completion-actions";
+import { parseCreationSeed, splitProposalWork, type CreationProposal } from "../../lib/omnibar-creation-proposal";
 import {
   buildProfessorMariCommandCenterContext,
   inferProfessorMariCommandCenterCapability,
@@ -356,6 +357,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // Set when a Mari task finishes while the Work pane is open, so the omnibar can
   // offer the bounded completion actions for that task instead of a dead end.
   const [mariTaskFinished, setMariTaskFinished] = useState(false);
+  // When set, the Work pane shows the creation proposal for review instead of
+  // the Mari transcript. Nothing is created until the user accepts.
+  const [proposalDraft, setProposalDraft] = useState<CreationProposal | null>(null);
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
@@ -372,6 +376,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const updateLorebook = useUpdateLorebook();
   const setDefaultPreset = useSetDefaultPreset();
   const updateChat = useUpdateChat();
+  const createChat = useCreateChat();
   const extensionCommands = usePersonalExtensionCommands();
   const docs = useDocsCommandSearchProvider(query, { enabled: true });
   const theme = useUIStore((state) => state.theme);
@@ -391,6 +396,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const openCharacterId = useUIStore((state) => state.characterDetailId);
   const activeEditorField = useUIStore((state) => state.activeEditorField);
   const lastAppError = useUIStore((state) => state.lastAppError);
+  const creationSession = useUIStore((state) => state.creationSession);
   const openPersonaId = useUIStore((state) => state.personaDetailId);
   const openLorebookId = useUIStore((state) => state.lorebookDetailId);
   const openPresetId = useUIStore((state) => state.presetDetailId);
@@ -498,6 +504,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         }),
       ),
     [characters.data],
+  );
+  // Reverse lookup so a creation seed can resolve the names the user typed.
+  const characterIdByName = useMemo(
+    () => new Map([...characterNameById].map(([id, name]) => [String(name).toLowerCase(), id])),
+    [characterNameById],
   );
   const personaById = useMemo(() => new Map((personas.data ?? []).map((item) => [item.id, item])), [personas.data]);
   const connectionById = useMemo(
@@ -1388,6 +1399,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       });
     }
 
+    if (creationSession) {
+      push({
+        id: "resume-creation-session",
+        title: t("commandCenter.proposal.resume", "Continue building {{title}}", { title: creationSession.title }),
+        description: creationSession.seed,
+        category: "professor",
+        score: 0,
+        group: "current-work",
+        icon: "professor",
+      });
+    }
+
     if (openCharacterId) {
       const name = characterNameById.get(openCharacterId);
       if (name)
@@ -1501,6 +1524,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     agents.data,
     characterNameById,
     connectionById,
+    creationSession,
     lastAppError,
     lorebooks.data,
     openAgentId,
@@ -1514,6 +1538,26 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     presets.data,
     t,
   ]);
+  const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
+  const proposalResult = useMemo<OmnibarResult | null>(() => {
+    if (!creationProposal) return null;
+    const created = creationProposal.items.filter((item) => item.status === "missing").length;
+    return {
+      id: "creation-proposal",
+      title: t("commandCenter.proposal.title", "Set up {{title}}", { title: creationProposal.title }),
+      description: t(
+        "commandCenter.proposal.description",
+        "Creates {{count}} things. Review before anything is made.",
+        {
+          count: created,
+        },
+      ),
+      category: "professor",
+      score: 400,
+      kind: "action",
+      icon: "professor",
+    };
+  }, [creationProposal, t]);
   const continueResult = useMemo<OmnibarResult | null>(() => {
     if (!mariEnabled) return null;
     const status = mariWorkspaceStatus.data;
@@ -1544,9 +1588,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const rawResults = useMemo(
     () =>
       deferredQuery.trim()
-        ? searchResults
+        ? [...(proposalResult ? [proposalResult] : []), ...searchResults]
         : [...contextResults, ...(continueResult ? [continueResult] : []), ...idleResults],
-    [contextResults, continueResult, deferredQuery, idleResults, searchResults],
+    [contextResults, continueResult, deferredQuery, idleResults, proposalResult, searchResults],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
@@ -1769,6 +1813,22 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     if (runSystemAction(result)) {
       recordUse(result.id);
       onClose();
+      return;
+    }
+    if (result.id === "creation-proposal" && creationProposal) {
+      setProposalDraft(creationProposal);
+      setMariReturnPane("results");
+      mariReturnResultIdRef.current = result.id;
+      setMariMounted(true);
+      setPane("mari");
+      return;
+    }
+    if (result.id === "resume-creation-session") {
+      const session = ui().creationSession;
+      if (session?.createdChatId && navigate({ kind: "chat", chatId: session.createdChatId })) {
+        ui().setCreationSession(null);
+        onClose();
+      }
       return;
     }
     if (result.id === "ask-professor-mari") {
@@ -2026,6 +2086,64 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
     const result = currentResultById.get(`${resource.kind}:${resource.id}`);
     if (result) choose(result);
+  };
+
+  /**
+   * Accepts a proposal: the app creates what it can name for certain (the chat
+   * and any character the user already has), then hands the creative remainder
+   * to Mari. The user always ends up with a usable chat, even if Mari is slow
+   * or the creative half is abandoned.
+   */
+  const acceptProposal = async (proposal: CreationProposal, options: { assistedOnly?: boolean } = {}) => {
+    const { direct, assisted } = splitProposalWork(proposal, (name) => characterIdByName.get(name.toLowerCase()));
+    let createdChatId: string | undefined;
+    if (!options.assistedOnly) {
+      const characterIds = direct.flatMap((item) => (item.kind === "character" && item.id ? [item.id] : []));
+      try {
+        const chat = await createChat.mutateAsync({
+          name: proposal.title,
+          mode: proposal.goal === "campaign" ? "game" : "roleplay",
+          characterIds,
+        });
+        createdChatId = chat.id;
+      } catch (error) {
+        // Keep the user in the flow: Mari can still do the creative half.
+        ui().setLastAppError({
+          message: error instanceof Error ? error.message : String(error),
+          action: t("commandCenter.proposal.createChatAction", "Create chat"),
+        });
+      }
+    }
+    ui().setCreationSession(
+      assisted.length > 0
+        ? {
+            id: `creation-${Date.now()}`,
+            seed: proposal.seed,
+            title: proposal.title,
+            ...(createdChatId ? { createdChatId } : {}),
+            createdAt: Date.now(),
+          }
+        : null,
+    );
+    setProposalDraft(null);
+    // Hand the remainder to Mari with the seed and what is still missing.
+    const remaining = assisted.map((item) => `${item.kind}: ${item.label}`).join(", ");
+    const draft = remaining
+      ? t("commandCenter.proposal.mariDraft", "{{seed}}. Still needed: {{remaining}}.", {
+          seed: proposal.seed,
+          remaining,
+        })
+      : proposal.seed;
+    useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
+    setMariContext(
+      buildProfessorMariCommandCenterContext(draft, null, [], undefined, {
+        ...(createdChatId ? { activeChat: { id: createdChatId, label: proposal.title } } : {}),
+      }),
+    );
+    setMariChatOpen(true);
+    setMariMounted(true);
+    setMariTaskFinished(false);
+    setPane("mari");
   };
 
   const compareWithProfessorMari = () => {
@@ -2556,39 +2674,99 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             className={`min-h-0 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${pane === "mari" ? "relative flex-1" : "pointer-events-none absolute inset-0"}`}
             aria-hidden={pane !== "mari"}
           >
-            <Suspense
-              fallback={
-                <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
-                  <Loader2 className="mr-2 animate-spin" size={16} />
-                  {t("omnibar.loading", "Loading results")}
+            {proposalDraft ? (
+              <div
+                data-component="GlobalOmnibar.Proposal"
+                className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4"
+              >
+                <div>
+                  <h2 className="text-sm font-semibold text-[var(--foreground)]">
+                    {t("commandCenter.proposal.heading", "Set up {{title}}", { title: proposalDraft.title })}
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">{proposalDraft.seed}</p>
                 </div>
-              }
-            >
-              <OmnibarProfessorMariChat
-                pageActive
-                embeddedTab
-                omnibarMode
-                launchHidden
-                initialAskContext={mariContext}
-                pendingReviewRequest={mariPendingReviewRequest}
-                chatWindowOpen={mariChatOpen}
-                onChatWindowOpenChange={(open) => {
-                  setMariChatOpen(open);
-                  if (!open) {
-                    setPane(mariReturnPane);
-                    const returnResultId = mariReturnResultIdRef.current;
-                    if (returnResultId) setActiveResultId(returnResultId);
-                    requestAnimationFrame(() => {
-                      const resultId = mariReturnResultIdRef.current;
-                      const row = resultId
-                        ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
-                        : null;
-                      (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
-                    });
-                  }
-                }}
-              />
-            </Suspense>
+                <ul className="flex flex-col gap-1 text-xs">
+                  {proposalDraft.items.map((item, index) => (
+                    <li key={`${item.kind}-${item.label}-${index}`} className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--foreground)]">{item.label}</span>
+                      <span className="text-[var(--muted-foreground)]">
+                        {item.status === "known"
+                          ? t("commandCenter.proposal.existing", "existing {{kind}}", { kind: item.kind })
+                          : t("commandCenter.proposal.new", "new {{kind}}", { kind: item.kind })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {proposalDraft.missingDecisions.length > 0 ? (
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    {t("commandCenter.proposal.missing", "Mari will ask about: {{list}}", {
+                      list: proposalDraft.missingDecisions.join(", "),
+                    })}
+                  </p>
+                ) : null}
+                <div className="mt-auto flex flex-wrap gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => void acceptProposal(proposalDraft)}
+                    disabled={createChat.isPending}
+                    className="rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-[var(--primary-foreground)] disabled:opacity-50"
+                  >
+                    {t("commandCenter.proposal.accept", "Create it")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void acceptProposal(proposalDraft, { assistedOnly: true })}
+                    className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--foreground)]"
+                  >
+                    {t("commandCenter.proposal.withMari", "Build with Mari")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProposalDraft(null);
+                      setPane(mariReturnPane);
+                    }}
+                    className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted-foreground)]"
+                  >
+                    {t("commandCenter.proposal.cancel", "Cancel")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Suspense
+                fallback={
+                  <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
+                    <Loader2 className="mr-2 animate-spin" size={16} />
+                    {t("omnibar.loading", "Loading results")}
+                  </div>
+                }
+              >
+                <OmnibarProfessorMariChat
+                  pageActive
+                  embeddedTab
+                  omnibarMode
+                  launchHidden
+                  initialAskContext={mariContext}
+                  pendingReviewRequest={mariPendingReviewRequest}
+                  chatWindowOpen={mariChatOpen}
+                  onChatWindowOpenChange={(open) => {
+                    setMariChatOpen(open);
+                    if (!open) {
+                      setPane(mariReturnPane);
+                      const returnResultId = mariReturnResultIdRef.current;
+                      if (returnResultId) setActiveResultId(returnResultId);
+                      requestAnimationFrame(() => {
+                        const resultId = mariReturnResultIdRef.current;
+                        const row = resultId
+                          ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
+                          : null;
+                        (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
+                      });
+                    }
+                  }}
+                />
+              </Suspense>
+            )}
             {completionActions.length > 0 ? (
               <div
                 data-component="GlobalOmnibar.CompletionActions"
