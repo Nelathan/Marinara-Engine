@@ -285,6 +285,7 @@
   "commandCenter.actions.enable": "Enable",
   "commandCenter.actions.enableLorebook": "Enable lorebook",
   "commandCenter.actions.openDocs": "Open documentation",
+  "commandCenter.actions.removeFromThisChat": "Remove from this chat",
   "commandCenter.actions.resumeChat": "Resume chat",
   "commandCenter.actions.setDefaultPreset": "Set default preset",
   "commandCenter.actions.startChat": "Start chat",

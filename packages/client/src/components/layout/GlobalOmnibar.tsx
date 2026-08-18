@@ -28,13 +28,14 @@ import {
   SlidersHorizontal,
   Sparkles,
   Theater,
+  UserMinus,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
 import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
-import { useChats, useChatMessageCount, useChatMessagePeek } from "../../hooks/use-chats";
+import { useChats, useChatMessageCount, useChatMessagePeek, useUpdateChat } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
@@ -366,6 +367,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const activatePersona = useActivatePersona();
   const updateLorebook = useUpdateLorebook();
   const setDefaultPreset = useSetDefaultPreset();
+  const updateChat = useUpdateChat();
   const extensionCommands = usePersonalExtensionCommands();
   const docs = useDocsCommandSearchProvider(query, { enabled: true });
   const theme = useUIStore((state) => state.theme);
@@ -2180,12 +2182,35 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             icon: Edit3,
             onSelect: () => choose(previewResult),
           };
+          // Symmetric to add-to-chat: when the character is already a participant,
+          // the most useful scene action is removing it from the active chat.
+          const removeFromChatAction =
+            activeChat && characterId && rowState?.inActiveChat
+              ? {
+                  label: t("commandCenter.actions.removeFromThisChat", "Remove from this chat"),
+                  icon: UserMinus,
+                  onSelect: () => {
+                    void updateChat.mutateAsync({
+                      id: activeChat.id,
+                      characterIds: (activeChat.characterIds ?? []).filter((id) => id !== characterId),
+                    });
+                    recordUse(previewResult.id);
+                    onClose();
+                  },
+                }
+              : null;
           // Mari stays the primary (last) action when enabled; otherwise fall back
           // to add-to-chat so the third slot is never wasted.
           return [
             startChatAction,
             editAction,
-            ...(mariActions.length ? mariActions : addToChatAction ? [addToChatAction] : []),
+            ...(removeFromChatAction
+              ? [removeFromChatAction]
+              : mariActions.length
+                ? mariActions
+                : addToChatAction
+                  ? [addToChatAction]
+                  : []),
           ];
         }
         const requiresSetup = previewResult.command.availability?.status === "requires-capability";
