@@ -3228,7 +3228,7 @@ export const useUIStore = create<UIState>()(
         chibiProfessorMariEnabled: state.chibiProfessorMariEnabled,
         professorMariSuggestionsEnabled: state.professorMariSuggestionsEnabled,
         professorMariNavigationEnabled: state.professorMariNavigationEnabled,
-    commandCenterMariEnabled: state.commandCenterMariEnabled,
+        commandCenterMariEnabled: state.commandCenterMariEnabled,
         achievementsEnabled: state.achievementsEnabled,
         musicPlayerEnabled: state.musicPlayerEnabled,
         musicPlayerSource: state.musicPlayerSource,

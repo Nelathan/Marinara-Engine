@@ -716,12 +716,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const controls = useMemo<OmnibarResult[]>(() => {
     const set = useUIStore.getState;
     const toggleRows = [
-      [
-        "commandCenterMariEnabled",
-        "commandCenter.controls.mariAssist",
-        mariEnabled,
-        set().setCommandCenterMariEnabled,
-      ],
+      ["commandCenterMariEnabled", "commandCenter.controls.mariAssist", mariEnabled, set().setCommandCenterMariEnabled],
       [
         "reduceAmbientEffects",
         "commandCenter.controls.reducedEffects",
@@ -1410,11 +1405,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       setBrowseCompareIds([]);
       setSessionValue("detailResultId", null);
       requestAnimationFrame(() => inputRef.current?.focus());
-    } else if (query || filter !== "all") {
-      setQuery("");
-      setFilter("all");
-      setActiveResultId(null);
-      setSessionValue("detailResultId", null);
     } else onClose();
   };
   const moveSelection = (index: number) => {
@@ -1441,7 +1431,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else if (pane !== "browse" && event.key === "End") {
       event.preventDefault();
       moveSelection(results.length - 1);
-    } else if (pane === "results" && event.key === "Enter" && activeResult) {
+    } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
       event.preventDefault();
       if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
       else if (activeResult.control?.type === "choice") return;
@@ -1716,11 +1706,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 disabled: resultControlPending(previewResult),
               }
             : null;
-        return [
-          ...(openAction ? [openAction] : []),
-          ...(addToChatAction ? [addToChatAction] : []),
-            ...mariActions,
-        ];
+        return [...(openAction ? [openAction] : []), ...(addToChatAction ? [addToChatAction] : []), ...mariActions];
       })()
     : [];
 
@@ -1883,6 +1869,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </motion.div>
               )}
             </AnimatePresence>
+            {query && pane !== "mari" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setFilter("all");
+                  setActiveResultId(null);
+                  setSessionValue("detailResultId", null);
+                  requestAnimationFrame(() => inputRef.current?.focus());
+                }}
+                aria-label={t("commandCenter.clearSearch", "Clear search")}
+                title={t("commandCenter.clearSearch", "Clear search")}
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+              >
+                <X size={16} />
+              </button>
+            ) : null}
             {pane !== "mari" && mariEnabled ? (
               <button
                 type="button"
@@ -2067,12 +2070,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     : group.id === "context"
                       ? Compass
                       : group.id === "recent"
-                      ? Clock3
-                      : group.id === "quick-controls"
-                        ? SlidersHorizontal
-                        : group.id === "pinned"
-                          ? Sparkles
-                          : LayoutGrid;
+                        ? Clock3
+                        : group.id === "quick-controls"
+                          ? SlidersHorizontal
+                          : group.id === "pinned"
+                            ? Sparkles
+                            : LayoutGrid;
                 return (
                   <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
                     <div className="flex items-center gap-1.5 px-3 pb-1 pt-3">
@@ -2089,7 +2092,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       {group.results.map((result, rowIndex) => {
                         const visual = resultVisual(result);
                         const selected = result.id === activeResult?.id;
-                        const hasDetails = result.control?.type === "choice" || isRichResult(result);
                         const currentChoice =
                           result.control?.type === "choice"
                             ? result.control.options?.find((option) => option.value === String(result.control?.value))
@@ -2119,16 +2121,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             icon={resultIcon(result)}
                             selected={selected}
                             onSelect={() => selectResult(result)}
-                            onMouseEnter={() => {
-                              if (
-                                hasDetails &&
-                                window.matchMedia("(min-width: 1280px) and (hover: hover) and (pointer: fine)").matches
-                              ) {
-                                showResultDetail(result);
-                                return;
-                              }
-                              setActiveResultId(result.id);
-                            }}
+                            onMouseEnter={() => setActiveResultId(result.id)}
                             mediaSrc={result.preview?.media?.src}
                             mediaKind={result.preview?.media?.kind}
                             avatarCropStyle={result.preview?.media?.avatarCropStyle}
