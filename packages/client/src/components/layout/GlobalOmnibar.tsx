@@ -1654,14 +1654,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     activeChatId ?? null,
     !!activeChatId && messageSearchQuery.length >= MIN_MESSAGE_SEARCH_LENGTH,
   );
+  // Normalizing every message body is NFKC + regex work over the whole chat, so
+  // it is cached against the message list instead of redone on each keystroke.
+  const messageSearchIndex = useMemo(
+    () =>
+      (messageSearch.data ?? []).map((message) => ({
+        message,
+        haystack: isMessageHiddenFromUser(message) ? null : normalizeTextForMatch(message.content),
+      })),
+    [messageSearch.data],
+  );
   const messageResults = useMemo<OmnibarResult[]>(() => {
     const normalized = normalizeTextForMatch(messageSearchQuery);
     if (!activeChatId || normalized.length < MIN_MESSAGE_SEARCH_LENGTH) return [];
     const out: OmnibarResult[] = [];
-    (messageSearch.data ?? []).forEach((message, index) => {
+    messageSearchIndex.forEach(({ message, haystack }, index) => {
       if (out.length >= MAX_MESSAGE_SEARCH_RESULTS) return;
-      if (isMessageHiddenFromUser(message)) return;
-      if (!normalizeTextForMatch(message.content).includes(normalized)) return;
+      if (haystack === null || !haystack.includes(normalized)) return;
       out.push({
         id: `message:${activeChatId}:${index + 1}`,
         title: getMessageSearchSnippet(message.content, messageSearchQuery),
@@ -1674,7 +1683,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       });
     });
     return out;
-  }, [activeChatId, messageSearch.data, messageSearchQuery, t]);
+  }, [activeChatId, messageSearchIndex, messageSearchQuery, t]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -2800,9 +2809,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           : current,
     );
   };
+  // Keyed by row id so the two per-row lookups below stay O(1); a linear scan
+  // over every chat, twice per rendered row, showed up on large libraries.
+  const chatModeByResultId = useMemo(
+    () => new Map(data.chats.map((chat) => [`chat:${chat.id}` as string, chat.mode] as const)),
+    [data.chats],
+  );
   const resultIcon = (result: RankedOmnibarResult) => {
     if (result.category === "chat") {
-      const mode = data.chats.find((chat) => `chat:${chat.id}` === result.id)?.mode;
+      const mode = chatModeByResultId.get(result.id);
       if (mode === "roleplay") return Theater;
       if (mode === "game") return Gamepad2;
       return MessageCircle;
@@ -2811,7 +2826,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   };
   const resultVisual = (result: RankedOmnibarResult) => {
     if (result.category === "chat") {
-      const mode = data.chats.find((chat) => `chat:${chat.id}` === result.id)?.mode;
+      const mode = chatModeByResultId.get(result.id);
       if (mode) return getCommandCenterChatModeVisual(mode as ChatMode, chatModeLabels);
     }
     return getCommandCenterCategoryVisual(result.category, categoryLabels);

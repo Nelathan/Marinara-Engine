@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DOCS_COMMAND_SEARCH_MIN_QUERY_LENGTH,
   searchDocsCommandTitles,
@@ -37,18 +37,41 @@ export function useDocsCommandSearchProvider(
   const stagedQuery = eligible && delayedQuery === trimmed ? delayedQuery : "";
   const index = useDocsIndex(eligible);
   const search = useDocsSearch(stagedQuery);
-  const passages = search.data?.query === stagedQuery ? toDocsCommandPassages(search.data) : [];
+  const searchData = search.data;
+  const passages = useMemo(
+    () => (searchData?.query === stagedQuery ? toDocsCommandPassages(searchData) : []),
+    [searchData, stagedQuery],
+  );
+  const titles = useMemo(
+    () => (eligible ? searchDocsCommandTitles(trimmed, index.data) : []),
+    [eligible, index.data, trimmed],
+  );
   const hasPassageStage =
     stagedQuery.length >= DOCS_COMMAND_SEARCH_MIN_QUERY_LENGTH && !search.isFetching && !search.isError;
 
-  if (!eligible) return { results: [], stage: "idle", isSearching: false, isError: false };
-  if (hasPassageStage) {
-    return { results: passages, stage: "passages", isSearching: false, isError: false };
-  }
-  return {
-    results: searchDocsCommandTitles(trimmed, index.data),
-    stage: "titles",
-    isSearching: index.isLoading || stagedQuery === "" || search.isFetching,
-    isError: index.isError || search.isError,
-  };
+  // Memoized so the result array keeps a stable identity between renders: the
+  // omnibar's search pipeline is keyed on it and would otherwise rerun on every
+  // keystroke-unrelated render.
+  return useMemo(() => {
+    if (!eligible) return { results: [], stage: "idle" as const, isSearching: false, isError: false };
+    if (hasPassageStage) {
+      return { results: passages, stage: "passages" as const, isSearching: false, isError: false };
+    }
+    return {
+      results: titles,
+      stage: "titles" as const,
+      isSearching: index.isLoading || stagedQuery === "" || search.isFetching,
+      isError: index.isError || search.isError,
+    };
+  }, [
+    eligible,
+    hasPassageStage,
+    index.isError,
+    index.isLoading,
+    passages,
+    search.isError,
+    search.isFetching,
+    stagedQuery,
+    titles,
+  ]);
 }
