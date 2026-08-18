@@ -2642,6 +2642,24 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             selected={selected}
                             onSelect={() => selectResult(result)}
                             onMouseEnter={() => setActiveResultId(result.id)}
+                            mariAffordance={
+                              mariEnabled && result.command.availability?.status !== "requires-admin" ? (
+                                <button
+                                  type="button"
+                                  aria-label={t("commandCenter.actions.continueWithMari", "Continue with Mari")}
+                                  title={t("commandCenter.actions.continueWithMari", "Continue with Mari")}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openProfessorMari(resolveCurrentResult(result));
+                                  }}
+                                  className={`inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-opacity hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)] max-md:opacity-100 ${
+                                    selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                  }`}
+                                >
+                                  <Sparkles className="size-3.5" aria-hidden="true" />
+                                </button>
+                              ) : undefined
+                            }
                             mediaSrc={result.preview?.media?.src}
                             mediaKind={result.preview?.media?.kind}
                             avatarCropStyle={result.preview?.media?.avatarCropStyle}

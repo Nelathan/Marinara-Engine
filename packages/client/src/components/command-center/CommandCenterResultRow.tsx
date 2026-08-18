@@ -21,6 +21,7 @@ export interface CommandCenterResultRowProps {
   groupClassName?: string;
   accent?: string | null;
   control?: ReactNode;
+  mariAffordance?: ReactNode;
   currentChoice?: string;
   enterHint?: string;
   setupStatus?: string;
@@ -46,6 +47,7 @@ export function CommandCenterResultRow({
   groupClassName,
   accent,
   control,
+  mariAffordance,
   currentChoice,
   enterHint,
   setupStatus,
@@ -106,8 +108,9 @@ export function CommandCenterResultRow({
         </span>
       </button>
 
-      {control ? (
-        <div className="col-start-2 flex min-w-0 max-w-[min(48vw,16rem)] shrink-0 items-center justify-end pr-1">
+      {control || mariAffordance ? (
+        <div className="col-start-2 flex min-w-0 max-w-[min(48vw,16rem)] shrink-0 items-center justify-end gap-1 pr-1">
+          {mariAffordance}
           {control}
         </div>
       ) : null}
