@@ -39,7 +39,7 @@ import { useChats, useChatMessageCount, useChatMessagePeek, useCreateChat, useUp
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
-import { useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
+import { useCreateLorebook, useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { useProfessorMariWorkspaceStatus } from "../../hooks/use-professor-mari-workspace-status";
 import { getCharacterDisplayIdentity, parseCharacterDisplayData } from "../../lib/character-display";
@@ -84,6 +84,7 @@ import {
 import { resolvePresetArtwork } from "../../lib/preset-artwork";
 import { omnibarCompletionActions, type OmnibarCompletionAction } from "../../lib/omnibar-completion-actions";
 import { parseCreationSeed, splitProposalWork, type CreationProposal } from "../../lib/omnibar-creation-proposal";
+import { parseChatExtraction } from "../../lib/omnibar-chat-extraction";
 import {
   buildProfessorMariCommandCenterContext,
   inferProfessorMariCommandCenterCapability,
@@ -107,6 +108,13 @@ import {
   type CommandCenterChatModeLabels,
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact, RichCommandResult } from "../command-center/command-result-preview.types";
+
+const EXTRACTION_LABELS = {
+  lorebook: "Create lorebook from {{chat}}",
+  characters: "Extract characters from {{chat}}",
+  locations: "Extract locations from {{chat}}",
+  campaign: "Create campaign from {{chat}}",
+} as const;
 
 const OmnibarProfessorMariChat = lazy(() =>
   import("../chat/HomeProfessorMariChat").then((module) => ({ default: module.HomeProfessorMariChat })),
@@ -377,6 +385,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setDefaultPreset = useSetDefaultPreset();
   const updateChat = useUpdateChat();
   const createChat = useCreateChat();
+  const createLorebook = useCreateLorebook();
   const extensionCommands = usePersonalExtensionCommands();
   const docs = useDocsCommandSearchProvider(query, { enabled: true });
   const theme = useUIStore((state) => state.theme);
@@ -1558,6 +1567,25 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       icon: "professor",
     };
   }, [creationProposal, t]);
+  const chatExtraction = useMemo(
+    () => (activeChat ? parseChatExtraction(deferredQuery) : null),
+    [activeChat, deferredQuery],
+  );
+  const extractionResult = useMemo<OmnibarResult | null>(() => {
+    if (!chatExtraction || !activeChat) return null;
+    const label = EXTRACTION_LABELS[chatExtraction.kind];
+    return {
+      id: "chat-extraction",
+      title: t(`commandCenter.extract.${chatExtraction.kind}`, label, { chat: activeChat.name }),
+      description: t("commandCenter.extract.description", "From {{chat}}. Mari proposes the content for review.", {
+        chat: activeChat.name,
+      }),
+      category: "professor",
+      score: 400,
+      kind: "action",
+      icon: "professor",
+    };
+  }, [activeChat, chatExtraction, t]);
   const continueResult = useMemo<OmnibarResult | null>(() => {
     if (!mariEnabled) return null;
     const status = mariWorkspaceStatus.data;
@@ -1588,9 +1616,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const rawResults = useMemo(
     () =>
       deferredQuery.trim()
-        ? [...(proposalResult ? [proposalResult] : []), ...searchResults]
+        ? [
+            ...(proposalResult ? [proposalResult] : []),
+            ...(extractionResult ? [extractionResult] : []),
+            ...searchResults,
+          ]
         : [...contextResults, ...(continueResult ? [continueResult] : []), ...idleResults],
-    [contextResults, continueResult, deferredQuery, idleResults, proposalResult, searchResults],
+    [contextResults, continueResult, deferredQuery, extractionResult, idleResults, proposalResult, searchResults],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
@@ -1821,6 +1853,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       mariReturnResultIdRef.current = result.id;
       setMariMounted(true);
       setPane("mari");
+      return;
+    }
+    if (result.id === "chat-extraction") {
+      void runChatExtraction();
       return;
     }
     if (result.id === "resume-creation-session") {
@@ -2140,6 +2176,44 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ...(createdChatId ? { activeChat: { id: createdChatId, label: proposal.title } } : {}),
       }),
     );
+    setMariChatOpen(true);
+    setMariMounted(true);
+    setMariTaskFinished(false);
+    setPane("mari");
+  };
+
+  /**
+   * Turns the active chat into reusable world material. A lorebook gets an empty
+   * shell up front so Mari has somewhere to write; the other kinds need Mari to
+   * decide what already exists first. Mari receives a typed chat reference, not
+   * the transcript — she reads what she needs after the request.
+   */
+  const runChatExtraction = async () => {
+    if (!chatExtraction || !activeChat) return;
+    let lorebookId: string | undefined;
+    if (chatExtraction.creates === "lorebook") {
+      try {
+        const lorebook = await createLorebook.mutateAsync({ name: activeChat.name });
+        lorebookId = lorebook.id;
+      } catch (error) {
+        ui().setLastAppError({
+          message: error instanceof Error ? error.message : String(error),
+          action: t("commandCenter.extract.createLorebookAction", "Create lorebook"),
+        });
+      }
+    }
+    useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, chatExtraction.seed);
+    setMariContext(
+      buildProfessorMariCommandCenterContext(
+        chatExtraction.seed,
+        lorebookId ? { id: `lorebook:${lorebookId}`, title: activeChat.name, category: "lorebook" } : null,
+        [],
+        undefined,
+        { activeChat: { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } },
+      ),
+    );
+    setMariReturnPane("results");
+    mariReturnResultIdRef.current = "chat-extraction";
     setMariChatOpen(true);
     setMariMounted(true);
     setMariTaskFinished(false);
