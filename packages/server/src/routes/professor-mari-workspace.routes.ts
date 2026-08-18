@@ -80,6 +80,16 @@ export const professorMariPromptSchema = z.object({
       error: z.object({ message: z.string().min(1).max(2_000), code: z.string().max(200).optional() }).optional(),
       action: z.string().max(500).optional(),
       commandCenterResultId: z.string().min(1).max(256).optional(),
+      activeChat: z
+        .object({
+          id: z.string().min(1).max(256),
+          label: z.string().max(200).optional(),
+          mode: z.string().max(32).optional(),
+        })
+        .optional(),
+      settingsLocation: z
+        .object({ tab: z.string().max(64).optional(), controlId: z.string().max(128).optional() })
+        .optional(),
     })
     .optional(),
   attachments: z

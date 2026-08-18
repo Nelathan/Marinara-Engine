@@ -422,6 +422,21 @@ assert.deepEqual(
   { kind: "setting", id: "theme-mode", label: "Color scheme" },
 );
 assert.equal(buildProfessorMariCommandCenterContext("explain this", undefined)?.commandCenterResultId, undefined);
+assert.deepEqual(
+  buildProfessorMariCommandCenterContext("explain this", undefined, [], undefined, {
+    activeChat: { id: "chat-one", label: "Moonlit room", mode: "roleplay" },
+    settingsLocation: { tab: "appearance", controlId: "theme-mode" },
+  }),
+  {
+    source: "command-center",
+    capability: "explain",
+    query: "explain this",
+    resource: undefined,
+    action: undefined,
+    activeChat: { id: "chat-one", label: "Moonlit room", mode: "roleplay" },
+    settingsLocation: { tab: "appearance", controlId: "theme-mode" },
+  },
+);
 
 // The omnibar reopens on search, never a stale Professor Mari pane: the session
 // normalizer must reset an unsupported persisted pane back to "results".

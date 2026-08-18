@@ -49,6 +49,10 @@ export function buildProfessorMariCommandCenterContext(
   selectedResult: Pick<OmnibarResult, "id" | "title" | "category"> | null | undefined,
   relatedResults: readonly Pick<OmnibarResult, "id" | "title" | "category">[] = [],
   commandCenterResultId = selectedResult?.id,
+  options: {
+    activeChat?: { id: string; label?: string; mode?: string };
+    settingsLocation?: { tab?: string; controlId?: string };
+  } = {},
 ): ProfessorMariAskContext {
   const trimmedQuery = query.trim();
   const resourceKind = selectedResult ? RESOURCE_KIND_BY_CATEGORY[selectedResult.category] : undefined;
@@ -72,5 +76,7 @@ export function buildProfessorMariCommandCenterContext(
     ...(relatedResources.length > 0 ? { relatedResources: relatedResources.slice(0, 4) } : {}),
     action: selectedResult ? `Selected Command Center result: ${selectedResult.title}` : undefined,
     ...(commandCenterResultId ? { commandCenterResultId } : {}),
+    ...(options.activeChat ? { activeChat: options.activeChat } : {}),
+    ...(options.settingsLocation ? { settingsLocation: options.settingsLocation } : {}),
   };
 }

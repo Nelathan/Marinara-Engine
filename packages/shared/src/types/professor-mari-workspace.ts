@@ -97,6 +97,8 @@ export interface ProfessorMariAskContext {
   error?: { message: string; code?: string };
   action?: string;
   commandCenterResultId?: string;
+  activeChat?: { id: string; label?: string; mode?: string };
+  settingsLocation?: { tab?: string; controlId?: string };
 }
 
 export type ProfessorMariHandoffDestination = "home" | "floating-assistant" | "character-chat";
