@@ -85,6 +85,7 @@ import { resolvePresetArtwork } from "../../lib/preset-artwork";
 import { omnibarCompletionActions, type OmnibarCompletionAction } from "../../lib/omnibar-completion-actions";
 import { parseCreationSeed, splitProposalWork, type CreationProposal } from "../../lib/omnibar-creation-proposal";
 import { parseChatExtraction } from "../../lib/omnibar-chat-extraction";
+import { parseGameCommand } from "../../lib/omnibar-game-commands";
 import {
   buildProfessorMariCommandCenterContext,
   inferProfessorMariCommandCenterCapability,
@@ -108,6 +109,13 @@ import {
   type CommandCenterChatModeLabels,
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact, RichCommandResult } from "../command-center/command-result-preview.types";
+
+const GAME_TOPIC_LABELS = {
+  party: "Change the party with Mari",
+  quests: "Review quests with Mari",
+  scene: "Change the scene with Mari",
+  encounter: "Continue the encounter with Mari",
+} as const;
 
 const EXTRACTION_LABELS = {
   lorebook: "Create lorebook from {{chat}}",
@@ -1586,6 +1594,28 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       icon: "professor",
     };
   }, [activeChat, chatExtraction, t]);
+  const gameCommand = useMemo(
+    () => (activeChat?.mode === "game" ? parseGameCommand(deferredQuery) : null),
+    [activeChat?.mode, deferredQuery],
+  );
+  const gameResult = useMemo<OmnibarResult | null>(() => {
+    if (!gameCommand) return null;
+    return {
+      id: "game-command",
+      title:
+        gameCommand.kind === "roll"
+          ? t("commandCenter.game.roll", "Roll {{notation}}", { notation: gameCommand.notation })
+          : t(`commandCenter.game.${gameCommand.topic}`, GAME_TOPIC_LABELS[gameCommand.topic]),
+      description:
+        gameCommand.kind === "roll"
+          ? t("commandCenter.game.rollDescription", "Rolls in this game now.")
+          : t("commandCenter.game.assistDescription", "Continues with Mari using the current game state."),
+      category: gameCommand.kind === "roll" ? "chat" : "professor",
+      score: 420,
+      kind: "action",
+      icon: gameCommand.kind === "roll" ? "command" : "professor",
+    };
+  }, [gameCommand, t]);
   const continueResult = useMemo<OmnibarResult | null>(() => {
     if (!mariEnabled) return null;
     const status = mariWorkspaceStatus.data;
@@ -1617,12 +1647,22 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () =>
       deferredQuery.trim()
         ? [
+            ...(gameResult ? [gameResult] : []),
             ...(proposalResult ? [proposalResult] : []),
             ...(extractionResult ? [extractionResult] : []),
             ...searchResults,
           ]
         : [...contextResults, ...(continueResult ? [continueResult] : []), ...idleResults],
-    [contextResults, continueResult, deferredQuery, extractionResult, idleResults, proposalResult, searchResults],
+    [
+      contextResults,
+      continueResult,
+      deferredQuery,
+      extractionResult,
+      gameResult,
+      idleResults,
+      proposalResult,
+      searchResults,
+    ],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
@@ -1853,6 +1893,36 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       mariReturnResultIdRef.current = result.id;
       setMariMounted(true);
       setPane("mari");
+      return;
+    }
+    if (result.id === "game-command" && gameCommand && activeChatId) {
+      if (gameCommand.kind === "roll") {
+        // Imported on demand: a static import pulls the game surface into the
+        // app shell chunk and breaks the bundle budget.
+        void (async () => {
+          const [{ api }, { useGameModeStore }] = await Promise.all([
+            import("../../lib/api-client"),
+            import("../../stores/game-mode.store"),
+          ]);
+          try {
+            const res = await api.post<{ result: unknown }>("/game/dice/roll", {
+              chatId: activeChatId,
+              notation: gameCommand.notation,
+            });
+            useGameModeStore.getState().setDiceRollResult(res.result as never);
+          } catch (error) {
+            ui().setLastAppError({
+              message: error instanceof Error ? error.message : String(error),
+              action: t("commandCenter.game.rollAction", "Roll dice"),
+            });
+          }
+        })();
+        recordUse(result.id);
+        onClose();
+        return;
+      }
+      // Party, quest, scene and encounter changes need the live game state.
+      openProfessorMari(null);
       return;
     }
     if (result.id === "chat-extraction") {
