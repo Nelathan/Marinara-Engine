@@ -77,9 +77,11 @@ import {
 import { useConnections } from "../../hooks/use-connections";
 import { useTrackAchievement } from "../../hooks/use-achievements";
 import { chatKeys } from "../../hooks/use-chats";
-import { characterKeys } from "../../hooks/use-characters";
-import { lorebookKeys } from "../../hooks/use-lorebooks";
-import { presetKeys } from "../../hooks/use-presets";
+import { characterKeys, useCharacters, usePersonas } from "../../hooks/use-characters";
+import { completeInline } from "../../lib/inline-completion";
+import { InlineGhostText } from "../ui/InlineGhostText";
+import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
+import { presetKeys, usePresets } from "../../hooks/use-presets";
 import { useMariWorkspaceContext } from "../../hooks/use-mari-workspace-context";
 import { MariAttachButton } from "./MariAttachButton";
 import { MariChatHistoryPicker } from "./MariChatHistoryPicker";
@@ -3358,6 +3360,23 @@ export function HomeProfessorMariChat({
     },
     [setInputDraft],
   );
+  // Ghost-text completion for the composer: the user's own names first, because
+  // "tell me about cel|" almost always means one of their characters.
+  const completionCharacters = useCharacters();
+  const completionPersonas = usePersonas();
+  const completionLorebooks = useLorebooks();
+  const completionPresets = usePresets();
+  const completionCandidates = useMemo(
+    () =>
+      [completionCharacters.data, completionPersonas.data, completionLorebooks.data, completionPresets.data].flatMap(
+        (list) => (list ?? []).map((item) => (item as { name?: string }).name ?? "").filter(Boolean),
+      ),
+    [completionCharacters.data, completionLorebooks.data, completionPersonas.data, completionPresets.data],
+  );
+  const draftSuffix = useMemo(() => completeInline(draft, completionCandidates), [completionCandidates, draft]);
+  const acceptDraftCompletion = useCallback(() => {
+    if (draftSuffix) setDraft((current) => current + draftSuffix);
+  }, [draftSuffix, setDraft]);
   const [attachments, setAttachments] = useState<ProfessorMariAttachment[]>([]);
   const [handoffContext, setHandoffContext] = useState<ProfessorMariAskContext | null>(null);
   const [isReadingAttachments, setIsReadingAttachments] = useState(false);
@@ -5694,26 +5713,39 @@ export function HomeProfessorMariChat({
             </div>
           )}
 
-          <textarea
-            ref={embeddedTextareaRef}
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              if (mobileFocusMode) event.currentTarget.scrollIntoView({ block: "end" });
-            }}
-            onKeyDown={(event) => {
-              const shouldSend =
-                event.key === "Enter" && !event.shiftKey && (enterToSend || event.metaKey || event.ctrlKey);
-              if (shouldSend) {
-                event.preventDefault();
-                void handleSubmit();
-              }
-            }}
-            rows={1}
-            placeholder={t("home.professorMari.placeholder")}
-            className="mari-chat-input-textarea min-h-8 max-h-32 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-sm leading-normal text-foreground/90 outline-hidden placeholder:text-foreground/30 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={isBusy}
-          />
+          <div className="relative flex min-w-0 flex-1">
+            <InlineGhostText
+              value={draft}
+              suffix={draftSuffix}
+              multiline
+              className="px-1 py-1.5 text-sm leading-normal"
+            />
+            <textarea
+              ref={embeddedTextareaRef}
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (mobileFocusMode) event.currentTarget.scrollIntoView({ block: "end" });
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Tab" && !event.shiftKey && draftSuffix) {
+                  event.preventDefault();
+                  acceptDraftCompletion();
+                  return;
+                }
+                const shouldSend =
+                  event.key === "Enter" && !event.shiftKey && (enterToSend || event.metaKey || event.ctrlKey);
+                if (shouldSend) {
+                  event.preventDefault();
+                  void handleSubmit();
+                }
+              }}
+              rows={1}
+              placeholder={t("home.professorMari.placeholder")}
+              className="mari-chat-input-textarea min-h-8 max-h-32 w-full resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-sm leading-normal text-foreground/90 outline-hidden placeholder:text-foreground/30 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={isBusy}
+            />
+          </div>
           <button
             type="submit"
             disabled={!canSubmitMessage || isBusy}
@@ -6499,28 +6531,41 @@ export function HomeProfessorMariChat({
                               </div>
                             )}
 
-                            <textarea
-                              ref={floatingTextareaRef}
-                              value={draft}
-                              onChange={(event) => {
-                                setDraft(event.target.value);
-                                if (mobileFocusMode) event.currentTarget.scrollIntoView({ block: "end" });
-                              }}
-                              onKeyDown={(event) => {
-                                const shouldSend =
-                                  event.key === "Enter" &&
-                                  !event.shiftKey &&
-                                  (enterToSend || event.metaKey || event.ctrlKey);
-                                if (shouldSend) {
-                                  event.preventDefault();
-                                  void handleSubmit();
-                                }
-                              }}
-                              rows={1}
-                              placeholder={t("home.professorMari.placeholder")}
-                              className="mari-chat-input-textarea min-h-8 max-h-32 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-sm leading-normal text-foreground/90 outline-hidden placeholder:text-foreground/30 disabled:cursor-not-allowed disabled:opacity-40"
-                              disabled={isBusy}
-                            />
+                            <div className="relative flex min-w-0 flex-1">
+                              <InlineGhostText
+                                value={draft}
+                                suffix={draftSuffix}
+                                multiline
+                                className="px-1 py-1.5 text-sm leading-normal"
+                              />
+                              <textarea
+                                ref={floatingTextareaRef}
+                                value={draft}
+                                onChange={(event) => {
+                                  setDraft(event.target.value);
+                                  if (mobileFocusMode) event.currentTarget.scrollIntoView({ block: "end" });
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Tab" && !event.shiftKey && draftSuffix) {
+                                    event.preventDefault();
+                                    acceptDraftCompletion();
+                                    return;
+                                  }
+                                  const shouldSend =
+                                    event.key === "Enter" &&
+                                    !event.shiftKey &&
+                                    (enterToSend || event.metaKey || event.ctrlKey);
+                                  if (shouldSend) {
+                                    event.preventDefault();
+                                    void handleSubmit();
+                                  }
+                                }}
+                                rows={1}
+                                placeholder={t("home.professorMari.placeholder")}
+                                className="mari-chat-input-textarea min-h-8 max-h-32 w-full resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-sm leading-normal text-foreground/90 outline-hidden placeholder:text-foreground/30 disabled:cursor-not-allowed disabled:opacity-40"
+                                disabled={isBusy}
+                              />
+                            </div>
                             <button
                               type="submit"
                               disabled={!canSubmitMessage || isBusy}

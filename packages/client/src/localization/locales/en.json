@@ -372,6 +372,7 @@
   "commandCenter.groups.recent": "Recent",
   "commandCenter.groups.suggested": "Suggested",
   "commandCenter.initialHint": "Recent and useful controls",
+  "commandCenter.keyboard.complete": "⇥ Complete",
   "commandCenter.keyboard.continueMari": "⌘↵ Continue with Mari",
   "commandCenter.keyboard.escape": "Esc back",
   "commandCenter.keyboard.move": "Arrow keys move",

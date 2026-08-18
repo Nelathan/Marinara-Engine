@@ -43,6 +43,7 @@ import { useCreateLorebook, useLorebooks, useLorebookEntries, useUpdateLorebook 
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { useProfessorMariWorkspaceStatus } from "../../hooks/use-professor-mari-workspace-status";
 import { getCharacterDisplayIdentity, parseCharacterDisplayData } from "../../lib/character-display";
+import { completeInline } from "../../lib/inline-completion";
 import { parseChatMetadata } from "../../lib/chat-display";
 import { isLanguageGenerationConnection } from "../../lib/connection-filters";
 import { resolveChatResourceDropAction } from "../../lib/chat-resource-drop-capabilities";
@@ -106,6 +107,7 @@ import { useChatStore } from "../../stores/chat.store";
 import { useUIStore } from "../../stores/ui.store";
 import { CommandCenterBrowseGrid } from "../command-center/CommandCenterBrowseGrid";
 import { CommandCenterActionValue } from "../command-center/CommandCenterActionValue";
+import { InlineGhostText } from "../ui/InlineGhostText";
 import { CommandCenterResultRow } from "../command-center/CommandCenterResultRow";
 import { CommandCenterSegmentedChoice } from "../command-center/CommandCenterSegmentedChoice";
 import { CommandCenterToggle } from "../command-center/CommandCenterToggle";
@@ -138,6 +140,8 @@ const OmnibarProfessorMariChat = lazy(() =>
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
+/** A resumable creation session goes stale after a day. */
+const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const BROWSE_BATCH_SIZE = 48;
 
 // Leading resource-kind words to strip from a "create <kind> <name>" query so the
@@ -1449,7 +1453,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         });
       }
 
-      if (creationSession) {
+      // A creation session is persisted, so without an age limit "Continue
+      // building X" would lead the idle list forever.
+      if (creationSession && Date.now() - creationSession.createdAt < CREATION_SESSION_MAX_AGE_MS) {
         push({
           id: "resume-creation-session",
           title: t("commandCenter.proposal.resume", "Continue building {{title}}", { title: creationSession.title }),
@@ -1787,6 +1793,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     (item) => item === "all" || item === filter || tabAvailability[item] > 0,
   );
   const results = presentation.results;
+  // Ghost text: continue the query with the best-ranked result title. Uses the
+  // ranked list already on screen, so the guess never disagrees with row 1.
+  const inlineSuffix = useMemo(
+    () =>
+      pane === "mari"
+        ? ""
+        : completeInline(
+            query,
+            results.flatMap((result) => (result.id === "ask-professor-mari" ? [] : [result.title])),
+          ),
+    [pane, query, results],
+  );
   const resultIdsKey = results.map((result) => result.id).join("\u0000");
   const reconciledResultIdsKeyRef = useRef<string | null>(null);
   const activeIndex = results.findIndex((result) => result.id === activeResultId);
@@ -2086,6 +2104,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
   };
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Tab" && !event.shiftKey && inlineSuffix) {
+      // Accept the ghost completion instead of leaving the field.
+      event.preventDefault();
+      setQuery(query + inlineSuffix);
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       handleEscape();
@@ -2861,8 +2885,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={reduceMotion ? undefined : { opacity: 0, x: 10 }}
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
-                  className="flex min-w-0 flex-1"
+                  className="relative flex min-w-0 flex-1"
                 >
+                  <InlineGhostText
+                    value={query}
+                    suffix={inlineSuffix}
+                    className="text-base font-medium leading-normal"
+                  />
                   <input
                     ref={inputRef}
                     value={query}
@@ -3446,7 +3475,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         {pane !== "mari" ? (
           <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
             <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
-            {mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
+            {inlineSuffix ? (
+              <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
+            ) : mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
               <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
             ) : null}
             <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
