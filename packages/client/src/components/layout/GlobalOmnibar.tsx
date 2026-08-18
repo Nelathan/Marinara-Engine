@@ -1657,6 +1657,68 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })()
     : [];
 
+  // One preview body shared by the three detail surfaces (mobile inline, browse,
+  // and the external xl panel) so they never drift apart. `withControls` adds the
+  // inline choice/toggle editors the compact mobile/xl panels show.
+  const renderResultPreview = (withControls: boolean) =>
+    previewResult ? (
+      <>
+        <CommandResultPreview
+          result={
+            {
+              command: previewResult.command,
+              score: previewResult.score,
+              preview: previewResult.preview,
+            } as RichCommandResult
+          }
+          variant="compact"
+          statusLabel={
+            previewResult.command.availability?.status === "requires-capability"
+              ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
+                  capability:
+                    previewResult.command.availability.capability ?? t("commandCenter.capability", "capability"),
+                })
+              : previewResult.command.availability?.status === "requires-admin"
+                ? t("commandCenter.adminRequired", "Administrator access required")
+                : undefined
+          }
+          actions={previewActions}
+        />
+        {withControls && previewResult.control?.type === "choice" ? (
+          <div className="border-t border-[var(--border)] p-3">
+            <CommandCenterSegmentedChoice
+              label={previewResult.control.label}
+              value={String(previewResult.control.value)}
+              options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
+              onValueChange={(value) => previewResult.control?.onChange(value)}
+              variant="compact"
+            />
+          </div>
+        ) : null}
+        {withControls &&
+        previewResult.control?.type === "toggle" &&
+        previewResult.category !== "persona" &&
+        previewResult.category !== "preset" ? (
+          <div className="border-t border-[var(--border)] p-3">
+            <CommandCenterToggle
+              label={previewResult.control.label}
+              checked={Boolean(previewResult.control.value)}
+              stateLabel={
+                previewResult.control.value
+                  ? t("commandCenter.values.enabled", "Enabled")
+                  : t("commandCenter.values.disabled", "Disabled")
+              }
+              onCheckedChange={(value) => previewResult.control?.onChange(value)}
+              disabled={resultControlPending(previewResult)}
+              loading={resultControlPending(previewResult)}
+              variant="compact"
+              className="w-full"
+            />
+          </div>
+        ) : null}
+      </>
+    ) : null;
+
   return createPortal(
     <motion.div
       ref={panelRef}
@@ -2078,69 +2140,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] xl:hidden"
               >
                 <AnimatePresence initial={false} mode="wait">
-                  {previewResult ? (
-                    <motion.div
-                      key={previewResult.id}
-                      initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
-                      transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
-                    >
-                      <CommandResultPreview
-                        result={
-                          {
-                            command: previewResult.command,
-                            score: previewResult.score,
-                            preview: previewResult.preview,
-                          } as RichCommandResult
-                        }
-                        variant="compact"
-                        statusLabel={
-                          previewResult.command.availability?.status === "requires-capability"
-                            ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                                capability:
-                                  previewResult.command.availability.capability ??
-                                  t("commandCenter.capability", "capability"),
-                              })
-                            : previewResult.command.availability?.status === "requires-admin"
-                              ? t("commandCenter.adminRequired", "Administrator access required")
-                              : undefined
-                        }
-                        actions={previewActions}
-                      />
-                      {previewResult.control?.type === "choice" ? (
-                        <div className="border-t border-[var(--border)] p-3">
-                          <CommandCenterSegmentedChoice
-                            label={previewResult.control.label}
-                            value={String(previewResult.control.value)}
-                            options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
-                            onValueChange={(value) => previewResult.control?.onChange(value)}
-                            variant="compact"
-                          />
-                        </div>
-                      ) : null}
-                      {previewResult.control?.type === "toggle" &&
-                      previewResult.category !== "persona" &&
-                      previewResult.category !== "preset" ? (
-                        <div className="border-t border-[var(--border)] p-3">
-                          <CommandCenterToggle
-                            label={previewResult.control.label}
-                            checked={Boolean(previewResult.control.value)}
-                            stateLabel={
-                              previewResult.control.value
-                                ? t("commandCenter.values.enabled", "Enabled")
-                                : t("commandCenter.values.disabled", "Disabled")
-                            }
-                            onCheckedChange={(value) => previewResult.control?.onChange(value)}
-                            disabled={resultControlPending(previewResult)}
-                            loading={resultControlPending(previewResult)}
-                            variant="compact"
-                            className="w-full"
-                          />
-                        </div>
-                      ) : null}
-                    </motion.div>
-                  ) : null}
+                  <motion.div
+                    key={previewResult.id}
+                    initial={reduceMotion ? false : { opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
+                    transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
+                  >
+                    {renderResultPreview(true)}
+                  </motion.div>
                 </AnimatePresence>
               </aside>
             ) : null}
@@ -2255,27 +2263,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             data-component="GlobalOmnibar.Detail"
             className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] xl:hidden"
           >
-            <CommandResultPreview
-              result={
-                {
-                  command: previewResult.command,
-                  score: previewResult.score,
-                  preview: previewResult.preview,
-                } as RichCommandResult
-              }
-              variant="compact"
-              statusLabel={
-                previewResult.command.availability?.status === "requires-capability"
-                  ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                      capability:
-                        previewResult.command.availability.capability ?? t("commandCenter.capability", "capability"),
-                    })
-                  : previewResult.command.availability?.status === "requires-admin"
-                    ? t("commandCenter.adminRequired", "Administrator access required")
-                    : undefined
-              }
-              actions={previewActions}
-            />
+            {renderResultPreview(true)}
           </aside>
         ) : null}
 
@@ -2304,58 +2292,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
               transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
             >
-              <CommandResultPreview
-                result={
-                  {
-                    command: previewResult.command,
-                    score: previewResult.score,
-                    preview: previewResult.preview,
-                  } as RichCommandResult
-                }
-                variant="compact"
-                statusLabel={
-                  previewResult.command.availability?.status === "requires-capability"
-                    ? t("commandCenter.setupRequired", "Setup required: {{capability}}", {
-                        capability:
-                          previewResult.command.availability.capability ?? t("commandCenter.capability", "capability"),
-                      })
-                    : previewResult.command.availability?.status === "requires-admin"
-                      ? t("commandCenter.adminRequired", "Administrator access required")
-                      : undefined
-                }
-                actions={previewActions}
-              />
-              {previewResult.control?.type === "choice" ? (
-                <div className="border-t border-[var(--border)] p-3">
-                  <CommandCenterSegmentedChoice
-                    label={previewResult.control.label}
-                    value={String(previewResult.control.value)}
-                    options={(previewResult.control.options ?? []).map((option) => ({ ...option }))}
-                    onValueChange={(value) => previewResult.control?.onChange(value)}
-                    variant="compact"
-                  />
-                </div>
-              ) : null}
-              {previewResult.control?.type === "toggle" &&
-              previewResult.category !== "persona" &&
-              previewResult.category !== "preset" ? (
-                <div className="border-t border-[var(--border)] p-3">
-                  <CommandCenterToggle
-                    label={previewResult.control.label}
-                    checked={Boolean(previewResult.control.value)}
-                    stateLabel={
-                      previewResult.control.value
-                        ? t("commandCenter.values.enabled", "Enabled")
-                        : t("commandCenter.values.disabled", "Disabled")
-                    }
-                    onCheckedChange={(value) => previewResult.control?.onChange(value)}
-                    disabled={resultControlPending(previewResult)}
-                    loading={resultControlPending(previewResult)}
-                    variant="compact"
-                    className="w-full"
-                  />
-                </div>
-              ) : null}
+              {renderResultPreview(true)}
             </motion.div>
           </AnimatePresence>
         </motion.aside>
