@@ -40,6 +40,7 @@ import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-searc
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
 import { useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
+import { useProfessorMariWorkspaceStatus } from "../../hooks/use-professor-mari-workspace-status";
 import { getCharacterDisplayIdentity, parseCharacterDisplayData } from "../../lib/character-display";
 import { isLanguageGenerationConnection } from "../../lib/connection-filters";
 import { resolveChatResourceDropAction } from "../../lib/chat-resource-drop-capabilities";
@@ -346,6 +347,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const reduceAmbientEffects = useUIStore((state) => state.reduceAmbientEffects);
   const musicPlayerEnabled = useUIStore((state) => state.musicPlayerEnabled);
   const mariEnabled = useUIStore((state) => state.commandCenterMariEnabled);
+  const mariWorkspaceStatus = useProfessorMariWorkspaceStatus();
   const speechToTextEnabled = useUIStore((state) => state.speechToTextEnabled);
   const notificationSoundsOnlyWhenUnfocused = useUIStore((state) => state.notificationSoundsOnlyWhenUnfocused);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
@@ -1461,18 +1463,32 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     t,
   ]);
   const continueResult = useMemo<OmnibarResult | null>(() => {
-    if (!mariEnabled || contextResults.length === 0) return null;
+    if (!mariEnabled) return null;
+    const status = mariWorkspaceStatus.data;
+    const hasPendingApprovals = (status?.pendingApprovals.length ?? 0) > 0;
+    const hasCurrentWork = contextResults.length > 0;
+    if (!hasPendingApprovals && !status?.active && !hasCurrentWork) return null;
+    const title = status?.active
+      ? t("commandCenter.continueMariActive", "Mari is working")
+      : hasPendingApprovals
+        ? t("commandCenter.continueMariReview", "Review Mari's pending work")
+        : t("commandCenter.continueMari", "Continue with Professor Mari");
+    const description = status?.active
+      ? t("commandCenter.continueMariActiveDescription", "Return to the active Mari workspace.")
+      : hasPendingApprovals
+        ? t("commandCenter.continueMariReviewDescription", "Mari is waiting for your review.")
+        : t("commandCenter.continueMariDescription", "Open Mari with the current work attached.");
     return {
       id: "ask-professor-mari",
-      title: t("commandCenter.continueMari", "Continue with Professor Mari"),
+      title,
       category: "professor",
-      description: t("commandCenter.continueMariDescription", "Open Mari with the current work attached."),
+      description,
       score: 140,
       group: "continue",
       kind: "action",
       icon: "professor",
     };
-  }, [contextResults.length, mariEnabled, t]);
+  }, [contextResults.length, mariEnabled, mariWorkspaceStatus.data, t]);
   const rawResults = useMemo(
     () =>
       deferredQuery.trim()
