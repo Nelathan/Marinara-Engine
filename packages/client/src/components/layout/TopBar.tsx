@@ -11,7 +11,6 @@ import {
   Sparkles,
   FileText,
   VenetianMask,
-  Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -84,6 +83,7 @@ const TOPBAR_ACTIVE_BUTTON_CLASS = "bg-[var(--accent)] shadow-sm";
 const TOPBAR_FORCE_HOVER_CLASS = "bg-[var(--accent)]";
 const TOPBAR_ACCENT_ICON_CLASS = "mari-topbar-accent-icon mari-accent-animated";
 const CHAT_TOPBAR_GRADIENT_ID = "mari-topbar-chats-gradient";
+const HOME_LONG_PRESS_MS = 550;
 
 function isMobileTopbarNavigation() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
@@ -116,6 +116,8 @@ export function TopBar() {
   const headerRef = useRef<HTMLElement | null>(null);
   const leftControlsRef = useRef<HTMLDivElement | null>(null);
   const rightNavRef = useRef<HTMLElement | null>(null);
+  const homeLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressHomeClickRef = useRef(false);
   const [spotifyDesktopViewport, setSpotifyDesktopViewport] = useState(false);
   const [spotifyUseFloatingFallback, setSpotifyUseFloatingFallback] = useState(false);
   const [hoveredTopbarKey, setHoveredTopbarKey] = useState<string | null>(null);
@@ -175,6 +177,34 @@ export function TopBar() {
     prepareMobileTopbarNavigation();
     setOmnibarOpen(true);
   }, [prepareMobileTopbarNavigation, setOmnibarOpen]);
+
+  const clearHomeLongPress = useCallback(() => {
+    if (homeLongPressTimerRef.current !== null) {
+      clearTimeout(homeLongPressTimerRef.current);
+      homeLongPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleHomePointerDown = useCallback(() => {
+    clearHomeLongPress();
+    suppressHomeClickRef.current = false;
+    homeLongPressTimerRef.current = setTimeout(() => {
+      homeLongPressTimerRef.current = null;
+      suppressHomeClickRef.current = true;
+      handleOmnibarClick();
+    }, HOME_LONG_PRESS_MS);
+  }, [clearHomeLongPress, handleOmnibarClick]);
+
+  const handleHomeClick = useCallback(() => {
+    if (suppressHomeClickRef.current) {
+      suppressHomeClickRef.current = false;
+      return;
+    }
+
+    window.dispatchEvent(new Event("marinara:home-professor-mari-close"));
+    setActiveChatId(null);
+    closeAllDetails();
+  }, [closeAllDetails, setActiveChatId]);
 
   const handleRightPanelClick = useCallback(
     (panel: Parameters<typeof toggleRightPanel>[0]) => {
@@ -244,6 +274,10 @@ export function TopBar() {
   }, []);
 
   useEffect(() => {
+    return clearHomeLongPress;
+  }, [clearHomeLongPress]);
+
+  useEffect(() => {
     const clearWhenHidden = () => {
       if (document.visibilityState !== "visible") clearTopbarHover();
     };
@@ -311,11 +345,11 @@ export function TopBar() {
           </button>
 
           <button
-            onClick={() => {
-              window.dispatchEvent(new Event("marinara:home-professor-mari-close"));
-              setActiveChatId(null);
-              closeAllDetails();
-            }}
+            onClick={handleHomeClick}
+            onPointerDown={handleHomePointerDown}
+            onPointerUp={clearHomeLongPress}
+            onPointerCancel={clearHomeLongPress}
+            onPointerLeave={clearHomeLongPress}
             data-topbar-hover-key="home"
             className={cn(
               TOPBAR_BUTTON_CLASS,
@@ -333,17 +367,6 @@ export function TopBar() {
             {isHomeActive && (
               <span className="mari-topbar-active-underline absolute -bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full" />
             )}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOmnibarClick}
-            data-topbar-hover-key="omnibar"
-            className={cn(TOPBAR_BUTTON_CLASS, "text-[var(--muted-foreground)] md:hidden")}
-            title={localize("Search Marinara")}
-            aria-label={localize("Search Marinara")}
-          >
-            <Search size={15} className={TOPBAR_ACCENT_ICON_CLASS} />
           </button>
         </div>
         {showMusicDjUnavailablePlayer ? (

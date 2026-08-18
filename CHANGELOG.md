@@ -161,7 +161,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 ### Changed
 
 - Removed the Continue the scene button from chat composers.
-- Removed the loupe button from the top bar.
+- Removed the mobile loupe button from the top bar. Long-pressing the Home button now opens Command Center.
 - Coding-agent contributors now follow a Ponytail-inspired minimalism ladder that favors reuse, platform capabilities, and the smallest correct implementation without weakening safety or validation requirements (#5186).
 - Project validation now checks the maintained TypeScript and TSX source tree with Prettier before linting and building, so formatting drift is rejected by the same `pnpm check` command used in pull-request CI (#5181).
 - The Inventory Tracker panel now flows its entries as wrapping pills across the full panel width, with the quantity shown as `×N` only when it is above one. The previous layout split the panel into three fixed columns and reserved a quantity cell on every row, so at the widest setting each column was around 95 px and item names truncated — while a group holding two rows sat mostly empty. The panel also establishes its own container context, so it now lays out identically in the docked sidebar and the HUD popover instead of differing between them (#5125).
