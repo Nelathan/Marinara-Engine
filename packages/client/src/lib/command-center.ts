@@ -203,6 +203,7 @@ export interface CommandCenterSessionState {
   detailOrigin: CommandCenterDetailOrigin;
   browseSelectedId: string | null;
   browseLimit: number;
+  mariReturnResultId: string | null;
 }
 
 export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
@@ -214,6 +215,7 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
   detailOrigin: "results",
   browseSelectedId: null,
   browseLimit: 48,
+  mariReturnResultId: null,
 };
 
 function getCommandCenterSessionStorage(): CommandStorage | null {
@@ -242,6 +244,7 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
     detailOrigin,
     browseSelectedId: stringOrNull(source.browseSelectedId),
     browseLimit,
+    mariReturnResultId: stringOrNull(source.mariReturnResultId),
   };
 }
 

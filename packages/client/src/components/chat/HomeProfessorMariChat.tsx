@@ -3594,6 +3594,9 @@ export function HomeProfessorMariChat({
     (handoff: ProfessorMariHandoff) => {
       if (handoff.draft !== undefined) setDraft(handoff.draft);
       setHandoffContext(handoff.context ?? null);
+      if (handoff.completion?.kind === "return-to-source") {
+        setRecovery(null);
+      }
       setChatWindowOpen(true);
       if (floatingMode && floatingSmallViewport) setMobileFocusMode(true);
       focusComposer();

@@ -179,6 +179,11 @@ function resultMetadata(result: RankedOmnibarResult, categoryLabel: string) {
   );
 }
 
+function getOmnibarResourceId(result: Pick<RankedOmnibarResult, "id">) {
+  const parts = result.id.split(":");
+  return parts[0] === "context" ? (parts.at(-1) ?? "") : parts.slice(1).join(":");
+}
+
 export function GlobalOmnibar() {
   const open = useUIStore((state) => state.omnibarOpen);
   const setOpen = useUIStore((state) => state.setOmnibarOpen);
@@ -292,7 +297,17 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // omnibar always reopens on search; the Mari conversation resumes only on
   // explicit re-entry within a session.
   const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
-  const { query, filter, pane, activeResultId, detailOrigin, browseSelectedId, browseLimit, detailResultId } = session;
+  const {
+    query,
+    filter,
+    pane,
+    activeResultId,
+    detailOrigin,
+    browseSelectedId,
+    browseLimit,
+    detailResultId,
+    mariReturnResultId,
+  } = session;
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));
   const setQuery = (value: string) => setSessionValue("query", value);
@@ -310,7 +325,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
-  const mariReturnResultIdRef = useRef<string | null>(null);
+  const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
   const [browseCompareIds, setBrowseCompareIds] = useState<string[]>([]);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
@@ -1807,7 +1822,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const focusResult = selectedResult ?? contextResults[0] ?? null;
     setMariContext(buildProfessorMariCommandCenterContext(draft, focusResult));
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
-    mariReturnResultIdRef.current = focusResult?.id ?? activeResultId;
+    const returnResultId = focusResult?.id ?? activeResultId;
+    mariReturnResultIdRef.current = returnResultId;
+    setSessionValue("mariReturnResultId", returnResultId);
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
@@ -1829,6 +1846,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setMariContext(buildProfessorMariCommandCenterContext(draft, primary, selected.slice(1)));
     setMariReturnPane("browse");
     mariReturnResultIdRef.current = primary.id;
+    setSessionValue("mariReturnResultId", primary.id);
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
@@ -1923,7 +1941,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           agent: "agent",
         };
         const resourceKind = resourceKinds[previewResult.category];
-        const resourceId = resourceKind ? previewResult.id.slice(previewResult.id.indexOf(":") + 1) : "";
+        const resourceId = resourceKind ? getOmnibarResourceId(previewResult) : "";
         const connection =
           resourceKind === "connection"
             ? (connections.data ?? []).find((item) => readNamedRow(item)?.id === resourceId)
@@ -1980,16 +1998,20 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           return [...(addToChatAction ? [addToChatAction] : []), ...mariActions];
         }
         if (previewResult.category === "persona" || previewResult.category === "preset") {
+          const globalAction =
+            previewResult.control?.type === "toggle"
+              ? {
+                  label:
+                    previewResult.category === "persona"
+                      ? t("commandCenter.actions.activatePersona", "Activate persona")
+                      : t("commandCenter.actions.setDefaultPreset", "Set default preset"),
+                  icon: previewResult.category === "persona" ? Play : ArrowRight,
+                  onSelect: () => previewResult.control?.onChange(true),
+                  disabled: resultControlPending(previewResult),
+                }
+              : null;
           return [
-            {
-              label:
-                previewResult.category === "persona"
-                  ? t("commandCenter.actions.activatePersona", "Activate persona")
-                  : t("commandCenter.actions.setDefaultPreset", "Set default preset"),
-              icon: previewResult.category === "persona" ? Play : ArrowRight,
-              onSelect: () => previewResult.control?.onChange(true),
-              disabled: resultControlPending(previewResult),
-            },
+            ...(globalAction ? [globalAction] : []),
             ...(addToChatAction ? [addToChatAction] : []),
             ...mariActions,
           ];
@@ -2009,7 +2031,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           ];
         }
         if (previewResult.category === "character") {
-          const characterId = previewResult.id.slice("character:".length);
+          const characterId = getOmnibarResourceId(previewResult);
           const startChatAction = {
             label: t("commandCenter.actions.startChat", "Start chat"),
             icon: Play,
@@ -2315,6 +2337,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   setMariChatOpen(open);
                   if (!open) {
                     setPane(mariReturnPane);
+                    const returnResultId = mariReturnResultIdRef.current;
+                    if (returnResultId) setActiveResultId(returnResultId);
                     requestAnimationFrame(() => {
                       const resultId = mariReturnResultIdRef.current;
                       const row = resultId

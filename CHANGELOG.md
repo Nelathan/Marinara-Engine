@@ -18,6 +18,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 - Professor Mari's Command Center focus now shows the carried request, restores focus to the source result on return, and closes the omnibar onto resources opened from completed workspace actions.
 
+- Professor Mari handoffs now keep the carried request, capability, selected resource, related resources, and available error metadata visible across Home, floating, editor, and omnibar entry points; returning from the omnibar restores its query and selected result.
+
 - Command Center now keeps current-chat context available when several editors are open, and Escape closes the embedded Mari pane without changing the floating assistant preference.
 
 - Command Center Browse can now select up to five resources and send a bounded, server-validated comparison request to Professor Mari.

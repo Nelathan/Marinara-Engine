@@ -15,6 +15,15 @@ interface Props {
 
 type PanelPosition = { top: number; right: number };
 
+const CAPABILITY_LABELS: Record<ProfessorMariAskContext["capability"], string> = {
+  explain: "Explain",
+  recommend: "Recommend",
+  create: "Create",
+  edit: "Edit",
+  repair: "Repair",
+  navigate: "Navigate",
+};
+
 export function ProfessorMariContextControl({
   context,
   attachedContextCount,
@@ -37,6 +46,7 @@ export function ProfessorMariContextControl({
       ? t("ui.chat.homeprofessormarichat.contextControlChat")
       : t("ui.chat.homeprofessormarichat.contextControlResource");
   const focusLabel = context?.resource?.label ?? context?.resource?.kind ?? context?.source;
+  const capabilityLabel = context ? CAPABILITY_LABELS[context.capability] : "";
   const relatedCount = context?.relatedResources?.length ?? 0;
 
   useEffect(() => {
@@ -51,7 +61,12 @@ export function ProfessorMariContextControl({
     const update = () => {
       const anchor = buttonRef.current?.getBoundingClientRect();
       if (!anchor) return;
-      setPosition({ top: anchor.bottom + 8, right: Math.max(8, window.innerWidth - anchor.right) });
+      const panelHeight = Math.min(448, Math.max(176, window.innerHeight * 0.8));
+      const top =
+        anchor.bottom + 8 + panelHeight <= window.innerHeight
+          ? anchor.bottom + 8
+          : Math.max(8, anchor.top - panelHeight - 8);
+      setPosition({ top, right: Math.max(8, window.innerWidth - anchor.right) });
     };
     update();
     window.addEventListener("resize", update);
@@ -147,6 +162,14 @@ export function ProfessorMariContextControl({
                 {t("ui.chat.homeprofessormarichat.contextControlWorkingWith", { type: focusType })}
               </p>
               <p className="mt-1 truncate text-sm font-semibold text-[var(--foreground)]">{focusLabel}</p>
+              {context.query && (
+                <p className="mt-1 line-clamp-3 break-words text-xs text-[var(--muted-foreground)]">
+                  {t("ui.chat.homeprofessormarichat.contextControlQuery", { query: context.query })}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                {t("ui.chat.homeprofessormarichat.contextControlCapability", { capability: capabilityLabel })}
+              </p>
               {context.field && (
                 <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
                   {t("ui.chat.homeprofessormarichat.contextControlFieldLabel", { field: context.field })}
@@ -155,6 +178,16 @@ export function ProfessorMariContextControl({
               {relatedCount > 0 && (
                 <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                   {t("ui.chat.homeprofessormarichat.contextControlRelated", { count: relatedCount })}
+                </p>
+              )}
+              {context.error && (
+                <p className="mt-1 break-words text-xs text-[var(--destructive)]">
+                  {context.error.code
+                    ? t("ui.chat.homeprofessormarichat.contextControlErrorWithCode", {
+                        code: context.error.code,
+                        message: context.error.message,
+                      })
+                    : context.error.message}
                 </p>
               )}
               <button

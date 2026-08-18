@@ -5,6 +5,7 @@ import {
   buildMariWorkspaceActionResult,
   parseAssistantWorkspaceAction,
 } from "../../../packages/server/src/services/professor-mari/workspace-agent.service.js";
+import { normalizeCommandCenterSessionState } from "../../../packages/client/src/lib/command-center.js";
 
 function result(table: string, action: "insert" | "update" | "replace"): MariDbCommandResult {
   return {
@@ -72,10 +73,17 @@ const parsedAction = parseAssistantWorkspaceAction(
 assert.equal(parsedAction.protocolValid, true, "structured action output remains valid");
 assert.equal(parsedAction.commands[0]?.name, "app_data", "app-data action calls are retained");
 
-const malformedAction = parseAssistantWorkspaceAction(
-  '<delete_everything>{"action":"delete"}</delete_everything>',
-);
+const malformedAction = parseAssistantWorkspaceAction('<delete_everything>{"action":"delete"}</delete_everything>');
 assert.equal(malformedAction.protocolValid, false, "unknown action tools are rejected");
 assert.equal(malformedAction.commands.length, 0, "rejected action tools cannot reach execution");
+
+const session = normalizeCommandCenterSessionState({
+  query: "find Luna",
+  activeResultId: "character:luna",
+  mariReturnResultId: "character:luna",
+});
+assert.equal(session.query, "find Luna", "the Mari return keeps the search query");
+assert.equal(session.activeResultId, "character:luna", "the selected result remains selected");
+assert.equal(session.mariReturnResultId, "character:luna", "the return result is persisted in the session contract");
 
 console.log("Professor Mari action-result regression checks passed.");
