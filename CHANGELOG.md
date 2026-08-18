@@ -6,11 +6,15 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Professor Mari now keeps workspace focus in a compact toolbar context control with quick removal and access to attached context details.
+
 - Added a mobile topbar button that opens the Marinara Command Center.
 
 - Command Center results can now continue with Professor Mari using the exact search request and a typed, removable resource focus, while returning to the prior result or browse context when Mari closes.
 
 - Command Center now finds resource names inside natural requests and ranks the open editor and active-chat resources higher without using an LLM.
+
+- Command Center now parses clear typed actions locally, ranks current workspace context with bounded state, keeps direct matches above Professor Mari, and avoids choosing between equal targets.
 
 - Professor Mari's Command Center focus now shows the carried request, restores focus to the source result on return, and closes the omnibar onto resources opened from completed workspace actions.
 

@@ -84,6 +84,7 @@ import { useMariWorkspaceContext } from "../../hooks/use-mari-workspace-context"
 import { MariAttachButton } from "./MariAttachButton";
 import { MariChatHistoryPicker } from "./MariChatHistoryPicker";
 import { MariContextViewer } from "./MariContextViewer";
+import { ProfessorMariContextControl } from "./ProfessorMariContextControl";
 import { homeFeedKeys } from "../../hooks/use-home-feed";
 import { filterLanguageGenerationConnections } from "../../lib/connection-filters";
 import { api, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
@@ -5452,43 +5453,6 @@ export function HomeProfessorMariChat({
     </div>
   ) : null;
 
-  const contextSummary = handoffContext ? (
-    <div
-      data-component="HomeProfessorMariChat.HandoffContext"
-      className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2.5 py-2 text-xs"
-    >
-      <Sparkles size="0.8125rem" className="shrink-0 text-[var(--primary)]" />
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-[var(--foreground)]">
-          {localizeUi("ui.chat.homeprofessormarichat.handoffContextTitle")}
-        </p>
-        <p className="truncate text-[var(--muted-foreground)]">
-          {handoffContext.resource?.label ?? handoffContext.resource?.kind ?? handoffContext.source}
-          {handoffContext.field
-            ? localizeUi("ui.chat.homeprofessormarichat.handoffContextField", { field: handoffContext.field })
-            : ""}
-          {handoffContext.relatedResources?.length
-            ? localizeUi("ui.chat.homeprofessormarichat.handoffRelatedResources", {
-                count: handoffContext.relatedResources.length,
-              })
-            : ""}
-        </p>
-        {handoffContext.query ? (
-          <p className="mt-0.5 line-clamp-2 text-[var(--muted-foreground)]/80">{handoffContext.query}</p>
-        ) : null}
-      </div>
-      <button
-        type="button"
-        onClick={() => setHandoffContext(null)}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-        aria-label={localizeUi("ui.chat.homeprofessormarichat.removeHandoffContext")}
-        title={localizeUi("ui.chat.homeprofessormarichat.removeHandoffContext")}
-      >
-        <X size="0.75rem" />
-      </button>
-    </div>
-  ) : null;
-
   const openActionResult = useCallback(
     async (result: MariWorkspaceActionResult) => {
       await invalidateActionResult(result).catch((error) => {
@@ -5605,7 +5569,6 @@ export function HomeProfessorMariChat({
       >
         {trustStrip}
         {showTokenUsage && contextBudget && <ProfessorMariContextBudgetIndicator budget={contextBudget} />}
-        {contextSummary}
         {recoveryNotice}
         <input
           ref={attachmentInputRef}
@@ -6284,6 +6247,18 @@ export function HomeProfessorMariChat({
                                 </span>
                               )}
                             </button>
+                            <ProfessorMariContextControl
+                              context={handoffContext}
+                              attachedContextCount={attachedContext?.length ?? 0}
+                              onOpen={() => {
+                                setConnectionMenuOpen(false);
+                                setChatHistoryOpen(false);
+                                setSkillsMenuOpen(false);
+                                setMemoriesMenuOpen(false);
+                              }}
+                              onRemoveFocus={() => setHandoffContext(null)}
+                              onViewAttachedContext={() => void handleOpenContextViewer()}
+                            />
                             {(workspaceActive || hasActiveGeneration) && (
                               <button
                                 type="button"
@@ -6374,7 +6349,6 @@ export function HomeProfessorMariChat({
                           {showTokenUsage && contextBudget && (
                             <ProfessorMariContextBudgetIndicator budget={contextBudget} />
                           )}
-                          {contextSummary}
                           {recoveryNotice}
                           <input
                             ref={attachmentInputRef}

@@ -13,7 +13,13 @@ import {
   type CommandCenterPresentableResult,
 } from "../../packages/client/src/lib/command-center.js";
 import { createSystemCommandDefinitions } from "../../packages/client/src/lib/command-center-system-commands.js";
-import { getOmnibarActiveChatContextResultIds, searchOmnibar } from "../../packages/client/src/lib/omnibar-search.js";
+import {
+  createOmnibarContext,
+  getOmnibarActiveChatContextResultIds,
+  getUnambiguousOmnibarResult,
+  parseOmnibarIntent,
+  searchOmnibar,
+} from "../../packages/client/src/lib/omnibar-search.js";
 import { getOmnibarSettingsDestinations } from "../../packages/client/src/lib/omnibar-settings.js";
 import {
   getCharacterDisplayIdentity,
@@ -198,10 +204,13 @@ const naturalRequestResults = searchOmnibar("make Luna warmer", {
     { kind: "character", id: "mara", name: "Mara" },
   ],
   connections: [],
-  contextResultIds: new Set(["character:luna"]),
+  context: createOmnibarContext({
+    surface: "editor",
+    openResource: { kind: "character", id: "luna", resultId: "character:luna" },
+  }),
 });
 assert.equal(naturalRequestResults[0]?.id, "character:luna");
-assert.equal(naturalRequestResults[0]?.score, 194);
+assert.equal(naturalRequestResults[0]?.score, 234);
 
 const contextRankedResults = searchOmnibar("Luna", {
   commands: [],
@@ -211,9 +220,99 @@ const contextRankedResults = searchOmnibar("Luna", {
     { kind: "character", id: "current-luna", name: "Luna" },
   ],
   connections: [],
-  contextResultIds: new Set(["character:current-luna"]),
+  context: createOmnibarContext({
+    surface: "chat",
+    activeChat: { id: "chat-one", resultIds: ["character:current-luna"] },
+  }),
 });
 assert.equal(contextRankedResults[0]?.id, "character:current-luna");
+assert.equal(contextRankedResults[0]?.score, 359);
+const exactBeforePinnedPrefix = searchOmnibar("Luna", {
+  commands: [],
+  chats: [],
+  resources: [
+    { kind: "character", id: "exact", name: "Luna" },
+    { kind: "character", id: "pinned-prefix", name: "Luna Park" },
+  ],
+  connections: [],
+  context: createOmnibarContext({ surface: "home", pinnedResultIds: ["character:pinned-prefix"] }),
+});
+assert.deepEqual(
+  exactBeforePinnedPrefix.slice(0, 2).map((result) => result.id),
+  ["character:exact", "character:pinned-prefix"],
+);
+assert.deepEqual(parseOmnibarIntent("Go to the Moonlight preset"), {
+  kind: "navigate",
+  verb: "go to",
+  targetQuery: "moonlight preset",
+});
+assert.deepEqual(parseOmnibarIntent("add Luna to this chat"), {
+  kind: "action",
+  verb: "add",
+  targetQuery: "luna",
+});
+assert.equal(parseOmnibarIntent("new character")?.kind, "create");
+assert.equal(parseOmnibarIntent("how do presets work")?.kind, "explain");
+assert.equal(parseOmnibarIntent("recommend a preset")?.kind, "recommend");
+assert.equal(parseOmnibarIntent("image generation failed")?.kind, "repair");
+assert.equal(parseOmnibarIntent("profile Luna"), null);
+
+const directOpenResults = searchOmnibar("open Luna", {
+  commands: [],
+  chats: [],
+  resources: [
+    { kind: "character", id: "luna", name: "Luna" },
+    { kind: "character", id: "lunar", name: "Lunar" },
+  ],
+  connections: [],
+});
+assert.equal(directOpenResults[0]?.id, "character:luna");
+assert.ok(directOpenResults[0]!.score > directOpenResults.at(-1)!.score);
+assert.equal(getUnambiguousOmnibarResult(directOpenResults)?.id, "character:luna");
+
+const ambiguousResults = searchOmnibar("open Luna", {
+  commands: [],
+  chats: [],
+  resources: [
+    { kind: "character", id: "luna-one", name: "Luna" },
+    { kind: "character", id: "luna-two", name: "Luna" },
+  ],
+  connections: [],
+});
+assert.equal(getUnambiguousOmnibarResult(ambiguousResults), null);
+
+const repairResults = searchOmnibar("fix speech error", {
+  commands: [
+    {
+      id: "tts-settings",
+      title: "Text to speech",
+      kind: "settings",
+      availability: { status: "requires-capability", capability: "tts", setupTarget: true },
+    },
+    { id: "diagnostics", title: "Support diagnostics", kind: "settings" },
+  ],
+  chats: [],
+  resources: [],
+  connections: [],
+  context: createOmnibarContext({
+    surface: "settings",
+    setupResultIds: ["tts-settings"],
+    error: { resultIds: ["diagnostics"], message: "Connection failed" },
+  }),
+});
+assert.equal(repairResults[0]?.id, "tts-settings");
+assert.ok(repairResults.some((result) => result.id === "diagnostics"));
+
+const boundedContext = createOmnibarContext({
+  surface: "home",
+  surfaceResultIds: Array.from({ length: 40 }, (_, index) => `result:${index}`),
+  openResource: { kind: "character", id: "x".repeat(300), resultId: "character:" + "x".repeat(300) },
+  error: { resultIds: [], message: "x".repeat(200) },
+});
+assert.equal(boundedContext.surfaceResultIds.length, 32);
+assert.equal(boundedContext.openResource?.id.length, 256);
+assert.equal(boundedContext.openResource?.resultId.length, 256);
+assert.equal(boundedContext.error?.message?.length, 160);
 assert.deepEqual(
   [
     ...getOmnibarActiveChatContextResultIds("chat-one", {

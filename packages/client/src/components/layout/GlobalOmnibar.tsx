@@ -65,7 +65,10 @@ import {
 import { createSystemCommandDefinitions } from "../../lib/command-center-system-commands";
 import { getCommandIcon } from "../../lib/command-icons";
 import {
+  createOmnibarContext,
+  getUnambiguousOmnibarResult,
   getOmnibarActiveChatContextResultIds,
+  parseOmnibarIntent,
   searchOmnibar,
   type OmnibarCategory,
   type OmnibarResult,
@@ -168,7 +171,11 @@ function isRichResult(result: RankedOmnibarResult) {
 function resultMetadata(result: RankedOmnibarResult, categoryLabel: string) {
   if (result.control?.type === "choice") return result.control.label;
   return (
-    result.preview?.subtitle ?? result.preview?.facts?.[0]?.value?.toString() ?? result.description ?? categoryLabel
+    result.contextLabel ??
+    result.preview?.subtitle ??
+    result.preview?.facts?.[0]?.value?.toString() ??
+    result.description ??
+    categoryLabel
   );
 }
 
@@ -341,6 +348,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const settingsTab = useUIStore((state) => state.settingsTab);
   const settingsTargetControlId = useUIStore((state) => state.settingsTargetControlId);
   const settingsPanelVisible = useUIStore((state) => state.rightPanelOpen && state.rightPanel === "settings");
+  const rightPanelOpen = useUIStore((state) => state.rightPanelOpen);
+  const rightPanel = useUIStore((state) => state.rightPanel);
+  const botBrowserOpen = useUIStore((state) => state.botBrowserOpen);
+  const gameAssetsBrowserOpen = useUIStore((state) => state.gameAssetsBrowserOpen);
+  const characterLibraryOpen = useUIStore((state) => state.characterLibraryOpen);
+  const cardLibraryKind = useUIStore((state) => state.cardLibraryKind);
+  const agentCatalogOpen = useUIStore((state) => state.agentCatalogOpen);
+  const editorDirty = useUIStore((state) => state.editorDirty);
 
   const categoryLabels = useMemo<CommandCenterCategoryLabels>(
     () => ({
@@ -1019,41 +1034,138 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => [...controls, ...searchableCommandResults, ...searchableEntityResults],
     [controls, searchableCommandResults, searchableEntityResults],
   );
-  const contextResultIds = useMemo(() => {
-    const ids = new Set<string>();
-    if (openCharacterId) ids.add(`character:${openCharacterId}`);
-    if (openPersonaId) ids.add(`persona:${openPersonaId}`);
-    if (openLorebookId) ids.add(`lorebook:${openLorebookId}`);
-    if (openPresetId) ids.add(`preset:${openPresetId}`);
-    if (openConnectionId) ids.add(`connection:${openConnectionId}`);
-    if (openAgentId) ids.add(`agent:${openAgentId}`);
-    if (settingsPanelVisible && settingsTargetControlId) ids.add(`settings-control:${settingsTargetControlId}`);
-    else if (settingsPanelVisible && settingsTab) ids.add(`settings-section:${settingsTab}`);
-    for (const id of getOmnibarActiveChatContextResultIds(
-      activeChatId,
-      activeChat
-        ? {
-            ...activeChat,
-            enableAgents: activeChat.metadata?.enableAgents,
-            activeAgentIds: activeChat.metadata?.activeAgentIds,
-          }
-        : null,
-    ))
-      ids.add(id);
-    return ids;
+  const omnibarContext = useMemo(() => {
+    const activeChatResultIds = [
+      ...getOmnibarActiveChatContextResultIds(
+        activeChatId,
+        activeChat
+          ? {
+              ...activeChat,
+              enableAgents: activeChat.metadata?.enableAgents,
+              activeAgentIds: activeChat.metadata?.activeAgentIds,
+            }
+          : null,
+      ),
+    ];
+    const openResource = (
+      [
+        ["character", openCharacterId],
+        ["persona", openPersonaId],
+        ["lorebook", openLorebookId],
+        ["preset", openPresetId],
+        ["connection", openConnectionId],
+        ["agent", openAgentId],
+      ] as const
+    ).find(([, id]) => id);
+    const settingsResultId = settingsPanelVisible
+      ? settingsTargetControlId
+        ? `settings-control:${settingsTargetControlId}`
+        : settingsTab
+          ? `settings-section:${settingsTab}`
+          : "settings"
+      : null;
+    const surfaceResultIds = rightPanelOpen
+      ? [rightPanel === "connections" ? "integrations" : rightPanel === "settings" ? "settings" : rightPanel]
+      : botBrowserOpen
+        ? ["card-browser"]
+        : gameAssetsBrowserOpen
+          ? ["game-assets"]
+          : characterLibraryOpen
+            ? [cardLibraryKind === "personas" ? "persona-library" : "character-library"]
+            : agentCatalogOpen
+              ? ["agent-library", "packages"]
+              : activeChatId
+                ? ["chats", `chat:${activeChatId}`]
+                : ["home"];
+    const setupResultIds = data.commands
+      .filter(
+        (command) =>
+          "availability" in command &&
+          command.availability?.status === "requires-capability" &&
+          command.availability.setupTarget,
+      )
+      .map((command) => command.id);
+    const failedSources = [chats, characters, personas, lorebooks, presets, connections, agents, docs].some(
+      (source) => source.isError,
+    );
+    const surface = openResource
+      ? "editor"
+      : settingsPanelVisible
+        ? "settings"
+        : gameAssetsBrowserOpen
+          ? "game"
+          : botBrowserOpen || characterLibraryOpen || agentCatalogOpen
+            ? "library"
+            : activeChatId
+              ? "chat"
+              : "home";
+    return createOmnibarContext({
+      surface,
+      surfaceResultIds,
+      activeChat:
+        activeChat && activeChat.id === activeChatId
+          ? { id: activeChat.id, mode: activeChat.mode, resultIds: activeChatResultIds }
+          : undefined,
+      openResource:
+        openResource && openResource[1]
+          ? { kind: openResource[0], id: openResource[1], resultId: `${openResource[0]}:${openResource[1]}` }
+          : undefined,
+      settingsTarget: settingsResultId
+        ? { tab: settingsTab, controlId: settingsTargetControlId ?? undefined, resultId: settingsResultId }
+        : undefined,
+      editorDirty,
+      pinnedResultIds: ranking.pinnedIds,
+      recentResultIds: ranking.recent.map((entry) => entry.id),
+      setupResultIds,
+      error: failedSources ? { resultIds: ["diagnostics"], message: t("omnibar.error") } : undefined,
+    });
   }, [
     activeChat,
     activeChatId,
+    agentCatalogOpen,
+    agents,
+    botBrowserOpen,
+    cardLibraryKind,
+    characterLibraryOpen,
+    characters,
+    chats,
+    connections,
+    data.commands,
+    docs,
+    editorDirty,
+    gameAssetsBrowserOpen,
+    lorebooks,
     openAgentId,
     openCharacterId,
     openConnectionId,
     openLorebookId,
     openPersonaId,
     openPresetId,
+    personas,
+    presets,
+    ranking.pinnedIds,
+    ranking.recent,
+    rightPanel,
+    rightPanelOpen,
     settingsTab,
     settingsTargetControlId,
     settingsPanelVisible,
+    t,
   ]);
+  const contextLabels = useMemo(
+    () => ({
+      surface: t("commandCenter.context.currentSurface", "On this screen"),
+      "open-resource": t("commandCenter.context.openResource", "Open now"),
+      "active-chat": t("commandCenter.context.activeChat", "Used by this chat"),
+      "settings-target": t("commandCenter.context.settingsTarget", "Current setting"),
+      dirty: t("commandCenter.context.unsaved", "Open with unsaved changes"),
+      setup: t("commandCenter.context.setup", "Setup available"),
+      error: t("commandCenter.context.error", "Related to a current error"),
+      pinned: t("commandCenter.context.pinned", "Pinned"),
+      recent: t("commandCenter.context.recent", "Recently used"),
+    }),
+    [t],
+  );
   const searchResults = useMemo<OmnibarResult[]>(() => {
     const query = deferredQuery;
     const normalizedQuery = query.trim().toLowerCase();
@@ -1092,6 +1204,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     // matched well. Its preview "peeks" what Mari will do before you commit.
     const trimmedQuery = query.trim();
     const capability = inferProfessorMariCommandCenterCapability(trimmedQuery);
+    const intent = parseOmnibarIntent(trimmedQuery);
     const askTitles: Partial<Record<typeof capability, string>> = {
       repair: t("omnibar.askMari.repair", "Ask Mari to fix this"),
       recommend: t("omnibar.askMari.recommend", "Ask Mari to compare & recommend"),
@@ -1107,17 +1220,30 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const askTitle = askTitles[capability] ?? t("omnibar.askProfessorMari", "Ask Professor Mari");
     const askPeek =
       askPeeks[capability] ?? t("omnibar.askMari.peek.explain", "Mari will explain this and guide your next step.");
-    const baseResults = searchOmnibar(query, { ...data, controls, contextResultIds }).filter(
+    const baseResults = searchOmnibar(query, { ...data, controls, context: omnibarContext, contextLabels }).filter(
       (result) => mariEnabled || result.id !== "ask-professor-mari",
     );
     const bestMatchScore = baseResults.reduce(
       (best, result) => (result.id === "ask-professor-mari" ? best : Math.max(best, result.score)),
       -1,
     );
+    const directResult = getUnambiguousOmnibarResult(baseResults);
+    const directIntent = intent?.kind === "navigate" || intent?.kind === "action" || intent?.kind === "create";
+    const directSetup =
+      intent?.kind === "repair" &&
+      directResult?.availability &&
+      typeof directResult.availability === "object" &&
+      directResult.availability.setupTarget;
+    const clearDirect = Boolean(directResult && directResult.score >= 250 && (directIntent || directSetup));
     const promoteMari =
-      /\?\s*$|^\s*(?:who|what|why|how|where|which|when|can|could|should|would|is|are|do|does|did|help|explain|tell)\b/i.test(
-        trimmedQuery,
-      ) || bestMatchScore < 150;
+      !clearDirect &&
+      (intent?.kind === "explain" ||
+        intent?.kind === "recommend" ||
+        intent?.kind === "repair" ||
+        /\?\s*$|^\s*(?:who|what|where|which|when|can|could|should|would|is|are|do|does|did|help|tell)\b/i.test(
+          trimmedQuery,
+        ) ||
+        bestMatchScore < 150);
     const askResults = baseResults.map((result) =>
       result.id === "ask-professor-mari"
         ? {
@@ -1163,7 +1289,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "documentation" as const,
       })),
     ];
-  }, [contextResultIds, controls, data, deferredQuery, docs.results, localize, mariEnabled, t]);
+  }, [contextLabels, controls, data, deferredQuery, docs.results, localize, mariEnabled, omnibarContext, t]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -1323,6 +1449,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
+    const searchRanking = deferredQuery.trim() ? { ...ranking, pinnedIds: [] } : ranking;
     return rankCommandResults(
       rawResults.map((result) => ({
         command: {
@@ -1348,9 +1475,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         },
         score: result.score,
       })),
-      ranking,
+      searchRanking,
     ).map(({ result }) => ({ ...sourceById.get(result.command.id)!, command: result.command }));
-  }, [ranking, rawResults]);
+  }, [deferredQuery, ranking, rawResults]);
   const presentation = useMemo(
     () =>
       presentCommandCenterResults(rankedResults, {
