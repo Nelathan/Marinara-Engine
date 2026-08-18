@@ -43,6 +43,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Professor Mari workspace results now show direct Open and Review actions for created or updated characters, personas, lorebooks, and presets, and refresh matching app data before opening it.
 - Professor Mari suggestion chips and guided plans now reject malformed or excessive output, stay scoped to the current Mari chat, clear stale plans on chat changes or interruption, and preserve typed draft text.
 - Omnibar search now includes practical FAQ answers and model-aware connection matches. FAQ results open the matching answer with its steps, while documentation results keep their in-context guide and match highlighting.
+
+### Fixed
+
+- Fixed Command Center resource rows to use character card identity and to distinguish active-chat assignments from global persona and preset state.
 - Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
 - Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, resource previews, documentation search, safe inline controls, extension commands, local pins and recency, exact Browse details, and an accessible full-screen mobile browse grid.
 - Command Center previews now show richer entity information, stable desktop sizing, category-specific safe actions, quiet media tints, delayed hover details, and a fixed Professor Mari header action that preserves the search handoff.

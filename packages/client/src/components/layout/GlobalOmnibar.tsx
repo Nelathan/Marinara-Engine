@@ -40,7 +40,7 @@ import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-searc
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
 import { useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
-import { parseCharacterDisplayData } from "../../lib/character-display";
+import { getCharacterDisplayIdentity, parseCharacterDisplayData } from "../../lib/character-display";
 import { isLanguageGenerationConnection } from "../../lib/connection-filters";
 import { resolveChatResourceDropAction } from "../../lib/chat-resource-drop-capabilities";
 import {
@@ -71,6 +71,7 @@ import {
   type OmnibarResult,
 } from "../../lib/omnibar-search";
 import { getOmnibarSettingsDestinations } from "../../lib/omnibar-settings";
+import { resolveOmnibarRowState } from "../../lib/omnibar-row-state";
 import {
   activatePersonalExtensionCommand,
   usePersonalExtensionCommands,
@@ -413,6 +414,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       ),
     [characters.data],
   );
+  const characterNameById = useMemo(
+    () =>
+      new Map(
+        (characters.data ?? []).flatMap((item) => {
+          const row = readNamedRow(item);
+          if (!row) return [];
+          const record = item as Record<string, unknown>;
+          return [
+            [
+              row.id,
+              getCharacterDisplayIdentity({ data: record.data, comment: record.comment as string | null | undefined }),
+            ] as const,
+          ];
+        }),
+      ),
+    [characters.data],
+  );
   const personaById = useMemo(() => new Map((personas.data ?? []).map((item) => [item.id, item])), [personas.data]);
   const connectionById = useMemo(
     () =>
@@ -649,7 +667,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })),
       ...(lorebooks.data ?? []).map((item) => {
         const linkedNames = [
-          ...(item.characterIds ?? []).map((id) => readNamedRow(characterById.get(id))?.name),
+          ...(item.characterIds ?? []).map((id) => characterNameById.get(id)),
           ...(item.personaIds ?? []).map((id) => personaById.get(id)?.name),
         ].filter((name): name is string => Boolean(name));
         return {
@@ -834,6 +852,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     agents.data,
     categoryLabels,
     characterById,
+    characterNameById,
     characters.data,
     chatModeLabels,
     chats.data,
@@ -1174,7 +1193,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       readNamedRow((list ?? []).find((item) => readNamedRow(item)?.id === id))?.name;
 
     if (openCharacterId) {
-      const name = nameOf(characterById, openCharacterId);
+      const name = characterNameById.get(openCharacterId);
       if (name)
         push({
           id: `context:character:${openCharacterId}`,
@@ -1228,7 +1247,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "chats",
       });
       for (const characterId of activeChat.characterIds ?? []) {
-        const name = nameOf(characterById, characterId);
+        const name = characterNameById.get(characterId);
         if (!name) continue;
         push({
           id: `context:chat-character:${characterId}`,
@@ -1284,7 +1303,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     activeChat,
     activeChatId,
     agents.data,
-    characterById,
+    characterNameById,
     connectionById,
     lorebooks.data,
     openAgentId,
@@ -1793,8 +1812,31 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 : {}),
             }
           : null;
+        const rowResource =
+          resourceKind === "character" ||
+          resourceKind === "persona" ||
+          resourceKind === "preset" ||
+          resourceKind === "connection"
+            ? resourceKind
+            : null;
+        const rowState = rowResource
+          ? resolveOmnibarRowState({
+              resource: rowResource,
+              id: resourceId,
+              activeChat,
+              globallyActive:
+                previewResult.category === "persona"
+                  ? previewResult.control?.value === true
+                  : previewResult.category === "preset"
+                    ? previewResult.control?.value === true
+                    : undefined,
+            })
+          : null;
         const canAddToChat =
-          payload && activeChat && resolveChatResourceDropAction(payload, activeChat)?.type !== "blocked";
+          payload &&
+          activeChat &&
+          (!rowState || rowState.canAddToChat) &&
+          resolveChatResourceDropAction(payload, activeChat)?.type !== "blocked";
         const addToChatAction =
           payload && canAddToChat
             ? {
@@ -1807,10 +1849,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 },
               }
             : null;
-        if (previewResult.category === "persona" && previewResult.control?.value === true) {
-          return [...(addToChatAction ? [addToChatAction] : []), ...mariActions];
-        }
-        if (previewResult.category === "preset" && previewResult.control?.value === true) {
+        if ((previewResult.category === "persona" || previewResult.category === "preset") && !rowState?.globalAction) {
           return [...(addToChatAction ? [addToChatAction] : []), ...mariActions];
         }
         if (previewResult.category === "persona" || previewResult.category === "preset") {

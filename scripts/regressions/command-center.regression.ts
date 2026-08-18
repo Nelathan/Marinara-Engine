@@ -13,11 +13,13 @@ import {
   type CommandCenterPresentableResult,
 } from "../../packages/client/src/lib/command-center.js";
 import { createSystemCommandDefinitions } from "../../packages/client/src/lib/command-center-system-commands.js";
-import {
-  getOmnibarActiveChatContextResultIds,
-  searchOmnibar,
-} from "../../packages/client/src/lib/omnibar-search.js";
+import { getOmnibarActiveChatContextResultIds, searchOmnibar } from "../../packages/client/src/lib/omnibar-search.js";
 import { getOmnibarSettingsDestinations } from "../../packages/client/src/lib/omnibar-settings.js";
+import {
+  getCharacterDisplayIdentity,
+  parseCharacterDisplayData,
+} from "../../packages/client/src/lib/character-display.js";
+import { resolveOmnibarRowState } from "../../packages/client/src/lib/omnibar-row-state.js";
 import {
   buildProfessorMariCommandCenterContext,
   inferProfessorMariCommandCenterCapability,
@@ -213,28 +215,20 @@ const contextRankedResults = searchOmnibar("Luna", {
 });
 assert.equal(contextRankedResults[0]?.id, "character:current-luna");
 assert.deepEqual(
-  [...getOmnibarActiveChatContextResultIds("chat-one", {
-    id: "chat-one",
-    characterIds: ["luna"],
-    personaId: "hero",
-    promptPresetId: "moonlight",
-    connectionId: "primary",
-    enableAgents: true,
-    activeAgentIds: ["world-state"],
-  })].sort(),
   [
-    "agent:world-state",
-    "character:luna",
-    "chat:chat-one",
-    "connection:primary",
-    "persona:hero",
-    "preset:moonlight",
-  ],
+    ...getOmnibarActiveChatContextResultIds("chat-one", {
+      id: "chat-one",
+      characterIds: ["luna"],
+      personaId: "hero",
+      promptPresetId: "moonlight",
+      connectionId: "primary",
+      enableAgents: true,
+      activeAgentIds: ["world-state"],
+    }),
+  ].sort(),
+  ["agent:world-state", "character:luna", "chat:chat-one", "connection:primary", "persona:hero", "preset:moonlight"],
 );
-assert.deepEqual(
-  [...getOmnibarActiveChatContextResultIds("chat-two", { id: "chat-one", characterIds: ["luna"] })],
-  [],
-);
+assert.deepEqual([...getOmnibarActiveChatContextResultIds("chat-two", { id: "chat-one", characterIds: ["luna"] })], []);
 assert.equal(
   getOmnibarActiveChatContextResultIds("chat-one", {
     id: "chat-one",
@@ -242,6 +236,34 @@ assert.equal(
     activeAgentIds: ["world-state"],
   }).has("agent:world-state"),
   false,
+);
+
+assert.equal(
+  getCharacterDisplayIdentity({ data: JSON.stringify({ name: "Card Name" }), comment: "Database label" }),
+  "Card Name",
+);
+assert.equal(parseCharacterDisplayData({ data: "not-json" }).name, "Unknown");
+assert.deepEqual(
+  resolveOmnibarRowState({ resource: "character", id: "luna", activeChat: { characterIds: ["luna"] } }),
+  { inActiveChat: true, globallyActive: false, canAddToChat: false, globalAction: null },
+);
+assert.deepEqual(
+  resolveOmnibarRowState({ resource: "persona", id: "hero", activeChat: { personaId: "other" }, globallyActive: true }),
+  { inActiveChat: false, globallyActive: true, canAddToChat: true, globalAction: null },
+);
+assert.deepEqual(resolveOmnibarRowState({ resource: "persona", id: "hero", activeChat: { personaId: "hero" } }), {
+  inActiveChat: true,
+  globallyActive: false,
+  canAddToChat: false,
+  globalAction: "activate-persona",
+});
+assert.deepEqual(
+  resolveOmnibarRowState({ resource: "preset", id: "moonlight", activeChat: { promptPresetId: "moonlight" } }),
+  { inActiveChat: true, globallyActive: false, canAddToChat: false, globalAction: "set-default-preset" },
+);
+assert.deepEqual(
+  resolveOmnibarRowState({ resource: "connection", id: "primary", activeChat: { connectionId: "other" } }),
+  { inActiveChat: false, globallyActive: false, canAddToChat: true, globalAction: null },
 );
 
 const settingsDestinations = getOmnibarSettingsDestinations();
