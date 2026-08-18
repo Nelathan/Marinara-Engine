@@ -2178,6 +2178,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       ref={panelRef}
       data-component="GlobalOmnibar"
       data-pane={pane}
+      data-mode={pane === "mari" ? "work" : "find"}
       className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm sm:px-6 sm:pt-[10vh]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -2190,7 +2191,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="global-omnibar-title"
         data-component="GlobalOmnibar.Panel"
-        className={`relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60 ${pane === "mari" ? "sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]" : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"}`}
+        className={`relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60 motion-safe:transition-[height,max-height] motion-safe:duration-300 motion-safe:ease-out motion-reduce:transition-none ${pane === "mari" ? "sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]" : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"}`}
       >
         <div
           aria-hidden="true"
@@ -2303,7 +2304,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 aria-label={t("commandCenter.openWork", "Open Work with Professor Mari")}
                 title={t("commandCenter.openWork", "Open Work with Professor Mari")}
                 data-component="GlobalOmnibar.ProfessorMariButton"
-                className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+                className="group relative -mb-px flex h-14 w-[4.25rem] shrink-0 self-end items-end justify-end overflow-hidden pb-2 pl-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
               >
                 <img
                   src={PROFESSOR_MARI_PEEK_URL}
@@ -2312,6 +2313,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   draggable={false}
                   className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
                 />
+                <span className="relative z-10 rounded-md bg-[var(--card)]/80 px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--primary)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                  {t("commandCenter.mode.work", "Work")}
+                </span>
               </button>
             ) : null}
             <button
