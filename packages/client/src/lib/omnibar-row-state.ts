@@ -1,3 +1,13 @@
+// Selection stability: the omnibar keeps the same selected result while the
+// user types. It only moves when the current selection leaves the list (or the
+// list empties). Callers must NOT reset the selection on every keystroke — let
+// this reconcile decide, so slight score shifts never snap the choice to the top.
+export function reconcileActiveResultId(current: string | null, resultIds: readonly string[]): string | null {
+  if (!resultIds.length) return null;
+  if (current && resultIds.includes(current)) return current;
+  return resultIds[0]!;
+}
+
 export type OmnibarRowResource = "character" | "persona" | "preset" | "connection";
 
 export type OmnibarRowState = {

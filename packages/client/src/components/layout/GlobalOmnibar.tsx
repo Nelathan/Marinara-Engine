@@ -75,7 +75,7 @@ import {
   type OmnibarResult,
 } from "../../lib/omnibar-search";
 import { getOmnibarSettingsDestinations } from "../../lib/omnibar-settings";
-import { resolveOmnibarRowState } from "../../lib/omnibar-row-state";
+import { reconcileActiveResultId, resolveOmnibarRowState } from "../../lib/omnibar-row-state";
 import {
   activatePersonalExtensionCommand,
   usePersonalExtensionCommands,
@@ -1595,16 +1595,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   );
 
   useEffect(() => {
-    if (!results.length) {
-      setSession((current) => (current.activeResultId === null ? current : { ...current, activeResultId: null }));
-      return;
-    }
-    if (!activeResultId || !results.some((result) => result.id === activeResultId)) {
-      const firstResultId = results[0]!.id;
-      setSession((current) =>
-        current.activeResultId === firstResultId ? current : { ...current, activeResultId: firstResultId },
-      );
-    }
+    const next = reconcileActiveResultId(
+      activeResultId,
+      results.map((result) => result.id),
+    );
+    setSession((current) => (current.activeResultId === next ? current : { ...current, activeResultId: next }));
   }, [activeResultId, results]);
 
   useEffect(() => {
@@ -2343,7 +2338,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       setFilter("all");
                       setPane("results");
                       setDetailResult(null);
-                      setActiveResultId(null);
                     }}
                     type="search"
                     aria-label={t("omnibar.inputLabel", "Search Marinara")}
