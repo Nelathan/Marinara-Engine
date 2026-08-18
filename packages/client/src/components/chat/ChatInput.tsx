@@ -20,7 +20,8 @@ import {
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
-import { updateCurrentInputSnapshot, useChatStore } from "../../stores/chat.store";
+import { getCurrentInputSnapshot, updateCurrentInputSnapshot, useChatStore } from "../../stores/chat.store";
+import { MariContextChip } from "./MariContextChip";
 import { useAgentStore } from "../../stores/agent.store";
 import { useUIStore } from "../../stores/ui.store";
 import { useGenerate } from "../../hooks/use-generate";
@@ -251,6 +252,7 @@ export const ChatInput = memo(function ChatInput({
   const attachmentsRef = useRef<Attachment[]>([]);
   const pendingAttachmentDraftsRef = useRef<Map<string, Attachment[]>>(new Map());
   const activeChatId = useChatStore((s) => s.activeChatId);
+  const hasCurrentInput = useChatStore((s) => s.hasCurrentInput);
   const pendingSpatialTransition = useChatStore((s) =>
     activeChatId ? (s.pendingSpatialTransitions.get(activeChatId) ?? null) : null,
   );
@@ -1861,6 +1863,19 @@ export const ChatInput = memo(function ChatInput({
 
       {/* Feedback toast */}
       {feedback && <SlashCommandFeedback feedback={feedback} onDismiss={() => setFeedback(null)} className="mb-2" />}
+
+      {/* Contextual Professor Mari chip — knows the current chat/character */}
+      {!isProfessorMariChat && activeChatCharacters && activeChatCharacters.length > 0 && (
+        <div className="mb-2 flex justify-end">
+          <MariContextChip
+            entryPoint="character-chat"
+            surface="chat"
+            resource={{ kind: "character", id: activeChatCharacters[0].id, label: activeChatCharacters[0].name }}
+            value={hasCurrentInput ? getCurrentInputSnapshot() : ""}
+            subject={activeChatCharacters[0].name}
+          />
+        </div>
+      )}
 
       {hierarchicalMapsActive && activeChatId ? (
         <CapabilityElement

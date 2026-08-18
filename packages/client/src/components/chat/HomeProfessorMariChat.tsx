@@ -1233,7 +1233,7 @@ const CompactMarkdown = memo(function CompactMarkdown({
   );
   if (!trimmed) return null;
   return (
-    <div className="mari-message-content text-[0.8125rem] leading-[1.42] text-[var(--foreground)] [&_.mari-md-codeblock]:my-1.5 [&_.mari-md-codeblock]:max-h-44 [&_.mari-md-heading]:mb-0.5 [&_.mari-md-heading]:mt-1 [&_.mari-md-ol]:my-1 [&_.mari-md-ul]:my-1">
+    <div className="mari-message-content text-[0.8125rem] leading-[1.55] text-[var(--foreground)] [&_.mari-md-codeblock]:my-2 [&_.mari-md-codeblock]:max-h-44 [&_.mari-md-heading]:mb-1 [&_.mari-md-heading]:mt-2 [&_.mari-md-ol]:my-1.5 [&_.mari-md-ul]:my-1.5">
       {rendered}
       {streaming && (
         <span className="ml-1 inline-block h-3 w-1 translate-y-0.5 rounded-full bg-[var(--primary)] opacity-80 animate-pulse" />
@@ -1424,8 +1424,8 @@ function TranscriptRow({
   className?: string;
 }) {
   return (
-    <div className={cn("grid grid-cols-[2.25rem_minmax(0,1fr)] gap-2", className)}>
-      <div className="flex min-w-0 justify-start pt-0.5">{marker}</div>
+    <div className={cn("grid grid-cols-[2rem_minmax(0,1fr)] gap-2.5", className)}>
+      <div className="flex min-w-0 justify-start">{marker}</div>
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -5562,7 +5562,7 @@ export function HomeProfessorMariChat({
         ref={setTranscriptScrollNode}
         onScroll={handleTranscriptScroll}
         data-component="HomeProfessorMariChat.Transcript"
-        className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3 pb-4 text-left"
+        className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-3.5 py-3.5 pb-5 text-left"
       >
         {loadingHistory ? (
           <LoadingHistoryState />

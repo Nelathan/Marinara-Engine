@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
 import {
@@ -195,6 +195,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));
   const setQuery = (value: string) => setSessionValue("query", value);
+  // Keep typing responsive: the heavy search/rank/present pipeline reruns against
+  // the deferred query so keystrokes paint immediately on large libraries.
+  const deferredQuery = useDeferredValue(query);
   const setFilter = (value: CommandCenterCategoryFilter) => setSessionValue("filter", value);
   const setPane = (value: OmnibarPane) => setSessionValue("pane", value);
   const setActiveResultId = (value: string | null) => setSessionValue("activeResultId", value);
@@ -329,6 +332,22 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [connections.data],
   );
 
+  // Reverse index: which lorebooks are attached to a given character / persona.
+  // Lets resource previews surface their real relationships, not just their own row.
+  const lorebookLinks = useMemo(() => {
+    const byCharacter = new Map<string, string[]>();
+    const byPersona = new Map<string, string[]>();
+    for (const book of lorebooks.data ?? []) {
+      for (const cid of book.characterIds ?? []) {
+        byCharacter.set(cid, [...(byCharacter.get(cid) ?? []), book.name]);
+      }
+      for (const pid of book.personaIds ?? []) {
+        byPersona.set(pid, [...(byPersona.get(pid) ?? []), book.name]);
+      }
+    }
+    return { byCharacter, byPersona };
+  }, [lorebooks.data]);
+
   const data = useMemo(() => {
     const commands = [
       {
@@ -448,12 +467,31 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     avatarCropStyle: getAvatarCropStyle(display.avatarCrop),
                   }
                 : undefined,
+              metadataLine:
+                [
+                  display.creator
+                    ? t("commandCenter.preview.byCreator", "by {{creator}}", { creator: display.creator })
+                    : null,
+                  readString(record.version)
+                    ? t("commandCenter.preview.versionShort", "v{{version}}", { version: readString(record.version)! })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || undefined,
               facts: [
                 ...(display.creator
                   ? [{ label: t("commandCenter.preview.creator", "Creator"), value: display.creator }]
                   : []),
                 ...(readString(record.version)
                   ? [{ label: t("commandCenter.preview.version", "Version"), value: readString(record.version)! }]
+                  : []),
+                ...(lorebookLinks.byCharacter.get(row.id)?.length
+                  ? [
+                      {
+                        label: t("commandCenter.preview.lorebooks", "Lorebooks"),
+                        value: lorebookLinks.byCharacter.get(row.id)!.join(", "),
+                      },
+                    ]
                   : []),
                 ...(display.comment
                   ? [{ label: t("commandCenter.preview.comment", "Comment"), value: display.comment }]
@@ -489,6 +527,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...(item.personaVersion
               ? [{ label: t("commandCenter.preview.version", "Version"), value: item.personaVersion }]
               : []),
+            ...(lorebookLinks.byPersona.get(item.id)?.length
+              ? [
+                  {
+                    label: t("commandCenter.preview.lorebooks", "Lorebooks"),
+                    value: lorebookLinks.byPersona.get(item.id)!.join(", "),
+                  },
+                ]
+              : []),
             ...(item.comment ? [{ label: t("commandCenter.preview.note", "Note"), value: item.comment }] : []),
           ],
           badges: [
@@ -508,47 +554,68 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           onChange: (value: string | boolean) => value === true && !item.isActive && activatePersona.mutate(item.id),
         },
       })),
-      ...(lorebooks.data ?? []).map((item) => ({
-        kind: "lorebook" as const,
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        preview: {
+      ...(lorebooks.data ?? []).map((item) => {
+        const linkedNames = [
+          ...(item.characterIds ?? []).map((id) => readNamedRow(characterById.get(id))?.name),
+          ...(item.personaIds ?? []).map((id) => personaById.get(id)?.name),
+        ].filter((name): name is string => Boolean(name));
+        return {
           kind: "lorebook" as const,
-          title: item.name,
+          id: item.id,
+          name: item.name,
           description: item.description,
-          categoryLabel: categoryLabels.lorebook,
-          media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
-          status: {
-            label: item.enabled
-              ? t("commandCenter.values.enabled", "Enabled")
-              : t("commandCenter.values.disabled", "Disabled"),
-            tone: item.enabled ? ("success" as const) : ("neutral" as const),
-          },
-          facts: [
-            { label: t("commandCenter.preview.category", "Category"), value: item.category },
-            { label: t("commandCenter.preview.tokenBudget", "Token budget"), value: item.tokenBudget },
-            { label: t("commandCenter.preview.entryLimit", "Entry limit"), value: item.entryLimit },
-            {
-              label: t("commandCenter.preview.scope", "Scope"),
-              value: item.isGlobal
-                ? t("commandCenter.values.global", "Global")
-                : t("commandCenter.values.scoped", "Scoped"),
+          preview: {
+            kind: "lorebook" as const,
+            title: item.name,
+            description: item.description,
+            categoryLabel: categoryLabels.lorebook,
+            media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
+            metadataLine:
+              [
+                typeof item.entryCount === "number"
+                  ? t("commandCenter.preview.entryCount", "{{count}} entries", { count: item.entryCount })
+                  : null,
+                item.isGlobal ? t("commandCenter.values.global", "Global") : t("commandCenter.values.scoped", "Scoped"),
+                linkedNames.length
+                  ? t("commandCenter.preview.linkedCount", "{{count}} linked", { count: linkedNames.length })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || undefined,
+            status: {
+              label: item.enabled
+                ? t("commandCenter.values.enabled", "Enabled")
+                : t("commandCenter.values.disabled", "Disabled"),
+              tone: item.enabled ? ("success" as const) : ("neutral" as const),
             },
-          ],
-          badges: item.tags?.length
-            ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: item.tags.join(", ") })]
-            : [],
-        },
-        control: {
-          type: "toggle" as const,
-          label: item.enabled
-            ? t("commandCenter.actions.disableLorebook", "Disable lorebook")
-            : t("commandCenter.actions.enableLorebook", "Enable lorebook"),
-          value: item.enabled,
-          onChange: (value: string | boolean) => updateLorebook.mutate({ id: item.id, enabled: value === true }),
-        },
-      })),
+            facts: [
+              { label: t("commandCenter.preview.category", "Category"), value: item.category },
+              { label: t("commandCenter.preview.tokenBudget", "Token budget"), value: item.tokenBudget },
+              { label: t("commandCenter.preview.entryLimit", "Entry limit"), value: item.entryLimit },
+              {
+                label: t("commandCenter.preview.scope", "Scope"),
+                value: item.isGlobal
+                  ? t("commandCenter.values.global", "Global")
+                  : t("commandCenter.values.scoped", "Scoped"),
+              },
+              ...(linkedNames.length
+                ? [{ label: t("commandCenter.preview.linkedTo", "Linked to"), value: linkedNames.join(", ") }]
+                : []),
+            ],
+            badges: item.tags?.length
+              ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: item.tags.join(", ") })]
+              : [],
+          },
+          control: {
+            type: "toggle" as const,
+            label: item.enabled
+              ? t("commandCenter.actions.disableLorebook", "Disable lorebook")
+              : t("commandCenter.actions.enableLorebook", "Enable lorebook"),
+            value: item.enabled,
+            onChange: (value: string | boolean) => updateLorebook.mutate({ id: item.id, enabled: value === true }),
+          },
+        };
+      }),
       ...(presets.data ?? []).map((item) => {
         const artwork = resolvePresetArtwork(item);
         return {
@@ -681,6 +748,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     connectionById,
     extensionCommands,
     lorebooks.data,
+    lorebookLinks,
     personaById,
     personas.data,
     activatePersona,
@@ -875,6 +943,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     settingsPanelVisible,
   ]);
   const searchResults = useMemo<OmnibarResult[]>(() => {
+    const query = deferredQuery;
     const normalizedQuery = query.trim().toLowerCase();
     const faqResults =
       normalizedQuery.length < 2
@@ -982,7 +1051,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "documentation" as const,
       })),
     ];
-  }, [contextResultIds, controls, data, docs.results, localize, mariEnabled, query, t]);
+  }, [contextResultIds, controls, data, deferredQuery, docs.results, localize, mariEnabled, t]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -1137,8 +1206,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     t,
   ]);
   const rawResults = useMemo(
-    () => (query.trim() ? searchResults : [...contextResults, ...idleResults]),
-    [contextResults, idleResults, query, searchResults],
+    () => (deferredQuery.trim() ? searchResults : [...contextResults, ...idleResults]),
+    [contextResults, deferredQuery, idleResults, searchResults],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
@@ -1173,11 +1242,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const presentation = useMemo(
     () =>
       presentCommandCenterResults(rankedResults, {
-        query,
+        query: deferredQuery,
         filter,
         rankingState: ranking,
       }),
-    [filter, query, rankedResults, ranking],
+    [filter, deferredQuery, rankedResults, ranking],
   );
   const browseAvailability = useMemo(
     () =>
@@ -1220,9 +1289,21 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     });
   }, [browseResults]);
 
+  // Persist the session, but debounced: writing JSON to localStorage on every
+  // keystroke is pure jank. A ref holds the latest session so the unmount-only
+  // effect can flush it on close without losing the final edit.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
   useEffect(() => {
-    writeCommandCenterSessionState(session);
+    const timer = window.setTimeout(() => writeCommandCenterSessionState(session), 250);
+    return () => window.clearTimeout(timer);
   }, [session]);
+  useEffect(
+    () => () => {
+      writeCommandCenterSessionState(sessionRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!results.length) {

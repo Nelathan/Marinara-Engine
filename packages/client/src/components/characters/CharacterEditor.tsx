@@ -114,6 +114,7 @@ import {
   Check,
 } from "lucide-react";
 import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
+import { MariContextChip } from "../chat/MariContextChip";
 import { cn, copyToClipboard, generateClientId, getAvatarCropStyle } from "../../lib/utils";
 import { normalizeAvatarCrop } from "@marinara-engine/shared";
 import { extractColorsFromImage } from "../../lib/avatar-color-extraction";
@@ -903,6 +904,14 @@ export function CharacterEditor() {
     );
   }
 
+  // Primary prose field for the current tab; drives the contextual Mari chip.
+  const mariChipField: { field: string; value: string } | null =
+    activeTab === "card"
+      ? { field: "description", value: formData.description ?? "" }
+      : activeTab === "convo"
+        ? { field: "first_mes", value: formData.first_mes ?? "" }
+        : null;
+
   const headerActionButtonClass = "mari-editor-action inline-flex";
   const saveDisabled = !dirty || saving || avatarUploading || lorebookEmbedding;
   const saveLabel = avatarUploading ? "Uploading…" : lorebookEmbedding ? "Embedding…" : saving ? "Saving…" : "Save";
@@ -1188,6 +1197,18 @@ export function CharacterEditor() {
         {/* Tab Content */}
         <div className="mari-editor-content @max-5xl:p-4">
           <div className="mari-editor-content-inner">
+            {characterId && mariChipField && (
+              <div className="mb-3 flex justify-end">
+                <MariContextChip
+                  entryPoint="character-editor"
+                  surface="character-editor"
+                  resource={{ kind: "character", id: characterId, label: formData.name }}
+                  field={mariChipField.field}
+                  value={mariChipField.value}
+                  subject={formData.name}
+                />
+              </div>
+            )}
             {activeTab === "metadata" && (
               <MetadataTab
                 characterId={characterId}
