@@ -2805,9 +2805,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-44 bg-[radial-gradient(120%_100%_at_12%_0%,oklch(0.72_0.16_255/0.12),transparent_60%),radial-gradient(120%_100%_at_88%_0%,oklch(0.73_0.21_345/0.11),transparent_60%)]"
         />
         <h2 id="global-omnibar-title" className="sr-only">
-          {pane === "mari"
-            ? t("commandCenter.workTitle", "Professor Mari Work")
-            : t("omnibar.title", "Search Marinara")}
+          {pane === "mari" ? t("commandCenter.workTitle", "Professor Mari") : t("omnibar.title", "Search Marinara")}
         </h2>
         <header className="shrink-0 pt-[env(safe-area-inset-top)]">
           <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4">
@@ -2818,7 +2816,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 onClick={leaveDetail}
                 aria-label={
                   pane === "mari"
-                    ? t("commandCenter.backToFind", "Back to Find")
+                    ? t("commandCenter.backToFind", "Back to search")
                     : pane === "detail" && detailOrigin === "browse"
                       ? t("commandCenter.backToBrowse", "Back to browse")
                       : t("commandCenter.backToResults", "Back to results")
@@ -2852,7 +2850,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       {t("omnibar.categories.professor", "Professor Mari")}
                     </span>
                     <span className="block truncate text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
-                      {t("commandCenter.mode.work", "Work")}
+                      {t("commandCenter.mode.work", "Ask Mari")}
                     </span>
                   </span>
                 </motion.div>
@@ -2908,8 +2906,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={() => openProfessorMari()}
-                aria-label={t("commandCenter.openWork", "Open Work with Professor Mari")}
-                title={t("commandCenter.openWork", "Open Work with Professor Mari")}
+                aria-label={t("commandCenter.openWork", "Ask Professor Mari")}
+                title={t("commandCenter.openWork", "Ask Professor Mari")}
                 data-component="GlobalOmnibar.ProfessorMariButton"
                 className="group relative -mb-px flex h-14 w-[4.25rem] shrink-0 self-end items-end justify-end overflow-hidden pb-2 pl-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
               >
@@ -2920,8 +2918,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   draggable={false}
                   className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
                 />
-                <span className="relative z-10 rounded-md bg-[var(--card)]/80 px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--primary)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
-                  {t("commandCenter.mode.work", "Work")}
+                <span className="relative z-10 rounded-md bg-[var(--card)]/80 px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--primary)] opacity-0 transition-opacity max-md:opacity-100 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                  {t("commandCenter.mode.work", "Ask Mari")}
                 </span>
               </button>
             ) : null}
@@ -3100,51 +3098,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               id="global-omnibar-results"
               aria-label={t("omnibar.results", "Search results")}
               data-component="GlobalOmnibar.Results"
-              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-xl:hidden") : ""}`}
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-2xl:hidden") : ""}`}
             >
               {!query.trim() ? (
                 <div className="border-b border-[var(--border)] px-3 pb-2.5 pt-2.5 motion-safe:animate-fade-in-up">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[0.8125rem] font-bold leading-tight text-[var(--foreground)]">
-                        {t("commandCenter.mode.find", "Find")}
-                      </p>
-                      <p className="mt-0.5 text-[0.6875rem] leading-snug text-[var(--muted-foreground)]">
-                        {t(
-                          "commandCenter.deck.subtitle",
-                          "Find what you need, or continue the current work with Professor Mari.",
-                        )}
-                      </p>
-                    </div>
-                    {mariEnabled ? (
-                      // Mari already lives in the header bar above — a curved arrow
-                      // points up to her instead of showing her portrait twice.
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none -mt-1 mr-0.5 flex shrink-0 flex-col items-center gap-0.5 self-start text-[var(--primary)]/55"
-                      >
-                        <svg width="44" height="30" viewBox="0 0 44 30" fill="none" className="overflow-visible">
-                          <path
-                            d="M41 27 C 35 12, 20 5, 4 3"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeDasharray="0.5 4"
-                          />
-                          <path
-                            d="M4 3 L 11 3.5 M4 3 L 7 9.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <span className="whitespace-nowrap text-[0.625rem] font-medium tracking-wide">
-                          {t("commandCenter.deck.askMariHint", "Ask Mari")}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
+                  <p className="text-[0.8125rem] font-bold leading-tight text-[var(--foreground)]">
+                    {t("commandCenter.mode.find", "Find")}
+                  </p>
+                  <p className="mt-0.5 text-[0.6875rem] leading-snug text-[var(--muted-foreground)]">
+                    {t("commandCenter.deck.subtitle", "Find what you need, or ask Professor Mari for help.")}
+                  </p>
                   <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
                     {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
                       <button
@@ -3339,7 +3302,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             {pane === "detail" && previewResult ? (
               <aside
                 data-component="GlobalOmnibar.Detail"
-                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] xl:hidden"
+                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] 2xl:hidden"
               >
                 <AnimatePresence initial={false} mode="wait">
                   <motion.div
@@ -3358,7 +3321,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <div
             data-component="GlobalOmnibar.Browse"
-            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${pane === "detail" ? "max-xl:hidden" : ""}`}
+            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${pane === "detail" ? "max-2xl:hidden" : ""}`}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -3474,7 +3437,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         {pane === "detail" && detailOrigin === "browse" && previewResult ? (
           <aside
             data-component="GlobalOmnibar.Detail"
-            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] xl:hidden"
+            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] 2xl:hidden"
           >
             {renderResultPreview(true)}
           </aside>
@@ -3498,7 +3461,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           animate={{ opacity: 1, x: 0 }}
           exit={reduceMotion ? undefined : { opacity: 0, x: -18 }}
           transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
-          className="fixed left-[calc(50%+23rem)] top-[10vh] hidden h-[min(44rem,80dvh)] w-[22rem] overflow-y-auto overscroll-contain rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 xl:block"
+          className="fixed left-[calc(50%+23rem)] top-[10vh] hidden h-[min(36rem,68dvh)] w-[22rem] overflow-y-auto overscroll-contain rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 2xl:block"
         >
           <AnimatePresence initial={false} mode="wait">
             <motion.div
