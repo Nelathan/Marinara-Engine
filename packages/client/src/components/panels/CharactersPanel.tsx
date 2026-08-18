@@ -864,7 +864,9 @@ export function CharactersPanel() {
         {(["all", "favorites", "non-favorites"] as const).map((opt) => (
           <button
             key={opt}
+            type="button"
             onClick={() => setFavFilter(opt)}
+            aria-pressed={favFilter === opt}
             className={cn(
               "mari-chrome-control mari-chrome-control--compact",
               favFilter === opt && "mari-chrome-control--selected",
@@ -879,7 +881,9 @@ export function CharactersPanel() {
         ))}
         {allTags.length > 0 && (
           <button
+            type="button"
             onClick={() => setTagsExpanded(!tagsExpanded)}
+            aria-expanded={tagsExpanded}
             className={cn(
               "mari-chrome-control mari-chrome-control--compact",
               (includedTags.size > 0 || excludedTags.size > 0) && "mari-chrome-control--selected",
@@ -896,6 +900,7 @@ export function CharactersPanel() {
         <div className="flex flex-wrap gap-1">
           {(includedTags.size > 0 || excludedTags.size > 0) && (
             <button
+              type="button"
               onClick={clearTagFilters}
               className="mari-chrome-control mari-chrome-control--compact mari-chrome-control--danger"
             >
@@ -908,28 +913,26 @@ export function CharactersPanel() {
             return (
               <div
                 key={tag}
-                role="button"
-                tabIndex={0}
-                onClick={() => toggleIncludedTag(tag)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleIncludedTag(tag);
-                  }
-                }}
                 className={cn(
-                  "mari-chrome-control mari-chrome-control--compact group/tag cursor-pointer",
+                  "mari-chrome-control mari-chrome-control--compact group/tag gap-0 p-0",
                   included ? "mari-chrome-control--selected" : excluded ? "mari-chrome-control--danger" : "",
                 )}
               >
-                {tag}
+                <button
+                  type="button"
+                  onClick={() => toggleIncludedTag(tag)}
+                  aria-pressed={included}
+                  className="px-2 py-1"
+                >
+                  {tag}
+                </button>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteTag(tag);
                   }}
-                  className="rounded-full p-0.5 transition-colors hover:bg-[var(--destructive)]/20 hover:text-[var(--destructive)]"
+                  className="mr-1 rounded-full p-0.5 transition-colors hover:bg-[var(--destructive)]/20 hover:text-[var(--destructive)]"
                   title={localizeUi("ui.panels.characterspanel.deleteTagValue1", { value1: tag })}
                 >
                   <X size="0.5rem" />

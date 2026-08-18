@@ -473,9 +473,12 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
       else if (result.control) addToGroup("quick-controls", result);
       else addToGroup("create-navigation", result);
     }
+    const visibleResults = (
+      ["current-work", "continue", "pinned", "recent", "quick-controls", "create-navigation"] as const
+    ).flatMap((id) => groups.get(id) ?? []);
     return {
       filter,
-      results,
+      results: visibleResults,
       groups: (
         ["current-work", "continue", "pinned", "recent", "quick-controls", "create-navigation"] as const
       ).flatMap((id) => {
@@ -493,13 +496,14 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
         : (CATEGORY_GROUP[result.category] ?? "navigation");
     addToGroup(group, result);
   }
+  const presentedGroups = COMMAND_CENTER_SEARCH_GROUP_ORDER.flatMap((id) => {
+    const groupResults = groups.get(id);
+    return groupResults ? [{ id, results: groupResults }] : [];
+  });
   return {
     filter,
-    results,
-    groups: COMMAND_CENTER_SEARCH_GROUP_ORDER.flatMap((id) => {
-      const groupResults = groups.get(id);
-      return groupResults ? [{ id, results: groupResults }] : [];
-    }),
+    results: presentedGroups.flatMap((group) => group.results),
+    groups: presentedGroups,
     categoryAvailability,
   };
 }

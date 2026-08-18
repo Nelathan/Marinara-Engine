@@ -2312,6 +2312,7 @@
   "ui.characters.characterlibraryview.favoritesFirst": "Favorites first",
   "ui.characters.characterlibraryview.fromTheGridToSeeALargerOverviewBefore": "from the grid to see a larger overview before editing.",
   "ui.characters.characterlibraryview.importValue1": "Import {{value1}}",
+  "ui.characters.characterlibraryview.loadedCount": "Showing {{visible}} from {{loaded}} loaded cards",
   "ui.characters.characterlibraryview.loading": "Loading...",
   "ui.characters.characterlibraryview.loadMoreValue1Loaded": "Load more ({{value1}} loaded)",
   "ui.characters.characterlibraryview.nameAZ": "Name A-Z",

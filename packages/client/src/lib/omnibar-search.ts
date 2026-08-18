@@ -208,6 +208,7 @@ export type OmnibarActiveChatContext = {
   personaId?: string | null;
   promptPresetId?: string | null;
   connectionId?: string | null;
+  lorebookIds?: readonly string[];
   enableAgents?: boolean;
   activeAgentIds?: readonly string[];
 };
@@ -223,6 +224,7 @@ export function getOmnibarActiveChatContextResultIds(
   if (chat.personaId) ids.add(`persona:${chat.personaId}`);
   if (chat.promptPresetId) ids.add(`preset:${chat.promptPresetId}`);
   if (chat.connectionId) ids.add(`connection:${chat.connectionId}`);
+  for (const lorebookId of chat.lorebookIds ?? []) ids.add(`lorebook:${lorebookId}`);
   if (chat.enableAgents) {
     for (const agentId of chat.activeAgentIds ?? []) ids.add(`agent:${agentId}`);
   }
@@ -413,4 +415,17 @@ export function getUnambiguousOmnibarResult(results: readonly OmnibarResult[]): 
   const first = direct[0];
   if (!first) return null;
   return direct[1]?.score === first.score ? null : first;
+}
+
+export function isDirectActiveChatAction(
+  query: string,
+  result: Pick<OmnibarResult, "id" | "category">,
+  results: readonly OmnibarResult[],
+): boolean {
+  const intent = parseOmnibarIntent(query);
+  if (intent?.kind !== "action") return false;
+  const directResult = getUnambiguousOmnibarResult(results);
+  if (directResult?.id !== result.id) return false;
+  if (/\b(?:add|use)\b.*\b(?:this|current)\s+chat\b/i.test(query)) return true;
+  return intent.verb === "add" && result.category === "character";
 }

@@ -1092,23 +1092,38 @@ export function CharacterEditor() {
               "mari-editor-avatar-tile group relative",
               !avatarPreview && "mari-avatar-placeholder mari-avatar-placeholder--character",
             )}
-            onClick={() => fileInputRef.current?.click()}
           >
-            {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt={formData.name}
-                className="pointer-events-none h-full w-full object-cover"
-                style={getAvatarCropStyle(normalizeAvatarCrop(formData.extensions.avatarCrop))}
-              />
-            ) : (
-              <User size="1.375rem" className="text-white" />
-            )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute inset-0 overflow-hidden rounded-[inherit]"
+              aria-label={localizeUi("editor.avatar.upload")}
+            >
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={formData.name}
+                  className="pointer-events-none h-full w-full object-cover"
+                  style={getAvatarCropStyle(normalizeAvatarCrop(formData.extensions.avatarCrop))}
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center">
+                  <User size="1.375rem" className="text-white" />
+                </span>
+              )}
+            </button>
             <EditorAvatarTileActions
               generationAvailable={imageGenerationAvailable}
               onGenerate={() => setAvatarGeneratorOpen(true)}
             />
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={handleAvatarUpload}
+            />
           </div>
 
           <div className="min-w-0 flex-1">

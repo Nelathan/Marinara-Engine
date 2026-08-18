@@ -159,6 +159,7 @@ export function CommandCenterBrowseGrid({
                   else cellRefs.current.delete(result.id);
                 }}
                 type="button"
+                data-command-center-browse-result
                 data-selected={selected || undefined}
                 aria-pressed={selectionMode ? selected : undefined}
                 tabIndex={active ? 0 : -1}

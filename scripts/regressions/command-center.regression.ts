@@ -17,6 +17,7 @@ import {
   createOmnibarContext,
   getOmnibarActiveChatContextResultIds,
   getUnambiguousOmnibarResult,
+  isDirectActiveChatAction,
   parseOmnibarIntent,
   searchOmnibar,
 } from "../../packages/client/src/lib/omnibar-search.js";
@@ -25,7 +26,7 @@ import {
   getCharacterDisplayIdentity,
   parseCharacterDisplayData,
 } from "../../packages/client/src/lib/character-display.js";
-import { resolveOmnibarRowState } from "../../packages/client/src/lib/omnibar-row-state.js";
+import { reconcileActiveResultId, resolveOmnibarRowState } from "../../packages/client/src/lib/omnibar-row-state.js";
 import {
   buildProfessorMariCommandCenterContext,
   inferProfessorMariCommandCenterCapability,
@@ -116,6 +117,32 @@ assert.deepEqual(
     ["continue", ["ask-professor-mari"]],
     ["create-navigation", ["create-character"]],
   ],
+);
+assert.deepEqual(
+  contextualPresentation.results.map((result) => result.id),
+  ["context:chat:one", "ask-professor-mari", "create-character"],
+);
+assert.equal(contextualPresentation.results[0]?.id, contextualPresentation.groups[0]?.results[0]?.id);
+assert.equal(
+  reconcileActiveResultId(
+    null,
+    contextualPresentation.results.map((result) => result.id),
+  ),
+  "context:chat:one",
+);
+assert.deepEqual(
+  presentCommandCenterResults(
+    [
+      { id: "chat:recent", category: "chat" },
+      { id: "chat:current", category: "chat", group: "current-work" },
+      { id: "control:theme", category: "settings", control: {} },
+    ],
+    {
+      query: "",
+      rankingState: { pinnedIds: [], recent: [{ id: "chat:recent", lastUsedAt: 1, useCount: 1 }] },
+    },
+  ).results.map((result) => result.id),
+  ["chat:current", "chat:recent", "control:theme"],
 );
 assert.deepEqual(
   buildProfessorMariCommandCenterContext(
@@ -298,6 +325,11 @@ const ambiguousResults = searchOmnibar("open Luna", {
   connections: [],
 });
 assert.equal(getUnambiguousOmnibarResult(ambiguousResults), null);
+assert.equal(isDirectActiveChatAction("add Luna", directOpenResults[0]!, directOpenResults), true);
+assert.equal(isDirectActiveChatAction("use Luna", directOpenResults[0]!, directOpenResults), false);
+assert.equal(isDirectActiveChatAction("add Luna", ambiguousResults[0]!, ambiguousResults), false);
+assert.equal(isDirectActiveChatAction("use Luna in this chat", ambiguousResults[0]!, ambiguousResults), false);
+assert.equal(isDirectActiveChatAction("use Luna in this chat", directOpenResults[0]!, directOpenResults), true);
 
 const repairResults = searchOmnibar("fix speech error", {
   commands: [
@@ -339,11 +371,20 @@ assert.deepEqual(
       personaId: "hero",
       promptPresetId: "moonlight",
       connectionId: "primary",
+      lorebookIds: ["world"],
       enableAgents: true,
       activeAgentIds: ["world-state"],
     }),
   ].sort(),
-  ["agent:world-state", "character:luna", "chat:chat-one", "connection:primary", "persona:hero", "preset:moonlight"],
+  [
+    "agent:world-state",
+    "character:luna",
+    "chat:chat-one",
+    "connection:primary",
+    "lorebook:world",
+    "persona:hero",
+    "preset:moonlight",
+  ],
 );
 assert.deepEqual([...getOmnibarActiveChatContextResultIds("chat-two", { id: "chat-one", characterIds: ["luna"] })], []);
 assert.equal(

@@ -13,6 +13,7 @@ import { BookOpen, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
 import { useTranslation as useUiTranslation } from "react-i18next";
+import { useDialogFocusScope } from "../../hooks/use-dialog-focus-scope";
 
 // ─── Step definitions ─────────────────────────
 
@@ -540,11 +541,14 @@ function OnboardingTutorialInner() {
   const uiLanguage = useUIStore((s) => s.language);
   const trackAchievement = useTrackAchievement();
   const { t: localizeUi } = useUiTranslation();
+  const localize = useLocalizedUiText();
+  const modal = useUIStore((s) => s.modal);
 
   const [step, setStep] = useState(0);
   const [spotlightRects, setSpotlightRects] = useState<SpotlightRect[]>([]);
   const [isMobileViewport, setIsMobileViewport] = useState(() => getViewportWidth() < MOBILE_BREAKPOINT);
   const rafRef = useRef<number>(0);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -569,6 +573,8 @@ function OnboardingTutorialInner() {
   const suggestedDocsLanguage =
     docsLanguageStatus?.configured || !uiMatchedDocsLanguage ? activeDocsLanguage : uiMatchedDocsLanguage;
   const effectiveDocsLanguagePick = docsLanguagePick ?? suggestedDocsLanguage;
+
+  useDialogFocusScope(!modal, cardRef);
 
   /**
    * Commit the picked docs language when the tour completes via "Get Started".
@@ -681,6 +687,14 @@ function OnboardingTutorialInner() {
     trackAchievement.mutate("tutorial_completed");
   }, [setCompleted, trackAchievement]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !useUIStore.getState().modal) finish();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [finish]);
+
   // "Get Started" on the final step commits the docs-language pick; Skip never does.
   const next = useCallback(() => {
     if (isLast) {
@@ -694,6 +708,7 @@ function OnboardingTutorialInner() {
   const isCentered = isMobileViewport || currentStep.centerCard || !currentStep.target || !targetRect;
   const centeredTopOffset = getTutorialTopOffset();
   const centeredCardMaxHeight = Math.max(220, getViewportHeight() - centeredTopOffset - 16);
+  const dialogLabel = currentStep.titleKey ? localizeUi(currentStep.titleKey) : localize(currentStep.title ?? "");
 
   const pickerSlot = currentStep.docsLanguagePicker ? (
     <div className="mb-4 flex flex-col gap-3 text-left">
@@ -762,6 +777,10 @@ function OnboardingTutorialInner() {
               exit={{ opacity: 0, y: -8, scale: 0.96 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className={TUTORIAL_CARD_CLASS}
+              ref={cardRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={dialogLabel}
               data-component="OnboardingTutorial.Card"
               style={{ width: Math.min(380, getViewportWidth() - 32), maxHeight: centeredCardMaxHeight }}
             >
@@ -785,6 +804,10 @@ function OnboardingTutorialInner() {
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className={TUTORIAL_CARD_CLASS}
+            ref={cardRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={dialogLabel}
             data-component="OnboardingTutorial.Card"
             style={computeTooltipStyle(targetRect!, currentStep)}
           >

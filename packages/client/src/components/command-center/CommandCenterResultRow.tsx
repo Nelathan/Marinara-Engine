@@ -26,6 +26,7 @@ export interface CommandCenterResultRowProps {
   enterHint?: string;
   setupStatus?: string;
   onMouseEnter?: MouseEventHandler<HTMLLIElement>;
+  onMouseMove?: MouseEventHandler<HTMLLIElement>;
   onMouseLeave?: MouseEventHandler<HTMLLIElement>;
   className?: string;
   style?: React.CSSProperties;
@@ -52,6 +53,7 @@ export function CommandCenterResultRow({
   enterHint,
   setupStatus,
   onMouseEnter,
+  onMouseMove,
   onMouseLeave,
   className,
   style,
@@ -61,6 +63,7 @@ export function CommandCenterResultRow({
       data-result-id={dataResultId}
       data-command-center-result-row
       onMouseEnter={onMouseEnter}
+      onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       style={style}
       className={cn(
@@ -99,18 +102,19 @@ export function CommandCenterResultRow({
               <Settings2 className="size-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate">{setupStatus}</span>
             </span>
-          ) : !control && enterHint ? (
-            <span className="hidden items-center gap-1 sm:inline-flex">
-              <span className="truncate">{enterHint}</span>
-              <CornerDownLeft className="size-3.5 shrink-0" aria-hidden="true" />
-            </span>
           ) : null}
         </span>
       </button>
 
-      {control || mariAffordance ? (
+      {control || mariAffordance || enterHint ? (
         <div className="col-start-2 flex min-w-0 max-w-[min(48vw,16rem)] shrink-0 items-center justify-end gap-1 pr-1">
           {mariAffordance}
+          {!control && enterHint ? (
+            <span className="hidden items-center gap-1 text-xs text-[var(--muted-foreground)] sm:inline-flex">
+              <span className="truncate">{enterHint}</span>
+              <CornerDownLeft className="size-3.5 shrink-0" aria-hidden="true" />
+            </span>
+          ) : null}
           {control}
         </div>
       ) : null}

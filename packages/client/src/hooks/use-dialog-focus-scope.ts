@@ -45,6 +45,9 @@ export function useDialogFocusScope(
       if (event.key !== "Tab") return;
       const container = containerRef.current;
       if (!container) return;
+      const activeModal =
+        document.activeElement instanceof Element ? document.activeElement.closest('[aria-modal="true"]') : null;
+      if (activeModal && activeModal !== container && !container.contains(activeModal)) return;
       const roots = [
         container,
         ...(ownedPortalSelector ? Array.from(document.querySelectorAll<HTMLElement>(ownedPortalSelector)) : []),

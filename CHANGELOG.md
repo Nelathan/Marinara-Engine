@@ -66,6 +66,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Empty omnibar suggestions in an active chat now show the chat's attached context with canonical previews and stable keyboard ordering.
+- Improved Command Center keyboard control and safe active-chat actions, fixed stale Professor Mari work state, restored character avatar crops and accurate library counts, added keyboard access to character controls, corrected danger and light-theme colors, and improved dialog focus and Escape handling.
 - Fixed Command Center resource rows to use character card identity and to distinguish active-chat assignments from global persona and preset state.
 - Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
 - Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, resource previews, documentation search, safe inline controls, extension commands, local pins and recency, exact Browse details, and an accessible full-screen mobile browse grid.

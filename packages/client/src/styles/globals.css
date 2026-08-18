@@ -194,8 +194,8 @@
   --muted-foreground: #d4adfc;
   --accent: #2a1a3e;
   --accent-foreground: #f0e8ff;
-  --destructive: var(--primary);
-  --destructive-foreground: var(--primary-foreground);
+  --destructive: #ff6b9d;
+  --destructive-foreground: #0a0a0a;
   --border: #d4adfc33;
   --input: #d4adfc33;
   --ring: #d4acfb;
@@ -455,7 +455,7 @@
   --card-foreground: #1a1025;
   --popover: #ffffffee;
   --popover-foreground: #1a1025;
-  --primary: #d4acfb;
+  --primary: #e0709a;
   --primary-foreground: #0a0a0a;
   --secondary: #f0eaf7;
   --secondary-foreground: #3a2960;
@@ -465,8 +465,8 @@
   --muted-foreground: #7a64a0;
   --accent: #ede4f7;
   --accent-foreground: #1a1025;
-  --destructive: var(--primary);
-  --destructive-foreground: var(--primary-foreground);
+  --destructive: #c44040;
+  --destructive-foreground: #ffffff;
   --border: #d4adfc44;
   --input: #d4adfc44;
   --ring: #d4acfb;
