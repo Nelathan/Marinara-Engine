@@ -272,6 +272,7 @@ assert.equal(parseOmnibarIntent("new character")?.kind, "create");
 assert.equal(parseOmnibarIntent("how do presets work")?.kind, "explain");
 assert.equal(parseOmnibarIntent("recommend a preset")?.kind, "recommend");
 assert.equal(parseOmnibarIntent("image generation failed")?.kind, "repair");
+assert.equal(parseOmnibarIntent("add Luna to this chat")?.kind, "action");
 assert.equal(parseOmnibarIntent("profile Luna"), null);
 
 const directOpenResults = searchOmnibar("open Luna", {

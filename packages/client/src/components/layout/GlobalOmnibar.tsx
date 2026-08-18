@@ -1662,8 +1662,39 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     else executeStateNavigation(definition.action.target);
     return true;
   };
+  const runDirectChatAction = (result: OmnibarResult) => {
+    if (
+      !activeChat ||
+      parseOmnibarIntent(query)?.kind !== "action" ||
+      !/\b(?:add|use)\b.*\b(?:this|current)\s+chat\b/i.test(query)
+    )
+      return false;
+    const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
+      character: "character",
+      persona: "persona",
+      lorebook: "lorebook",
+      preset: "preset",
+      connection: "connection",
+      agent: "agent",
+    };
+    const kind = resourceKinds[result.category];
+    if (!kind) return false;
+    const id = getOmnibarResourceId(result);
+    const payload: ChatResourceDragPayload = {
+      version: 1,
+      kind,
+      ids: [id],
+      label: result.title,
+    };
+    if (resolveChatResourceDropAction(payload, activeChat)?.type === "blocked") return false;
+    requestChatResourceAssignment(payload);
+    recordUse(result.id);
+    onClose();
+    return true;
+  };
   const choose = (result: OmnibarResult) => {
     if (result.control) return;
+    if (runDirectChatAction(result)) return;
     if (result.id.startsWith("personal-extension:")) {
       if (activatePersonalExtensionCommand(result.id)) {
         recordUse(result.id);
