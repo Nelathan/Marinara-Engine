@@ -40,6 +40,24 @@ const roleClasses: Record<CommandCenterMediaRole, string> = {
   browse: "size-24",
 };
 
+function resolveMediaSrc(src: string | null | undefined, kind: CommandCenterMediaKind): string | undefined {
+  if (!src) return undefined;
+  if (kind !== "avatar") return src;
+
+  const trimmed = src.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("/api/") || /^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+
+  // Older Windows imports can retain a local path. Serve its filename through
+  // the app endpoint instead of letting the browser resolve it as file://.
+  if (/^(file:)?[a-z]:[\\/]/i.test(trimmed) || trimmed.toLowerCase().startsWith("file://")) {
+    const filename = trimmed.split(/[\\/]/u).filter(Boolean).pop();
+    return filename ? `/api/avatars/file/${encodeURIComponent(filename)}` : undefined;
+  }
+
+  return trimmed;
+}
+
 export function CommandCenterMedia({
   size,
   role = size === "grid" ? "browse" : size,
@@ -54,13 +72,14 @@ export function CommandCenterMedia({
 }: CommandCenterMediaProps) {
   const [failedSrc, setFailedSrc] = useState<string>();
   const [loadedSrc, setLoadedSrc] = useState<string>();
-  const hasImage = Boolean(src && src !== failedSrc);
+  const resolvedSrc = resolveMediaSrc(src, kind);
+  const hasImage = Boolean(resolvedSrc && resolvedSrc !== failedSrc);
   const validAccent = getValidatedCommandCenterAccent(accent);
 
   useEffect(() => {
     setFailedSrc(undefined);
     setLoadedSrc(undefined);
-  }, [src]);
+  }, [resolvedSrc]);
 
   return (
     <span
@@ -83,24 +102,24 @@ export function CommandCenterMedia({
           // A cached image can complete before React attaches onLoad, which used
           // to leave it stuck at opacity-0. Read the state on mount instead.
           ref={(node) => {
-            if (node?.complete && node.naturalWidth > 0) setLoadedSrc(src ?? undefined);
+            if (node?.complete && node.naturalWidth > 0) setLoadedSrc(resolvedSrc);
           }}
-          src={src ?? undefined}
+          src={resolvedSrc}
           alt={role === "row" ? "" : alt}
           loading={size === "grid" ? "lazy" : "eager"}
           decoding={size === "grid" ? "async" : "auto"}
-          onLoad={() => setLoadedSrc(src ?? undefined)}
-          onError={() => setFailedSrc(src ?? undefined)}
+          onLoad={() => setLoadedSrc(resolvedSrc)}
+          onError={() => setFailedSrc(resolvedSrc)}
           style={kind === "avatar" ? avatarCropStyle : undefined}
           className={cn(
             "size-full object-cover transition-opacity duration-200 motion-reduce:transition-none",
-            loadedSrc === src ? "opacity-100" : "opacity-0",
+            loadedSrc === resolvedSrc ? "opacity-100" : "opacity-0",
           )}
         />
       ) : (
         <Icon className={iconClasses[size]} strokeWidth={1.8} />
       )}
-      {hasImage && loadedSrc !== src && !failedSrc ? (
+      {hasImage && loadedSrc !== resolvedSrc && !failedSrc ? (
         <span className="absolute inset-0 animate-pulse bg-[color-mix(in_srgb,var(--foreground)_5%,var(--background))] motion-reduce:animate-none" />
       ) : null}
       {validAccent ? (

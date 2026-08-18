@@ -2882,15 +2882,17 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!detailResultId) {
-      setDetailResult(null);
+      setDetailResult((previous) => (previous === null ? previous : null));
       return;
     }
-    setDetailResult(currentResultById.get(detailResultId) ?? null);
+    const next = currentResultById.get(detailResultId) ?? null;
+    setDetailResult((previous) => (previous?.id === next?.id ? previous : next));
   }, [currentResultById, detailResultId]);
 
   useEffect(() => {
     if (pane !== "detail" || detailOrigin === "browse" || !activeResultId) return;
-    setDetailResult(currentResultById.get(activeResultId) ?? null);
+    const next = currentResultById.get(activeResultId) ?? null;
+    setDetailResult((previous) => (previous?.id === next?.id ? previous : next));
     setSessionValue("detailResultId", activeResultId);
   }, [activeResultId, currentResultById, detailOrigin, pane]);
 

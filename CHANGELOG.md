@@ -66,6 +66,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Fixed a Command Center render loop when a restored detail result changed the result list, and normalized legacy Windows avatar paths to the app avatar endpoint.
+
 - Empty omnibar suggestions in an active chat now show the chat's attached context with canonical previews and stable keyboard ordering.
 - Improved Command Center keyboard control and safe active-chat actions, fixed stale Professor Mari work state, restored character avatar crops and accurate library counts, added keyboard access to character controls, corrected danger and light-theme colors, and improved dialog focus and Escape handling.
 - Fixed Command Center resource rows to use character card identity and to distinguish active-chat assignments from global persona and preset state.
