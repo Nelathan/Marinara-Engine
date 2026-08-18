@@ -160,6 +160,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Changed
 
+- Removed the Continue the scene button from chat composers.
 - Removed the loupe button from the top bar.
 - Coding-agent contributors now follow a Ponytail-inspired minimalism ladder that favors reuse, platform capabilities, and the smallest correct implementation without weakening safety or validation requirements (#5186).
 - Project validation now checks the maintained TypeScript and TSX source tree with Prettier before linting and building, so formatting drift is rejected by the same `pnpm check` command used in pull-request CI (#5181).

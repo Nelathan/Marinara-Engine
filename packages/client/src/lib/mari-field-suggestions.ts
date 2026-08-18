@@ -45,13 +45,6 @@ export function suggestMariAction(input: MariFieldInput): MariFieldSuggestion | 
   }
 
   if (input.surface === "chat") {
-    if (!trimmed) {
-      return {
-        label: "Continue the scene",
-        capability: "explain",
-        draft: `Suggest how ${subjectRef(input.subject)} would respond next.`,
-      };
-    }
     if (trimmed.endsWith("?")) {
       return {
         label: `Ask about ${input.subject?.trim() || "her"}`,
