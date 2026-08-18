@@ -13,7 +13,6 @@ import { createPortal } from "react-dom";
 import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
 import {
   ArrowRight,
-  BookOpen,
   ChevronLeft,
   Clock3,
   Compass,
@@ -29,7 +28,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   Theater,
-  UserPlus,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -2193,14 +2191,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       >
                         <svg width="44" height="30" viewBox="0 0 44 30" fill="none" className="overflow-visible">
                           <path
-                            d="M3 27 C 9 12, 24 5, 40 3"
+                            d="M41 27 C 35 12, 20 5, 4 3"
                             stroke="currentColor"
                             strokeWidth="1.5"
                             strokeLinecap="round"
                             strokeDasharray="0.5 4"
                           />
                           <path
-                            d="M40 3 L 33 3.5 M40 3 L 37 9.5"
+                            d="M4 3 L 11 3.5 M4 3 L 7 9.5"
                             stroke="currentColor"
                             strokeWidth="1.5"
                             strokeLinecap="round"
@@ -2213,42 +2211,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       </div>
                     ) : null}
                   </div>
-                  {(() => {
-                    const quickActions = [
-                      {
-                        id: "create-chat",
-                        label: t("commandCenter.quick.newChat", "New chat"),
-                        Icon: MessageSquarePlus,
-                      },
-                      {
-                        id: "create-character",
-                        label: t("commandCenter.quick.newCharacter", "New character"),
-                        Icon: Theater,
-                      },
-                      {
-                        id: "create-persona",
-                        label: t("commandCenter.quick.newPersona", "New persona"),
-                        Icon: UserPlus,
-                      },
-                      { id: "documentation", label: t("commandCenter.quick.docs", "Docs"), Icon: BookOpen },
-                    ].filter((action) => allLocalResults.some((result) => result.id === action.id));
-                    if (quickActions.length === 0) return null;
-                    return (
-                      <div className="mt-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                        {quickActions.map(({ id, label, Icon }) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => runCommandById(id)}
-                            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-2 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/45 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                          >
-                            <Icon size={14} className="text-[var(--primary)]" aria-hidden="true" />
-                            <span className="truncate">{label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  {allLocalResults.some((result) => result.id === "create-chat") ? (
+                    <button
+                      type="button"
+                      onClick={() => runCommandById("create-chat")}
+                      className="mt-2.5 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--primary)]/40 bg-[var(--primary)]/10 px-3 text-[0.8125rem] font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                    >
+                      <MessageSquarePlus size={14} className="text-[var(--primary)]" aria-hidden="true" />
+                      <span className="truncate">{t("commandCenter.quick.newChat", "New chat")}</span>
+                    </button>
+                  ) : null}
                   <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
                     {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
                       <button
@@ -2319,11 +2291,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       {group.results.map((result, rowIndex) => {
                         const visual = resultVisual(result);
                         const selected = result.id === activeResult?.id;
-                        const currentChoice =
-                          result.control?.type === "choice"
-                            ? result.control.options?.find((option) => option.value === String(result.control?.value))
-                                ?.label
-                            : undefined;
                         const setupStatus =
                           result.command.availability?.status === "requires-capability"
                             ? t("commandCenter.setup", "Set up")
@@ -2359,7 +2326,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             avatarCropStyle={result.preview?.media?.avatarCropStyle}
                             groupClassName={visual.groupClassName}
                             accent={result.preview?.accent}
-                            currentChoice={currentChoice}
                             setupStatus={setupStatus}
                             enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
                             control={
