@@ -79,6 +79,13 @@ transient and self-clears. The omnibar then:
    wire image generation + connection test. Do not wire every surface app-wide
    until an error taxonomy is agreed.
 
+   As built: the bus and the connection paths (`useTestConnection`,
+   `useTestMessage`) are wired. **Image generation was not wired** — it has no
+   isolated failure hook; the failure paths inside `use-generate.ts` are
+   swallowed `catch {}` blocks spread across the streaming flow. Wiring it needs
+   a decision about which of those failures is the user-visible one. Adding it
+   later is a one-line `setLastAppError` call at that point.
+
 3. **Retry ownership: identifier + tiny registry.** The error slot stores a
    retry-action id; the omnibar maps it to a known retry action. The store
    stays serializable and holds no component closures.

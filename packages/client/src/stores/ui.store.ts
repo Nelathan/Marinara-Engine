@@ -594,6 +594,17 @@ interface UIState {
   regexDetailId: string | null;
   /** The primary field currently focused in an open editor, for Mari omnibar handoff. Transient, never persisted. */
   activeEditorField: { id: string; label: string } | null;
+  /**
+   * The most recent recoverable app failure, so the omnibar can answer "fix this".
+   * `retry` is a serializable target the omnibar maps to a real action, never a
+   * captured callback. Transient, never persisted.
+   */
+  lastAppError: {
+    message: string;
+    code?: string;
+    action?: string;
+    retry?: { kind: "open-connection"; id: string };
+  } | null;
   /** When set, the main area shows the hierarchical map editor for this chat */
   spatialMapDetailChatId: string | null;
   /** One-shot generated map preview handed from Game setup into the spatial editor. Never persisted. */
@@ -945,6 +956,7 @@ interface UIState {
   toggleRightPanel: (panel: Panel) => void;
   setSettingsTab: (tab: string) => void;
   setActiveEditorField: (field: { id: string; label: string } | null) => void;
+  setLastAppError: (error: UIState["lastAppError"]) => void;
   setSettingsTargetControlId: (controlId: string | null) => void;
   openModal: (type: string, props?: Record<string, unknown>) => void;
   closeModal: () => void;
@@ -1380,6 +1392,7 @@ export const useUIStore = create<UIState>()(
       trackerPanelSectionOrder: [...TRACKER_DATA_PANEL_SECTIONS],
       settingsTab: "general",
       activeEditorField: null,
+      lastAppError: null,
       settingsTargetControlId: null,
       modal: null,
       theme: "dark" as const,
@@ -1686,6 +1699,7 @@ export const useUIStore = create<UIState>()(
 
       setSettingsTab: (tab) => set({ settingsTab: tab }),
       setActiveEditorField: (field) => set({ activeEditorField: field }),
+      setLastAppError: (error) => set({ lastAppError: error }),
       setSettingsTargetControlId: (controlId) => set({ settingsTargetControlId: controlId }),
       openModal: (type, props) => set({ modal: { type, props } }),
       closeModal: () => set({ modal: null }),

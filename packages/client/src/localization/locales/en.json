@@ -308,6 +308,8 @@
   "commandCenter.context.activeChat": "Used by this chat",
   "commandCenter.context.currentSurface": "On this screen",
   "commandCenter.context.error": "Related to a current error",
+  "commandCenter.context.fixError": "Fix the last error",
+  "commandCenter.context.fixFailed": "Fix: {{action}} failed",
   "commandCenter.context.openResource": "Open now",
   "commandCenter.context.pinned": "Pinned",
   "commandCenter.context.recent": "Recently used",

@@ -129,10 +129,21 @@ export function useDeleteConnection() {
   });
 }
 
+/** Record a failed connection check so the omnibar can answer "fix this". */
+function recordConnectionFailure(id: string, action: string, error: unknown) {
+  useUIStore.getState().setLastAppError({
+    message: error instanceof Error ? error.message : String(error),
+    action,
+    retry: { kind: "open-connection", id },
+  });
+}
+
 export function useTestConnection() {
   return useMutation({
     mutationFn: (id: string) =>
       api.post<ConnectionTestResult>(`/connections/${id}/test`, { debugMode: useUIStore.getState().debugMode }),
+    onError: (error, id) => recordConnectionFailure(id, "Test connection", error),
+    onSuccess: () => useUIStore.getState().setLastAppError(null),
   });
 }
 
@@ -142,6 +153,8 @@ export function useTestMessage() {
       api.post<{ success: boolean; response: string; latencyMs: number }>(`/connections/${id}/test-message`, {
         debugMode: useUIStore.getState().debugMode,
       }),
+    onError: (error, id) => recordConnectionFailure(id, "Send test message", error),
+    onSuccess: () => useUIStore.getState().setLastAppError(null),
   });
 }
 

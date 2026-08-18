@@ -44,10 +44,6 @@ export function omnibarCompletionActions(
     case "open-resource":
       addResource();
       break;
-    case "show-field":
-      addField();
-      actions.push({ kind: "review" });
-      break;
     case "show-review":
       actions.push({ kind: "review" });
       // A field edit is easiest to check in place; fall back to the whole resource.

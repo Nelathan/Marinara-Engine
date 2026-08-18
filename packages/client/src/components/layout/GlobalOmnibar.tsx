@@ -390,6 +390,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const activeChatId = useChatStore((state) => state.activeChatId);
   const openCharacterId = useUIStore((state) => state.characterDetailId);
   const activeEditorField = useUIStore((state) => state.activeEditorField);
+  const lastAppError = useUIStore((state) => state.lastAppError);
   const openPersonaId = useUIStore((state) => state.personaDetailId);
   const openLorebookId = useUIStore((state) => state.lorebookDetailId);
   const openPresetId = useUIStore((state) => state.presetDetailId);
@@ -1370,6 +1371,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const listName = (list: readonly unknown[] | undefined, id: string) =>
       readNamedRow((list ?? []).find((item) => readNamedRow(item)?.id === id))?.name;
 
+    // A visible failure is the most useful next step, so it leads the group. The
+    // id must stay the real connection id so the existing connection branch in
+    // choose() opens the right editor (and still honours the dirty-editor guard).
+    if (lastAppError?.retry) {
+      push({
+        id: `connection:${lastAppError.retry.id}`,
+        title: lastAppError.action
+          ? t("commandCenter.context.fixFailed", "Fix: {{action}} failed", { action: lastAppError.action })
+          : t("commandCenter.context.fixError", "Fix the last error"),
+        description: lastAppError.message,
+        category: "connection",
+        score: 0,
+        group: "current-work",
+        icon: "connection",
+      });
+    }
+
     if (openCharacterId) {
       const name = characterNameById.get(openCharacterId);
       if (name)
@@ -1483,6 +1501,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     agents.data,
     characterNameById,
     connectionById,
+    lastAppError,
     lorebooks.data,
     openAgentId,
     openCharacterId,
@@ -1956,6 +1975,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
             : undefined,
         field: activeEditorField?.label,
+        error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
       }),
     );
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
@@ -1993,7 +2013,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const resource = action.resource;
     if (!resource) return;
     if (resource.kind === "character") {
-      if (ui().editorDirty && !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?")))
+      if (
+        ui().editorDirty &&
+        !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"))
+      )
         return;
       ui().openCharacterDetail(resource.id, {
         ...(action.kind === "open-field" ? { initialTab: action.field === "Greeting" ? "convo" : "card" } : {}),
