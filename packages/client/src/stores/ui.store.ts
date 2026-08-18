@@ -759,6 +759,8 @@ interface UIState {
   professorMariSuggestionsEnabled: boolean;
   /** When true, Professor Mari's deterministic Home navigator is available. */
   professorMariNavigationEnabled: boolean;
+  /** When true, the Command Center (omnibar) surfaces Professor Mari's LLM-backed assistance. */
+  commandCenterMariEnabled: boolean;
   /** When true, achievements appear on Home and announce unlocks. Backend tracking stays silent either way. */
   achievementsEnabled: boolean;
   /** When true, show the global Music Player surface. */
@@ -1072,6 +1074,7 @@ interface UIState {
   setChibiProfessorMariEnabled: (v: boolean) => void;
   setProfessorMariSuggestionsEnabled: (v: boolean) => void;
   setProfessorMariNavigationEnabled: (v: boolean) => void;
+  setCommandCenterMariEnabled: (v: boolean) => void;
   setAchievementsEnabled: (v: boolean) => void;
   setMusicPlayerEnabled: (v: boolean) => void;
   setMusicPlayerSource: (v: MusicPlayerSource) => void;
@@ -1285,6 +1288,7 @@ export function pickSyncedSettings(state: UIState) {
     chibiProfessorMariEnabled: state.chibiProfessorMariEnabled,
     professorMariSuggestionsEnabled: state.professorMariSuggestionsEnabled,
     professorMariNavigationEnabled: state.professorMariNavigationEnabled,
+    commandCenterMariEnabled: state.commandCenterMariEnabled,
     achievementsEnabled: state.achievementsEnabled,
     musicPlayerEnabled: state.musicPlayerEnabled,
     musicPlayerSource: state.musicPlayerSource,
@@ -1490,6 +1494,7 @@ export const useUIStore = create<UIState>()(
       chibiProfessorMariEnabled: true,
       professorMariSuggestionsEnabled: true,
       professorMariNavigationEnabled: true,
+      commandCenterMariEnabled: true,
       achievementsEnabled: true,
       musicPlayerEnabled: true,
       musicPlayerSource: "youtube" as MusicPlayerSource,
@@ -2282,6 +2287,7 @@ export const useUIStore = create<UIState>()(
         set({ professorMariNavigationEnabled: v });
         if (v && !wasEnabled) resetProfessorMariNavigator();
       },
+      setCommandCenterMariEnabled: (v) => set({ commandCenterMariEnabled: v }),
       setAchievementsEnabled: (v) => set({ achievementsEnabled: v }),
       setMusicPlayerEnabled: (v) => set({ musicPlayerEnabled: v }),
       setMusicPlayerSource: (v) =>
@@ -2512,7 +2518,7 @@ export const useUIStore = create<UIState>()(
       // the persisted version changes. Without it an existing user's saved order
       // never gains "inventory" and the section stays invisible until they
       // reorder the panel by hand.
-      version: 94,
+      version: 95,
       // Debounce localStorage writes to avoid sync I/O on every state change
       storage: createJSONStorage(() => {
         let timer: ReturnType<typeof setTimeout> | null = null;
@@ -3077,6 +3083,10 @@ export const useUIStore = create<UIState>()(
         if (version <= 90 && persisted.professorMariNavigationEnabled === undefined) {
           persisted.professorMariNavigationEnabled = true;
         }
+        // v94 -> v95: Command Center Mari LLM assistance defaults on for existing users.
+        if (version <= 94 && persisted.commandCenterMariEnabled === undefined) {
+          persisted.commandCenterMariEnabled = true;
+        }
         // v84 -> v85: keep the historical blank-line behavior for /continue by default.
         if (version <= 84 && persisted.continueAddsNewline === undefined) {
           persisted.continueAddsNewline = true;
@@ -3086,6 +3096,7 @@ export const useUIStore = create<UIState>()(
         persisted.reduceAmbientEffects = persisted.reduceAmbientEffects === true;
         persisted.professorMariSuggestionsEnabled = persisted.professorMariSuggestionsEnabled !== false;
         persisted.professorMariNavigationEnabled = persisted.professorMariNavigationEnabled !== false;
+        persisted.commandCenterMariEnabled = persisted.commandCenterMariEnabled !== false;
         persisted.includeReasoningInExports = persisted.includeReasoningInExports === true;
         persisted.roleplayReducedPaintEffects = persisted.roleplayReducedPaintEffects === true;
         persisted.roleplayNarratorAvatarCycling = persisted.roleplayNarratorAvatarCycling !== false;
@@ -3217,6 +3228,7 @@ export const useUIStore = create<UIState>()(
         chibiProfessorMariEnabled: state.chibiProfessorMariEnabled,
         professorMariSuggestionsEnabled: state.professorMariSuggestionsEnabled,
         professorMariNavigationEnabled: state.professorMariNavigationEnabled,
+    commandCenterMariEnabled: state.commandCenterMariEnabled,
         achievementsEnabled: state.achievementsEnabled,
         musicPlayerEnabled: state.musicPlayerEnabled,
         musicPlayerSource: state.musicPlayerSource,

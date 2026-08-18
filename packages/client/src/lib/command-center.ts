@@ -58,6 +58,7 @@ export type CommandCenterResultGroupId =
   | "create-navigation"
   | "navigation"
   | Exclude<CommandCenterCategoryFilter, "all">
+  | "professor-suggested"
   | "professor-fallback";
 
 export interface CommandCenterResultMetadata {
@@ -171,6 +172,7 @@ export const COMMAND_CENTER_CATEGORY_FILTERS: readonly CommandCenterCategoryFilt
   "docs",
 ];
 export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGroupId[] = [
+  "professor-suggested",
   "navigation",
   "chats",
   "characters",
@@ -478,7 +480,9 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
 
   for (const result of results) {
     const group =
-      result.id === "ask-professor-mari" ? "professor-fallback" : (CATEGORY_GROUP[result.category] ?? "navigation");
+      result.id === "ask-professor-mari"
+        ? (result.group ?? "professor-fallback")
+        : (CATEGORY_GROUP[result.category] ?? "navigation");
     addToGroup(group, result);
   }
   return {

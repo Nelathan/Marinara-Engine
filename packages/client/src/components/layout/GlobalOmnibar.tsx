@@ -65,7 +65,10 @@ import {
   usePersonalExtensionCommands,
 } from "../../lib/personal-extension-contributions";
 import { resolvePresetArtwork } from "../../lib/preset-artwork";
-import { buildProfessorMariCommandCenterContext } from "../../lib/professor-mari-command-center-context";
+import {
+  buildProfessorMariCommandCenterContext,
+  inferProfessorMariCommandCenterCapability,
+} from "../../lib/professor-mari-command-center-context";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { getAvatarCropStyle } from "../../lib/utils";
@@ -223,6 +226,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const reduceMotion = useReducedMotion();
   const reduceAmbientEffects = useUIStore((state) => state.reduceAmbientEffects);
   const musicPlayerEnabled = useUIStore((state) => state.musicPlayerEnabled);
+  const mariEnabled = useUIStore((state) => state.commandCenterMariEnabled);
   const speechToTextEnabled = useUIStore((state) => state.speechToTextEnabled);
   const notificationSoundsOnlyWhenUnfocused = useUIStore((state) => state.notificationSoundsOnlyWhenUnfocused);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
@@ -297,6 +301,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       agents: filterLabels.agents,
       settings: filterLabels.settings,
       docs: filterLabels.docs,
+      "professor-suggested": t("commandCenter.groups.mariSuggested", "Professor Mari"),
       "professor-fallback": t("commandCenter.groups.askMari", "Ask Professor Mari"),
     }),
     [filterLabels, t],
@@ -712,6 +717,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const set = useUIStore.getState;
     const toggleRows = [
       [
+        "commandCenterMariEnabled",
+        "commandCenter.controls.mariAssist",
+        mariEnabled,
+        set().setCommandCenterMariEnabled,
+      ],
+      [
         "reduceAmbientEffects",
         "commandCenter.controls.reducedEffects",
         reduceAmbientEffects,
@@ -792,6 +803,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })),
     ];
   }, [
+    mariEnabled,
     musicPlayerEnabled,
     notificationSoundsOnlyWhenUnfocused,
     reduceAmbientEffects,
@@ -922,8 +934,59 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               } satisfies OmnibarResult,
             ];
           });
+    // Professor Mari blur: the fallback row speaks the query's intent, and is
+    // promoted above search hits when the query reads like a question or nothing
+    // matched well. Its preview "peeks" what Mari will do before you commit.
+    const trimmedQuery = query.trim();
+    const capability = inferProfessorMariCommandCenterCapability(trimmedQuery);
+    const askTitles: Partial<Record<typeof capability, string>> = {
+      repair: t("omnibar.askMari.repair", "Ask Mari to fix this"),
+      recommend: t("omnibar.askMari.recommend", "Ask Mari to compare & recommend"),
+      create: t("omnibar.askMari.create", "Ask Mari to create this"),
+      edit: t("omnibar.askMari.change", "Ask Mari to change this"),
+    };
+    const askPeeks: Partial<Record<typeof capability, string>> = {
+      repair: t("omnibar.askMari.peek.repair", "Mari will help troubleshoot and fix this."),
+      recommend: t("omnibar.askMari.peek.recommend", "Mari will compare the options and recommend one."),
+      create: t("omnibar.askMari.peek.create", "Mari will help you create this."),
+      edit: t("omnibar.askMari.peek.change", "Mari will help you change this."),
+    };
+    const askTitle = askTitles[capability] ?? t("omnibar.askProfessorMari", "Ask Professor Mari");
+    const askPeek =
+      askPeeks[capability] ?? t("omnibar.askMari.peek.explain", "Mari will explain this and guide your next step.");
+    const baseResults = searchOmnibar(query, { ...data, controls, contextResultIds }).filter(
+      (result) => mariEnabled || result.id !== "ask-professor-mari",
+    );
+    const bestMatchScore = baseResults.reduce(
+      (best, result) => (result.id === "ask-professor-mari" ? best : Math.max(best, result.score)),
+      -1,
+    );
+    const promoteMari =
+      /\?\s*$|^\s*(?:who|what|why|how|where|which|when|can|could|should|would|is|are|do|does|did|help|explain|tell)\b/i.test(
+        trimmedQuery,
+      ) || bestMatchScore < 150;
+    const askResults = baseResults.map((result) =>
+      result.id === "ask-professor-mari"
+        ? {
+            ...result,
+            title: askTitle,
+            description: askPeek,
+            group: promoteMari ? ("professor-suggested" as const) : result.group,
+            score: promoteMari ? 500 : result.score,
+            preview: {
+              kind: "docs" as const,
+              title: askTitle,
+              categoryLabel: t("omnibar.askProfessorMari", "Ask Professor Mari"),
+              description: askPeek,
+              facts: trimmedQuery
+                ? [{ label: t("omnibar.askMari.peek.searchLabel", "Your search"), value: trimmedQuery }]
+                : [],
+            },
+          }
+        : result,
+    );
     return [
-      ...searchOmnibar(query, { ...data, controls, contextResultIds }),
+      ...askResults,
       ...faqResults,
       ...docs.results.map((result) => ({
         ...result,
@@ -947,7 +1010,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "documentation" as const,
       })),
     ];
-  }, [contextResultIds, controls, data, docs.results, localize, query, t]);
+  }, [contextResultIds, controls, data, docs.results, localize, mariEnabled, query, t]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -1547,12 +1610,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const previewActions = previewResult
     ? (() => {
         if (previewResult.command.availability?.status === "requires-admin") return [];
-        const continueWithMariAction = {
-          label: t("commandCenter.actions.continueWithMari", "Continue with Mari"),
-          icon: Sparkles,
-          onSelect: () => openProfessorMari(previewResult),
-        };
-        if (previewResult.control?.type === "choice") return [continueWithMariAction];
+        const mariActions = mariEnabled
+          ? [
+              {
+                label: t("commandCenter.actions.continueWithMari", "Continue with Mari"),
+                icon: Sparkles,
+                onSelect: () => openProfessorMari(previewResult),
+              },
+            ]
+          : [];
+        if (previewResult.control?.type === "choice") return mariActions;
         const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
           character: "character",
           persona: "persona",
@@ -1593,10 +1660,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               }
             : null;
         if (previewResult.category === "persona" && previewResult.control?.value === true) {
-          return [...(addToChatAction ? [addToChatAction] : []), continueWithMariAction];
+          return [...(addToChatAction ? [addToChatAction] : []), ...mariActions];
         }
         if (previewResult.category === "preset" && previewResult.control?.value === true) {
-          return [...(addToChatAction ? [addToChatAction] : []), continueWithMariAction];
+          return [...(addToChatAction ? [addToChatAction] : []), ...mariActions];
         }
         if (previewResult.category === "persona" || previewResult.category === "preset") {
           return [
@@ -1610,7 +1677,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               disabled: resultControlPending(previewResult),
             },
             ...(addToChatAction ? [addToChatAction] : []),
-            continueWithMariAction,
+            ...mariActions,
           ];
         }
         if (previewResult.control?.type === "toggle") {
@@ -1624,7 +1691,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               disabled: resultControlPending(previewResult),
             },
             ...(addToChatAction ? [addToChatAction] : []),
-            continueWithMariAction,
+            ...mariActions,
           ];
         }
         const requiresSetup = previewResult.command.availability?.status === "requires-capability";
@@ -1652,7 +1719,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         return [
           ...(openAction ? [openAction] : []),
           ...(addToChatAction ? [addToChatAction] : []),
-          continueWithMariAction,
+            ...mariActions,
         ];
       })()
     : [];
@@ -1816,7 +1883,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </motion.div>
               )}
             </AnimatePresence>
-            {pane !== "mari" ? (
+            {pane !== "mari" && mariEnabled ? (
               <button
                 type="button"
                 onClick={() => openProfessorMari()}
@@ -1934,21 +2001,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                         {t("commandCenter.deck.subtitle", "Jump, create, change, or ask Professor Mari.")}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => openProfessorMari()}
-                      aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                      title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                      className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
-                    >
-                      <img
-                        src={PROFESSOR_MARI_PEEK_URL}
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                        className="absolute left-1/2 top-0 h-20 w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
-                      />
-                    </button>
+                    {mariEnabled ? (
+                      <button
+                        type="button"
+                        onClick={() => openProfessorMari()}
+                        aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                        title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                        className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+                      >
+                        <img
+                          src={PROFESSOR_MARI_PEEK_URL}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          className="absolute left-1/2 top-0 h-20 w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+                        />
+                      </button>
+                    ) : null}
                   </div>
                   <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
                     {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
@@ -1993,9 +2062,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               ) : null}
               {presentation.groups.map((group) => {
                 const GroupIcon =
-                  group.id === "context"
-                    ? Compass
-                    : group.id === "recent"
+                  group.id === "professor-suggested"
+                    ? Sparkles
+                    : group.id === "context"
+                      ? Compass
+                      : group.id === "recent"
                       ? Clock3
                       : group.id === "quick-controls"
                         ? SlidersHorizontal
@@ -2037,11 +2108,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             style={{ animationDelay: `${Math.min(rowIndex, 8) * 22}ms` }}
                             dataResultId={result.id}
                             id={`omnibar-${result.id}`}
-                            title={
-                              result.id === "ask-professor-mari"
-                                ? t("omnibar.askProfessorMari", "Ask Professor Mari")
-                                : result.title
-                            }
+                            title={result.title}
                             metadata={resultMetadata(result, visual.label)}
                             tertiaryMetadata={
                               result.preview?.status?.label ??
@@ -2168,7 +2235,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                {browseCompareMode ? (
+                {!mariEnabled ? null : browseCompareMode ? (
                   <>
                     <span aria-live="polite" className="text-xs text-[var(--muted-foreground)]">
                       {t("commandCenter.compareSelectionCount", "{{count}}/5 selected", {
@@ -2210,7 +2277,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               ariaLabel={filterLabels[browseFilter]}
               selectedId={browseSelectedId}
               selectedIds={new Set(browseCompareIds)}
-              selectionMode={browseCompareMode}
+              selectionMode={browseCompareMode && mariEnabled}
               onSelectedIdChange={setBrowseSelectedId}
               results={visibleBrowseResults.map((result) => {
                 const command = {
