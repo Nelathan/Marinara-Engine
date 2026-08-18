@@ -1174,6 +1174,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // Chat state as inline controls: the changes a user makes most often are to
   // the chat they are already in — model, preset, persona, agents. These edit
   // the chat in the row, so nothing navigates away from the scene.
+  // useMutation returns a fresh object every render, so the memo depends on the
+  // stable mutateAsync functions. Depending on the mutation objects would give
+  // this list a new identity each render and churn every list derived from it.
+  const patchChat = updateChat.mutateAsync;
+  const patchChatMetadata = updateChatMetadata.mutateAsync;
   const chatControls = useMemo<OmnibarResult[]>(() => {
     if (!activeChat || activeChat.id !== activeChatId) return [];
     const chatId = activeChat.id;
@@ -1210,7 +1215,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             value: connection.id,
             label: connection.name,
           })),
-          onChange: (value) => void updateChat.mutateAsync({ id: chatId, connectionId: String(value) || null }),
+          onChange: (value) => void patchChat({ id: chatId, connectionId: String(value) || null }),
         },
       });
     }
@@ -1234,7 +1239,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               label: preset.name,
             })),
           ],
-          onChange: (value) => void updateChat.mutateAsync({ id: chatId, promptPresetId: String(value) || null }),
+          onChange: (value) => void patchChat({ id: chatId, promptPresetId: String(value) || null }),
         },
       });
     }
@@ -1258,7 +1263,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               label: persona.name,
             })),
           ],
-          onChange: (value) => void updateChat.mutateAsync({ id: chatId, personaId: String(value) || null }),
+          onChange: (value) => void patchChat({ id: chatId, personaId: String(value) || null }),
         },
       });
     }
@@ -1274,11 +1279,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         type: "toggle",
         label: t("commandCenter.controls.chatAgents", "Agents in this chat"),
         value: chatMetadata.enableAgents === true,
-        onChange: (value) => void updateChatMetadata.mutateAsync({ id: chatId, enableAgents: value === true }),
+        onChange: (value) => void patchChatMetadata({ id: chatId, enableAgents: value === true }),
       },
     });
     return rows;
-  }, [activeChat, activeChatId, data.connections, data.resources, t, updateChat, updateChatMetadata]);
+  }, [activeChat, activeChatId, data.connections, data.resources, patchChat, patchChatMetadata, t]);
 
   const searchableEntityResults = useMemo<OmnibarResult[]>(
     () => [
