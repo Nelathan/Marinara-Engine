@@ -2,6 +2,11 @@ import type { DocsIndex, DocsSearchResponse } from "../hooks/use-docs";
 import type { CommandResult } from "./command-center";
 
 export const DOCS_COMMAND_SEARCH_MIN_QUERY_LENGTH = 2;
+/**
+ * Docs are a fallback, not the main event. Cap how many surface so a common word
+ * doesn't bury real resources under a wall of near-identical documentation rows.
+ */
+export const DOCS_COMMAND_SEARCH_MAX_RESULTS = 6;
 
 export interface DocsCommandSearchPassage extends CommandResult {
   id: string;
@@ -18,6 +23,7 @@ export function searchDocsCommandTitles(query: string, index: DocsIndex | undefi
 
   return (index?.docs ?? [])
     .filter((doc) => doc.title.toLocaleLowerCase().includes(normalized))
+    .slice(0, DOCS_COMMAND_SEARCH_MAX_RESULTS)
     .map((doc) => ({
       id: `docs:${doc.path}:title`,
       title: doc.title,
@@ -36,22 +42,28 @@ export function searchDocsCommandTitles(query: string, index: DocsIndex | undefi
 }
 
 export function toDocsCommandPassages(search: DocsSearchResponse | undefined): DocsCommandSearchPassage[] {
-  return (search?.results ?? []).flatMap((result) => {
-    const snippets = result.snippets.length > 0 ? result.snippets : [{ line: null, text: result.title }];
-    return snippets.map((snippet) => ({
-      id: `docs:${result.path}:${snippet.line ?? "title"}`,
-      title: result.title,
-      source: result.path,
-      snippet: snippet.text,
-      path: result.path,
-      line: snippet.line,
-      command: {
-        id: `docs:${result.path}:${snippet.line ?? "title"}`,
+  // One row per doc — the best snippet — not one per matching line. A single doc
+  // with many hits used to explode into dozens of identical-titled rows.
+  return (search?.results ?? [])
+    .slice()
+    .sort((a, b) => b.matches - a.matches)
+    .slice(0, DOCS_COMMAND_SEARCH_MAX_RESULTS)
+    .map((result) => {
+      const snippet = result.snippets[0] ?? { line: null, text: result.title };
+      return {
+        id: `docs:${result.path}`,
         title: result.title,
-        kind: "resource" as const,
-        icon: "documentation" as const,
-      },
-      score: 100 + result.matches,
-    }));
-  });
+        source: result.path,
+        snippet: snippet.text,
+        path: result.path,
+        line: snippet.line,
+        command: {
+          id: `docs:${result.path}`,
+          title: result.title,
+          kind: "resource" as const,
+          icon: "documentation" as const,
+        },
+        score: 100 + result.matches,
+      };
+    });
 }

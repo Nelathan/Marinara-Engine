@@ -1,4 +1,14 @@
-import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
 import {
@@ -23,11 +33,11 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
 import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
-import { useChats } from "../../hooks/use-chats";
+import { useChats, useChatMessageCount, useChatMessagePeek } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
-import { useLorebooks, useUpdateLorebook } from "../../hooks/use-lorebooks";
+import { useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { parseCharacterDisplayData } from "../../lib/character-display";
 import { isLanguageGenerationConnection } from "../../lib/connection-filters";
@@ -87,7 +97,7 @@ import {
   type CommandCenterCategoryLabels,
   type CommandCenterChatModeLabels,
 } from "../command-center/command-center-visuals";
-import type { RichCommandResult } from "../command-center/command-result-preview.types";
+import type { CommandCenterPreviewFact, RichCommandResult } from "../command-center/command-result-preview.types";
 
 const OmnibarProfessorMariChat = lazy(() =>
   import("../chat/HomeProfessorMariChat").then((module) => ({ default: module.HomeProfessorMariChat })),
@@ -176,6 +186,88 @@ export function GlobalOmnibar() {
   }, [setOpen]);
 
   return open ? <GlobalOmnibarDialog onClose={() => setOpen(false)} /> : null;
+}
+
+/**
+ * Tier-2 preview data: fetched lazily only for the one focused result, gated by
+ * a short focus dwell so arrow-key scrubbing does not fire a request per row.
+ * React Query caches by id, so re-focusing a result is instant.
+ */
+function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
+  extraFacts: CommandCenterPreviewFact[];
+  detail: ReactNode;
+  detailLoading: boolean;
+} {
+  const { t } = useTranslation();
+  const category = previewResult?.category;
+  const resourceId = previewResult ? previewResult.id.slice(previewResult.id.indexOf(":") + 1) : "";
+
+  const [settledId, setSettledId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!previewResult) {
+      setSettledId(null);
+      return;
+    }
+    const id = previewResult.id;
+    const timer = window.setTimeout(() => setSettledId(id), 160);
+    return () => window.clearTimeout(timer);
+  }, [previewResult]);
+  const settled = !!previewResult && settledId === previewResult.id;
+
+  const chatId = category === "chat" && settled ? resourceId : null;
+  const lorebookId = category === "lorebook" && settled ? resourceId : null;
+
+  const peek = useChatMessagePeek(chatId, 3, !!chatId);
+  const messageCount = useChatMessageCount(chatId);
+  const entries = useLorebookEntries(lorebookId);
+
+  if (chatId) {
+    const messages = peek.data ?? [];
+    const extraFacts: CommandCenterPreviewFact[] =
+      typeof messageCount.data?.count === "number"
+        ? [{ label: t("commandCenter.preview.messages", "Messages"), value: messageCount.data.count }]
+        : [];
+    const detail = messages.length ? (
+      <div className="space-y-1.5">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className="rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-2.5 py-1.5 ring-1 ring-inset ring-[var(--border)]/50"
+          >
+            <div className="text-[0.625rem] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
+              {message.role === "user"
+                ? t("commandCenter.preview.you", "You")
+                : t("commandCenter.preview.reply", "Reply")}
+            </div>
+            <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-[var(--foreground)]">
+              {message.content}
+            </p>
+          </div>
+        ))}
+      </div>
+    ) : null;
+    return { extraFacts, detail, detailLoading: peek.isLoading };
+  }
+
+  if (lorebookId) {
+    const list = entries.data ?? [];
+    const keywords = Array.from(new Set(list.flatMap((entry) => entry.keys ?? []).filter(Boolean))).slice(0, 8);
+    const names = list
+      .map((entry) => entry.name)
+      .filter((name): name is string => Boolean(name))
+      .slice(0, 6);
+    const extraFacts: CommandCenterPreviewFact[] = [
+      ...(keywords.length
+        ? [{ label: t("commandCenter.preview.keywords", "Keywords"), value: keywords.join(", ") }]
+        : []),
+      ...(names.length
+        ? [{ label: t("commandCenter.preview.sampleEntries", "Entries"), value: names.join(", ") }]
+        : []),
+    ];
+    return { extraFacts, detail: null, detailLoading: entries.isLoading };
+  }
+
+  return { extraFacts: [], detail: null, detailLoading: false };
 }
 
 function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
@@ -1646,6 +1738,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     result ? (currentResultById.get(result.id) ?? null) : null;
   // Always show the detail panel for whatever result is currently selected.
   const previewResult = resolveCurrentResult(detailResult) ?? resolveCurrentResult(activeResult ?? null);
+  const previewDetail = usePreviewDetail(previewResult);
 
   useEffect(() => {
     if (!detailResultId) {
@@ -1811,6 +1904,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 : undefined
           }
           actions={previewActions}
+          extraFacts={previewDetail.extraFacts}
+          detail={previewDetail.detail}
+          detailLoading={previewDetail.detailLoading}
         />
         {withControls && previewResult.control?.type === "choice" ? (
           <div className="border-t border-[var(--border)] p-3">

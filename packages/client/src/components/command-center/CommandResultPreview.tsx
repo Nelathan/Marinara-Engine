@@ -1,10 +1,14 @@
 import { ArrowRight, CornerDownRight, Tag } from "lucide-react";
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { getCommandIcon } from "../../lib/command-icons";
 import { cn } from "../../lib/utils";
 import { CommandCenterMedia } from "./CommandCenterMedia";
 import { getCommandCenterStatusClass } from "./command-center-visuals";
-import type { CommandResultPreviewAction, RichCommandResult } from "./command-result-preview.types";
+import type {
+  CommandCenterPreviewFact,
+  CommandResultPreviewAction,
+  RichCommandResult,
+} from "./command-result-preview.types";
 
 export interface CommandResultPreviewProps {
   result: RichCommandResult;
@@ -12,6 +16,12 @@ export interface CommandResultPreviewProps {
   statusLabel?: string;
   variant?: "default" | "compact";
   className?: string;
+  /** Facts fetched lazily on focus, appended after the eager facts. */
+  extraFacts?: readonly CommandCenterPreviewFact[];
+  /** Lazily-loaded body content (e.g. a chat message excerpt). */
+  detail?: ReactNode;
+  /** True while lazy detail is being fetched, before anything arrives. */
+  detailLoading?: boolean;
 }
 
 export function CommandResultPreview({
@@ -20,16 +30,20 @@ export function CommandResultPreview({
   statusLabel,
   variant = "default",
   className,
+  extraFacts,
+  detail,
+  detailLoading,
 }: CommandResultPreviewProps) {
   const titleId = useId();
   const descriptionId = useId();
   const preview = result.preview;
   const title = preview?.title ?? result.command.title;
   const Icon = getCommandIcon(result.command.icon, result.command.kind);
-  const hasFacts = Boolean(preview?.facts?.length);
+  const allFacts = [...(preview?.facts ?? []), ...(extraFacts ?? [])];
+  const hasFacts = allFacts.length > 0;
   const resolvedActions = actions?.slice(0, 3) ?? [];
   const hasActions = resolvedActions.length > 0;
-  const facts = preview?.facts?.slice(0, 6);
+  const facts = allFacts.slice(0, 8);
   const tags = preview?.tags ?? preview?.badges;
   const compact = variant === "compact";
 
@@ -83,7 +97,9 @@ export function CommandResultPreview({
       </header>
 
       {((preview && (preview.description || tags?.length || preview.status || preview.supportingInfo || hasFacts)) ||
-        statusLabel) && (
+        statusLabel ||
+        detail ||
+        detailLoading) && (
         <div
           className={cn(
             "max-h-[min(20rem,45vh)] min-h-0 flex-1 overscroll-contain overflow-y-auto",
@@ -132,9 +148,9 @@ export function CommandResultPreview({
             <p className="mt-2 text-xs leading-5 text-[var(--muted-foreground)]">{preview.supportingInfo}</p>
           )}
 
-          {hasFacts && preview && (
+          {hasFacts && (
             <dl className={cn("mt-3 grid grid-cols-1 gap-2", !compact && "sm:grid-cols-2")}>
-              {facts?.map((fact, index) => (
+              {facts.map((fact, index) => (
                 <div
                   key={`${fact.label}-${index}`}
                   className="min-w-0 rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-3 py-2 ring-1 ring-inset ring-[var(--border)]/60"
@@ -146,6 +162,16 @@ export function CommandResultPreview({
                 </div>
               ))}
             </dl>
+          )}
+
+          {detail && <div className="mt-3">{detail}</div>}
+
+          {detailLoading && !detail && (
+            <div className="mt-3 space-y-1.5" aria-hidden="true">
+              <div className="h-3 w-3/4 animate-pulse rounded-full bg-[color-mix(in_srgb,var(--foreground)_9%,var(--card))] motion-reduce:animate-none" />
+              <div className="h-3 w-full animate-pulse rounded-full bg-[color-mix(in_srgb,var(--foreground)_9%,var(--card))] motion-reduce:animate-none" />
+              <div className="h-3 w-2/3 animate-pulse rounded-full bg-[color-mix(in_srgb,var(--foreground)_9%,var(--card))] motion-reduce:animate-none" />
+            </div>
           )}
         </div>
       )}
