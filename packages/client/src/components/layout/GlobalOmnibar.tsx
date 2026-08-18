@@ -82,6 +82,7 @@ import {
   usePersonalExtensionCommands,
 } from "../../lib/personal-extension-contributions";
 import { resolvePresetArtwork } from "../../lib/preset-artwork";
+import { omnibarCompletionActions, type OmnibarCompletionAction } from "../../lib/omnibar-completion-actions";
 import {
   buildProfessorMariCommandCenterContext,
   inferProfessorMariCommandCenterCapability,
@@ -352,6 +353,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
+  // Set when a Mari task finishes while the Work pane is open, so the omnibar can
+  // offer the bounded completion actions for that task instead of a dead end.
+  const [mariTaskFinished, setMariTaskFinished] = useState(false);
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
@@ -1960,9 +1964,47 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setSessionValue("mariReturnResultId", returnResultId);
     setMariChatOpen(true);
     setMariMounted(true);
+    setMariTaskFinished(false);
     setPane("mari");
     if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
   };
+  // A task is "finished" when Mari stops working while the Work pane is open.
+  const mariActive = mariWorkspaceStatus.data?.active ?? false;
+  const mariActiveRef = useRef(mariActive);
+  useEffect(() => {
+    const wasActive = mariActiveRef.current;
+    mariActiveRef.current = mariActive;
+    if (wasActive && !mariActive && pane === "mari") setMariTaskFinished(true);
+  }, [mariActive, pane]);
+
+  const completionActions = mariTaskFinished && pane === "mari" ? omnibarCompletionActions(mariContext) : [];
+  const runCompletionAction = (action: OmnibarCompletionAction) => {
+    setMariTaskFinished(false);
+    if (action.kind === "return") {
+      setMariChatOpen(false);
+      return;
+    }
+    if (action.kind === "review") {
+      setMariPendingReviewRequest((current) => current + 1);
+      return;
+    }
+    // Open the resource through the existing result path so dirty-editor and
+    // navigation rules still apply. Characters can deep-link to the edited field.
+    const resource = action.resource;
+    if (!resource) return;
+    if (resource.kind === "character") {
+      if (ui().editorDirty && !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?")))
+        return;
+      ui().openCharacterDetail(resource.id, {
+        ...(action.kind === "open-field" ? { initialTab: action.field === "Greeting" ? "convo" : "card" } : {}),
+      });
+      onClose();
+      return;
+    }
+    const result = currentResultById.get(`${resource.kind}:${resource.id}`);
+    if (result) choose(result);
+  };
+
   const compareWithProfessorMari = () => {
     const resultById = new Map(browseResults.map((result) => [result.id, result]));
     const selected = browseCompareIds.flatMap((id) => {
@@ -2524,6 +2566,31 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 }}
               />
             </Suspense>
+            {completionActions.length > 0 ? (
+              <div
+                data-component="GlobalOmnibar.CompletionActions"
+                className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[var(--border)] bg-[var(--card)] px-3 py-2"
+              >
+                {completionActions.map((action) => (
+                  <button
+                    key={action.kind}
+                    type="button"
+                    onClick={() => runCompletionAction(action)}
+                    className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--foreground)] transition-colors hover:bg-[var(--accent)]"
+                  >
+                    {action.kind === "open-resource"
+                      ? t("commandCenter.completion.openResource", "Open {{label}}", {
+                          label: action.resource?.label ?? "",
+                        })
+                      : action.kind === "open-field"
+                        ? t("commandCenter.completion.openField", "Open {{field}}", { field: action.field ?? "" })
+                        : action.kind === "review"
+                          ? t("commandCenter.completion.review", "Review changes")
+                          : t("commandCenter.completion.return", "Return to results")}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </motion.div>
         ) : null}
         {pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
