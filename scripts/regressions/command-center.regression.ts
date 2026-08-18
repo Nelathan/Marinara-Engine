@@ -101,6 +101,22 @@ assert.deepEqual(
     ["create-navigation", ["characters"]],
   ],
 );
+const contextualPresentation = presentCommandCenterResults(
+  [
+    { id: "context:chat:one", category: "chat", group: "current-work" },
+    { id: "ask-professor-mari", category: "professor", group: "continue" },
+    { id: "create-character", category: "navigation" },
+  ],
+  { query: "" },
+);
+assert.deepEqual(
+  contextualPresentation.groups.map((group) => [group.id, group.results.map((result) => result.id)]),
+  [
+    ["current-work", ["context:chat:one"]],
+    ["continue", ["ask-professor-mari"]],
+    ["create-navigation", ["create-character"]],
+  ],
+);
 assert.deepEqual(
   buildProfessorMariCommandCenterContext(
     "compare these presets",

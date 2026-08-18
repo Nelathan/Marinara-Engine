@@ -414,6 +414,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const groupLabels = useMemo<Record<CommandCenterResultGroupId, string>>(
     () => ({
       context: t("commandCenter.groups.context", "On this screen"),
+      "current-work": t("commandCenter.groups.currentWork", "Current work"),
+      continue: t("commandCenter.groups.continue", "Continue"),
       pinned: t("commandCenter.groups.pinned", "Pinned"),
       recent: t("commandCenter.groups.recent", "Recent"),
       "quick-controls": t("commandCenter.groups.quickControls", "Quick controls"),
@@ -1342,7 +1344,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           category: "character",
           target: { kind: "resource", resource: "character", id: openCharacterId },
           score: 0,
-          group: "context",
+          group: "current-work",
           icon: "character",
         });
     }
@@ -1361,7 +1363,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         category: kind,
         target: { kind: "resource", resource: kind, id },
         score: 0,
-        group: "context",
+        group: "current-work",
         icon,
       });
     }
@@ -1373,7 +1375,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
           category: "connection",
           score: 0,
-          group: "context",
+          group: "current-work",
           icon: "connection",
         });
     }
@@ -1384,7 +1386,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         category: "chat",
         target: { kind: "chat", chatId: activeChat.id },
         score: 0,
-        group: "context",
+        group: "current-work",
         icon: "chats",
       });
       for (const characterId of activeChat.characterIds ?? []) {
@@ -1396,7 +1398,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           category: "character",
           target: { kind: "resource", resource: "character", id: characterId },
           score: 0,
-          group: "context",
+          group: "current-work",
           icon: "character",
         });
       }
@@ -1409,7 +1411,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             category: "persona",
             target: { kind: "resource", resource: "persona", id: activeChat.personaId },
             score: 0,
-            group: "context",
+            group: "current-work",
             icon: "persona",
           });
       }
@@ -1422,7 +1424,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             category: "preset",
             target: { kind: "resource", resource: "preset", id: activeChat.promptPresetId },
             score: 0,
-            group: "context",
+            group: "current-work",
             icon: "preset",
           });
       }
@@ -1434,7 +1436,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             title: name,
             category: "connection",
             score: 0,
-            group: "context",
+            group: "current-work",
             icon: "connection",
           });
       }
@@ -1458,9 +1460,25 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     presets.data,
     t,
   ]);
+  const continueResult = useMemo<OmnibarResult | null>(() => {
+    if (!mariEnabled || contextResults.length === 0) return null;
+    return {
+      id: "ask-professor-mari",
+      title: t("commandCenter.continueMari", "Continue with Professor Mari"),
+      category: "professor",
+      description: t("commandCenter.continueMariDescription", "Open Mari with the current work attached."),
+      score: 140,
+      group: "continue",
+      kind: "action",
+      icon: "professor",
+    };
+  }, [contextResults.length, mariEnabled, t]);
   const rawResults = useMemo(
-    () => (deferredQuery.trim() ? searchResults : [...contextResults, ...idleResults]),
-    [contextResults, deferredQuery, idleResults, searchResults],
+    () =>
+      deferredQuery.trim()
+        ? searchResults
+        : [...contextResults, ...(continueResult ? [continueResult] : []), ...idleResults],
+    [contextResults, continueResult, deferredQuery, idleResults, searchResults],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map(rawResults.map((result) => [result.id, result]));
@@ -2485,15 +2503,17 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 const GroupIcon =
                   group.id === "professor-suggested"
                     ? Sparkles
-                    : group.id === "context"
+                    : group.id === "current-work" || group.id === "context"
                       ? Compass
-                      : group.id === "recent"
-                        ? Clock3
-                        : group.id === "quick-controls"
-                          ? SlidersHorizontal
-                          : group.id === "pinned"
-                            ? Sparkles
-                            : LayoutGrid;
+                      : group.id === "continue"
+                        ? Sparkles
+                        : group.id === "recent"
+                          ? Clock3
+                          : group.id === "quick-controls"
+                            ? SlidersHorizontal
+                            : group.id === "pinned"
+                              ? Sparkles
+                              : LayoutGrid;
                 return (
                   <section key={group.id} aria-labelledby={`omnibar-group-${group.id}`}>
                     <div className="flex items-center gap-1.5 px-3 pb-1 pt-3">

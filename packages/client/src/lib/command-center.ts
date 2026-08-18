@@ -52,6 +52,8 @@ export type CommandCenterResultCategory =
 
 export type CommandCenterResultGroupId =
   | "context"
+  | "current-work"
+  | "continue"
   | "pinned"
   | "recent"
   | "quick-controls"
@@ -464,7 +466,8 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
     const pinnedIds = new Set(ranking.pinnedIds);
     const recentIds = new Set(ranking.recent.map((entry) => entry.id));
     for (const result of results) {
-      if (result.group === "context") addToGroup("context", result);
+      if (result.group === "current-work" || result.group === "context") addToGroup("current-work", result);
+      else if (result.group === "continue") addToGroup("continue", result);
       else if (pinnedIds.has(result.id)) addToGroup("pinned", result);
       else if (recentIds.has(result.id)) addToGroup("recent", result);
       else if (result.control) addToGroup("quick-controls", result);
@@ -473,7 +476,9 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
     return {
       filter,
       results,
-      groups: (["context", "pinned", "recent", "quick-controls", "create-navigation"] as const).flatMap((id) => {
+      groups: (
+        ["current-work", "continue", "pinned", "recent", "quick-controls", "create-navigation"] as const
+      ).flatMap((id) => {
         const groupResults = groups.get(id);
         return groupResults ? [{ id, results: groupResults }] : [];
       }),
