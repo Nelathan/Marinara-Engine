@@ -435,35 +435,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...row,
             name: display.name,
             description: display.description ?? undefined,
-            badges: [
-              ...((display.tags ?? []).length
-                ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: (display.tags ?? []).join(", ") })]
-                : []),
-              ...(display.creator
-                ? [t("commandCenter.preview.creatorValue", "Creator: {{creator}}", { creator: display.creator })]
-                : []),
-              ...(readString(record.version)
-                ? [
-                    t("commandCenter.preview.versionValue", "Version: {{version}}", {
-                      version: readString(record.version),
-                    }),
-                  ]
-                : []),
-              ...(display.comment
-                ? [t("commandCenter.preview.commentValue", "Comment: {{comment}}", { comment: display.comment })]
-                : []),
-            ],
-            facts: [
-              ...(display.creator
-                ? [{ label: t("commandCenter.preview.creator", "Creator"), value: display.creator }]
-                : []),
-              ...(readString(record.version)
-                ? [{ label: t("commandCenter.preview.version", "Version"), value: readString(record.version)! }]
-                : []),
-              ...(display.comment
-                ? [{ label: t("commandCenter.preview.comment", "Comment"), value: display.comment }]
-                : []),
-            ],
             preview: {
               kind: "character" as const,
               title: display.name,
@@ -477,6 +448,20 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     avatarCropStyle: getAvatarCropStyle(display.avatarCrop),
                   }
                 : undefined,
+              facts: [
+                ...(display.creator
+                  ? [{ label: t("commandCenter.preview.creator", "Creator"), value: display.creator }]
+                  : []),
+                ...(readString(record.version)
+                  ? [{ label: t("commandCenter.preview.version", "Version"), value: readString(record.version)! }]
+                  : []),
+                ...(display.comment
+                  ? [{ label: t("commandCenter.preview.comment", "Comment"), value: display.comment }]
+                  : []),
+              ],
+              badges: (display.tags ?? []).length
+                ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: (display.tags ?? []).join(", ") })]
+                : [],
             },
           },
         ];
@@ -534,13 +519,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           description: item.description,
           categoryLabel: categoryLabels.lorebook,
           media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
+          status: {
+            label: item.enabled
+              ? t("commandCenter.values.enabled", "Enabled")
+              : t("commandCenter.values.disabled", "Disabled"),
+            tone: item.enabled ? ("success" as const) : ("neutral" as const),
+          },
           facts: [
-            {
-              label: t("commandCenter.preview.status", "Status"),
-              value: item.enabled
-                ? t("commandCenter.values.enabled", "Enabled")
-                : t("commandCenter.values.disabled", "Disabled"),
-            },
             { label: t("commandCenter.preview.category", "Category"), value: item.category },
             { label: t("commandCenter.preview.tokenBudget", "Token budget"), value: item.tokenBudget },
             { label: t("commandCenter.preview.entryLimit", "Entry limit"), value: item.entryLimit },
@@ -577,17 +562,15 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             description: item.description,
             categoryLabel: categoryLabels.preset,
             media: artwork ? { src: artwork, alt: item.name, kind: "artwork" as const } : undefined,
+            status: item.isDefault
+              ? { label: t("commandCenter.values.default", "Default"), tone: "success" as const }
+              : undefined,
             facts: [
-              {
-                label: t("commandCenter.preview.type", "Type"),
-                value: t("commandCenter.preview.promptPreset", "Prompt preset"),
-              },
               { label: t("commandCenter.preview.author", "Author"), value: item.author },
               { label: t("commandCenter.preview.wrapFormat", "Wrap format"), value: item.wrapFormat },
               { label: t("commandCenter.preview.sections", "Sections"), value: item.sectionOrder.length },
               { label: t("commandCenter.preview.groups", "Groups"), value: item.groupOrder.length },
             ],
-            badges: item.isDefault ? [t("commandCenter.values.default", "Default")] : [],
           },
           control: {
             type: "toggle" as const,
@@ -612,14 +595,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           description: item.description,
           categoryLabel: categoryLabels.agent,
           media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
+          status: {
+            label:
+              item.enabled === "true"
+                ? t("commandCenter.values.enabled", "Enabled")
+                : t("commandCenter.values.disabled", "Disabled"),
+            tone: item.enabled === "true" ? ("success" as const) : ("neutral" as const),
+          },
           facts: [
-            {
-              label: t("commandCenter.preview.status", "Status"),
-              value:
-                item.enabled === "true"
-                  ? t("commandCenter.values.enabled", "Enabled")
-                  : t("commandCenter.values.disabled", "Disabled"),
-            },
             { label: t("commandCenter.preview.phase", "Phase"), value: item.phase },
             { label: t("commandCenter.preview.type", "Type"), value: item.type },
             ...(item.connectionId
@@ -630,11 +613,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   },
                 ]
               : []),
-          ],
-          badges: [
-            item.enabled === "true"
-              ? t("commandCenter.values.enabled", "Enabled")
-              : t("commandCenter.values.disabled", "Disabled"),
           ],
         },
       })),
@@ -659,6 +637,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             categoryLabel: categoryLabels.connection,
             subtitle: provider,
             media: imagePath ? { src: imagePath, alt: row.name, kind: "artwork" as const } : undefined,
+            status:
+              record.isDefault === true
+                ? {
+                    label: t("commandCenter.preview.defaultConnection", "Default connection"),
+                    tone: "success" as const,
+                  }
+                : undefined,
             facts: [
               ...(model ? [{ label: t("commandCenter.preview.model", "Model"), value: model }] : []),
               ...(provider ? [{ label: t("commandCenter.preview.provider", "Provider"), value: provider }] : []),
@@ -670,14 +655,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     {
                       label: t("commandCenter.preview.maxContext", "Max context"),
                       value: readString(record.maxContext)!,
-                    },
-                  ]
-                : []),
-              ...(record.isDefault === true
-                ? [
-                    {
-                      label: t("commandCenter.preview.status", "Status"),
-                      value: t("commandCenter.preview.defaultConnection", "Default connection"),
                     },
                   ]
                 : []),
@@ -1684,6 +1661,30 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...mariActions,
           ];
         }
+        if (previewResult.category === "character") {
+          const characterId = previewResult.id.slice("character:".length);
+          const startChatAction = {
+            label: t("commandCenter.actions.startChat", "Start chat"),
+            icon: Play,
+            onSelect: () => {
+              ui().openModal("start-character-chat", { characterId, characterName: previewResult.title });
+              recordUse(previewResult.id);
+              onClose();
+            },
+          };
+          const editAction = {
+            label: t("commandCenter.actions.editCharacter", "Edit character"),
+            icon: Edit3,
+            onSelect: () => choose(previewResult),
+          };
+          // Mari stays the primary (last) action when enabled; otherwise fall back
+          // to add-to-chat so the third slot is never wasted.
+          return [
+            startChatAction,
+            editAction,
+            ...(mariActions.length ? mariActions : addToChatAction ? [addToChatAction] : []),
+          ];
+        }
         const requiresSetup = previewResult.command.availability?.status === "requires-capability";
         const openAction =
           previewResult.target && (!requiresSetup || previewResult.command.availability?.setupTarget)
@@ -1691,17 +1692,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 label:
                   previewResult.category === "chat"
                     ? t("commandCenter.actions.resumeChat", "Resume chat")
-                    : previewResult.category === "character"
-                      ? t("commandCenter.actions.editCharacter", "Edit character")
-                      : previewResult.category === "docs"
-                        ? t("commandCenter.actions.openDocs", "Open documentation")
-                        : t("commandCenter.open", "Open"),
-                icon:
-                  previewResult.category === "chat"
-                    ? Play
-                    : previewResult.category === "character"
-                      ? Edit3
-                      : FolderOpen,
+                    : previewResult.category === "docs"
+                      ? t("commandCenter.actions.openDocs", "Open documentation")
+                      : t("commandCenter.open", "Open"),
+                icon: previewResult.category === "chat" ? Play : FolderOpen,
                 onSelect: () => choose(previewResult),
                 disabled: resultControlPending(previewResult),
               }

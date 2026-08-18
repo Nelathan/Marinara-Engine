@@ -287,6 +287,7 @@
   "commandCenter.actions.openDocs": "Open documentation",
   "commandCenter.actions.resumeChat": "Resume chat",
   "commandCenter.actions.setDefaultPreset": "Set default preset",
+  "commandCenter.actions.startChat": "Start chat",
   "commandCenter.adminRequired": "Administrator access required",
   "commandCenter.backToBrowse": "Back to browse",
   "commandCenter.backToResults": "Back to results",
