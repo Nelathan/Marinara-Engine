@@ -79,6 +79,7 @@ export const professorMariPromptSchema = z.object({
       field: z.string().min(1).max(200).optional(),
       error: z.object({ message: z.string().min(1).max(2_000), code: z.string().max(200).optional() }).optional(),
       action: z.string().max(500).optional(),
+      commandCenterResultId: z.string().min(1).max(256).optional(),
     })
     .optional(),
   attachments: z

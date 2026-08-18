@@ -6,6 +6,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Professor Mari Work now uses the omnibar's native shell treatment, with a compact toolbar, shared transcript surface, and matching composer when Find transforms into Work.
+
+- Command Center Mari handoffs now preserve the typed source result identity through server validation for future completion routing.
+
 - The omnibar now presents Find and Professor Mari Work as two connected states: Find opens first with current context, while explicit Mari actions expand the same shell into her full workspace with a fresh or carried draft and a clear return path.
 
 - Professor Mari now keeps workspace focus in a compact toolbar context control with quick removal and access to attached context details.

@@ -48,6 +48,7 @@ export function buildProfessorMariCommandCenterContext(
   query: string,
   selectedResult: Pick<OmnibarResult, "id" | "title" | "category"> | null | undefined,
   relatedResults: readonly Pick<OmnibarResult, "id" | "title" | "category">[] = [],
+  commandCenterResultId = selectedResult?.id,
 ): ProfessorMariAskContext {
   const trimmedQuery = query.trim();
   const resourceKind = selectedResult ? RESOURCE_KIND_BY_CATEGORY[selectedResult.category] : undefined;
@@ -70,5 +71,6 @@ export function buildProfessorMariCommandCenterContext(
         : undefined,
     ...(relatedResources.length > 0 ? { relatedResources: relatedResources.slice(0, 4) } : {}),
     action: selectedResult ? `Selected Command Center result: ${selectedResult.title}` : undefined,
+    ...(commandCenterResultId ? { commandCenterResultId } : {}),
   };
 }

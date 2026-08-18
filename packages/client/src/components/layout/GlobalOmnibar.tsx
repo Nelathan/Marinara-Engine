@@ -1855,7 +1855,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
-    setMariContext(buildProfessorMariCommandCenterContext(draft, focusResult));
+    setMariContext(buildProfessorMariCommandCenterContext(draft, focusResult, [], focusResult?.id));
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
     const returnResultId = focusResult?.id ?? activeResultId;
     mariReturnResultIdRef.current = returnResultId;
@@ -1878,7 +1878,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         count: selected.length,
       });
     useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
-    setMariContext(buildProfessorMariCommandCenterContext(draft, primary, selected.slice(1)));
+    setMariContext(buildProfessorMariCommandCenterContext(draft, primary, selected.slice(1), primary.id));
     setMariReturnPane("browse");
     mariReturnResultIdRef.current = primary.id;
     setSessionValue("mariReturnResultId", primary.id);

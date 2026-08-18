@@ -130,6 +130,7 @@ assert.deepEqual(
     source: "command-center",
     capability: "recommend",
     query: "compare these presets",
+    commandCenterResultId: "preset:one",
     resource: { kind: "preset", id: "one", label: "One" },
     relatedResources: [
       { kind: "preset", id: "two", label: "Two" },
@@ -407,6 +408,7 @@ assert.deepEqual(
     source: "command-center",
     capability: "edit",
     query: "make Luna warmer",
+    commandCenterResultId: "character:luna-id",
     resource: { kind: "character", id: "luna-id", label: "Luna" },
     action: "Selected Command Center result: Luna",
   },
@@ -419,6 +421,7 @@ assert.deepEqual(
   }).resource,
   { kind: "setting", id: "theme-mode", label: "Color scheme" },
 );
+assert.equal(buildProfessorMariCommandCenterContext("explain this", undefined)?.commandCenterResultId, undefined);
 
 // The omnibar reopens on search, never a stale Professor Mari pane: the session
 // normalizer must reset an unsupported persisted pane back to "results".

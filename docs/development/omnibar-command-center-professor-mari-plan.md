@@ -49,6 +49,20 @@ The omnibar must not send every query to an LLM. Search, ranking, context
 collection, action availability, navigation, and simple settings changes stay
 local and deterministic.
 
+### Shared Shell and Two-State Model
+
+The omnibar and Professor Mari use one shared shell. The shell keeps the same
+focus, return path, dismissal behavior, and responsive layout.
+
+The experience has two states:
+
+- **Find:** Search, contextual work, browse, details, and direct actions use the
+  native omnibar visual language.
+- **Work:** The same shell expands downward into the Professor Mari workspace.
+
+Work does not open a separate chat surface. It transforms the existing shell,
+keeps the original request editable, and retains the selected focus.
+
 ## User Experience
 
 ### Direct Work
@@ -84,6 +98,18 @@ Examples:
 
 The user chooses the assisted path. The omnibar does not silently start a
 model request.
+
+### Native Mari Work Treatment
+
+The Mari state keeps the full Professor Mari controls and runtime, but it uses
+the omnibar's visual language for its shell chrome. The global header owns the
+Professor Mari identity and Work state. The embedded Mari toolbar stays
+compact, the transcript uses the shell surface, and the composer uses the
+omnibar input treatment rather than a separate chat-card treatment.
+
+The shell must read as one product surface in both states. Avoid a second Mari
+header, a nested decorative card, or a visually separate chat window inside
+Work.
 
 ### Ambiguous Work
 
@@ -255,6 +281,10 @@ Pass:
 - Settings location, when relevant.
 - Visible error or capability state, when relevant.
 - The selected Command Center result ID.
+
+The selected result ID is bounded and typed. The server validates it and keeps
+it in the untrusted orientation context so future completion actions can return
+to the exact Find result without treating the ID as authorization.
 
 Do not pass full resource data during search. Mari can fetch the required data
 after the user sends the request.

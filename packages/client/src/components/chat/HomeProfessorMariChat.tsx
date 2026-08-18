@@ -6173,7 +6173,7 @@ export function HomeProfessorMariChat({
                         <div
                           className={cn(
                             "flex min-h-12 items-center justify-between gap-2 border-b border-[var(--border)]/60 px-2 pt-2 sm:px-3 sm:py-2",
-                            omnibarMode ? "bg-transparent" : "bg-[var(--card)]/80",
+                            omnibarMode ? "min-h-10 border-b-0 px-2 py-1 sm:py-1" : "bg-[var(--card)]/80",
                           )}
                         >
                           {omnibarMode ? (
@@ -6304,7 +6304,12 @@ export function HomeProfessorMariChat({
                           ref={setTranscriptScrollNode}
                           onScroll={handleTranscriptScroll}
                           data-component="HomeProfessorMariChat.Transcript"
-                          className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[radial-gradient(circle_at_12%_8%,oklch(0.79_0.16_205/0.06),transparent_26%),radial-gradient(circle_at_88%_12%,oklch(0.73_0.21_345/0.07),transparent_28%)] px-3 py-3 pb-4 text-left"
+                          className={cn(
+                            "min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3 pb-4 text-left",
+                            omnibarMode
+                              ? "bg-transparent"
+                              : "bg-[radial-gradient(circle_at_12%_8%,oklch(0.79_0.16_205/0.06),transparent_26%),radial-gradient(circle_at_88%_12%,oklch(0.73_0.21_345/0.07),transparent_28%)]",
+                          )}
                         >
                           {loadingHistory ? (
                             <LoadingHistoryState />
@@ -6343,7 +6348,10 @@ export function HomeProfessorMariChat({
                         </div>
 
                         <form
-                          className="border-t border-[var(--border)]/60 px-2.5 py-2.5"
+                          className={cn(
+                            "border-t border-[var(--border)]/60 px-2.5 py-2.5",
+                            omnibarMode && "bg-[var(--card)]/35 px-2 py-2",
+                          )}
                           onSubmit={(event) => {
                             event.preventDefault();
                             void handleSubmit();
@@ -6389,7 +6397,13 @@ export function HomeProfessorMariChat({
                             disabled={isBusy}
                             compact
                           />
-                          <div className="mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50">
+                          <div
+                            className={cn(
+                              "mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50",
+                              omnibarMode &&
+                                "rounded-lg border-[var(--border)]/70 bg-[var(--card)]/70 shadow-none focus-within:border-[var(--primary)]/50",
+                            )}
+                          >
                             <MariAttachButton
                               onAttachFiles={() => attachmentInputRef.current?.click()}
                               onAddChatHistory={() => void handleOpenHistoryPicker()}
