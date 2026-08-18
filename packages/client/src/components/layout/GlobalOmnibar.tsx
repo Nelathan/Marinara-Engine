@@ -1774,7 +1774,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     if (event.key !== "Tab") return;
     const focusable = Array.from(
       panelRef.current?.querySelectorAll<HTMLElement>('input, button, [tabindex]:not([tabindex="-1"])') ?? [],
-    ).filter((element) => !element.hasAttribute("disabled") && element.getClientRects().length > 0);
+    ).filter(
+      (element) =>
+        !element.hasAttribute("disabled") &&
+        !element.closest('[aria-hidden="true"]') &&
+        element.getClientRects().length > 0,
+    );
     if (focusable.length === 0) return;
     const current = focusable.indexOf(document.activeElement as HTMLElement);
     const next = event.shiftKey
@@ -1809,6 +1814,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setBrowseCompareIds([]);
   };
   const leaveDetail = () => {
+    if (pane === "mari") {
+      setMariChatOpen(false);
+      setPane(mariReturnPane);
+      requestAnimationFrame(() => {
+        const resultId = mariReturnResultIdRef.current;
+        const row = resultId
+          ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
+          : null;
+        (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
+      });
+      return;
+    }
     const destination = pane === "detail" ? detailOrigin : "results";
     setDetailResult(null);
     setSessionValue("detailResultId", null);
@@ -1816,7 +1833,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setPane(destination);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
-  const openProfessorMari = (selectedResult: RankedOmnibarResult | null = previewResult ?? null) => {
+  const openProfessorMari = (selectedResult: RankedOmnibarResult | null = null) => {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
@@ -2155,14 +2172,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="global-omnibar-title"
         data-component="GlobalOmnibar.Panel"
-        className="relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)] sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60"
+        className={`relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60 ${pane === "mari" ? "sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]" : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"}`}
       >
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-44 bg-[radial-gradient(120%_100%_at_12%_0%,oklch(0.72_0.16_255/0.12),transparent_60%),radial-gradient(120%_100%_at_88%_0%,oklch(0.73_0.21_345/0.11),transparent_60%)]"
         />
         <h2 id="global-omnibar-title" className="sr-only">
-          {t("omnibar.title", "Search Marinara")}
+          {pane === "mari"
+            ? t("commandCenter.workTitle", "Professor Mari Work")
+            : t("omnibar.title", "Search Marinara")}
         </h2>
         <header className="shrink-0 pt-[env(safe-area-inset-top)]">
           <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4">
@@ -2172,9 +2191,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={leaveDetail}
                 aria-label={
-                  pane === "detail" && detailOrigin === "browse"
-                    ? t("commandCenter.backToBrowse", "Back to browse")
-                    : t("commandCenter.backToResults", "Back to results")
+                  pane === "mari"
+                    ? t("commandCenter.backToFind", "Back to Find")
+                    : pane === "detail" && detailOrigin === "browse"
+                      ? t("commandCenter.backToBrowse", "Back to browse")
+                      : t("commandCenter.backToResults", "Back to results")
                 }
                 className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
               >
@@ -2200,8 +2221,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     draggable={false}
                     className="size-9 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--primary)]/30 ring-offset-2 ring-offset-[var(--card)]"
                   />
-                  <span className="truncate text-base font-semibold text-[var(--foreground)]">
-                    {t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold leading-tight text-[var(--foreground)]">
+                      {t("omnibar.categories.professor", "Professor Mari")}
+                    </span>
+                    <span className="block truncate text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
+                      {t("commandCenter.mode.work", "Work")}
+                    </span>
                   </span>
                 </motion.div>
               ) : (
@@ -2256,8 +2282,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={() => openProfessorMari()}
-                aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
+                aria-label={t("commandCenter.openWork", "Open Work with Professor Mari")}
+                title={t("commandCenter.openWork", "Open Work with Professor Mari")}
                 data-component="GlobalOmnibar.ProfessorMariButton"
                 className="group relative -mb-px h-14 w-11 shrink-0 self-end overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
               >
@@ -2366,10 +2392,13 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[0.8125rem] font-bold leading-tight text-[var(--foreground)]">
-                        {t("commandCenter.deck.title", "Command Center")}
+                        {t("commandCenter.mode.find", "Find")}
                       </p>
                       <p className="mt-0.5 text-[0.6875rem] leading-snug text-[var(--muted-foreground)]">
-                        {t("commandCenter.deck.subtitle", "Jump, create, change, or ask Professor Mari.")}
+                        {t(
+                          "commandCenter.deck.subtitle",
+                          "Find what you need, or continue the current work with Professor Mari.",
+                        )}
                       </p>
                     </div>
                     {mariEnabled ? (
