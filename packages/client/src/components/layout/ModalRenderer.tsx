@@ -79,7 +79,13 @@ export function ModalRenderer() {
   let content = null;
   switch (type) {
     case "create-character":
-      content = <CreateCharacterModal open onClose={closeModal} />;
+      content = (
+        <CreateCharacterModal
+          open
+          onClose={closeModal}
+          defaultName={(modal?.props?.defaultName as string | undefined) ?? undefined}
+        />
+      );
       break;
     case "import-character":
       content = <ImportCharacterModal open onClose={closeModal} />;
@@ -93,6 +99,7 @@ export function ModalRenderer() {
           characterId={(modal?.props?.characterId as string | null | undefined) ?? null}
           personaId={(modal?.props?.personaId as string | null | undefined) ?? null}
           defaultScope={(modal?.props?.defaultScope as LorebookScope | null | undefined) ?? null}
+          defaultName={(modal?.props?.defaultName as string | undefined) ?? undefined}
         />
       );
       break;
@@ -100,7 +107,13 @@ export function ModalRenderer() {
       content = <ImportLorebookModal open onClose={closeModal} />;
       break;
     case "create-preset":
-      content = <CreatePresetModal open onClose={closeModal} />;
+      content = (
+        <CreatePresetModal
+          open
+          onClose={closeModal}
+          defaultName={(modal?.props?.defaultName as string | undefined) ?? undefined}
+        />
+      );
       break;
     case "import-preset":
       content = <ImportPresetModal open onClose={closeModal} />;
@@ -115,7 +128,13 @@ export function ModalRenderer() {
       content = <ImportConnectionModal open onClose={closeModal} />;
       break;
     case "create-persona":
-      content = <CreatePersonaModal open onClose={closeModal} />;
+      content = (
+        <CreatePersonaModal
+          open
+          onClose={closeModal}
+          defaultName={(modal?.props?.defaultName as string | undefined) ?? undefined}
+        />
+      );
       break;
     case "st-bulk-import":
       content = <STBulkImportModal open onClose={closeModal} />;

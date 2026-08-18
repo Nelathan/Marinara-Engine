@@ -113,6 +113,31 @@ const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
 const BROWSE_BATCH_SIZE = 48;
 
+// Leading resource-kind words to strip from a "create <kind> <name>" query so the
+// create modal opens with just the typed name pre-filled.
+const CREATE_MODAL_KIND_WORDS: Record<string, readonly string[]> = {
+  "create-character": ["character", "card"],
+  "create-persona": ["persona", "profile"],
+  "create-lorebook": ["lorebook", "world book", "world info", "worldbook"],
+  "create-preset": ["preset", "prompt preset"],
+};
+
+function createModalPrefillName(modal: string, query: string): string | undefined {
+  const words = CREATE_MODAL_KIND_WORDS[modal];
+  if (!words) return undefined;
+  const intent = parseOmnibarIntent(query);
+  if (intent?.kind !== "create") return undefined;
+  let name = intent.targetQuery.trim();
+  for (const word of words) {
+    const stripped = name.replace(new RegExp(`^${word}\\b\\s*`, "i"), "").trim();
+    if (stripped !== name) {
+      name = stripped;
+      break;
+    }
+  }
+  return name || undefined;
+}
+
 type OmnibarPane = "results" | "browse" | "detail" | "mari";
 type DetailOrigin = Exclude<OmnibarPane, "detail" | "mari">;
 type BrowseFilter = Exclude<CommandCenterCategoryFilter, "all" | "settings" | "docs">;
@@ -1653,9 +1678,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       )
     )
       return false;
-    if (definition.action.kind === "modal")
-      ui().openModal(definition.action.modal, definition.action.props ? { ...definition.action.props } : undefined);
-    else executeStateNavigation(definition.action.target);
+    if (definition.action.kind === "modal") {
+      const props = definition.action.props ? { ...definition.action.props } : undefined;
+      const prefillName = createModalPrefillName(definition.action.modal, query);
+      ui().openModal(definition.action.modal, prefillName ? { ...props, defaultName: prefillName } : props);
+    } else executeStateNavigation(definition.action.target);
     return true;
   };
   const runDirectChatAction = (result: OmnibarResult) => {
