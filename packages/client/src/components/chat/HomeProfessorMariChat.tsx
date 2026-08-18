@@ -78,6 +78,7 @@ import { useConnections } from "../../hooks/use-connections";
 import { useTrackAchievement } from "../../hooks/use-achievements";
 import { chatKeys } from "../../hooks/use-chats";
 import { characterKeys, useCharacters, usePersonas } from "../../hooks/use-characters";
+import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { completeInline } from "../../lib/inline-completion";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
@@ -399,6 +400,22 @@ function getProfessorMariAttachments(message: Message): ProfessorMariAttachment[
     if (typeof candidate.resized === "boolean") normalized.resized = candidate.resized;
     return [normalized];
   });
+}
+
+/** The name every Mari chat is created with, before it earns a real one. */
+const PROFESSOR_MARI_DEFAULT_CHAT_NAME = "Professor Mari";
+const PROFESSOR_MARI_AUTO_TITLE_MAX = 48;
+
+/**
+ * A title taken from the first thing the user asked. No second model call: the
+ * opening question is already the best short summary of the conversation, and a
+ * history of ten chats all called "Professor Mari" cannot be searched at all.
+ */
+function buildProfessorMariAutoTitle(text: string): string {
+  const line = text.replace(/\s+/gu, " ").trim();
+  if (!line) return "";
+  if (line.length <= PROFESSOR_MARI_AUTO_TITLE_MAX) return line;
+  return `${line.slice(0, PROFESSOR_MARI_AUTO_TITLE_MAX - 1).trimEnd()}…`;
 }
 
 function isProfessorMariChatActive(chat: ProfessorMariChatSummary) {
@@ -3318,6 +3335,8 @@ type HomeProfessorMariChatProps = {
   floatingMode?: boolean;
   launchHidden?: boolean;
   initialAskContext?: ProfessorMariAskContext | null;
+  /** A past Mari conversation to open, handed in from the omnibar. */
+  openChatId?: string | null;
   pendingReviewRequest?: number;
   onChatWindowOpenChange?: (open: boolean) => void;
   onChatWindowExitComplete?: () => void;
@@ -3333,6 +3352,7 @@ export function HomeProfessorMariChat({
   floatingMode = false,
   launchHidden = false,
   initialAskContext = null,
+  openChatId = null,
   pendingReviewRequest = 0,
   onChatWindowOpenChange,
   onChatWindowExitComplete,
@@ -3367,10 +3387,18 @@ export function HomeProfessorMariChat({
   const completionLorebooks = useLorebooks();
   const completionPresets = usePresets();
   const completionCandidates = useMemo(
-    () =>
-      [completionCharacters.data, completionPersonas.data, completionLorebooks.data, completionPresets.data].flatMap(
-        (list) => (list ?? []).map((item) => (item as { name?: string }).name ?? "").filter(Boolean),
+    () => [
+      // A character's display name lives inside its card data, not on the row —
+      // reading `.name` here returned nothing, which is why characters never
+      // completed.
+      ...(completionCharacters.data ?? []).map((item) => {
+        const record = item as Record<string, unknown>;
+        return getCharacterDisplayIdentity({ data: record.data, comment: record.comment as string | null | undefined });
+      }),
+      ...[completionPersonas.data, completionLorebooks.data, completionPresets.data].flatMap((list) =>
+        (list ?? []).map((item) => (item as { name?: string }).name ?? ""),
       ),
+    ],
     [completionCharacters.data, completionLorebooks.data, completionPersonas.data, completionPresets.data],
   );
   const draftSuffix = useMemo(() => completeInline(draft, completionCandidates), [completionCandidates, draft]);
@@ -4250,6 +4278,10 @@ export function HomeProfessorMariChat({
     }
   }, []);
 
+  // The omnibar can hand us a past conversation to open. The effect lives after
+  // handleSelectProfessorChat so it can call it directly.
+  const requestedChatIdRef = useRef<string | null>(null);
+
   const floatingPositionStyle = useMemo<CSSProperties | undefined>(() => {
     if (!floatingPosition) return undefined;
     return { left: floatingPosition.x, top: floatingPosition.y };
@@ -4797,6 +4829,12 @@ export function HomeProfessorMariChat({
     },
     [isBusy, loadChatHistory, loadMessages, qc, setActiveChatId, localizeUi],
   );
+
+  useEffect(() => {
+    if (!openChatId || openChatId === chatId || requestedChatIdRef.current === openChatId) return;
+    requestedChatIdRef.current = openChatId;
+    void handleSelectProfessorChat(openChatId);
+  }, [chatId, handleSelectProfessorChat, openChatId]);
 
   const handleRenameProfessorChat = useCallback(
     async (id: string) => {
@@ -5375,6 +5413,16 @@ export function HomeProfessorMariChat({
       setAttachments([]);
       setHandoffContext(null);
       setMessages((current) => [...current, createLocalUserMessage(chat.id, messageText, submittedAttachments)]);
+      if (messages.length === 0 && (chat.name ?? "") === PROFESSOR_MARI_DEFAULT_CHAT_NAME) {
+        const autoTitle = buildProfessorMariAutoTitle(messageText);
+        if (autoTitle) {
+          // Best effort: a failed rename must never block the message.
+          void api
+            .patch(`/chats/internal/professor-mari/chats/${chat.id}`, { name: autoTitle })
+            .then(() => loadChatHistory())
+            .catch((error) => console.error("[Professor Mari] Failed to auto-title chat", error));
+        }
+      }
       trackAchievement.mutate("prof_mari_message_sent");
       const { received, runId } = await sendWorkspaceMessage(chat, messageText, submittedAttachments);
       setRecovery(null);

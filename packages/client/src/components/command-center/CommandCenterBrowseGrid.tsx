@@ -140,12 +140,18 @@ export function CommandCenterBrowseGrid({
     );
   }
 
+  // One media shape for the whole grid: deriving it per tile made a card without
+  // an image a different size from its neighbours.
+  const gridMediaKind = results.find((result) => result.media?.kind)?.media?.kind;
+  const mediaAspect =
+    gridMediaKind === "artwork" ? "aspect-[16/10]" : gridMediaKind === "avatar" ? "aspect-square" : "aspect-[4/3]";
+
   return (
     <div className={cn("min-w-0", className)}>
       <ul
         ref={gridRef}
         aria-label={ariaLabel}
-        className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(auto-fill,minmax(132px,1fr))]"
+        className="grid auto-rows-fr grid-cols-2 gap-2 md:grid-cols-[repeat(auto-fill,minmax(132px,1fr))]"
       >
         {results.map((result, index) => {
           const active = result.id === activeId;
@@ -167,7 +173,7 @@ export function CommandCenterBrowseGrid({
                 onClick={result.onSelect}
                 onKeyDown={(event) => handleKeyDown(event, result, index)}
                 className={cn(
-                  "group min-h-11 w-full min-w-0 overflow-hidden rounded-md border bg-[var(--card)] text-left transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out",
+                  "group flex h-full min-h-11 w-full min-w-0 flex-col overflow-hidden rounded-md border bg-[var(--card)] text-left transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out",
                   "hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--primary)_45%,var(--border))] hover:bg-[var(--accent)]/35 active:translate-y-0 active:scale-[0.99]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
                   "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
@@ -177,16 +183,7 @@ export function CommandCenterBrowseGrid({
                     : "border-[var(--border)]",
                 )}
               >
-                <div
-                  className={cn(
-                    "w-full overflow-hidden bg-[var(--muted)]",
-                    result.media?.kind === "artwork"
-                      ? "aspect-[16/10]"
-                      : result.media?.kind === "avatar"
-                        ? "aspect-square"
-                        : "aspect-[4/3]",
-                  )}
-                >
+                <div className={cn("w-full shrink-0 overflow-hidden bg-[var(--muted)]", mediaAspect)}>
                   <CommandCenterMedia
                     size="grid"
                     icon={result.icon}
@@ -198,7 +195,7 @@ export function CommandCenterBrowseGrid({
                     className="h-full w-full"
                   />
                 </div>
-                <div className="min-w-0 px-2.5 pb-2.5 pt-2">
+                <div className="flex min-w-0 flex-1 flex-col px-2.5 pb-2.5 pt-2">
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <div
                       data-command-center-browse-title
@@ -240,7 +237,7 @@ export function CommandCenterBrowseGrid({
                       {result.tags?.map((tag, tagIndex) => (
                         <span
                           key={`${result.id}-tag-${tagIndex}`}
-                          className="max-w-full break-words rounded-sm border border-[var(--border)] bg-[var(--secondary)] px-1.5 py-0.5 text-[0.6875rem] leading-4 text-[var(--muted-foreground)]"
+                          className="max-w-full break-words rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-2 py-0.5 text-[0.6875rem] font-medium leading-4 text-[color-mix(in_srgb,var(--primary)_70%,var(--foreground))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]"
                         >
                           {tag}
                         </span>
@@ -248,12 +245,12 @@ export function CommandCenterBrowseGrid({
                     </div>
                   ) : null}
                   {result.secondaryState ? (
-                    <div className="mt-2 flex min-h-11 items-center justify-between gap-2 border-t border-[var(--border)]/70 pt-1.5 text-xs text-[var(--muted-foreground)]">
+                    <div className="mt-auto flex min-h-11 items-center justify-between gap-2 border-t border-[var(--border)]/70 pt-1.5 text-xs text-[var(--muted-foreground)]">
                       <span className="min-w-0 flex-1 break-words">{result.secondaryState}</span>
                       <ChevronRight className="size-4 shrink-0 text-[var(--primary)]" aria-hidden="true" />
                     </div>
                   ) : (
-                    <div className="flex min-h-11 items-end justify-end pt-1">
+                    <div className="mt-auto flex min-h-11 items-end justify-end pt-1">
                       <ChevronRight className="size-4 text-[var(--muted-foreground)]" aria-hidden="true" />
                     </div>
                   )}

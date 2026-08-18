@@ -1,13 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { normalizeTextForMatch, type Message } from "@marinara-engine/shared";
 import { Loader2, Search, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslation as useUiTranslation } from "react-i18next";
-import { api } from "../../lib/api-client";
+import { useChatMessageSearchSource } from "../../hooks/use-chats";
 import { CHAT_FLOATING_UI_DISMISS_EVENT } from "../../lib/chat-floating-ui-events";
 import { isMessageHiddenFromUser } from "../../lib/chat-message-visibility";
-import { normalizeHydratedMessage } from "../../lib/message-hydration";
 import { cn } from "../../lib/utils";
 import { useChatStore } from "../../stores/chat.store";
 import {
@@ -62,19 +60,7 @@ export function ChatMessageSearch({ chatId }: { chatId: string }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const title = localizeUi("chat.toolbar.searchMessages");
 
-  const {
-    data: messages,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["chat-message-search", chatId],
-    queryFn: ({ signal }) =>
-      api.get<Message[]>(`/chats/${chatId}/messages`, { signal }).then((items) => items.map(normalizeHydratedMessage)),
-    enabled: open,
-    staleTime: 30_000,
-    gcTime: 5 * 60_000,
-  });
+  const { data: messages, isLoading, isError, refetch } = useChatMessageSearchSource(chatId, open);
 
   const results = useMemo<SearchResult[]>(() => {
     const normalizedQuery = normalizeTextForMatch(query.trim());

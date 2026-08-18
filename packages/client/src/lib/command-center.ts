@@ -59,6 +59,7 @@ export type CommandCenterResultGroupId =
   | "quick-controls"
   | "create-navigation"
   | "navigation"
+  | "messages"
   | Exclude<CommandCenterCategoryFilter, "all">
   | "professor-suggested"
   | "professor-fallback";
@@ -175,6 +176,7 @@ export const COMMAND_CENTER_CATEGORY_FILTERS: readonly CommandCenterCategoryFilt
 ];
 export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGroupId[] = [
   "professor-suggested",
+  "messages",
   "navigation",
   "chats",
   "characters",
@@ -490,10 +492,14 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
   }
 
   for (const result of results) {
+    // An explicit group wins when it is one this view renders; otherwise the
+    // result would silently vanish into a group nobody lists.
     const group =
       result.id === "ask-professor-mari"
         ? (result.group ?? "professor-fallback")
-        : (CATEGORY_GROUP[result.category] ?? "navigation");
+        : result.group && COMMAND_CENTER_SEARCH_GROUP_ORDER.includes(result.group)
+          ? result.group
+          : (CATEGORY_GROUP[result.category] ?? "navigation");
     addToGroup(group, result);
   }
   const presentedGroups = COMMAND_CENTER_SEARCH_GROUP_ORDER.flatMap((id) => {

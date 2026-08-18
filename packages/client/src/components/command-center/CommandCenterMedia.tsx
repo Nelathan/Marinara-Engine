@@ -80,6 +80,11 @@ export function CommandCenterMedia({
     >
       {hasImage ? (
         <img
+          // A cached image can complete before React attaches onLoad, which used
+          // to leave it stuck at opacity-0. Read the state on mount instead.
+          ref={(node) => {
+            if (node?.complete && node.naturalWidth > 0) setLoadedSrc(src ?? undefined);
+          }}
           src={src ?? undefined}
           alt={role === "row" ? "" : alt}
           loading={size === "grid" ? "lazy" : "eager"}

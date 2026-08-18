@@ -67,7 +67,7 @@ export function CommandCenterSegmentedChoice<T extends string>({
       aria-busy={loading || undefined}
       className={cn(
         "inline-flex min-w-0 max-w-full gap-0.5 rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--foreground)_5%,var(--secondary))] p-0.5 shadow-inner",
-        compact ? "w-full flex-nowrap overflow-x-auto overscroll-x-contain [scrollbar-width:none]" : "flex-wrap",
+        compact ? "scrollbar-hide w-full flex-nowrap overflow-x-auto overscroll-x-contain" : "flex-wrap",
         unavailable && "opacity-50",
         className,
       )}
@@ -104,7 +104,14 @@ export function CommandCenterSegmentedChoice<T extends string>({
             ) : OptionIcon ? (
               <OptionIcon className="size-3.5 shrink-0" aria-hidden="true" />
             ) : null}
-            <span className="min-w-0 whitespace-normal break-words text-center leading-4">{option.label}</span>
+            <span
+              className={cn(
+                "min-w-0 text-center leading-4",
+                compact ? "whitespace-nowrap" : "whitespace-normal break-words",
+              )}
+            >
+              {option.label}
+            </span>
           </button>
         );
       })}

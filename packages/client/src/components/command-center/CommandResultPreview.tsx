@@ -55,7 +55,7 @@ export function CommandResultPreview({
       data-preview-kind={preview?.kind ?? result.command.kind}
       data-variant={variant}
       className={cn(
-        "flex min-h-0 w-full flex-col overflow-hidden bg-[var(--card)] text-[var(--foreground)] animate-in fade-in slide-in-from-right-1 duration-200 motion-reduce:animate-none",
+        "flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--card)] text-[var(--foreground)] animate-in fade-in slide-in-from-right-1 duration-200 motion-reduce:animate-none",
         className,
       )}
     >
@@ -102,21 +102,29 @@ export function CommandResultPreview({
         detailLoading) && (
         <div
           className={cn(
-            "max-h-[min(20rem,45vh)] min-h-0 flex-1 overscroll-contain overflow-y-auto",
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+            // Only cap the body when the preview is not already inside a
+            // height-bounded panel; otherwise the footer floats mid-panel.
+            !compact && "max-h-[min(20rem,45vh)]",
             compact ? "px-3 py-3" : "px-4 py-3 sm:px-5",
           )}
         >
           {preview?.description && (
             <p
               id={descriptionId}
-              className="max-w-[70ch] whitespace-pre-line break-words text-sm leading-5 text-[var(--foreground)]"
+              className={cn(
+                "max-w-[70ch] whitespace-pre-line break-words text-sm leading-5 text-[var(--foreground)]",
+                // A resource description is often the full card text. Show the
+                // opening; the editor has the rest.
+                compact && "line-clamp-6",
+              )}
             >
               {preview.description}
             </p>
           )}
 
           {(statusLabel || preview?.status || tags?.length) && (
-            <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1" aria-label={preview?.categoryLabel}>
+            <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={preview?.categoryLabel}>
               {statusLabel ? (
                 <li className="max-w-full break-words rounded-full bg-[color-mix(in_srgb,var(--foreground)_7%,var(--background))] px-2 py-0.5 text-xs font-medium">
                   {statusLabel}
@@ -135,9 +143,9 @@ export function CommandResultPreview({
               {tags?.map((tag, index) => (
                 <li
                   key={`${tag}-${index}`}
-                  className="inline-flex max-w-full items-center gap-1 break-words text-xs text-[var(--muted-foreground)]"
+                  className="inline-flex max-w-full items-center gap-1 break-words rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-2 py-0.5 text-xs font-medium text-[color-mix(in_srgb,var(--primary)_70%,var(--foreground))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]"
                 >
-                  <Tag className="size-3 shrink-0" aria-hidden="true" />
+                  <Tag className="size-3 shrink-0 opacity-70" aria-hidden="true" />
                   {tag}
                 </li>
               ))}

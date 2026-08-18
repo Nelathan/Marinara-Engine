@@ -316,6 +316,36 @@ export function useChatMessagePeek(chatId: string | null, limit = 4, enabled = f
   });
 }
 
+/**
+ * Every message of one chat, for searching inside it. The key is shared with the
+ * in-chat search panel, so opening either one warms the other.
+ */
+export function useChatMessageSearchSource(chatId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["chat-message-search", chatId ?? ""],
+    queryFn: ({ signal }) =>
+      api
+        .get<Message[]>(`/chats/${chatId}/messages`, { signal })
+        .then((messages) => messages.map(normalizeHydratedMessage)),
+    enabled: !!chatId && enabled,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Professor Mari's own conversations. They are ordinary chats behind an internal
+ * marker, so they are absent from the normal chat list and need their own read.
+ */
+export function useProfessorMariChats(enabled: boolean) {
+  return useQuery({
+    queryKey: ["professor-mari-chats"],
+    queryFn: ({ signal }) => api.get<Chat[]>("/chats/internal/professor-mari/chats", { signal }),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 export function useChatMessageCount(chatId: string | null) {
   return useQuery({
     queryKey: chatKeys.messageCount(chatId ?? ""),

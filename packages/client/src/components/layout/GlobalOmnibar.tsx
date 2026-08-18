@@ -35,7 +35,15 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
 import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
-import { useChats, useChatMessageCount, useChatMessagePeek, useCreateChat, useUpdateChat } from "../../hooks/use-chats";
+import {
+  useChats,
+  useChatMessageCount,
+  useChatMessagePeek,
+  useChatMessageSearchSource,
+  useProfessorMariChats,
+  useCreateChat,
+  useUpdateChat,
+} from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
@@ -104,6 +112,8 @@ import { executeStateNavigation } from "../../lib/state-navigation";
 import { getAvatarCropStyle } from "../../lib/utils";
 import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
 import { useChatStore } from "../../stores/chat.store";
+import { isMessageHiddenFromUser } from "../../lib/chat-message-visibility";
+import { normalizeTextForMatch } from "@marinara-engine/shared";
 import { useUIStore } from "../../stores/ui.store";
 import { CommandCenterBrowseGrid } from "../command-center/CommandCenterBrowseGrid";
 import { CommandCenterActionValue } from "../command-center/CommandCenterActionValue";
@@ -140,6 +150,35 @@ const OmnibarProfessorMariChat = lazy(() =>
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
+/** Categories whose result rows open an editor rather than the thing itself. */
+const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
+  "character",
+  "persona",
+  "lorebook",
+  "preset",
+  "connection",
+  "agent",
+]);
+
+/** Below this a message search matches most of the transcript. */
+const MIN_MESSAGE_SEARCH_LENGTH = 3;
+const MAX_MESSAGE_SEARCH_RESULTS = 6;
+
+/** A one-line excerpt centred on the match, so the row shows why it matched. */
+function getMessageSearchSnippet(content: string, query: string): string {
+  const text = content.replace(/\s+/gu, " ").trim();
+  if (text.length <= 120) return text;
+  const matchIndex = normalizeTextForMatch(text).indexOf(normalizeTextForMatch(query));
+  const start = Math.max(0, matchIndex - 40);
+  const end = Math.min(text.length, start + 120);
+  return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
+}
+
+/**
+ * The context group answers "what am I on?", not "what is in this chat?" — past
+ * this many rows it buries recents and create actions.
+ */
+const CHAT_CONTEXT_MAX_RESULTS = 8;
 /** A resumable creation session goes stale after a day. */
 const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const BROWSE_BATCH_SIZE = 48;
@@ -322,20 +361,51 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
 
   if (lorebookId) {
     const list = entries.data ?? [];
-    const keywords = Array.from(new Set(list.flatMap((entry) => entry.keys ?? []).filter(Boolean))).slice(0, 8);
-    const names = list
-      .map((entry) => entry.name)
-      .filter((name): name is string => Boolean(name))
-      .slice(0, 6);
-    const extraFacts: CommandCenterPreviewFact[] = [
-      ...(keywords.length
-        ? [{ label: t("commandCenter.preview.keywords", "Keywords"), value: keywords.join(", ") }]
-        : []),
-      ...(names.length
-        ? [{ label: t("commandCenter.preview.sampleEntries", "Entries"), value: names.join(", ") }]
-        : []),
-    ];
-    return { extraFacts, detail: null, detailLoading: entries.isLoading };
+    const extraFacts: CommandCenterPreviewFact[] = list.length
+      ? [{ label: t("commandCenter.preview.entryCount", "Entries"), value: list.length }]
+      : [];
+    // Entries used to be flattened into two comma-joined strings, which read as
+    // a wall of text. One card per entry shows the shape of the book instead.
+    const detail = list.length ? (
+      <div className="space-y-1.5">
+        {list.slice(0, 5).map((entry, index) => {
+          const keys = (entry.keys ?? []).filter(Boolean).slice(0, 4);
+          return (
+            <div
+              key={entry.id ?? `${entry.name ?? "entry"}-${index}`}
+              className="rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-2.5 py-1.5 ring-1 ring-inset ring-[var(--border)]/50"
+            >
+              <div className="truncate text-xs font-semibold text-[var(--foreground)]">
+                {entry.name?.trim() || t("commandCenter.preview.untitledEntry", "Untitled entry")}
+              </div>
+              {keys.length ? (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {keys.map((key, keyIndex) => (
+                    <span
+                      key={`${key}-${keyIndex}`}
+                      className="rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-1.5 py-0.5 text-[0.625rem] font-medium leading-4 text-[color-mix(in_srgb,var(--primary)_70%,var(--foreground))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]"
+                    >
+                      {key}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {entry.content ? (
+                <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-[var(--muted-foreground)]">
+                  {entry.content}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+        {list.length > 5 ? (
+          <p className="px-0.5 text-[0.6875rem] text-[var(--muted-foreground)]">
+            {t("commandCenter.preview.moreEntries", "+{{count}} more", { count: list.length - 5 })}
+          </p>
+        ) : null}
+      </div>
+    ) : null;
+    return { extraFacts, detail, detailLoading: entries.isLoading };
   }
 
   return { extraFacts: [], detail: null, detailLoading: false };
@@ -493,6 +563,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       "quick-controls": t("commandCenter.groups.quickControls", "Quick controls"),
       "create-navigation": t("commandCenter.groups.suggested", "Suggested"),
       navigation: t("commandCenter.groups.navigation", "Navigation"),
+      messages: t("commandCenter.groups.messages", "In this chat"),
       chats: filterLabels.chats,
       characters: filterLabels.characters,
       personas: filterLabels.personas,
@@ -1402,8 +1473,58 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })),
     ];
   }, [contextLabels, controls, data, deferredQuery, docs.results, localize, mariEnabled, omnibarContext, t]);
+  // Professor Mari's conversations live behind an internal marker, so they are
+  // missing from the normal chat list. Searchable here by their auto-title.
+  const [mariOpenChatId, setMariOpenChatId] = useState<string | null>(null);
+  const mariChats = useProfessorMariChats(mariEnabled && deferredQuery.trim().length > 0);
+  const mariChatResults = useMemo<OmnibarResult[]>(() => {
+    const normalized = normalizeTextForMatch(deferredQuery.trim());
+    if (!normalized) return [];
+    return (mariChats.data ?? [])
+      .filter((chat) => normalizeTextForMatch(chat.name ?? "").includes(normalized))
+      .slice(0, 5)
+      .map((chat) => ({
+        id: `mari-chat:${chat.id}`,
+        title: chat.name || t("omnibar.categories.professor", "Professor Mari"),
+        description: t("commandCenter.mariChat", "Professor Mari conversation"),
+        category: "chat" as const,
+        group: "chats" as const,
+        score: 120,
+        kind: "action" as const,
+        icon: "professor" as const,
+      }));
+  }, [deferredQuery, mariChats.data, t]);
+
+  // Chat search: the engine only stores messages per chat, so this searches the
+  // chat you are in rather than pretending to search all of them. The message
+  // list is shared with the in-chat search panel's cache.
+  const messageSearchQuery = deferredQuery.trim();
+  const messageSearch = useChatMessageSearchSource(
+    activeChatId ?? null,
+    !!activeChatId && messageSearchQuery.length >= MIN_MESSAGE_SEARCH_LENGTH,
+  );
+  const messageResults = useMemo<OmnibarResult[]>(() => {
+    const normalized = normalizeTextForMatch(messageSearchQuery);
+    if (!activeChatId || normalized.length < MIN_MESSAGE_SEARCH_LENGTH) return [];
+    const out: OmnibarResult[] = [];
+    (messageSearch.data ?? []).forEach((message, index) => {
+      if (out.length >= MAX_MESSAGE_SEARCH_RESULTS) return;
+      if (isMessageHiddenFromUser(message)) return;
+      if (!normalizeTextForMatch(message.content).includes(normalized)) return;
+      out.push({
+        id: `message:${activeChatId}:${index + 1}`,
+        title: getMessageSearchSnippet(message.content, messageSearchQuery),
+        description: t("commandCenter.messages.position", "Message {{number}}", { number: index + 1 }),
+        category: "chat",
+        group: "messages",
+        score: 300 - out.length,
+        kind: "action",
+        icon: "chats",
+      });
+    });
+    return out;
+  }, [activeChatId, messageSearch.data, messageSearchQuery, t]);
   const idleResults = useMemo(() => {
-    if (omnibarContext.surface === "chat") return [];
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
     const add = (id: string) => {
@@ -1417,7 +1538,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       add(result.id);
     }
     return selected.slice(0, 12);
-  }, [allLocalResults, omnibarContext.surface, ranking.recent, searchableCommandResults]);
+  }, [allLocalResults, ranking.recent, searchableCommandResults]);
   // Context-aware results: read the app's current location (active chat, open
   // editor) and surface direct jumps to whatever is on screen and under it.
   const contextResults = useMemo<OmnibarResult[]>(() => {
@@ -1601,7 +1722,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         }
       }
     }
-    return out.slice(0, 32);
+    return out.slice(0, CHAT_CONTEXT_MAX_RESULTS);
   }, [
     activeChat,
     activeChatId,
@@ -1718,6 +1839,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...(gameResult ? [gameResult] : []),
             ...(proposalResult ? [proposalResult] : []),
             ...(extractionResult ? [extractionResult] : []),
+            ...messageResults,
+            ...mariChatResults,
             ...searchResults,
           ]
         : [...contextResults, ...(continueResult ? [continueResult] : []), ...idleResults],
@@ -1728,6 +1851,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       extractionResult,
       gameResult,
       idleResults,
+      mariChatResults,
+      messageResults,
       proposalResult,
       searchResults,
     ],
@@ -1949,6 +2074,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   };
   const choose = (result: OmnibarResult) => {
     if (result.control) return;
+    if (result.id.startsWith("mari-chat:")) {
+      setMariOpenChatId(result.id.slice("mari-chat:".length));
+      openProfessorMari();
+      return;
+    }
+    if (result.id.startsWith("message:")) {
+      const messageNumber = Number(result.id.slice(result.id.lastIndexOf(":") + 1));
+      const chatId = result.id.slice("message:".length, result.id.lastIndexOf(":"));
+      if (Number.isFinite(messageNumber)) useChatStore.getState().requestGotoMessage(chatId, messageNumber);
+      onClose();
+      return;
+    }
     if (runDirectChatAction(result)) return;
     if (result.id.startsWith("personal-extension:")) {
       if (activatePersonalExtensionCommand(result.id)) {
@@ -2517,6 +2654,16 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
     return getCommandCenterCategoryVisual(result.category, categoryLabels);
   };
+  /**
+   * What Enter does, in one word. Resource rows open an editor even when the row
+   * shows only a name, so "Open" alone was misleading in the context group.
+   */
+  const resultEnterHint = (result: RankedOmnibarResult) =>
+    EDITOR_CATEGORIES.has(result.category)
+      ? t("commandCenter.edit", "Edit")
+      : result.category === "docs"
+        ? t("commandCenter.read", "Read")
+        : t("commandCenter.open", "Open");
   const resultControlPending = (result: RankedOmnibarResult) =>
     (result.category === "persona" && activatePersona.isPending) ||
     (result.category === "lorebook" && updateLorebook.isPending) ||
@@ -2909,7 +3056,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       "commandCenter.placeholder",
                       "Search Marinara commands, chats, resources, and guides",
                     )}
-                    className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)]"
+                    className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)] [&::-webkit-search-cancel-button]:hidden"
                   />
                 </motion.div>
               )}
@@ -2926,9 +3073,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 }}
                 aria-label={t("commandCenter.clearSearch", "Clear search")}
                 title={t("commandCenter.clearSearch", "Clear search")}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+                className="inline-flex size-6 shrink-0 items-center justify-center self-center rounded-full bg-[color-mix(in_srgb,var(--foreground)_12%,var(--card))] text-[var(--muted-foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_20%,var(--card))] hover:text-[var(--foreground)]"
               >
-                <X size={16} />
+                <X size={13} strokeWidth={2.5} />
               </button>
             ) : null}
             {pane !== "mari" && mariEnabled ? (
@@ -2947,9 +3094,6 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   draggable={false}
                   className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
                 />
-                <span className="relative z-10 rounded-md bg-[var(--card)]/80 px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--primary)] opacity-0 transition-opacity max-md:opacity-100 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
-                  {t("commandCenter.mode.work", "Ask Mari")}
-                </span>
               </button>
             ) : null}
             <button
@@ -2969,7 +3113,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               role="toolbar"
               aria-label={t("commandCenter.filters.label", "Result categories")}
               data-component="GlobalOmnibar.Filters"
-              className="flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
+              className="scrollbar-hide flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
             >
               {(pane === "browse" ? BROWSE_FILTERS : availableFilters).map((item) => (
                 <button
@@ -3073,6 +3217,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   omnibarMode
                   launchHidden
                   initialAskContext={mariContext}
+                  openChatId={mariOpenChatId}
                   pendingReviewRequest={mariPendingReviewRequest}
                   chatWindowOpen={mariChatOpen}
                   onChatWindowOpenChange={(open) => {
@@ -3127,7 +3272,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               id="global-omnibar-results"
               aria-label={t("omnibar.results", "Search results")}
               data-component="GlobalOmnibar.Results"
-              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-2xl:hidden") : ""}`}
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-[85rem]:hidden") : ""}`}
             >
               {!query.trim() ? (
                 <div className="border-b border-[var(--border)] px-3 pb-2.5 pt-2.5 motion-safe:animate-fade-in-up">
@@ -3137,7 +3282,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   <p className="mt-0.5 text-[0.6875rem] leading-snug text-[var(--muted-foreground)]">
                     {t("commandCenter.deck.subtitle", "Find what you need, or ask Professor Mari for help.")}
                   </p>
-                  <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                  <div className="scrollbar-hide mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
                     {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
                       <button
                         key={item}
@@ -3263,7 +3408,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             groupClassName={visual.groupClassName}
                             accent={result.preview?.accent}
                             setupStatus={setupStatus}
-                            enterHint={result.control ? undefined : t("commandCenter.open", "Open")}
+                            enterHint={result.control ? undefined : resultEnterHint(result)}
                             control={
                               result.control?.type === "choice" ? (
                                 <CommandCenterSegmentedChoice
@@ -3331,7 +3476,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             {pane === "detail" && previewResult ? (
               <aside
                 data-component="GlobalOmnibar.Detail"
-                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] 2xl:hidden"
+                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[85rem]:hidden"
               >
                 <AnimatePresence initial={false} mode="wait">
                   <motion.div
@@ -3350,7 +3495,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <div
             data-component="GlobalOmnibar.Browse"
-            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${pane === "detail" ? "max-2xl:hidden" : ""}`}
+            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${pane === "detail" ? "max-[85rem]:hidden" : ""}`}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -3466,7 +3611,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         {pane === "detail" && detailOrigin === "browse" && previewResult ? (
           <aside
             data-component="GlobalOmnibar.Detail"
-            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] 2xl:hidden"
+            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[85rem]:hidden"
           >
             {renderResultPreview(true)}
           </aside>
@@ -3485,18 +3630,19 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : null}
       </div>
 
-      {pane === "detail" && previewResult ? (
+      {(pane === "detail" || pane === "results") && previewResult ? (
         <motion.aside
           data-component="GlobalOmnibar.ExternalDetail"
           initial={reduceMotion ? false : { opacity: 0, x: -18 }}
           animate={{ opacity: 1, x: 0 }}
           exit={reduceMotion ? undefined : { opacity: 0, x: -18 }}
           transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
-          className="fixed left-[calc(50%+23rem)] top-[10vh] hidden h-[min(36rem,68dvh)] w-[22rem] overflow-y-auto overscroll-contain rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 2xl:block"
+          className="fixed left-[calc(50%+22.5rem)] top-[10vh] hidden h-[min(36rem,68dvh)] w-[20rem] overflow-hidden rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 min-[85rem]:block"
         >
           <AnimatePresence initial={false} mode="wait">
             <motion.div
               key={previewResult.id}
+              className="h-full"
               initial={reduceMotion ? false : { opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
