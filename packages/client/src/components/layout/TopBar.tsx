@@ -11,6 +11,7 @@ import {
   Sparkles,
   FileText,
   VenetianMask,
+  Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -92,6 +93,7 @@ export function TopBar() {
   const localize = useLocalizedUiText();
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const setOmnibarOpen = useUIStore((s) => s.setOmnibarOpen);
   const toggleRightPanel = useUIStore((s) => s.toggleRightPanel);
   const rightPanel = useUIStore((s) => s.rightPanel);
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
@@ -168,6 +170,11 @@ export function TopBar() {
     prepareMobileTopbarNavigation();
     toggleSidebar();
   }, [prepareMobileTopbarNavigation, toggleSidebar]);
+
+  const handleOmnibarClick = useCallback(() => {
+    prepareMobileTopbarNavigation();
+    setOmnibarOpen(true);
+  }, [prepareMobileTopbarNavigation, setOmnibarOpen]);
 
   const handleRightPanelClick = useCallback(
     (panel: Parameters<typeof toggleRightPanel>[0]) => {
@@ -326,6 +333,17 @@ export function TopBar() {
             {isHomeActive && (
               <span className="mari-topbar-active-underline absolute -bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full" />
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOmnibarClick}
+            data-topbar-hover-key="omnibar"
+            className={cn(TOPBAR_BUTTON_CLASS, "text-[var(--muted-foreground)] md:hidden")}
+            title={localize("Search Marinara")}
+            aria-label={localize("Search Marinara")}
+          >
+            <Search size={15} className={TOPBAR_ACCENT_ICON_CLASS} />
           </button>
         </div>
         {showMusicDjUnavailablePlayer ? (

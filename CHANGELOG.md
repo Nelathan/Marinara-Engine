@@ -6,6 +6,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Added a mobile topbar button that opens the Marinara Command Center.
+
 - Command Center results can now continue with Professor Mari using the exact search request and a typed, removable resource focus, while returning to the prior result or browse context when Mari closes.
 
 - Command Center now finds resource names inside natural requests and ranks the open editor and active-chat resources higher without using an LLM.
