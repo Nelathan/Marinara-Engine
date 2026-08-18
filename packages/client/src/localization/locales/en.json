@@ -290,6 +290,7 @@
   "commandCenter.actions.setDefaultPreset": "Set default preset",
   "commandCenter.actions.startChat": "Start chat",
   "commandCenter.adminRequired": "Administrator access required",
+  "commandCenter.attachSelection": "Add {{count}} to this chat",
   "commandCenter.backToBrowse": "Back to browse",
   "commandCenter.backToFind": "Back to Find",
   "commandCenter.backToResults": "Back to results",

@@ -2290,6 +2290,43 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setPane("mari");
   };
 
+  /**
+   * The selected browse items, when they are all one attachable kind and a chat
+   * is open. Mixed selections are not attachable, because one drop payload
+   * carries a single kind.
+   */
+  const browseBatchAttach = useMemo(() => {
+    if (!activeChat || browseCompareIds.length === 0) return null;
+    const kinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
+      character: "character",
+      persona: "persona",
+      lorebook: "lorebook",
+      preset: "preset",
+    };
+    const resultById = new Map(browseResults.map((item) => [item.id, item]));
+    const selected = browseCompareIds.flatMap((id) => {
+      const item = resultById.get(id);
+      return item ? [item] : [];
+    });
+    if (selected.length === 0) return null;
+    const kind = kinds[selected[0]!.category];
+    if (!kind || selected.some((item) => kinds[item.category] !== kind)) return null;
+    return { kind, ids: selected.map((item) => getOmnibarResourceId(item)), label: selected[0]!.title };
+  }, [activeChat, browseCompareIds, browseResults]);
+
+  const attachBrowseSelection = () => {
+    if (!browseBatchAttach) return;
+    requestChatResourceAssignment({
+      version: 1,
+      kind: browseBatchAttach.kind,
+      ids: browseBatchAttach.ids,
+      label: browseBatchAttach.label,
+    });
+    setBrowseCompareMode(false);
+    setBrowseCompareIds([]);
+    onClose();
+  };
+
   const compareWithProfessorMari = () => {
     const resultById = new Map(browseResults.map((result) => [result.id, result]));
     const selected = browseCompareIds.flatMap((id) => {
@@ -3242,6 +3279,17 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     >
                       {t("common.cancel", "Cancel")}
                     </button>
+                    {browseBatchAttach ? (
+                      <button
+                        type="button"
+                        onClick={attachBrowseSelection}
+                        className="min-h-9 rounded-md border border-[var(--border)] px-3 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--accent)]"
+                      >
+                        {t("commandCenter.attachSelection", "Add {{count}} to this chat", {
+                          count: browseBatchAttach.ids.length,
+                        })}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={compareWithProfessorMari}
