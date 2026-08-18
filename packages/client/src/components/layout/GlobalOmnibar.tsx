@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
 import {
   ArrowRight,
+  BookOpen,
   ChevronLeft,
   Clock3,
   Compass,
@@ -22,11 +23,13 @@ import {
   LayoutGrid,
   Loader2,
   MessageCircle,
+  MessageSquarePlus,
   Play,
   Search,
   SlidersHorizontal,
   Sparkles,
   Theater,
+  UserPlus,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -1515,6 +1518,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       onClose();
     }
   };
+  // Run a known command by id (quick-actions row) by routing it through the same
+  // handler the result rows use, so behavior stays identical.
+  const runCommandById = (id: string) => {
+    const result = allLocalResults.find((item) => item.id === id);
+    if (result) choose(result);
+  };
   const showResultDetail = (result: RankedOmnibarResult, origin: DetailOrigin = "results") => {
     setActiveResultId(result.id);
     setDetailResult(result);
@@ -2165,35 +2174,82 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-xl:hidden") : ""}`}
             >
               {!query.trim() ? (
-                <div className="border-b border-[var(--border)] px-3 pb-3 pt-3 motion-safe:animate-fade-in-up">
+                <div className="border-b border-[var(--border)] px-3 pb-2.5 pt-2.5 motion-safe:animate-fade-in-up">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-[var(--foreground)]">
+                      <p className="text-[0.8125rem] font-bold leading-tight text-[var(--foreground)]">
                         {t("commandCenter.deck.title", "Command Center")}
                       </p>
-                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                      <p className="mt-0.5 text-[0.6875rem] leading-snug text-[var(--muted-foreground)]">
                         {t("commandCenter.deck.subtitle", "Jump, create, change, or ask Professor Mari.")}
                       </p>
                     </div>
                     {mariEnabled ? (
-                      <button
-                        type="button"
-                        onClick={() => openProfessorMari()}
-                        aria-label={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                        title={t("omnibar.askProfessorMari", "Ask Professor Mari")}
-                        className="group relative -mt-3 -mr-2 h-14 w-10 shrink-0 overflow-hidden rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+                      // Mari already lives in the header bar above — a curved arrow
+                      // points up to her instead of showing her portrait twice.
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none -mt-1 mr-0.5 flex shrink-0 flex-col items-center gap-0.5 self-start text-[var(--primary)]/55"
                       >
-                        <img
-                          src={PROFESSOR_MARI_PEEK_URL}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                          className="absolute left-1/2 top-0 h-20 w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
-                        />
-                      </button>
+                        <svg width="44" height="30" viewBox="0 0 44 30" fill="none" className="overflow-visible">
+                          <path
+                            d="M3 27 C 9 12, 24 5, 40 3"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeDasharray="0.5 4"
+                          />
+                          <path
+                            d="M40 3 L 33 3.5 M40 3 L 37 9.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span className="whitespace-nowrap text-[0.625rem] font-medium tracking-wide">
+                          {t("commandCenter.deck.askMariHint", "Ask Mari")}
+                        </span>
+                      </div>
                     ) : null}
                   </div>
-                  <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                  {(() => {
+                    const quickActions = [
+                      {
+                        id: "create-chat",
+                        label: t("commandCenter.quick.newChat", "New chat"),
+                        Icon: MessageSquarePlus,
+                      },
+                      {
+                        id: "create-character",
+                        label: t("commandCenter.quick.newCharacter", "New character"),
+                        Icon: Theater,
+                      },
+                      {
+                        id: "create-persona",
+                        label: t("commandCenter.quick.newPersona", "New persona"),
+                        Icon: UserPlus,
+                      },
+                      { id: "documentation", label: t("commandCenter.quick.docs", "Docs"), Icon: BookOpen },
+                    ].filter((action) => allLocalResults.some((result) => result.id === action.id));
+                    if (quickActions.length === 0) return null;
+                    return (
+                      <div className="mt-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                        {quickActions.map(({ id, label, Icon }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => runCommandById(id)}
+                            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-2 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/45 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                          >
+                            <Icon size={14} className="text-[var(--primary)]" aria-hidden="true" />
+                            <span className="truncate">{label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
                     {BROWSE_FILTERS.filter((item) => browseAvailability[item] > 0).map((item) => (
                       <button
                         key={item}
@@ -2203,11 +2259,11 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                           setPane("browse");
                           setBrowseLimit(BROWSE_BATCH_SIZE);
                         }}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--secondary)] px-2.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/40 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                        className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--secondary)] px-3 text-[0.8125rem] font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/40 hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                       >
-                        <LayoutGrid size={13} aria-hidden="true" />
+                        <LayoutGrid size={14} aria-hidden="true" />
                         {filterLabels[item]}
-                        <span className="text-[0.625rem] text-[var(--muted-foreground)]">
+                        <span className="rounded-full bg-[var(--background)]/70 px-1.5 text-[0.625rem] text-[var(--muted-foreground)]">
                           {browseAvailability[item]}
                         </span>
                       </button>
@@ -2215,9 +2271,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     <button
                       type="button"
                       onClick={openBrowse}
-                      className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-3 text-[0.8125rem] font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                     >
-                      <Compass size={13} aria-hidden="true" />
+                      <Compass size={14} aria-hidden="true" />
                       {t("commandCenter.browse", "Browse")}
                     </button>
                   </div>
@@ -2284,9 +2340,14 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             title={result.title}
                             metadata={resultMetadata(result, visual.label)}
                             tertiaryMetadata={
-                              result.preview?.status?.label ??
-                              result.preview?.badges?.[0] ??
-                              result.preview?.metadataLine
+                              // A toggle/action control already shows the on/active state, so
+                              // the status label ("Enabled"/"Active") next to it is redundant —
+                              // keep only the informative metadata line in that case.
+                              result.control?.type === "toggle"
+                                ? result.preview?.metadataLine
+                                : (result.preview?.status?.label ??
+                                  result.preview?.badges?.[0] ??
+                                  result.preview?.metadataLine)
                             }
                             description={result.description ?? result.preview?.description}
                             icon={resultIcon(result)}
