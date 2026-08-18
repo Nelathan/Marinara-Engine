@@ -385,6 +385,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const activeChat = useChatStore((state) => state.activeChat);
   const activeChatId = useChatStore((state) => state.activeChatId);
   const openCharacterId = useUIStore((state) => state.characterDetailId);
+  const activeEditorField = useUIStore((state) => state.activeEditorField);
   const openPersonaId = useUIStore((state) => state.personaDetailId);
   const openLorebookId = useUIStore((state) => state.lorebookDetailId);
   const openPresetId = useUIStore((state) => state.presetDetailId);
@@ -1950,6 +1951,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           settingsPanelVisible && (settingsTab || settingsTargetControlId)
             ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
             : undefined,
+        field: activeEditorField?.label,
       }),
     );
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");

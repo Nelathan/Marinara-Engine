@@ -52,6 +52,7 @@ export function buildProfessorMariCommandCenterContext(
   options: {
     activeChat?: { id: string; label?: string; mode?: string };
     settingsLocation?: { tab?: string; controlId?: string };
+    field?: string;
   } = {},
 ): ProfessorMariAskContext {
   const trimmedQuery = query.trim();
@@ -78,5 +79,6 @@ export function buildProfessorMariCommandCenterContext(
     ...(commandCenterResultId ? { commandCenterResultId } : {}),
     ...(options.activeChat ? { activeChat: options.activeChat } : {}),
     ...(options.settingsLocation ? { settingsLocation: options.settingsLocation } : {}),
+    ...(options.field ? { field: options.field } : {}),
   };
 }

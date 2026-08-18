@@ -318,6 +318,18 @@ export function CharacterEditor() {
   const dirtyRef = useRef(false);
   const editRevisionRef = useRef(0);
   const setEditorDirty = useUIStore((s) => s.setEditorDirty);
+  // Report the focused field to the omnibar so "make this warmer" knows the target.
+  const setActiveEditorField = useUIStore((s) => s.setActiveEditorField);
+  useEffect(() => {
+    const field =
+      activeTab === "card"
+        ? { id: "description", label: "Description" }
+        : activeTab === "convo"
+          ? { id: "first_mes", label: "Greeting" }
+          : null;
+    setActiveEditorField(field);
+    return () => setActiveEditorField(null);
+  }, [activeTab, setActiveEditorField]);
   const lorebookEmbedInFlightRef = useRef(false);
   const [lorebookEmbedding, setLorebookEmbedding] = useState(false);
   const setDirtyState = useCallback((nextDirty: boolean) => {

@@ -592,6 +592,8 @@ interface UIState {
   personaDetailId: string | null;
   /** When set, the main area shows the full-page regex script editor */
   regexDetailId: string | null;
+  /** The primary field currently focused in an open editor, for Mari omnibar handoff. Transient, never persisted. */
+  activeEditorField: { id: string; label: string } | null;
   /** When set, the main area shows the hierarchical map editor for this chat */
   spatialMapDetailChatId: string | null;
   /** One-shot generated map preview handed from Game setup into the spatial editor. Never persisted. */
@@ -942,6 +944,7 @@ interface UIState {
   closeRightPanel: () => void;
   toggleRightPanel: (panel: Panel) => void;
   setSettingsTab: (tab: string) => void;
+  setActiveEditorField: (field: { id: string; label: string } | null) => void;
   setSettingsTargetControlId: (controlId: string | null) => void;
   openModal: (type: string, props?: Record<string, unknown>) => void;
   closeModal: () => void;
@@ -1376,6 +1379,7 @@ export const useUIStore = create<UIState>()(
       trackerPanelCollapsedSections: {},
       trackerPanelSectionOrder: [...TRACKER_DATA_PANEL_SECTIONS],
       settingsTab: "general",
+      activeEditorField: null,
       settingsTargetControlId: null,
       modal: null,
       theme: "dark" as const,
@@ -1681,6 +1685,7 @@ export const useUIStore = create<UIState>()(
         }),
 
       setSettingsTab: (tab) => set({ settingsTab: tab }),
+      setActiveEditorField: (field) => set({ activeEditorField: field }),
       setSettingsTargetControlId: (controlId) => set({ settingsTargetControlId: controlId }),
       openModal: (type, props) => set({ modal: { type, props } }),
       closeModal: () => set({ modal: null }),
