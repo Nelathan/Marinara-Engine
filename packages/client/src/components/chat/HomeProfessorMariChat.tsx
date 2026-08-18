@@ -3316,6 +3316,7 @@ type HomeProfessorMariChatProps = {
   floatingMode?: boolean;
   launchHidden?: boolean;
   initialAskContext?: ProfessorMariAskContext | null;
+  pendingReviewRequest?: number;
   onChatWindowOpenChange?: (open: boolean) => void;
   onChatWindowExitComplete?: () => void;
   onFloatingDismiss?: () => void;
@@ -3330,6 +3331,7 @@ export function HomeProfessorMariChat({
   floatingMode = false,
   launchHidden = false,
   initialAskContext = null,
+  pendingReviewRequest = 0,
   onChatWindowOpenChange,
   onChatWindowExitComplete,
   onFloatingDismiss,
@@ -5404,6 +5406,13 @@ export function HomeProfessorMariChat({
       });
     });
   }, [refreshWorkspaceStatus]);
+
+  const handledPendingReviewRequestRef = useRef(0);
+  useEffect(() => {
+    if (!chatWindowOpen || pendingReviewRequest <= handledPendingReviewRequestRef.current) return;
+    handledPendingReviewRequestRef.current = pendingReviewRequest;
+    openPendingApprovals();
+  }, [chatWindowOpen, openPendingApprovals, pendingReviewRequest]);
 
   const trustStrip = (
     <ProfessorMariTrustStrip

@@ -325,6 +325,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
+  const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
@@ -1723,7 +1724,9 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     if (result.id === "ask-professor-mari") {
-      openProfessorMari();
+      openProfessorMari(null, {
+        reviewPending: result.group === "continue" && (mariWorkspaceStatus.data?.pendingApprovals.length ?? 0) > 0,
+      });
       return;
     }
     if (result.category === "connection") {
@@ -1898,7 +1901,10 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setPane(destination);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
-  const openProfessorMari = (selectedResult: RankedOmnibarResult | null = null) => {
+  const openProfessorMari = (
+    selectedResult: RankedOmnibarResult | null = null,
+    options: { reviewPending?: boolean } = {},
+  ) => {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
@@ -1918,6 +1924,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
+    if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
   };
   const compareWithProfessorMari = () => {
     const resultById = new Map(browseResults.map((result) => [result.id, result]));
@@ -2439,6 +2446,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 omnibarMode
                 launchHidden
                 initialAskContext={mariContext}
+                pendingReviewRequest={mariPendingReviewRequest}
                 chatWindowOpen={mariChatOpen}
                 onChatWindowOpenChange={(open) => {
                   setMariChatOpen(open);
