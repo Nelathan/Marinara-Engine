@@ -43,6 +43,7 @@ import {
   useProfessorMariChats,
   useCreateChat,
   useUpdateChat,
+  useUpdateChatMetadata,
 } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
@@ -91,6 +92,7 @@ import {
   searchOmnibar,
   type OmnibarCategory,
   type OmnibarResult,
+  type OmnibarSurface,
 } from "../../lib/omnibar-search";
 import { getOmnibarSettingsDestinations } from "../../lib/omnibar-settings";
 import { reconcileActiveResultId, resolveOmnibarRowState } from "../../lib/omnibar-row-state";
@@ -182,6 +184,26 @@ const CHAT_CONTEXT_MAX_RESULTS = 8;
 /** A resumable creation session goes stale after a day. */
 const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const BROWSE_BATCH_SIZE = 48;
+/**
+ * Idle suggestions per surface: what you most likely reach for from where you
+ * already are. Missing ids are skipped, so this stays a hint list, not a
+ * contract with the command registry.
+ */
+const SURFACE_IDLE_COMMAND_IDS: Record<OmnibarSurface, readonly string[]> = {
+  home: ["chats", "character-library", "create-character"],
+  chat: [
+    "control:chat-connection",
+    "control:chat-preset",
+    "control:chat-persona",
+    "control:chat-agents",
+    "card-browser",
+    "create-lorebook",
+  ],
+  editor: ["documentation", "character-library", "import-data"],
+  settings: ["integrations", "diagnostics", "backups", "updates"],
+  library: ["create-character", "import-sillytavern", "card-browser"],
+  game: ["game-assets", "help"],
+};
 
 // Leading resource-kind words to strip from a "create <kind> <name>" query so the
 // create modal opens with just the typed name pre-filled.
@@ -475,6 +497,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const updateLorebook = useUpdateLorebook();
   const setDefaultPreset = useSetDefaultPreset();
   const updateChat = useUpdateChat();
+  const updateChatMetadata = useUpdateChatMetadata();
   const createChat = useCreateChat();
   const createLorebook = useCreateLorebook();
   const extensionCommands = usePersonalExtensionCommands();
@@ -1148,6 +1171,115 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     userStatus,
   ]);
 
+  // Chat state as inline controls: the changes a user makes most often are to
+  // the chat they are already in — model, preset, persona, agents. These edit
+  // the chat in the row, so nothing navigates away from the scene.
+  const chatControls = useMemo<OmnibarResult[]>(() => {
+    if (!activeChat || activeChat.id !== activeChatId) return [];
+    const chatId = activeChat.id;
+    // ponytail: the segmented control renders every option as a pill, so a long
+    // list would overflow the row. Cap it, and keep the current value visible.
+    // Swap in a searchable picker if users hit the cap often.
+    const capped = <T extends { id: string }>(items: readonly T[], activeId: string | null | undefined) => {
+      const head = items.slice(0, 6);
+      const active = activeId ? items.find((item) => item.id === activeId) : undefined;
+      return active && !head.includes(active) ? [...head, active] : head;
+    };
+    const noneOption = { value: "", label: t("commandCenter.values.none", "None") };
+    const chatMetadata = parseChatMetadata(activeChat.metadata);
+    const languageConnections = data.connections.filter(isLanguageGenerationConnection);
+    const resourcesOfKind = (kind: OmnibarCategory) =>
+      data.resources.filter((resource) => resource.kind === kind).map(({ id, name }) => ({ id, name }));
+    const chatPresets = resourcesOfKind("preset");
+    const chatPersonas = resourcesOfKind("persona");
+    const rows: OmnibarResult[] = [];
+    if (languageConnections.length > 1) {
+      rows.push({
+        id: "control:chat-connection",
+        title: t("commandCenter.controls.chatModel", "Model for this chat"),
+        category: "connection",
+        score: 190,
+        aliases: ["model", "connection", "switch model", "provider"],
+        group: "current-work",
+        icon: "connection",
+        control: {
+          type: "choice",
+          label: t("commandCenter.controls.chatModel", "Model for this chat"),
+          value: activeChat.connectionId ?? "",
+          options: capped(languageConnections, activeChat.connectionId).map((connection) => ({
+            value: connection.id,
+            label: connection.name,
+          })),
+          onChange: (value) => void updateChat.mutateAsync({ id: chatId, connectionId: String(value) || null }),
+        },
+      });
+    }
+    if (chatPresets.length > 0) {
+      rows.push({
+        id: "control:chat-preset",
+        title: t("commandCenter.controls.chatPreset", "Preset for this chat"),
+        category: "preset",
+        score: 189,
+        aliases: ["preset", "prompt preset", "switch preset"],
+        group: "current-work",
+        icon: "preset",
+        control: {
+          type: "choice",
+          label: t("commandCenter.controls.chatPreset", "Preset for this chat"),
+          value: activeChat.promptPresetId ?? "",
+          options: [
+            noneOption,
+            ...capped(chatPresets, activeChat.promptPresetId).map((preset) => ({
+              value: preset.id,
+              label: preset.name,
+            })),
+          ],
+          onChange: (value) => void updateChat.mutateAsync({ id: chatId, promptPresetId: String(value) || null }),
+        },
+      });
+    }
+    if (chatPersonas.length > 0) {
+      rows.push({
+        id: "control:chat-persona",
+        title: t("commandCenter.controls.chatPersona", "Persona for this chat"),
+        category: "persona",
+        score: 188,
+        aliases: ["persona", "swap persona", "who am i"],
+        group: "current-work",
+        icon: "persona",
+        control: {
+          type: "choice",
+          label: t("commandCenter.controls.chatPersona", "Persona for this chat"),
+          value: activeChat.personaId ?? "",
+          options: [
+            noneOption,
+            ...capped(chatPersonas, activeChat.personaId).map((persona) => ({
+              value: persona.id,
+              label: persona.name,
+            })),
+          ],
+          onChange: (value) => void updateChat.mutateAsync({ id: chatId, personaId: String(value) || null }),
+        },
+      });
+    }
+    rows.push({
+      id: "control:chat-agents",
+      title: t("commandCenter.controls.chatAgents", "Agents in this chat"),
+      category: "agent",
+      score: 187,
+      aliases: ["agents", "tools", "enable agents"],
+      group: "current-work",
+      icon: "agent",
+      control: {
+        type: "toggle",
+        label: t("commandCenter.controls.chatAgents", "Agents in this chat"),
+        value: chatMetadata.enableAgents === true,
+        onChange: (value) => void updateChatMetadata.mutateAsync({ id: chatId, enableAgents: value === true }),
+      },
+    });
+    return rows;
+  }, [activeChat, activeChatId, data.connections, data.resources, t, updateChat, updateChatMetadata]);
+
   const searchableEntityResults = useMemo<OmnibarResult[]>(
     () => [
       ...data.chats.map((item) => ({
@@ -1196,8 +1328,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [data.commands],
   );
   const allLocalResults = useMemo(
-    () => [...controls, ...searchableCommandResults, ...searchableEntityResults],
-    [controls, searchableCommandResults, searchableEntityResults],
+    () => [...controls, ...chatControls, ...searchableCommandResults, ...searchableEntityResults],
+    [chatControls, controls, searchableCommandResults, searchableEntityResults],
   );
   const omnibarContext = useMemo(() => {
     const chatMetadata = activeChat ? parseChatMetadata(activeChat.metadata) : null;
@@ -1403,9 +1535,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const askTitle = askTitles[capability] ?? t("omnibar.askProfessorMari", "Ask Professor Mari");
     const askPeek =
       askPeeks[capability] ?? t("omnibar.askMari.peek.explain", "Mari will explain this and guide your next step.");
-    const baseResults = searchOmnibar(query, { ...data, controls, context: omnibarContext, contextLabels }).filter(
-      (result) => mariEnabled || result.id !== "ask-professor-mari",
-    );
+    const baseResults = searchOmnibar(query, {
+      ...data,
+      controls: [...controls, ...chatControls],
+      context: omnibarContext,
+      contextLabels,
+    }).filter((result) => mariEnabled || result.id !== "ask-professor-mari");
     const bestMatchScore = baseResults.reduce(
       (best, result) => (result.id === "ask-professor-mari" ? best : Math.max(best, result.score)),
       -1,
@@ -1472,7 +1607,18 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         icon: "documentation" as const,
       })),
     ];
-  }, [contextLabels, controls, data, deferredQuery, docs.results, localize, mariEnabled, omnibarContext, t]);
+  }, [
+    chatControls,
+    contextLabels,
+    controls,
+    data,
+    deferredQuery,
+    docs.results,
+    localize,
+    mariEnabled,
+    omnibarContext,
+    t,
+  ]);
   // Professor Mari's conversations live behind an internal marker, so they are
   // missing from the normal chat list. Searchable here by their auto-title.
   const [mariOpenChatId, setMariOpenChatId] = useState<string | null>(null);
@@ -1531,14 +1677,25 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       const result = byId.get(id);
       if (result && !selected.some((item) => item.id === id)) selected.push(result);
     };
+    // Unfinished setup beats everything else: the feature you cannot use yet is
+    // the most likely reason the omnibar is open at all. Capped so a fresh
+    // install does not bury recents under every un-configured integration.
+    omnibarContext.setupResultIds.slice(0, 2).forEach(add);
     ranking.recent.forEach((entry) => add(entry.id));
+    SURFACE_IDLE_COMMAND_IDS[omnibarContext.surface].forEach(add);
     ["control:theme", "control:presence", "create-character", "create-persona", "documentation"].forEach(add);
     for (const result of searchableCommandResults) {
       if (selected.length >= 4) break;
       add(result.id);
     }
     return selected.slice(0, 12);
-  }, [allLocalResults, ranking.recent, searchableCommandResults]);
+  }, [
+    allLocalResults,
+    omnibarContext.setupResultIds,
+    omnibarContext.surface,
+    ranking.recent,
+    searchableCommandResults,
+  ]);
   // Context-aware results: read the app's current location (active chat, open
   // editor) and surface direct jumps to whatever is on screen and under it.
   const contextResults = useMemo<OmnibarResult[]>(() => {
@@ -1557,37 +1714,37 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
     const isActiveChat = activeChat?.id === activeChatId;
     const isActiveChatSurface = omnibarContext.surface === "chat" && isActiveChat;
+    // A visible failure is the most useful next step, so it leads the group. The
+    // id must stay the real connection id so the existing connection branch in
+    // choose() opens the right editor (and still honours the dirty-editor guard).
+    if (lastAppError?.retry) {
+      pushCanonical(`connection:${lastAppError.retry.id}`, {
+        id: `connection:${lastAppError.retry.id}`,
+        title: lastAppError.action
+          ? t("commandCenter.context.fixFailed", "Fix: {{action}} failed", { action: lastAppError.action })
+          : t("commandCenter.context.fixError", "Fix the last error"),
+        description: lastAppError.message,
+        category: "connection",
+        score: 0,
+        icon: "connection",
+      });
+    }
+
+    // A creation session is persisted, so without an age limit "Continue
+    // building X" would lead the idle list forever.
+    if (creationSession && Date.now() - creationSession.createdAt < CREATION_SESSION_MAX_AGE_MS) {
+      push({
+        id: "resume-creation-session",
+        title: t("commandCenter.proposal.resume", "Continue building {{title}}", { title: creationSession.title }),
+        description: creationSession.seed,
+        category: "professor",
+        score: 0,
+        group: "current-work",
+        icon: "professor",
+      });
+    }
+
     if (!isActiveChatSurface) {
-      // A visible failure is the most useful next step, so it leads the group. The
-      // id must stay the real connection id so the existing connection branch in
-      // choose() opens the right editor (and still honours the dirty-editor guard).
-      if (lastAppError?.retry) {
-        pushCanonical(`connection:${lastAppError.retry.id}`, {
-          id: `connection:${lastAppError.retry.id}`,
-          title: lastAppError.action
-            ? t("commandCenter.context.fixFailed", "Fix: {{action}} failed", { action: lastAppError.action })
-            : t("commandCenter.context.fixError", "Fix the last error"),
-          description: lastAppError.message,
-          category: "connection",
-          score: 0,
-          icon: "connection",
-        });
-      }
-
-      // A creation session is persisted, so without an age limit "Continue
-      // building X" would lead the idle list forever.
-      if (creationSession && Date.now() - creationSession.createdAt < CREATION_SESSION_MAX_AGE_MS) {
-        push({
-          id: "resume-creation-session",
-          title: t("commandCenter.proposal.resume", "Continue building {{title}}", { title: creationSession.title }),
-          description: creationSession.seed,
-          category: "professor",
-          score: 0,
-          group: "current-work",
-          icon: "professor",
-        });
-      }
-
       if (openCharacterId) {
         const name = characterNameById.get(openCharacterId);
         if (name)
@@ -2667,7 +2824,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const resultControlPending = (result: RankedOmnibarResult) =>
     (result.category === "persona" && activatePersona.isPending) ||
     (result.category === "lorebook" && updateLorebook.isPending) ||
-    (result.category === "preset" && setDefaultPreset.isPending);
+    (result.category === "preset" && setDefaultPreset.isPending) ||
+    (result.id.startsWith("control:chat-") && (updateChat.isPending || updateChatMetadata.isPending));
   const liveMessage = loading
     ? t("commandCenter.live.loading", "Loading results")
     : failed
