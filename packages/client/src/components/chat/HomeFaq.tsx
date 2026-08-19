@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   ChevronDown,
@@ -623,6 +623,15 @@ export function HomeFaq({
     setOpenItemIdInternal(v);
     onOpenItemIdChange?.(v);
   };
+  // The list scrolls and holds 40+ entries, so an item opened from elsewhere
+  // (the omnibar FAQ rows) expands off-screen and reads as "nothing happened".
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!openItemId) return;
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-faq-item="${CSS.escape(openItemId)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [openItemId]);
   const trimmedSearch = searchQuery.trim().toLowerCase();
   const visibleFaqItems = useMemo(
     () =>
@@ -732,6 +741,7 @@ export function HomeFaq({
                 ) : null}
               </div>
               <div
+                ref={listRef}
                 className="max-h-64 space-y-1.5 overflow-y-auto pr-1 md:min-h-0 md:max-h-none md:flex-1"
                 data-component="HomeFaq.CompactList"
               >
@@ -741,6 +751,7 @@ export function HomeFaq({
                   return (
                     <div
                       key={item.id}
+                      data-faq-item={item.id}
                       className={cn(
                         "overflow-hidden rounded-lg border border-[var(--border)]/55 bg-[var(--card)]/45 transition-colors",
                         isOpen && "border-[var(--primary)]/30 bg-[var(--card)]/70",
@@ -973,13 +984,14 @@ export function HomeFaq({
                 ) : null}
               </div>
 
-              <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-0.5 sm:max-h-[28rem] sm:pr-1">
+              <div ref={listRef} className="max-h-[22rem] space-y-2 overflow-y-auto pr-0.5 sm:max-h-[28rem] sm:pr-1">
                 {visibleFaqItems.map((item) => {
                   const isOpen = openItemId === item.id;
 
                   return (
                     <div
                       key={item.id}
+                      data-faq-item={item.id}
                       className={cn(
                         "overflow-hidden rounded-[1rem] border border-[var(--border)]/55 bg-[var(--card)]/45 transition-colors",
                         isOpen && "border-[var(--primary)]/30 bg-[var(--card)]/70 shadow-[0_8px_24px_rgba(0,0,0,0.18)]",
