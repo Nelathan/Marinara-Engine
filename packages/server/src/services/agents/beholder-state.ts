@@ -509,21 +509,35 @@ export function normalizeBeholderState(value: unknown): BeholderState | null {
  * purpose-trained extractor reads this as one fixed shape; drifting from it moves the
  * input away from the distribution the model's accuracy was measured on.
  */
+/**
+ * Key tracked state the way the model speaks about it: the persona as `self`, everyone
+ * else by name. The prompt and the validator both need this exact shape — the validator
+ * compares a delta against prior state, so it has to be keyed like the delta.
+ */
+export function keyBeholderStateByCharacter(
+  state: unknown,
+  personaName: string | null | undefined,
+): Record<string, Omit<BeholderCharacterState, "name">> {
+  const prior = normalizedPriorState(state);
+  const resolvedPersonaName = cleanText(personaName, 160);
+  const keyed: Record<string, Omit<BeholderCharacterState, "name">> = {};
+  for (const character of prior.characters) {
+    const key = resolvedPersonaName && sameCharacterName(character.name, resolvedPersonaName) ? "self" : character.name;
+    keyed[key] = {
+      ...(character.species ? { species: character.species } : {}),
+      body: character.body,
+    };
+  }
+  return keyed;
+}
+
 export function buildBeholderUserMessage(
   state: unknown,
   personaName: string | null | undefined,
   narration: string,
 ): string {
-  const prior = normalizedPriorState(state);
   const resolvedPersonaName = cleanText(personaName, 160);
-  const keyedState: Record<string, Omit<BeholderCharacterState, "name">> = {};
-  for (const character of prior.characters) {
-    const key = resolvedPersonaName && sameCharacterName(character.name, resolvedPersonaName) ? "self" : character.name;
-    keyedState[key] = {
-      ...(character.species ? { species: character.species } : {}),
-      body: character.body,
-    };
-  }
+  const keyedState = keyBeholderStateByCharacter(state, personaName);
 
   const parts: string[] = [];
   if (resolvedPersonaName) parts.push(`Persona: ${resolvedPersonaName}`);
