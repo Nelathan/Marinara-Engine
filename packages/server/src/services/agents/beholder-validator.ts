@@ -663,7 +663,34 @@ function removePath(root: Dict, path: string): void {
   }
 }
 
-function pruneEmpties(parsed: Dict): void {
+/**
+ * Paths where the model itself emitted an already-empty worn or wounds list. That empty
+ * list is an explicit clear — "took it all off" — which the merge honours, so it has to
+ * survive pruning. A list that only became empty because an invalid item was stripped
+ * must NOT survive: collapsing it to a no-op keeps a bad emission from wiping a stack
+ * the model never meant to clear.
+ */
+function keepOriginallyEmpty(parsed: unknown): Set<string> {
+  const keep = new Set<string>();
+  if (!isObj(parsed)) return keep;
+  const delta = parsed.delta;
+  if (!isObj(delta)) return keep;
+  for (const [char, charData] of Object.entries(delta)) {
+    if (!isObj(charData)) continue;
+    const body = charData.body;
+    if (!isObj(body)) continue;
+    for (const [slot, slotData] of Object.entries(body)) {
+      if (!isObj(slotData)) continue;
+      for (const listField of ["worn", "wounds"]) {
+        const value = slotData[listField];
+        if (Array.isArray(value) && value.length === 0) keep.add(`${char}.${slot}.${listField}`);
+      }
+    }
+  }
+  return keep;
+}
+
+function pruneEmpties(parsed: Dict, keep: ReadonlySet<string>): void {
   const delta = parsed.delta;
   if (!isObj(delta)) return;
   for (const char of Object.keys(delta)) {
@@ -676,7 +703,10 @@ function pruneEmpties(parsed: Dict): void {
         if (isObj(slotData)) {
           for (const listField of ["worn", "wounds"]) {
             const value = slotData[listField];
-            if (listField in slotData && Array.isArray(value) && value.length === 0) delete slotData[listField];
+            if (listField in slotData && Array.isArray(value) && value.length === 0) {
+              if (keep.has(`${char}.${slot}.${listField}`)) continue; // the model's own clear
+              delete slotData[listField];
+            }
           }
           if (Object.keys(slotData).length === 0) delete body[slot];
         } else if (
@@ -712,6 +742,9 @@ function lastListIndex(path: string): number {
  */
 export function stripInvalidFields(parsed: unknown, errors: readonly BeholderFinding[]): unknown {
   if (!parsed) return parsed;
+  // Snapshot the model's explicit clears before stripping, then preserve exactly those
+  // through pruning so a takeoff reaches the merge instead of collapsing to a no-op.
+  const keep = keepOriginallyEmpty(parsed);
   const result = JSON.parse(JSON.stringify(parsed)) as Dict;
   const fatal = errors.filter((entry) => entry.severity === "error");
   const depth = (path: string): number => path.split(".").length - 1;
@@ -719,7 +752,7 @@ export function stripInvalidFields(parsed: unknown, errors: readonly BeholderFin
     (left, right) => depth(right.path) - depth(left.path) || lastListIndex(right.path) - lastListIndex(left.path),
   );
   for (const entry of fatal) removePath(result, entry.path);
-  pruneEmpties(result);
+  pruneEmpties(result, keep);
   return result;
 }
 

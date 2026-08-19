@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger.js";
+import { GARMENT_CANON } from "./beholder-validator-data.js";
 
 export const BEHOLDER_BODY_SLOTS = [
   "head",
@@ -186,16 +187,27 @@ function normalizedPriorState(value: unknown): BeholderState {
   return normalizeBeholderState(value) ?? emptyBeholderState();
 }
 
+/** Fold a garment's surface form onto its canonical identity ("boots" -> "boot"). */
+function canonicalGarment(item: unknown): string {
+  if (typeof item !== "string") return "";
+  const name = item.trim().toLocaleLowerCase("en-US");
+  return (GARMENT_CANON as Record<string, string>)[name] ?? name;
+}
+
 function sameCharacterName(left: string, right: string): boolean {
   return left.toLocaleLowerCase("en-US") === right.toLocaleLowerCase("en-US");
 }
 
-function wornItemIdentity(item: BeholderWornItem): string {
-  return item.item.toLocaleLowerCase("en-US");
+/**
+ * Garment identity, compared in canonical form so "boot" and "boots" are one garment
+ * and update in place instead of stacking up as two.
+ */
+function wornItemIdentity(item: Pick<BeholderWornItem, "item">): string {
+  return canonicalGarment(item.item);
 }
 
 function mergeWornItems(current: BeholderWornItem[] | undefined, updates: BeholderWornItem[]): BeholderWornItem[] {
-  const merged = [...(current ?? [])];
+  const merged = (current ?? []).map((item) => ({ ...item }));
   const indexes = new Map(merged.map((item, index) => [wornItemIdentity(item), index]));
   for (const item of updates) {
     const identity = wornItemIdentity(item);
@@ -203,9 +215,15 @@ function mergeWornItems(current: BeholderWornItem[] | undefined, updates: Behold
     if (existingIndex === undefined) {
       indexes.set(identity, merged.length);
       merged.push(item);
-    } else {
-      merged[existingIndex] = item;
+      continue;
     }
+    const existing = merged[existingIndex];
+    if (!existing) continue;
+    // Update in place: the incoming fields win, but fields this delta did not
+    // re-emit are kept — "the blazer is torn" must not drop the navy it was
+    // already known to be. The first-seen surface form is kept so the label does
+    // not flicker between "boot" and "boots".
+    merged[existingIndex] = { ...existing, ...item, item: existing.item };
   }
   return merged;
 }
@@ -226,7 +244,10 @@ function mergeWounds(current: BeholderWound[] | undefined, updates: BeholderWoun
       touched.add(merged.length);
       merged.push(wound);
     } else {
-      merged[existingIndex] = wound;
+      const existing = merged[existingIndex];
+      // Same in-place update as worn: a worsening severity or new bleeding wins,
+      // while the first-seen wording is kept.
+      merged[existingIndex] = existing ? { ...existing, ...wound, text: existing.text } : wound;
       touched.add(existingIndex);
     }
   }
@@ -401,10 +422,11 @@ function mergeSlotDelta(
   // never emits it (it clears a slot with `worn: []`), but the per-lane worn
   // pass uses it for partial takeoff, so subtract by the same identity.
   if (Array.isArray(rawDelta.worn_remove)) {
+    // Canonicalize the drop set too, so worn_remove: ["boots"] clears a stored "boot".
     const removals = new Set(
       rawDelta.worn_remove
         .filter((entry): entry is string => typeof entry === "string")
-        .map((entry) => entry.trim().toLocaleLowerCase("en-US"))
+        .map((entry) => canonicalGarment(entry))
         .filter((entry) => entry.length > 0),
     );
     if (removals.size > 0) {
@@ -460,6 +482,16 @@ function mergeSlotDelta(
     else delete next.bare;
   }
 
+  // A slot cannot be both bare and clothed. Reconcile toward whatever THIS delta
+  // asserted: bare this turn empties the stack, a garment added this turn clears a
+  // stale bare. A slot the delta did not touch is left alone — only a fresh
+  // assertion resolves the contradiction.
+  if (rawDelta.bare === true) {
+    delete next.worn;
+  } else if (Array.isArray(rawDelta.worn) && rawDelta.worn.length > 0 && next.bare === true) {
+    delete next.bare;
+  }
+
   return { state: Object.keys(next).length > 0 ? next : undefined, used };
 }
 
@@ -509,6 +541,31 @@ export function normalizeBeholderState(value: unknown): BeholderState | null {
  * purpose-trained extractor reads this as one fixed shape; drifting from it moves the
  * input away from the distribution the model's accuracy was measured on.
  */
+/**
+ * Strip `missing` from a model delta.
+ *
+ * Amputation and severed limbs are the one field the extractor misfires on often
+ * enough that acting on it does more harm than good: a wrongly recorded missing limb
+ * cascades through the tracked state and keeps being restated. The reference extractor
+ * therefore treats `missing` as manual-only — a user can set it in the editor or a
+ * directive, but a model delta never does. Slots left empty by the strip are dropped.
+ */
+export function stripModelMissing(delta: unknown): unknown {
+  if (!isRecord(delta)) return delta;
+  for (const characterValue of Object.values(delta)) {
+    if (!isRecord(characterValue)) continue;
+    const body = characterValue.body;
+    if (!isRecord(body)) continue;
+    for (const slotName of Object.keys(body)) {
+      const slot = body[slotName];
+      if (!isRecord(slot)) continue;
+      delete slot.missing;
+      if (Object.keys(slot).length === 0) delete body[slotName];
+    }
+  }
+  return delta;
+}
+
 /**
  * Key tracked state the way the model speaks about it: the persona as `self`, everyone
  * else by name. The prompt and the validator both need this exact shape — the validator

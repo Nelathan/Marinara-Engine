@@ -47,6 +47,7 @@ import {
   BEHOLDER_PASS_LANES,
   buildBeholderUserMessage,
   keyBeholderStateByCharacter,
+  stripModelMissing,
   formatBeholderRequestContext,
   isBeholderLaneResponse,
   mergeBeholderLaneDeltas,
@@ -1827,7 +1828,10 @@ function resolveStructuredAgentResult(
   // that keeps an anatomically impossible emission out of tracked state: a wound on a
   // slot that anatomy cannot occupy, clothing on an amputated limb, a garment on a slot
   // it cannot sit on. Error-severity findings are stripped; the rest are reported.
-  const { findings, stripped } = applyBeholderValidator(data, {
+  // Model-emitted `missing` is dropped before anything else looks at it: amputation is
+  // the one field the extractor misfires on badly enough to be manual-only.
+  const withoutModelMissing = stripModelMissing(data);
+  const { findings, stripped } = applyBeholderValidator(withoutModelMissing, {
     persona: personaName,
     prevState: keyBeholderStateByCharacter(context.memory._beholderState, personaName),
     prose: beholderNarration(config as AgentExecConfig, context),
