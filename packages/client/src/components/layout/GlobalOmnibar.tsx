@@ -1113,6 +1113,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => new Set(addSuggestions.map((item) => item.id.replace("action:add-to-chat:", ""))),
     [addSuggestions],
   );
+  // Same reason as the add rows below: while a removal row is offered for an
+  // entity, the plain entity row is a duplicate that opens its editor instead,
+  // which is never what "remove Eliza" asked for.
+  const removedResultIds = useMemo(
+    () => new Set(removalSuggestions.map((item) => item.id.replace("action:detach-from-chat:", ""))),
+    [removalSuggestions],
+  );
   const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
   const proposalResult = useMemo<OmnibarResult | null>(
     () => buildOmnibarProposalResult({ creationProposal, t }),
@@ -1151,7 +1158,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             // An explicit "Add X to this chat" row replaces the plain entity row
             // for the same thing: showing both lists every character twice, and
             // the plain one reads like "open" while doing the same attach.
-            ...(addedResultIds.size ? searchResults.filter((result) => !addedResultIds.has(result.id)) : searchResults),
+            ...(addedResultIds.size || removedResultIds.size
+              ? searchResults.filter((result) => !addedResultIds.has(result.id) && !removedResultIds.has(result.id))
+              : searchResults),
           ]
         : [
             ...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS),
@@ -1162,6 +1171,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [
       addSuggestions,
       addedResultIds,
+      removedResultIds,
       contextResults,
       continueResult,
       deferredQuery,
