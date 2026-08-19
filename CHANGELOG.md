@@ -6,6 +6,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- The omnibar now has a suggestion menu with separate toggles for proactive context suggestions and explicit Professor Mari model assistance. In an active chat, requests such as "remove" can suggest safe resource actions, and open editor fields can offer a focused Mari edit handoff.
+
 - Professor Mari Work now uses the omnibar's native shell treatment, with a compact toolbar, shared transcript surface, and matching composer when Find transforms into Work.
 
 - Command Center Mari handoffs now preserve the typed source result identity through server validation for future completion routing.

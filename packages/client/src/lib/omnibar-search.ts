@@ -177,7 +177,7 @@ export function createOmnibarContext(input: Partial<OmnibarContext> & Pick<Omnib
 
 const INTENT_PATTERNS: readonly [OmnibarIntentKind, RegExp][] = [
   ["navigate", /^(open|show|go\s+to)\b\s*/],
-  ["action", /^(add|use|activate|set)\b\s*/],
+  ["action", /^(add|use|activate|set|remove|drop|detach)\b\s*/],
   ["create", /^(create|new|import)\b\s*/],
   ["explain", /^(explain|why|how)\b\s*/],
   ["recommend", /^(compare|recommend|improve)\b\s*/],
@@ -200,6 +200,10 @@ export function parseOmnibarIntent(query: string): OmnibarIntent | null {
     return { kind: "repair", verb: normalized.match(/\b(broken|failed|error)\b/)![1]!, targetQuery: normalized };
   }
   return null;
+}
+
+export function isOmnibarRemovalIntent(query: string): boolean {
+  return /^(?:remove|drop|detach)\b/i.test(normalizeProfessorMariNavigationQuery(query));
 }
 
 export type OmnibarActiveChatContext = {

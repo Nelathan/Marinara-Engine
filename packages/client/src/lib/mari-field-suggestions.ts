@@ -45,6 +45,13 @@ export function suggestMariAction(input: MariFieldInput): MariFieldSuggestion | 
   }
 
   if (input.surface === "chat") {
+    if (!trimmed) {
+      return {
+        label: "Continue the scene",
+        capability: "create",
+        draft: `Continue the current scene with ${input.subject?.trim() || "the active character"}.`,
+      };
+    }
     if (trimmed.endsWith("?")) {
       return {
         label: `Ask about ${input.subject?.trim() || "her"}`,
@@ -52,7 +59,18 @@ export function suggestMariAction(input: MariFieldInput): MariFieldSuggestion | 
         draft: trimmed,
       };
     }
-    return null;
+    if (/\b(?:remove|cut|shorten|rewrite|change|improve|fix|make)\b/i.test(trimmed)) {
+      return {
+        label: "Refine this request",
+        capability: "edit",
+        draft: trimmed,
+      };
+    }
+    return {
+      label: "Improve this reply",
+      capability: "edit",
+      draft: `Improve this reply while keeping its intent: ${trimmed}`,
+    };
   }
 
   // character-editor surface below.

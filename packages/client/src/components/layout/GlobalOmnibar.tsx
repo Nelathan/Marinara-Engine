@@ -23,6 +23,7 @@ import {
   LayoutGrid,
   Loader2,
   MessageCircle,
+  MoreVertical,
   Play,
   Search,
   SlidersHorizontal,
@@ -46,6 +47,9 @@ import {
   useUpdateChatMetadata,
 } from "../../hooks/use-chats";
 import { useConnections } from "../../hooks/use-connections";
+import { useInstalledCapabilityPackages } from "../../hooks/use-capability-packages";
+import { getSlashCompletions } from "../../lib/slash-commands";
+import { dispatchCardAssetInsert } from "../../lib/card-asset-links";
 import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-search";
 import { HOME_FAQ_ITEMS, getFaqSearchText } from "../chat/HomeFaq";
 import { useCreateLorebook, useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
@@ -88,6 +92,7 @@ import {
   getUnambiguousOmnibarResult,
   getOmnibarActiveChatContextResultIds,
   isDirectActiveChatAction,
+  isOmnibarRemovalIntent,
   parseOmnibarIntent,
   searchOmnibar,
   type OmnibarCategory,
@@ -181,6 +186,16 @@ function getMessageSearchSnippet(content: string, query: string): string {
  * this many rows it buries recents and create actions.
  */
 const CHAT_CONTEXT_MAX_RESULTS = 8;
+const MAX_SLASH_RESULTS = 8;
+/** Categories that can be attached to (or detached from) the open chat. */
+const CHAT_ATTACHABLE_CATEGORIES = new Set<OmnibarCategory>([
+  "character",
+  "persona",
+  "lorebook",
+  "preset",
+  "connection",
+  "agent",
+]);
 /** A resumable creation session goes stale after a day. */
 const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const BROWSE_BATCH_SIZE = 48;
@@ -189,6 +204,12 @@ const BROWSE_BATCH_SIZE = 48;
  * already are. Missing ids are skipped, so this stays a hint list, not a
  * contract with the command registry.
  */
+/**
+ * Slash commands worth offering before anything is typed while a chat is open.
+ * Everything else stays discoverable by typing "/".
+ */
+const IDLE_CHAT_SLASH_COMMANDS = ["continue", "impersonate", "scene", "goto"] as const;
+
 const SURFACE_IDLE_COMMAND_IDS: Record<OmnibarSurface, readonly string[]> = {
   home: ["chats", "character-library", "create-character"],
   chat: [
@@ -484,6 +505,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
+  const [suggestionMenuOpen, setSuggestionMenuOpen] = useState(false);
   const [browseCompareIds, setBrowseCompareIds] = useState<string[]>([]);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
@@ -507,6 +529,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const reduceAmbientEffects = useUIStore((state) => state.reduceAmbientEffects);
   const musicPlayerEnabled = useUIStore((state) => state.musicPlayerEnabled);
   const mariEnabled = useUIStore((state) => state.commandCenterMariEnabled);
+  const omnibarSuggestionsEnabled = useUIStore((state) => state.omnibarSuggestionsEnabled);
   const mariWorkspaceStatus = useProfessorMariWorkspaceStatus();
   const speechToTextEnabled = useUIStore((state) => state.speechToTextEnabled);
   const notificationSoundsOnlyWhenUnfocused = useUIStore((state) => state.notificationSoundsOnlyWhenUnfocused);
@@ -1078,6 +1101,12 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const toggleRows = [
       ["commandCenterMariEnabled", "commandCenter.controls.mariAssist", mariEnabled, set().setCommandCenterMariEnabled],
       [
+        "omnibarSuggestionsEnabled",
+        "commandCenter.controls.omnibarSuggestions",
+        omnibarSuggestionsEnabled,
+        set().setOmnibarSuggestionsEnabled,
+      ],
+      [
         "reduceAmbientEffects",
         "commandCenter.controls.reducedEffects",
         reduceAmbientEffects,
@@ -1159,6 +1188,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     ];
   }, [
     mariEnabled,
+    omnibarSuggestionsEnabled,
     musicPlayerEnabled,
     notificationSoundsOnlyWhenUnfocused,
     reduceAmbientEffects,
@@ -1684,6 +1714,41 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     });
     return out;
   }, [activeChatId, messageSearchIndex, messageSearchQuery, t]);
+  // The chat input already owns a slash-command registry; the omnibar reuses it
+  // so "what can I do in this chat" is answerable from one place. Choosing a row
+  // types the command into the chat input instead of running it, so args and
+  // confirmation stay where the user can see them.
+  const installedCapabilities = useInstalledCapabilityPackages();
+  const slashAvailability = useMemo(
+    () => ({
+      mode: activeChat?.mode === "roleplay" || activeChat?.mode === "conversation" ? activeChat.mode : undefined,
+      availableCapabilityIds: new Set(
+        (installedCapabilities.data ?? []).filter((item) => item.status === "active").map((item) => item.id),
+      ),
+    }),
+    [activeChat?.mode, installedCapabilities.data],
+  );
+  const slashResults = useMemo<OmnibarResult[]>(() => {
+    if (!activeChatId || omnibarContext.surface !== "chat") return [];
+    const typed = deferredQuery.trim();
+    const commands = typed.startsWith("/")
+      ? getSlashCompletions(typed, slashAvailability)
+      : typed
+        ? []
+        : getSlashCompletions("/", slashAvailability).filter((command) =>
+            (IDLE_CHAT_SLASH_COMMANDS as readonly string[]).includes(command.name),
+          );
+    return commands.slice(0, MAX_SLASH_RESULTS).map((command, index) => ({
+      id: `slash:${command.name}`,
+      title: command.usage,
+      description: command.description,
+      category: "chat" as const,
+      group: "messages" as const,
+      score: 320 - index,
+      kind: "action" as const,
+      icon: "command" as const,
+    }));
+  }, [activeChatId, deferredQuery, omnibarContext.surface, slashAvailability]);
   const idleResults = useMemo(() => {
     const byId = new Map(allLocalResults.map((result) => [result.id, result]));
     const selected: OmnibarResult[] = [];
@@ -1759,6 +1824,23 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
 
     if (!isActiveChatSurface) {
+      if (omnibarSuggestionsEnabled && mariEnabled && activeEditorField) {
+        push({
+          id: "suggestion:edit-focused-field",
+          title: t("commandCenter.suggestions.editFocusedField", "Improve {{field}} with Mari", {
+            field: activeEditorField.label,
+          }),
+          description: t(
+            "commandCenter.suggestions.editFocusedFieldDescription",
+            "Ask Mari to suggest a useful change for the selected field.",
+          ),
+          category: "professor",
+          score: 460,
+          group: "professor-suggested",
+          kind: "action",
+          icon: "professor",
+        });
+      }
       if (openCharacterId) {
         const name = characterNameById.get(openCharacterId);
         if (name)
@@ -1897,6 +1979,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   }, [
     activeChat,
     activeChatId,
+    activeEditorField,
     allLocalResults,
     agents.data,
     characterNameById,
@@ -1904,6 +1987,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     creationSession,
     lastAppError,
     lorebooks.data,
+    mariEnabled,
     openAgentId,
     openCharacterId,
     openConnectionId,
@@ -1913,9 +1997,32 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     personaById,
     personas.data,
     presets.data,
+    omnibarSuggestionsEnabled,
     omnibarContext.surface,
     t,
   ]);
+  const removalSuggestions = useMemo<OmnibarResult[]>(() => {
+    if (!omnibarSuggestionsEnabled || !activeChat || !isOmnibarRemovalIntent(deferredQuery)) return [];
+    return getChatCharacterIds(activeChat).flatMap((characterId) => {
+      const name = characterNameById.get(characterId);
+      if (!name) return [];
+      return [
+        {
+          id: `action:remove-character:${characterId}`,
+          title: t("commandCenter.actions.removeCharacter", "Remove {{name}} from this chat", { name }),
+          description: t(
+            "commandCenter.actions.removeCharacterDescription",
+            "Detach this character from the current chat.",
+          ),
+          category: "character" as const,
+          score: 460,
+          kind: "action" as const,
+          icon: "character" as const,
+          group: "current-work" as const,
+        },
+      ];
+    });
+  }, [activeChat, characterNameById, deferredQuery, omnibarSuggestionsEnabled, t]);
   const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
   const proposalResult = useMemo<OmnibarResult | null>(() => {
     if (!creationProposal) return null;
@@ -2007,6 +2114,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () =>
       deferredQuery.trim()
         ? [
+            ...slashResults,
+            ...removalSuggestions,
             ...(gameResult ? [gameResult] : []),
             ...(proposalResult ? [proposalResult] : []),
             ...(extractionResult ? [extractionResult] : []),
@@ -2014,7 +2123,7 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...mariChatResults,
             ...searchResults,
           ]
-        : [...contextResults, ...(continueResult ? [continueResult] : []), ...idleResults],
+        : [...contextResults, ...slashResults, ...(continueResult ? [continueResult] : []), ...idleResults],
     [
       contextResults,
       continueResult,
@@ -2026,6 +2135,8 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       messageResults,
       proposalResult,
       searchResults,
+      removalSuggestions,
+      slashResults,
     ],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
@@ -2091,16 +2202,27 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const results = presentation.results;
   // Ghost text: continue the query with the best-ranked result title. Uses the
   // ranked list already on screen, so the guess never disagrees with row 1.
-  const inlineSuffix = useMemo(
-    () =>
-      pane === "mari"
-        ? ""
-        : completeInline(
-            query,
-            results.flatMap((result) => (result.id === "ask-professor-mari" ? [] : [result.title])),
-          ),
-    [pane, query, results],
-  );
+  // With a chat open, an action verb completes to the whole sentence the omnibar
+  // can execute ("add el" -> "add Eliza to this chat"), not just the name.
+  const inlineSuffix = useMemo(() => {
+    if (pane === "mari") return "";
+    const intent = parseOmnibarIntent(query);
+    const tail = !activeChat
+      ? null
+      : isOmnibarRemovalIntent(query)
+        ? t("commandCenter.phrase.fromThisChat", "from this chat")
+        : intent?.kind === "action"
+          ? t("commandCenter.phrase.toThisChat", "to this chat")
+          : null;
+    const candidates = results.flatMap((result) => {
+      if (result.id === "ask-professor-mari") return [];
+      if (tail && intent && CHAT_ATTACHABLE_CATEGORIES.has(result.category)) {
+        return [`${intent.verb} ${result.title} ${tail}`, result.title];
+      }
+      return [result.title];
+    });
+    return completeInline(query, candidates);
+  }, [activeChat, pane, query, results, t]);
   const resultIdsKey = results.map((result) => result.id).join("\u0000");
   const reconciledResultIdsKeyRef = useRef<string | null>(null);
   const activeIndex = results.findIndex((result) => result.id === activeResultId);
@@ -2250,11 +2372,38 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       openProfessorMari();
       return;
     }
+    if (result.id.startsWith("slash:")) {
+      const chatId = activeChatId;
+      const command = `/${result.id.slice("slash:".length)} `;
+      recordUse(result.id);
+      onClose();
+      // After the dialog unmounts, so the chat input keeps the focus it takes.
+      if (chatId) requestAnimationFrame(() => dispatchCardAssetInsert(command, chatId));
+      return;
+    }
     if (result.id.startsWith("message:")) {
       const messageNumber = Number(result.id.slice(result.id.lastIndexOf(":") + 1));
       const chatId = result.id.slice("message:".length, result.id.lastIndexOf(":"));
       if (Number.isFinite(messageNumber)) useChatStore.getState().requestGotoMessage(chatId, messageNumber);
       onClose();
+      return;
+    }
+    if (result.id.startsWith("action:remove-character:")) {
+      const characterId = result.id.slice("action:remove-character:".length);
+      if (
+        activeChat &&
+        characterId &&
+        window.confirm(
+          t("commandCenter.actions.confirmRemoveCharacter", "Remove this character from the current chat?"),
+        )
+      ) {
+        void updateChat.mutateAsync({
+          id: activeChat.id,
+          characterIds: (activeChat.characterIds ?? []).filter((id) => id !== characterId),
+        });
+        recordUse(result.id);
+        onClose();
+      }
       return;
     }
     if (runDirectChatAction(result)) return;
@@ -3275,6 +3424,66 @@ function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
                 />
               </button>
+            ) : null}
+            {pane !== "mari" ? (
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  aria-label={t("commandCenter.suggestionsMenu", "Suggestion settings")}
+                  aria-expanded={suggestionMenuOpen}
+                  title={t("commandCenter.suggestionsMenu", "Suggestion settings")}
+                  onClick={() => setSuggestionMenuOpen((open) => !open)}
+                  className="inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
+                >
+                  <MoreVertical size={18} />
+                </button>
+                {suggestionMenuOpen ? (
+                  <div
+                    role="menu"
+                    aria-label={t("commandCenter.suggestionsMenu", "Suggestion settings")}
+                    className="absolute right-0 top-12 z-20 w-72 rounded-lg border border-[var(--border)] bg-[var(--card)] p-2 shadow-xl"
+                  >
+                    <label className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-[var(--accent)]">
+                      <input
+                        type="checkbox"
+                        checked={omnibarSuggestionsEnabled}
+                        onChange={(event) => useUIStore.getState().setOmnibarSuggestionsEnabled(event.target.checked)}
+                        className="mt-0.5 accent-[var(--primary)]"
+                      />
+                      <span>
+                        <span className="block text-xs font-semibold text-[var(--foreground)]">
+                          {t("commandCenter.controls.omnibarSuggestions", "Context suggestions")}
+                        </span>
+                        <span className="mt-0.5 block text-[0.6875rem] leading-4 text-[var(--muted-foreground)]">
+                          {t(
+                            "commandCenter.controls.omnibarSuggestionsHelp",
+                            "Suggest useful actions for the current chat or screen.",
+                          )}
+                        </span>
+                      </span>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-[var(--accent)]">
+                      <input
+                        type="checkbox"
+                        checked={mariEnabled}
+                        onChange={(event) => useUIStore.getState().setCommandCenterMariEnabled(event.target.checked)}
+                        className="mt-0.5 accent-[var(--primary)]"
+                      />
+                      <span>
+                        <span className="block text-xs font-semibold text-[var(--foreground)]">
+                          {t("commandCenter.controls.mariAssist", "Professor Mari assistance")}
+                        </span>
+                        <span className="mt-0.5 block text-[0.6875rem] leading-4 text-[var(--muted-foreground)]">
+                          {t(
+                            "commandCenter.controls.mariAssistHelp",
+                            "Allow explicit handoffs to use the configured language model.",
+                          )}
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
             <button
               type="button"

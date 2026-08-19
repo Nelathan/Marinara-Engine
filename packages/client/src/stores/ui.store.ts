@@ -786,6 +786,8 @@ interface UIState {
   professorMariNavigationEnabled: boolean;
   /** When true, the Command Center (omnibar) surfaces Professor Mari's LLM-backed assistance. */
   commandCenterMariEnabled: boolean;
+  /** When true, the omnibar adds proactive context and edit suggestions. */
+  omnibarSuggestionsEnabled: boolean;
   /** When true, achievements appear on Home and announce unlocks. Backend tracking stays silent either way. */
   achievementsEnabled: boolean;
   /** When true, show the global Music Player surface. */
@@ -1103,6 +1105,7 @@ interface UIState {
   setProfessorMariSuggestionsEnabled: (v: boolean) => void;
   setProfessorMariNavigationEnabled: (v: boolean) => void;
   setCommandCenterMariEnabled: (v: boolean) => void;
+  setOmnibarSuggestionsEnabled: (v: boolean) => void;
   setAchievementsEnabled: (v: boolean) => void;
   setMusicPlayerEnabled: (v: boolean) => void;
   setMusicPlayerSource: (v: MusicPlayerSource) => void;
@@ -1526,6 +1529,7 @@ export const useUIStore = create<UIState>()(
       professorMariSuggestionsEnabled: true,
       professorMariNavigationEnabled: true,
       commandCenterMariEnabled: true,
+      omnibarSuggestionsEnabled: true,
       achievementsEnabled: true,
       musicPlayerEnabled: true,
       musicPlayerSource: "youtube" as MusicPlayerSource,
@@ -2322,6 +2326,7 @@ export const useUIStore = create<UIState>()(
         if (v && !wasEnabled) resetProfessorMariNavigator();
       },
       setCommandCenterMariEnabled: (v) => set({ commandCenterMariEnabled: v }),
+      setOmnibarSuggestionsEnabled: (v) => set({ omnibarSuggestionsEnabled: v }),
       setAchievementsEnabled: (v) => set({ achievementsEnabled: v }),
       setMusicPlayerEnabled: (v) => set({ musicPlayerEnabled: v }),
       setMusicPlayerSource: (v) =>
@@ -2552,7 +2557,7 @@ export const useUIStore = create<UIState>()(
       // the persisted version changes. Without it an existing user's saved order
       // never gains "inventory" and the section stays invisible until they
       // reorder the panel by hand.
-      version: 95,
+      version: 96,
       // Debounce localStorage writes to avoid sync I/O on every state change
       storage: createJSONStorage(() => {
         let timer: ReturnType<typeof setTimeout> | null = null;
@@ -3131,6 +3136,7 @@ export const useUIStore = create<UIState>()(
         persisted.professorMariSuggestionsEnabled = persisted.professorMariSuggestionsEnabled !== false;
         persisted.professorMariNavigationEnabled = persisted.professorMariNavigationEnabled !== false;
         persisted.commandCenterMariEnabled = persisted.commandCenterMariEnabled !== false;
+        persisted.omnibarSuggestionsEnabled = persisted.omnibarSuggestionsEnabled !== false;
         persisted.includeReasoningInExports = persisted.includeReasoningInExports === true;
         persisted.roleplayReducedPaintEffects = persisted.roleplayReducedPaintEffects === true;
         persisted.roleplayNarratorAvatarCycling = persisted.roleplayNarratorAvatarCycling !== false;
@@ -3264,6 +3270,7 @@ export const useUIStore = create<UIState>()(
         professorMariSuggestionsEnabled: state.professorMariSuggestionsEnabled,
         professorMariNavigationEnabled: state.professorMariNavigationEnabled,
         commandCenterMariEnabled: state.commandCenterMariEnabled,
+        omnibarSuggestionsEnabled: state.omnibarSuggestionsEnabled,
         achievementsEnabled: state.achievementsEnabled,
         musicPlayerEnabled: state.musicPlayerEnabled,
         musicPlayerSource: state.musicPlayerSource,
