@@ -568,7 +568,10 @@ function ActiveContextLinksButton({
 
   useEffect(() => {
     if (!open) return;
-    const handleDismiss = () => setOpen(false);
+    const handleDismiss = () => {
+      if (document.querySelector("[data-macro-modal]")) return;
+      setOpen(false);
+    };
     window.addEventListener(CHAT_FLOATING_UI_DISMISS_EVENT, handleDismiss);
     return () => window.removeEventListener(CHAT_FLOATING_UI_DISMISS_EVENT, handleDismiss);
   }, [open]);
@@ -877,6 +880,7 @@ function SummaryButton({
         ref={buttonRef}
         data-chat-toolbar-panel-action="summary"
         onClick={() => {
+          if (open && document.querySelector("[data-macro-modal]")) return;
           setAnchor(readSummaryAnchor());
           setOpen(!open);
         }}
@@ -2298,7 +2302,7 @@ export function ChatRoleplaySurface({
                   buttonClassName="border-[var(--marinara-chat-chrome-button-border-active)] bg-[var(--marinara-chat-chrome-button-bg-active)] text-[var(--marinara-chat-chrome-button-text-active)] hover:border-[var(--marinara-chat-chrome-button-border-hover)] hover:bg-[var(--marinara-chat-chrome-button-bg-hover)] hover:text-[var(--marinara-chat-chrome-button-text-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--marinara-chat-chrome-focus-ring)]"
                 />
 
-                {!isStreaming && <CyoaChoices messages={visibleMessages} />}
+                {!isStreaming && <CyoaChoices messages={messages} />}
 
                 {hasLiveStream && !regenerateMessageId && (
                   <StreamingIndicator

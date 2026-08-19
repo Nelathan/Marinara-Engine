@@ -8,7 +8,6 @@ import { GlobalOmnibar } from "./GlobalOmnibarHost";
 import { SpotifyMobileWidget } from "../spotify/SpotifyMiniPlayer";
 import { YouTubeMobileWidget } from "../chat/YouTubePlayer";
 import { LocalMusicMobileWidget } from "../chat/LocalMusicPlayer";
-import { MusicDjUnavailablePlayer } from "../music/MusicDjUnavailablePlayer";
 import { ProfessorMariFloatingAssistantHost } from "../chat/ProfessorMariFloatingAssistantHost";
 import { ChatResourceMobileDropDock } from "../chat/ChatResourceMobileDropDock";
 import { hasProfessorMariFloatingFollowup } from "../chat/professor-mari-floating-events";
@@ -231,11 +230,9 @@ export function AppShell() {
   const capabilityAgents = useCapabilityAgentRegistry();
   const installedCapabilities = useCapabilityClientModules();
   const updateChatMetadata = useUpdateChatMetadata();
-  const musicPlayerEnabled = useUIStore((state) => state.musicPlayerEnabled);
   const musicDjInstalled = (installedCapabilities.data ?? []).some(
     (capability) => capability.id === "spotify" && capability.status === "active",
   );
-  const showMusicDjUnavailablePlayer = musicPlayerEnabled && !installedCapabilities.isLoading && !musicDjInstalled;
 
   // Background autonomous polling for inactive conversation chats
   useBackgroundAutonomousPolling();
@@ -870,7 +867,13 @@ export function AppShell() {
     [activeChatId, setTrackerPanelOpen],
   );
 
-  const professorMariFloatingActive = hasDetailView && hasProfessorMariFloatingFollowup();
+  const professorMariFloatingActive =
+    hasProfessorMariFloatingFollowup() &&
+    (Boolean(activeChatId) ||
+      hasDetailView ||
+      botBrowserOpen ||
+      gameAssetsBrowserOpen ||
+      (shellOverlayMode && Boolean(mobileNavigationPanel)));
 
   useEffect(() => {
     restoreTrackerPanelOpenForChat(activeChatId);
@@ -1544,9 +1547,7 @@ export function AppShell() {
       <ProfessorMariFloatingAssistantHost active={professorMariFloatingActive} />
       <GlobalOmnibar />
       <div data-component="MobileMusicWidgetLayer" className="contents">
-        {isMobile && showMusicDjUnavailablePlayer ? (
-          <MusicDjUnavailablePlayer floating mobileOnly />
-        ) : isMobile && musicDjInstalled ? (
+        {isMobile && musicDjInstalled ? (
           <>
             <SpotifyMobileWidget />
             <YouTubeMobileWidget />

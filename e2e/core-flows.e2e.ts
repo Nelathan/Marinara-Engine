@@ -605,6 +605,64 @@ test("default dialogue color fills only cards without their own dialogue color",
   }
 });
 
+test("merged narrator hides speaker tags when every character uses the default dialogue color", async ({
+  page,
+}, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Merged speaker color fallback is covered on desktop.");
+
+  const characterIds: string[] = [];
+  let chatId = "";
+  try {
+    for (const name of ["Default Speaker Alpha", "Default Speaker Beta"]) {
+      const response = await page.request.post("/api/characters", { data: { data: { name } } });
+      expect(response.ok()).toBeTruthy();
+      characterIds.push(((await response.json()) as { id: string }).id);
+    }
+
+    const chatResponse = await page.request.post("/api/chats", {
+      data: { name: "Merged Speaker Fallback Smoke", mode: "roleplay", characterIds },
+    });
+    expect(chatResponse.ok()).toBeTruthy();
+    chatId = ((await chatResponse.json()) as { id: string }).id;
+
+    const metadataResponse = await page.request.patch(`/api/chats/${chatId}/metadata`, {
+      data: { groupChatMode: "merged" },
+    });
+    expect(metadataResponse.ok()).toBeTruthy();
+
+    const messageResponse = await page.request.post(`/api/chats/${chatId}/messages`, {
+      data: {
+        role: "assistant",
+        content:
+          '<speaker="Default Speaker Alpha">"Use the fallback."</speaker> <speaker="Default Speaker Beta">"Keep tags hidden."</speaker>',
+      },
+    });
+    expect(messageResponse.ok()).toBeTruthy();
+    const message = (await messageResponse.json()) as { id: string };
+
+    await page.addInitScript((activeChatId) => {
+      localStorage.setItem("marinara-active-chat-id", activeChatId);
+      const persisted = JSON.parse(localStorage.getItem("marinara-engine-ui") ?? '{"state":{}}') as {
+        state?: Record<string, unknown>;
+      };
+      persisted.state = { ...(persisted.state ?? {}), defaultDialogueColor: "#d946ef" };
+      localStorage.setItem("marinara-engine-ui", JSON.stringify(persisted));
+    }, chatId);
+    await page.goto("/");
+
+    const content = page.locator(`[data-message-id="${message.id}"] .mari-message-content`).first();
+    await expect(content).not.toContainText("<speaker=");
+    await expect(content).toContainText('"Use the fallback." "Keep tags hidden."');
+    await expect(content.locator("strong")).toHaveCount(2);
+    for (const dialogue of await content.locator("strong").all()) {
+      await expect(dialogue).toHaveCSS("color", "rgb(217, 70, 239)");
+    }
+  } finally {
+    if (chatId) await page.request.delete(`/api/chats/${chatId}`).catch(() => undefined);
+    await Promise.all(characterIds.map((id) => page.request.delete(`/api/characters/${id}`).catch(() => undefined)));
+  }
+});
+
 test("roleplay hides contentless user anchors without hiding visible payloads", async ({ page }) => {
   const chatResponse = await page.request.post("/api/chats", {
     data: { name: "Spatial-only Message Visibility Smoke", mode: "roleplay", characterIds: [] },
@@ -1122,8 +1180,6 @@ test("settings profiles enforce chat modes and preserve branch identity", async 
 });
 
 test("Author's Notes keeps its expand and full macro guide inside the field", async ({ page, request }, testInfo) => {
-  test.skip(!testInfo.project.name.includes("desktop"), "Author's Notes field chrome is covered on desktop.");
-
   const chatResponse = await request.post("/api/chats", {
     data: {
       name: "Author Notes Macro Field Smoke",
@@ -1137,10 +1193,15 @@ test("Author's Notes keeps its expand and full macro guide inside the field", as
 
   try {
     await page.goto("/");
+    if (testInfo.project.name.includes("mobile")) {
+      await page.getByRole("button", { name: "More options", exact: true }).click();
+    }
     await page.getByRole("button", { name: "Author's Notes", exact: true }).filter({ visible: true }).click();
 
     const heading = page.locator("h3").filter({ hasText: "Author's Notes" });
     await expect(heading).toBeVisible();
+    const floatingPanel = heading.locator("xpath=ancestor::div[contains(@class, 'fixed')][1]");
+    const floatingPanelZIndex = await floatingPanel.evaluate((element) => Number(getComputedStyle(element).zIndex));
     const panel = heading.locator("..");
     const field = panel.locator(".mari-author-notes-field");
     await expect(field.getByRole("textbox", { name: "Author's Notes", exact: true })).toBeVisible();
@@ -1151,6 +1212,10 @@ test("Author's Notes keeps its expand and full macro guide inside the field", as
     await field.getByRole("button", { name: "Macro reference", exact: true }).click();
     const macroReference = page.locator('[data-component="MacroReference"]');
     await expect(macroReference).toBeVisible();
+    await expect(macroReference.locator("section").first()).toContainText("Use {{macro}} anywhere in prompt fields.");
+    expect(await macroReference.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+      floatingPanelZIndex,
+    );
     await expect(macroReference.getByText("{{charPostHistory}}", { exact: true })).toBeVisible();
     await expect(macroReference.getByText("{{agent::TYPE}}", { exact: true })).toBeVisible();
     await expect(macroReference.getByText(/Conditional block with/)).toBeVisible();
@@ -1160,6 +1225,9 @@ test("Author's Notes keeps its expand and full macro guide inside the field", as
     await field.getByRole("button", { name: "Expand editor", exact: true }).click();
     const expandedEditor = page.locator('[data-component="ExpandedMacroEditor"]');
     await expect(expandedEditor).toBeVisible();
+    expect(await expandedEditor.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+      floatingPanelZIndex,
+    );
     const savedNotes = '{{#if char == "Albedo"}}Keep {{user}} curious.{{else}}Keep the scene curious.{{/if}}';
     await expandedEditor.locator("textarea").fill(savedNotes);
     await expandedEditor.getByRole("button", { name: "Close expanded editor", exact: true }).click();
@@ -1175,6 +1243,69 @@ test("Author's Notes keeps its expand and full macro guide inside the field", as
         return metadata.authorNotes;
       })
       .toBe(savedNotes);
+  } finally {
+    await request.delete(`/api/chats/${chat.id}`).catch(() => undefined);
+  }
+});
+
+test("summary macro editor stays above its floating panel", async ({ page, request }, testInfo) => {
+  const chatResponse = await request.post("/api/chats", {
+    data: { name: "Summary Macro Modal Layering Smoke", mode: "roleplay", characterIds: [] },
+  });
+  expect(chatResponse.ok()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+  const timestamp = new Date().toISOString();
+  const metadataResponse = await request.patch(`/api/chats/${chat.id}/metadata`, {
+    data: {
+      summaryEntries: [
+        {
+          id: "summary-macro-layering-entry",
+          kind: "rolling",
+          origin: "manual",
+          title: "Layered summary",
+          content: "A summary that should remain editable.",
+          enabled: true,
+          sourceMode: "last",
+          tokenEstimate: 7,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+      ],
+    },
+  });
+  expect(metadataResponse.ok()).toBeTruthy();
+  await page.addInitScript((chatId) => localStorage.setItem("marinara-active-chat-id", chatId), chat.id);
+
+  try {
+    await page.goto("/");
+    if (testInfo.project.name.includes("mobile")) {
+      await page.getByRole("button", { name: "More options", exact: true }).click();
+    }
+    const summaryButton = page
+      .getByRole("button", { name: "Chat Summary (1 active summary)", exact: true })
+      .filter({ visible: true });
+    await summaryButton.click();
+
+    const summaryPanel = page.locator("[data-chat-floating-panel]").filter({ hasText: "Chat Summary" });
+    await expect(summaryPanel).toBeVisible();
+    await summaryPanel.getByRole("button", { name: "Edit summary entry", exact: true }).click();
+    const summaryField = summaryPanel.getByRole("textbox", {
+      name: "Write or paste a summary of this chat...",
+      exact: true,
+    });
+    await expect(summaryField).toBeVisible();
+    await summaryField.locator("..").getByRole("button", { name: "Expand editor", exact: true }).click();
+
+    const expandedEditor = page.locator('[data-component="ExpandedMacroEditor"]');
+    await expect(expandedEditor).toBeVisible();
+    expect(await expandedEditor.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+      await summaryPanel.evaluate((element) => Number(getComputedStyle(element).zIndex)),
+    );
+    await summaryButton.evaluate((button: HTMLButtonElement) => button.click());
+    await expect(expandedEditor).toBeVisible();
+    await expandedEditor.locator("textarea").fill("The expanded summary remains usable.");
+    await expandedEditor.getByRole("button", { name: "Close expanded editor", exact: true }).click();
+    await expect(summaryPanel).toBeVisible();
   } finally {
     await request.delete(`/api/chats/${chat.id}`).catch(() => undefined);
   }
@@ -4460,6 +4591,62 @@ test("mobile transcript swipes navigate Conversation and Roleplay alternatives",
     }
   } finally {
     await Promise.allSettled(fixtures.map((fixture) => request.delete(`/api/chats/${fixture.chatId}`)));
+  }
+});
+
+test("goto keeps stale CYOA choices out of the chat tail", async ({ page, request }) => {
+  const staleChoiceText = `Wait for the stale path ${Date.now()}`;
+  const transcript = [
+    JSON.stringify({ user_name: "You", character_name: "Guide", chat_metadata: {} }),
+    ...Array.from({ length: 81 }, (_, index) =>
+      JSON.stringify({
+        name: "Guide",
+        is_user: false,
+        mes: `Imported assistant message ${index + 1}`,
+        extra:
+          index === 79
+            ? { cyoaChoices: [{ label: "Wait", text: staleChoiceText }] }
+            : {},
+      }),
+    ),
+  ].join("\n");
+  const importResponse = await request.post("/api/import/st-chat", {
+    multipart: {
+      file: {
+        name: `cyoa-goto-tail-${Date.now()}.jsonl`,
+        mimeType: "application/jsonl",
+        buffer: Buffer.from(transcript),
+      },
+      mode: "roleplay",
+    },
+  });
+  expect(importResponse.ok(), await importResponse.text()).toBeTruthy();
+  const imported = (await importResponse.json()) as { chatId: string };
+
+  try {
+    await page.addInitScript((chatId) => {
+      localStorage.setItem("marinara-active-chat-id", chatId);
+      localStorage.setItem(
+        "marinara-engine-ui",
+        JSON.stringify({
+          state: { hasCompletedOnboarding: true, messagesPerPage: 100, sidebarOpen: false, rightPanelOpen: false },
+          version: 87,
+        }),
+      );
+    }, imported.chatId);
+    await page.goto("/");
+
+    const staleChoice = page.getByText(staleChoiceText, { exact: true });
+    await expect(page.getByText("Imported assistant message 81", { exact: true })).toBeVisible();
+    await expect(staleChoice).toHaveCount(0);
+
+    const composer = page.locator("textarea.mari-chat-input-textarea");
+    await composer.fill("/goto 1");
+    await page.locator("button.mari-chat-send-btn").click();
+    await expect(page.getByText("Imported assistant message 1", { exact: true })).toBeVisible();
+    await expect(staleChoice).toHaveCount(0);
+  } finally {
+    await request.delete(`/api/chats/${imported.chatId}?force=true`).catch(() => undefined);
   }
 });
 
@@ -10503,7 +10690,7 @@ test("agent catalog reports API failures without diagnosing an internet outage",
   await expect(catalogView.getByText(/Check the server internet connection/)).toHaveCount(0);
 });
 
-test("Music Player links to Music DJ while its package is unavailable", async ({ page }) => {
+test("Music Player stays unavailable until Music DJ is installed", async ({ page }, testInfo) => {
   const errors = collectUnexpectedErrors(page);
   let musicDjInstalled = false;
   const musicDjManifest = {
@@ -10557,6 +10744,29 @@ test("Music Player links to Music DJ while its package is unavailable", async ({
       }),
     });
   });
+  await page.route("**/api/capability-packages/spotify/install", async (route) => {
+    musicDjInstalled = true;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "spotify",
+        version: "1.0.0",
+        manifest: musicDjManifest,
+        installedAt: "2026-07-15T00:00:00.000Z",
+        status: "active",
+        error: null,
+        legacy: false,
+      }),
+    });
+  });
+  await page.route("**/api/spotify/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ connected: false, expired: false, hasStreamingScope: false }),
+    });
+  });
 
   const openMusicPlayerSetting = async () => {
     const row = page.locator("#settings-control-music-player");
@@ -10566,43 +10776,41 @@ test("Music Player links to Music DJ while its package is unavailable", async ({
     await expect(row).toBeVisible();
     return row;
   };
-  const expandUnavailablePlayer = async () => {
-    const openPrompt = page.getByRole("button", { name: "Open Music DJ download prompt" });
-    if (await openPrompt.isVisible()) await openPrompt.click();
-  };
-
   await page.goto("/");
-  let unavailablePlayer = page.locator('[data-component="MusicDjUnavailablePlayer"]');
-  await expect(unavailablePlayer).toBeVisible();
-  await expandUnavailablePlayer();
-  await expect(unavailablePlayer.getByText("Download Music DJ Agent to configure", { exact: true })).toBeVisible();
+  await page.evaluate(async () => {
+    const { useUIStore } = await import("/src/stores/ui.store.ts");
+    useUIStore.getState().setMusicPlayerSource("spotify");
+  });
+  const musicPlayer = page.locator('[data-component^="SpotifyMiniPlayer."]');
+  await expect(musicPlayer).toHaveCount(0);
   let musicPlayerRow = await openMusicPlayerSetting();
   const musicPlayerToggle = musicPlayerRow.locator('input[type="checkbox"]');
   await expect(musicPlayerToggle).toHaveCount(1);
-  await expect(musicPlayerToggle).toBeChecked();
-  await musicPlayerRow.getByText("Music Player", { exact: true }).click();
+  await expect(musicPlayerToggle).toBeDisabled();
   await expect(musicPlayerToggle).not.toBeChecked();
-  await expect(page.locator('[data-component="MusicDjUnavailablePlayer"]')).toHaveCount(0);
-  await musicPlayerRow.getByText("Music Player", { exact: true }).click();
-  await expect(musicPlayerToggle).toBeChecked();
-  unavailablePlayer = page.locator('[data-component="MusicDjUnavailablePlayer"]');
-  await expect(unavailablePlayer).toBeVisible();
-  await expandUnavailablePlayer();
+  await musicPlayerRow.getByRole("button", { name: "Show help" }).click();
+  await expect(page.getByText("Download the Music DJ agent to use the Music Player.")).toBeVisible();
 
-  musicDjInstalled = true;
-  await page.reload();
-  await expect(page.locator('[data-component="MusicDjUnavailablePlayer"]')).toHaveCount(0);
+  await page.locator('[data-tour="panel-agents"]').click();
+  await page.getByLabel("Agents").getByRole("button", { name: "Download Agents", exact: true }).click();
+  const catalogView = page.locator('[data-component="AgentCatalogView"]');
+  await expect(catalogView).toBeVisible();
+  if (testInfo.project.name.includes("mobile")) {
+    await catalogView.getByRole("button", { name: /Music DJ Matches scene mood/u }).click();
+  }
+  await catalogView.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(musicPlayer).toBeVisible();
+
   musicPlayerRow = await openMusicPlayerSetting();
-  await expect(musicPlayerRow.locator('input[type="checkbox"]')).toHaveCount(1);
-
-  musicDjInstalled = false;
-  await page.reload();
-  unavailablePlayer = page.locator('[data-component="MusicDjUnavailablePlayer"]');
-  await expect(unavailablePlayer).toBeVisible();
-  await expandUnavailablePlayer();
-  await unavailablePlayer.getByRole("button", { name: "Download Agents" }).click();
-  await expect(page.locator('[data-component="AgentCatalogView"]')).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Download Agents" })).toBeVisible();
+  const installedMusicPlayerToggle = musicPlayerRow.locator('input[type="checkbox"]');
+  await expect(installedMusicPlayerToggle).toBeEnabled();
+  await expect(installedMusicPlayerToggle).toBeChecked();
+  await musicPlayerRow.getByText("Music Player", { exact: true }).click();
+  await expect(installedMusicPlayerToggle).not.toBeChecked();
+  await expect(musicPlayer).toHaveCount(0);
+  await musicPlayerRow.getByText("Music Player", { exact: true }).click();
+  await expect(installedMusicPlayerToggle).toBeChecked();
+  await expect(musicPlayer).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -12402,7 +12610,7 @@ test("Illustrator owns the merged scene-video and Storyboard subsections while a
     await durationInput.blur();
     await expect(durationInput).toHaveValue("9");
     await durationControl.getByRole("button", { name: "Use agent default" }).click();
-    await expect(durationInput).toHaveValue("6");
+    await expect(durationInput).toHaveValue("5");
     await expect(durationControl.getByText("Using agent default", { exact: true })).toBeVisible();
     await expect(gameIllustratorCard.getByText("Attach Card Appearance", { exact: true })).toHaveCount(1);
     await expect(gameIllustratorCard.getByText("Send Avatar References", { exact: true })).toHaveCount(1);
@@ -12415,7 +12623,10 @@ test("Illustrator owns the merged scene-video and Storyboard subsections while a
     await expect(gameSceneVideosSubsection.locator("[data-agent-settings-subsection-header] > svg")).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
-    await Promise.all([chat.id, gameChat.id].map((chatId) => request.delete(`/api/chats/${chatId}`)));
+    await Promise.all([
+      bestEffortDelete(request, `/api/chats/${chat.id}`),
+      bestEffortDelete(request, `/api/chats/${gameChat.id}?force=true`),
+    ]);
   }
 });
 
@@ -12987,22 +13198,95 @@ test("character editor hands an editable resource context to floating Professor 
   }
 });
 
+test("Professor Mari follows an open conversation across chats and mobile navigation", async ({ page }, testInfo) => {
+  const chatResponse = await page.request.post("/api/chats", {
+    data: {
+      name: "Professor Mari floating handoff",
+      mode: "conversation",
+      characterIds: [],
+    },
+  });
+  expect(chatResponse.ok()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Ask Professor Mari", exact: true }).click();
+    const professorWindow = page.locator('[data-component="HomeProfessorMariChat.Window"]');
+    await expect(professorWindow).toBeVisible();
+
+    if (testInfo.project.name.includes("mobile")) {
+      await page.locator('[data-tour="sidebar-toggle"]').click();
+      const reopenProfessorMari = page.getByRole("button", { name: "Open Professor Mari chat" });
+      await expect(reopenProfessorMari).toBeVisible();
+      await expect(page.getByRole("button", { name: "Dismiss Professor Mari floating chat" })).toBeVisible();
+      await reopenProfessorMari.dispatchEvent("click");
+      await expect(reopenProfessorMari).toHaveCount(0);
+      await expect(page.getByPlaceholder("Ask Professor Mari").last()).toBeVisible();
+    }
+
+    await page.evaluate(async (chatId) => {
+      const { useChatStore } = await import("/src/stores/chat.store.ts");
+      useChatStore.getState().setActiveChatId(chatId);
+    }, chat.id);
+
+    if (testInfo.project.name.includes("mobile")) {
+      await page.getByRole("button", { name: "Close Professor Mari chat" }).last().click();
+      await expect(page.getByRole("button", { name: "Open Professor Mari chat" })).toBeVisible();
+    } else {
+      const dismissProfessorMari = page.getByRole("button", { name: "Dismiss Professor Mari floating chat" });
+      await expect(dismissProfessorMari).toBeVisible();
+      await expect(dismissProfessorMari).toHaveClass(/mari-editor-action/u);
+      const [buttonBox, iconBox] = await Promise.all([
+        dismissProfessorMari.boundingBox(),
+        dismissProfessorMari.locator("svg").boundingBox(),
+      ]);
+      expect(buttonBox?.width).toBeGreaterThanOrEqual(36);
+      expect(buttonBox?.height).toBeGreaterThanOrEqual(36);
+      expect(iconBox?.width).toBeGreaterThanOrEqual(18);
+      expect(iconBox?.height).toBeGreaterThanOrEqual(18);
+      await expect(page.getByPlaceholder("Ask Professor Mari")).toBeVisible();
+    }
+
+    await page.locator('[data-component="TopBar"]').getByTitle("Home").click();
+    await expect(page.getByRole("button", { name: "Dismiss Professor Mari floating chat" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open Professor Mari chat" })).toHaveCount(0);
+  } finally {
+    await page.request.delete(`/api/chats/${chat.id}`).catch(() => undefined);
+  }
+});
+
 test("Professor Mari suggestions stay visible after chat history loads", async ({ page }) => {
   const chatResponse = await page.request.get("/api/chats/internal/professor-mari");
   expect(chatResponse.ok()).toBeTruthy();
   const chat = (await chatResponse.json()) as { id: string };
   const messageContent = `Professor Mari suggestion stability ${Date.now()}`;
-  const messageResponse = await page.request.post(`/api/chats/${chat.id}/messages`, {
-    data: {
-      role: "assistant",
-      characterId: "__professor_mari__",
-      content: messageContent,
-    },
-  });
-  expect(messageResponse.ok()).toBeTruthy();
-  const message = (await messageResponse.json()) as { id: string };
+  const createdMessageIds: string[] = [];
 
   try {
+    const userMessageResponse = await page.request.post(`/api/chats/${chat.id}/messages`, {
+      data: {
+        role: "user",
+        content: `Professor Mari chrome color request ${Date.now()}`,
+      },
+    });
+    const userMessage = (await userMessageResponse.json().catch(() => null)) as { id?: unknown } | null;
+    if (typeof userMessage?.id === "string") createdMessageIds.push(userMessage.id);
+    expect(userMessageResponse.ok()).toBeTruthy();
+    expect(userMessage?.id).toEqual(expect.any(String));
+
+    const messageResponse = await page.request.post(`/api/chats/${chat.id}/messages`, {
+      data: {
+        role: "assistant",
+        characterId: "__professor_mari__",
+        content: messageContent,
+      },
+    });
+    const message = (await messageResponse.json().catch(() => null)) as { id?: unknown } | null;
+    if (typeof message?.id === "string") createdMessageIds.push(message.id);
+    expect(messageResponse.ok()).toBeTruthy();
+    expect(message?.id).toEqual(expect.any(String));
+
     await page.goto("/");
     await page.evaluate(async () => {
       const [{ useAgentStore }, { useUIStore }] = await Promise.all([
@@ -13012,6 +13296,7 @@ test("Professor Mari suggestions stay visible after chat history loads", async (
       useAgentStore.getState().clearMariChips();
       useAgentStore.getState().clearMariPlan();
       useUIStore.getState().setProfessorMariSuggestionsEnabled(true);
+      useUIStore.getState().setChatChromeTextColor("#14b8a6");
     });
 
     await page.getByRole("tab", { name: "Professor", exact: true }).click();
@@ -13021,8 +13306,21 @@ test("Professor Mari suggestions stay visible after chat history loads", async (
     const suggestions = window.getByRole("group", { name: "Suggested replies" });
     await expect(suggestions).toBeVisible();
     await expect(suggestions.getByRole("button", { name: "Create a character" })).toBeVisible();
+    const configuredChromeTextColor = await page.evaluate(() =>
+      document.documentElement.style.getPropertyValue("--marinara-chat-chrome-text").trim(),
+    );
+    const chromeMutedColor = await readCssVariableColor(page, "--marinara-chat-chrome-panel-muted");
+    expect(configuredChromeTextColor).toBe("#14b8a6");
+    await expect(window.getByText("You", { exact: true }).last()).toHaveCSS("color", chromeMutedColor);
+    await expect(window.getByRole("button", { name: "Edit Message" }).last()).toHaveCSS("color", chromeMutedColor);
+    await expect(window.getByText("Suggestions only. Pick one, or type your own.", { exact: true })).toHaveCSS(
+      "color",
+      chromeMutedColor,
+    );
   } finally {
-    await bestEffortDelete(page.request, `/api/chats/${chat.id}/messages/${message.id}`);
+    await Promise.all(
+      createdMessageIds.map((id) => bestEffortDelete(page.request, `/api/chats/${chat.id}/messages/${id}`)),
+    );
   }
 });
 
@@ -13086,14 +13384,17 @@ test("Professor Mari shows the latest context budget when token usage is enabled
     await page.goto("/");
     await page.evaluate(async () => {
       const { useUIStore } = (await import("/src/stores/ui.store.ts")) as {
-        useUIStore: { getState: () => { setShowTokenUsage: (value: boolean) => void } };
+        useUIStore: {
+          getState: () => {
+            setChatChromeTextColor: (value: string) => void;
+            setShowTokenUsage: (value: boolean) => void;
+          };
+        };
       };
+      useUIStore.getState().setChatChromeTextColor("#14b8a6");
       useUIStore.getState().setShowTokenUsage(true);
     });
-    await page
-      .locator('[data-component="HomeProfessorMariChat.MariPanel"]')
-      .getByRole("button", { name: "Ask Professor Mari" })
-      .click();
+    await page.getByRole("tab", { name: "Professor", exact: true }).click();
 
     const window = page.locator('[data-component="HomeProfessorMariChat.Window"]');
     const trustStrip = window.locator('[data-component="HomeProfessorMariChat.TrustStrip"]');
@@ -13103,8 +13404,16 @@ test("Professor Mari shows the latest context budget when token usage is enabled
     await expect(trustStrip).toContainText("0 skills");
     await expect(trustStrip).toContainText("0 memories");
     const budget = window.locator('[data-component="HomeProfessorMariChat.ContextBudget"]');
+    const configuredChromeTextColor = await page.evaluate(() =>
+      document.documentElement.style.getPropertyValue("--marinara-chat-chrome-text").trim(),
+    );
+    const chromeMutedColor = await readCssVariableColor(page, "--marinara-chat-chrome-panel-muted");
+    const chromeTextColor = await readCssVariableColor(page, "--marinara-chat-chrome-panel-text");
+    expect(configuredChromeTextColor).toBe("#14b8a6");
     await expect(budget).toContainText("Context");
     await expect(budget).toContainText("12.3k / 128k tokens");
+    await expect(budget.getByText("Context", { exact: true })).toHaveCSS("color", chromeMutedColor);
+    await expect(budget.getByText("12.3k / 128k tokens", { exact: true })).toHaveCSS("color", chromeTextColor);
     await expect(budget.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "12345");
     await expect(budget.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "128000");
   } finally {
@@ -15475,6 +15784,40 @@ test("chat mode tabs and new-chat actions stay reachable", async ({ page }) => {
   }
 });
 
+test("renamed Roleplay branches use their display name in the Chats sidebar and search", async ({ page, request }) => {
+  const rawName = `Branch parent fallback ${Date.now()}`;
+  const displayName = `NPC_First Kiss ${Date.now()}`;
+  const chatResponse = await request.post("/api/chats", {
+    data: { name: rawName, mode: "roleplay", characterIds: [] },
+  });
+  expect(chatResponse.ok(), await chatResponse.text()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+
+  try {
+    const metadataResponse = await request.patch(`/api/chats/${chat.id}/metadata`, {
+      data: { branchName: displayName, branchParentChatId: "branch-display-parent" },
+    });
+    expect(metadataResponse.ok(), await metadataResponse.text()).toBeTruthy();
+
+    await page.goto("/");
+    await page.locator('[data-tour="sidebar-toggle"]').click();
+    const sidebar = page.locator('[data-component="ChatSidebar"]');
+    await expect(sidebar).toBeVisible();
+    await sidebar.locator('[data-tour="chat-mode-roleplay"]').click();
+
+    const chatRow = sidebar.locator(`[data-chat-id="${chat.id}"]`);
+    await expect(chatRow).toContainText(displayName);
+    await expect(chatRow).not.toContainText(rawName);
+
+    const search = sidebar.getByPlaceholder("Search roleplays");
+    await search.fill("First Kiss");
+    await expect(chatRow).toBeVisible();
+  } finally {
+    const cleanupResponse = await request.delete(`/api/chats/${chat.id}?force=true`);
+    expect(cleanupResponse.ok(), await cleanupResponse.text()).toBeTruthy();
+  }
+});
+
 test("Roleplay reduced paint effects preserve semantic and custom styling", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes("mobile"), "Reduced Roleplay paint styling is covered on desktop.");
 
@@ -16304,10 +16647,51 @@ test("mobile topbar remains reachable while sidebars switch", async ({ page }, t
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile shell smoke only runs in the mobile project.");
 
   const errors = collectUnexpectedErrors(page);
+  const musicDjManifest = {
+    schemaVersion: 1,
+    id: "spotify",
+    name: "Music DJ",
+    version: "1.0.0",
+    description: "Matches scene mood with Spotify, YouTube, or local music.",
+    engine: { min: "2.3.0", maxExclusive: "3.0.0" },
+    kind: ["agent"],
+    entrypoints: { agents: "agents.json" },
+    files: [],
+    permissions: ["agent-runtime", "chat-read", "prompt-context", "ui"],
+    restartRequired: false,
+  };
   await page.route("**/api/capability-packages/installed", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "spotify",
+          version: "1.0.0",
+          manifest: musicDjManifest,
+          installedAt: "2026-08-19T00:00:00.000Z",
+          status: "active",
+          error: null,
+          legacy: false,
+        },
+      ]),
+    }),
+  );
+  await page.route("**/api/spotify/status", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ connected: false, expired: false, hasStreamingScope: false }),
+    }),
   );
   await page.goto("/");
+  await page.evaluate(async () => {
+    const { DEFAULT_MOBILE_MUSIC_WIDGET_POSITION, useUIStore } = await import("/src/stores/ui.store.ts");
+    const state = useUIStore.getState();
+    state.setMusicPlayerSource("spotify");
+    state.setSpotifyMobileWidgetCollapsed(true);
+    state.setSpotifyMobileWidgetPosition(DEFAULT_MOBILE_MUSIC_WIDGET_POSITION);
+  });
 
   const topbar = page.locator('[data-component="TopBar"]');
   const homeButton = topbar.getByTitle("Home");
@@ -16347,10 +16731,10 @@ test("mobile topbar remains reachable while sidebars switch", async ({ page }, t
   expect(chatsIconBounds).not.toBeNull();
   expect(homeIconBounds!.width).toBeGreaterThan(chatsIconBounds!.width);
 
-  const musicDjButton = page.getByRole("button", { name: "Open Music DJ download prompt" });
-  await expect(musicDjButton).toBeVisible();
+  const musicDjWidget = page.locator('[data-component="SpotifyMiniPlayer.Mobile"]');
+  await expect(musicDjWidget).toBeVisible();
   const bookmarksBounds = await page.getByRole("navigation", { name: "Home bookmarks" }).boundingBox();
-  const initialMusicDjBounds = await musicDjButton.boundingBox();
+  const initialMusicDjBounds = await musicDjWidget.boundingBox();
   expect(bookmarksBounds).not.toBeNull();
   expect(initialMusicDjBounds).not.toBeNull();
   const musicDjOverlapsBookmarks =
@@ -16363,19 +16747,19 @@ test("mobile topbar remains reachable while sidebars switch", async ({ page }, t
     const { useUIStore } = await import("/src/stores/ui.store.ts");
     return useUIStore.getState().spotifyMobileWidgetPosition;
   });
-  await musicDjButton.dispatchEvent("pointerdown", {
+  await musicDjWidget.dispatchEvent("pointerdown", {
     pointerId: 1,
     pointerType: "touch",
     clientX: initialMusicDjBounds!.x + 24,
     clientY: initialMusicDjBounds!.y + 24,
   });
-  await musicDjButton.dispatchEvent("pointermove", {
+  await musicDjWidget.dispatchEvent("pointermove", {
     pointerId: 1,
     pointerType: "touch",
     clientX: initialMusicDjBounds!.x + 88,
     clientY: initialMusicDjBounds!.y + 88,
   });
-  await musicDjButton.dispatchEvent("pointerup", {
+  await musicDjWidget.dispatchEvent("pointerup", {
     pointerId: 1,
     pointerType: "touch",
     clientX: initialMusicDjBounds!.x + 88,
@@ -16395,6 +16779,30 @@ test("mobile topbar remains reachable while sidebars switch", async ({ page }, t
   await expect(page.locator('[data-component="ChatSidebar"]')).toBeVisible();
   await expect(homeButton).toHaveAttribute("aria-pressed", "false");
   await expect(chatsButton).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(() =>
+      chatsButton.evaluate((button) => {
+        const icon = button.querySelector("svg");
+        if (!icon) return false;
+        const styles = getComputedStyle(icon);
+        return (
+          styles.stroke === styles.color &&
+          !button.classList.contains("mari-topbar-chat-gradient-icon") &&
+          !button.classList.contains("mari-topbar-chat-gradient-hover")
+        );
+      }),
+    )
+    .toBe(true);
+  await chatsButton.dblclick();
+  await expect(chatsButton).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(() =>
+      chatsButton.evaluate((button) => {
+        const icon = button.querySelector("svg");
+        return icon ? getComputedStyle(icon).stroke === getComputedStyle(icon).color : false;
+      }),
+    )
+    .toBe(true);
   const mobileChatSidebar = page.locator('[data-component="ChatSidebarPanel"]');
   await expect.poll(async () => (await mobileChatSidebar.boundingBox())?.x ?? Number.POSITIVE_INFINITY).toBeLessThan(1);
   await mobileChatSidebar.evaluate((element) => element.setAttribute("data-e2e-mobile-shell", "preserved"));
