@@ -42,9 +42,11 @@ import { settleAgentJobsWithConcurrencyLimit } from "./agent-concurrency.js";
 import { normalizeCyoaChoiceOutput } from "./cyoa-choice-normalization.js";
 import { getAssetManifest } from "../game/asset-manifest.service.js";
 import { normalizeBeholderProse } from "./beholder-normalizer.js";
+import { applyBeholderValidator } from "./beholder-validator.js";
 import {
   BEHOLDER_PASS_LANES,
   buildBeholderUserMessage,
+  keyBeholderStateByCharacter,
   formatBeholderRequestContext,
   isBeholderLaneResponse,
   mergeBeholderLaneDeltas,
@@ -1814,12 +1816,33 @@ function invalidJsonAgentError(resultType: AgentResultType): string {
 }
 
 function resolveStructuredAgentResult(
-  config: Pick<AgentExecConfig, "type">,
+  config: Pick<AgentExecConfig, "type" | "settings">,
   context: AgentContext,
   data: unknown,
 ): { data: unknown; valid: boolean; error?: string } {
   if (config.type !== "beholder") return { data, valid: true };
-  const resolution = resolveBeholderStateResponse(data, context.memory._beholderState, context.persona?.name ?? "User");
+  const personaName = context.persona?.name ?? null;
+
+  // Validate before merging. The extractor is small on purpose, so this is the layer
+  // that keeps an anatomically impossible emission out of tracked state: a wound on a
+  // slot that anatomy cannot occupy, clothing on an amputated limb, a garment on a slot
+  // it cannot sit on. Error-severity findings are stripped; the rest are reported.
+  const { findings, stripped } = applyBeholderValidator(data, {
+    persona: personaName,
+    prevState: keyBeholderStateByCharacter(context.memory._beholderState, personaName),
+    prose: beholderNarration(config as AgentExecConfig, context),
+  });
+  const strippedCount = findings.filter((entry) => entry.severity === "error").length;
+  if (findings.length) {
+    logger.debug(
+      "[agent] beholder validator: %d finding(s), %d stripped — %s",
+      findings.length,
+      strippedCount,
+      findings.map((entry) => `${entry.rule_id}@${entry.path}`).join(", "),
+    );
+  }
+
+  const resolution = resolveBeholderStateResponse(stripped, context.memory._beholderState, personaName ?? "User");
   return { data: resolution.state, valid: resolution.valid, error: resolution.error };
 }
 
@@ -2027,13 +2050,17 @@ function buildCustomAgentCapabilityBlock(config: AgentExecConfig, context: Agent
  * history is background, but here the message IS the thing being extracted from, so
  * cutting it silently hides whatever state the rest of it described.
  */
-function buildBeholderMessages(config: AgentExecConfig, template: string, context: AgentContext): ChatMessage[] {
+function beholderNarration(config: AgentExecConfig, context: AgentContext): string {
   const contextSize = normalizeAgentContextSize(config.settings.contextSize);
   const recent = contextSize > 0 ? context.recentMessages.slice(-contextSize) : [];
-  const narration = recent
+  return recent
     .map((message) => normalizeBeholderProse(message.content))
     .filter((text) => text.length > 0)
     .join("\n");
+}
+
+function buildBeholderMessages(config: AgentExecConfig, template: string, context: AgentContext): ChatMessage[] {
+  const narration = beholderNarration(config, context);
   const user = buildBeholderUserMessage(context.memory._beholderState, context.persona?.name ?? null, narration);
   return [
     { role: "system", content: template },

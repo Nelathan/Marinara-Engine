@@ -1,0 +1,2784 @@
+{
+ "cases": [
+  {
+   "name": "clean-passthrough",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "blouse",
+           "damage": "pristine",
+           "color": "white"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "blouse",
+          "damage": "pristine",
+          "color": "white"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "bare-worn-mutex",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "chest": {
+         "bare": true,
+         "worn": [
+          {
+           "item": "shirt",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "BARE-WORN-MUTEX",
+     "path": "delta.Eva.body.chest.bare",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "shirt",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "missing-dominance",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "left_hand": {
+         "missing": true,
+         "worn": [
+          {
+           "item": "glove",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MISSING-DOMINANCE",
+     "path": "delta.Eva.body.left_hand.worn",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "left_hand": {
+        "missing": true
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "missing-cascade",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "left_hand": {
+         "worn": [
+          {
+           "item": "ring",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {
+     "Eva": {
+      "body": {
+       "left_arm": {
+        "missing": true
+       }
+      }
+     }
+    },
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MISSING-CASCADE",
+     "path": "delta.Eva.body.left_hand",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "species-leg-omission",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Mara": {
+       "species": "lamia",
+       "body": {
+        "left_leg": {
+         "worn": [
+          {
+           "item": "greave",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.Mara.body.left_leg.worn[item=greave]",
+     "severity": "warning"
+    },
+    {
+     "rule_id": "SPECIES-LEG-OMISSION",
+     "path": "delta.Mara.body.left_leg",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Mara": {
+      "species": "lamia"
+     }
+    }
+   }
+  },
+  {
+   "name": "holding-legacy-sentinel",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "right_hand": {
+         "holding": ""
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-CLEAR-LEGACY-SENTINEL",
+     "path": "delta.Tim.body.right_hand.holding",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "stamina-dropped",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "stamina": "tired",
+       "body": {}
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "STAMINA-DROPPED",
+     "path": "delta.Tim.stamina",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "item-wrong-slot-vambrace",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "vambrace",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-VAMBRACES",
+     "path": "delta.Tim.body.chest.worn[0]",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "item-wrong-slot-bag-warning",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "backpack",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-BAG",
+     "path": "delta.Tim.body.chest.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "backpack",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "multi-slot-incomplete-warning",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "left_foot": {
+         "worn": [
+          {
+           "item": "boots",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.Tim.body.left_foot.worn[item=boot]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "left_foot": {
+        "worn": [
+         {
+          "item": "boots",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "color-in-item-prose",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "red dress",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She smooths her red dress."
+   },
+   "findings": [
+    {
+     "rule_id": "COLOR-IN-ITEM",
+     "path": "delta.Eva.body.chest.worn[0].item",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "orphan-tail-warning",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Nyx": {
+       "body": {
+        "tail": {
+         "worn": [
+          {
+           "item": "ribbon",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ORPHAN-TAIL",
+     "path": "delta.Nyx.body.tail",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Nyx": {
+      "body": {
+       "tail": {
+        "worn": [
+         {
+          "item": "ribbon",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "no-op-changed-false",
+   "input": {
+    "merged": {
+     "changed": false
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "Nothing about clothing here."
+   },
+   "findings": [],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "severity-inflation",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "left_arm": {
+         "wounds": [
+          {
+           "text": "cut",
+           "severity": "serious",
+           "bleeding": true
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "The blade left a cut on her arm."
+   },
+   "findings": [
+    {
+     "rule_id": "SEVERITY-INFLATION",
+     "path": "delta.Eva.body.left_arm.wounds[0].severity",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "left_arm": {
+        "wounds": [
+         {
+          "text": "cut",
+          "severity": "serious",
+          "bleeding": true
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "x3-armor-form",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "armor",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "Her plate armor gleamed in the sun."
+   },
+   "findings": [
+    {
+     "rule_id": "X3-GENERIC-ARMOR-PROSE-HAS-FORM",
+     "path": "delta.Eva.body.chest.worn[0].item",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "armor",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "x5-damage-no-cue",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "jacket",
+           "damage": "damaged"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She smooths her jacket down."
+   },
+   "findings": [
+    {
+     "rule_id": "X5-DAMAGE-NO-STRUCTURAL-CUE",
+     "path": "delta.Eva.body.chest.worn[0].damage",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "jacket",
+          "damage": "damaged"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "soiling-with-damage",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "jacket",
+           "damage": "damaged"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "Her torn, blood-soaked jacket hung open."
+   },
+   "findings": [
+    {
+     "rule_id": "SOILING-WITH-DAMAGE-CHECK",
+     "path": "delta.Eva.body.chest.worn[0].damage",
+     "severity": "suggestion"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "jacket",
+          "damage": "damaged"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "severity-deflation",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "left_leg": {
+         "wounds": [
+          {
+           "text": "gash",
+           "severity": "serious",
+           "bleeding": true
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "Blood sprayed from the arterial wound in her left leg."
+   },
+   "findings": [
+    {
+     "rule_id": "SEVERITY-DEFLATION-SUSPECTED",
+     "path": "delta.Eva.body.left_leg.wounds",
+     "severity": "suggestion"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "left_leg": {
+        "wounds": [
+         {
+          "text": "gash",
+          "severity": "serious",
+          "bleeding": true
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "slot-not-in-schema",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Eva": {
+       "body": {
+        "right_eyebrow": {
+         "damage": "pristine"
+        },
+        "chest": {
+         "worn": [
+          {
+           "item": "shirt",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "SLOT-NOT-IN-SCHEMA",
+     "path": "delta.Eva.body.right_eyebrow",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Eva": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "shirt",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "coverable-eye-keeps-cover",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "left_eye": {
+         "missing": true,
+         "worn": [
+          {
+           "item": "eyepatch",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Shenna": {
+      "body": {
+       "left_eye": {
+        "missing": true,
+        "worn": [
+         {
+          "item": "eyepatch",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "limb-missing-still-strips-worn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "left_hand": {
+         "missing": true,
+         "worn": [
+          {
+           "item": "glove",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MISSING-DOMINANCE",
+     "path": "delta.Shenna.body.left_hand.worn",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Shenna": {
+      "body": {
+       "left_hand": {
+        "missing": true
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "ws-eyepatch-on-hand-strip",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "eyepatch",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-EYEWEAR_SINGLE",
+     "path": "delta.Shenna.body.right_hand.worn[0]",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "ws-boot-on-eye-strip",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "left_eye": {
+         "worn": [
+          {
+           "item": "boot",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-FOOTWEAR",
+     "path": "delta.Shenna.body.left_eye.worn[0]",
+     "severity": "error"
+    },
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.Shenna.body.left_eye.worn[item=boot]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "ws-glove-on-hand-clean",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "glove",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Shenna": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "glove",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "ws-watch-on-hand-keep-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "watch",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-WRISTWEAR",
+     "path": "delta.Shenna.body.right_hand.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Shenna": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "watch",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "ws-sash-blindfold-keep-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "left_eye": {
+         "worn": [
+          {
+           "item": "sash",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-WAISTWEAR",
+     "path": "delta.Shenna.body.left_eye.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Shenna": {
+      "body": {
+       "left_eye": {
+        "worn": [
+         {
+          "item": "sash",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "ws-belt-gag-keep-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Shenna": {
+       "body": {
+        "mouth": {
+         "worn": [
+          {
+           "item": "belt",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-WAISTWEAR",
+     "path": "delta.Shenna.body.mouth.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Shenna": {
+      "body": {
+       "mouth": {
+        "worn": [
+         {
+          "item": "belt",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "ws-two-impossible-on-hand-descending",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "boot",
+           "damage": "pristine"
+          },
+          {
+           "item": "hat",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "ITEM-WRONG-SLOT-FOOTWEAR",
+     "path": "delta.Tim.body.right_hand.worn[0]",
+     "severity": "error"
+    },
+    {
+     "rule_id": "ITEM-WRONG-SLOT-HEADWEAR",
+     "path": "delta.Tim.body.right_hand.worn[1]",
+     "severity": "error"
+    },
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.Tim.body.right_hand.worn[item=boot]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "wound-concussion-on-back-strip",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "back": {
+         "wounds": [
+          {
+           "text": "a nasty concussion",
+           "severity": "serious",
+           "bleeding": false
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "WOUND-WRONG-SLOT",
+     "path": "delta.Tim.body.back.wounds[0]",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "wound-cut-on-back-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "back": {
+         "wounds": [
+          {
+           "text": "a deep cut",
+           "severity": "minor",
+           "bleeding": true
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "back": {
+        "wounds": [
+         {
+          "text": "a deep cut",
+          "severity": "minor",
+          "bleeding": true
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "wound-concussion-on-head-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "head": {
+         "wounds": [
+          {
+           "text": "a concussion",
+           "severity": "serious",
+           "bleeding": false
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "head": {
+        "wounds": [
+         {
+          "text": "a concussion",
+          "severity": "serious",
+          "bleeding": false
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "wound-ankle-on-leg-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "left_leg": {
+         "wounds": [
+          {
+           "text": "a sprained ankle",
+           "severity": "minor",
+           "bleeding": false
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "left_leg": {
+        "wounds": [
+         {
+          "text": "a sprained ankle",
+          "severity": "minor",
+          "bleeding": false
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "wound-two-impossible-on-back-descending",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "back": {
+         "wounds": [
+          {
+           "text": "a concussion",
+           "severity": "serious",
+           "bleeding": false
+          },
+          {
+           "text": "a black eye",
+           "severity": "minor",
+           "bleeding": false
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "WOUND-WRONG-SLOT",
+     "path": "delta.Tim.body.back.wounds[0]",
+     "severity": "error"
+    },
+    {
+     "rule_id": "WOUND-WRONG-SLOT",
+     "path": "delta.Tim.body.back.wounds[1]",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "wound-ankle-on-naga-chest-guard-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Nyx": {
+       "species": "naga",
+       "body": {
+        "chest": {
+         "wounds": [
+          {
+           "text": "a sprained ankle",
+           "severity": "minor",
+           "bleeding": false
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Nyx": {
+      "species": "naga",
+      "body": {
+       "chest": {
+        "wounds": [
+         {
+          "text": "a sprained ankle",
+          "severity": "minor",
+          "bleeding": false
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "v2-pureblood-strip-keeps-worn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Yaxley": {
+       "species": "Pureblood",
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "shirt",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "SPECIES-IS-SOCIAL-DESCRIPTOR",
+     "path": "delta.Yaxley.species",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Yaxley": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "shirt",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "v2-captain-species-only-pruned",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Rex": {
+       "species": "Captain"
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "SPECIES-IS-SOCIAL-DESCRIPTOR",
+     "path": "delta.Rex.species",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": false
+   }
+  },
+  {
+   "name": "v2-captain-tail-escape-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Rex": {
+       "species": "captain",
+       "body": {
+        "tail": {
+         "worn": [
+          {
+           "item": "ribbon",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Rex": {
+      "species": "captain",
+      "body": {
+       "tail": {
+        "worn": [
+         {
+          "item": "ribbon",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "v2-compound-elf-captain-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Aria": {
+       "species": "elf captain",
+       "body": {}
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Aria": {
+      "species": "elf captain"
+     }
+    }
+   }
+  },
+  {
+   "name": "v2-noble-warn-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Lord": {
+       "species": "noble",
+       "body": {}
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Lord": {
+      "species": "noble"
+     }
+    }
+   }
+  },
+  {
+   "name": "v2-dragon-real-species-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Smaug": {
+       "species": "dragon",
+       "body": {}
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Smaug": {
+      "species": "dragon"
+     }
+    }
+   }
+  },
+  {
+   "name": "canon-multislot-singular-boot-one-foot-fires",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "left_foot": {
+         "worn": [
+          {
+           "item": "boot",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.Tim.body.left_foot.worn[item=boot]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "left_foot": {
+        "worn": [
+         {
+          "item": "boot",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "canon-multislot-plural-boots-one-foot-fires",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "left_foot": {
+         "worn": [
+          {
+           "item": "boots",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.Tim.body.left_foot.worn[item=boot]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "left_foot": {
+        "worn": [
+         {
+          "item": "boots",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "canon-multislot-boot-both-feet-clean",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "left_foot": {
+         "worn": [
+          {
+           "item": "boot",
+           "damage": "pristine"
+          }
+         ]
+        },
+        "right_foot": {
+         "worn": [
+          {
+           "item": "boots",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "left_foot": {
+        "worn": [
+         {
+          "item": "boot",
+          "damage": "pristine"
+         }
+        ]
+       },
+       "right_foot": {
+        "worn": [
+         {
+          "item": "boots",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "canon-multislot-frozen-boot-prev-no-spurious",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "Tim": {
+       "body": {
+        "right_foot": {
+         "worn": [
+          {
+           "item": "boots",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {
+     "Tim": {
+      "body": {
+       "left_foot": {
+        "worn": [
+         {
+          "item": "boot"
+         }
+        ]
+       },
+       "right_foot": {
+        "worn": [
+         {
+          "item": "boot"
+         }
+        ]
+       }
+      }
+     }
+    },
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "Tim": {
+      "body": {
+       "right_foot": {
+        "worn": [
+         {
+          "item": "boots",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-holster-gripped-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "holster"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She grips her holster tightly."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.S.body.right_hand.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-CLEAR-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-CLEAR-CUE-MISSED",
+     "path": "delta.S.body.right_hand.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "WORN-ON-HAND-INTERACTION",
+     "path": "delta.S.body.right_hand.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "holster"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-phone-gripped-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "phone"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She grips her phone, knuckles white."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.S.body.right_hand.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "WORN-ON-HAND-INTERACTION",
+     "path": "delta.S.body.right_hand.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "phone"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-glove-hand-native-no-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "glove"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She grabs the rail with her glove."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.S.body.right_hand.holding",
+     "severity": "suggestion"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "glove"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-bandage-staple-suppressed",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "hand bandage"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She grips the rope, her hand bandage straining."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.S.body.right_hand.holding",
+     "severity": "suggestion"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "hand bandage"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-not-new-on-hand-no-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "left_hand": {
+         "worn": [
+          {
+           "item": "wand"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {
+     "S": {
+      "body": {
+       "left_hand": {
+        "worn": [
+         {
+          "item": "wand"
+         }
+        ]
+       }
+      }
+     }
+    },
+    "persona": null,
+    "prose": "She grips her wand."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.S.body.left_hand.holding",
+     "severity": "suggestion"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "left_hand": {
+        "worn": [
+         {
+          "item": "wand"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-don-cue-suppresses",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "left_hand": {
+         "worn": [
+          {
+           "item": "torch"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She puts on the gauntlet and grips her torch."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-ADD-CUE-MISSED",
+     "path": "delta.S.body.left_hand.holding",
+     "severity": "suggestion"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "left_hand": {
+        "worn": [
+         {
+          "item": "torch"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-touch-thumb-traces-holster-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "holster"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "Her thumb traces the holster at her hip."
+   },
+   "findings": [
+    {
+     "rule_id": "HOLDING-CLEAR-CUE-MISSED",
+     "path": "delta.*.body.<hand>.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "HOLDING-CLEAR-CUE-MISSED",
+     "path": "delta.S.body.right_hand.holding",
+     "severity": "suggestion"
+    },
+    {
+     "rule_id": "WORN-ON-HAND-INTERACTION",
+     "path": "delta.S.body.right_hand.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "holster"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-touch-reaches-datapad-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "datapad"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She reaches for the datapad."
+   },
+   "findings": [
+    {
+     "rule_id": "WORN-ON-HAND-INTERACTION",
+     "path": "delta.S.body.right_hand.worn[0]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "datapad"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-touch-staple-suppressed",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "hand wrap"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "She fiddles with her hand wrap."
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "hand wrap"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "rule2-touch-item-not-in-prose-no-warn",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "S": {
+       "body": {
+        "right_hand": {
+         "worn": [
+          {
+           "item": "widget"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": "Her thumb traces the railing."
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "S": {
+      "body": {
+       "right_hand": {
+        "worn": [
+         {
+          "item": "widget"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "conflict-three-armors-on-chest-strip-two",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "K": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "chainmail"
+          },
+          {
+           "item": "leather armor"
+          },
+          {
+           "item": "plate armor"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "CONFLICTING-WORN",
+     "path": "delta.K.body.chest.worn[1]",
+     "severity": "error"
+    },
+    {
+     "rule_id": "CONFLICTING-WORN",
+     "path": "delta.K.body.chest.worn[2]",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "K": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "chainmail"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "conflict-armor-spread-both-slots-strip",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "K": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "chainmail"
+          },
+          {
+           "item": "plate armor"
+          }
+         ]
+        },
+        "back": {
+         "worn": [
+          {
+           "item": "chainmail"
+          },
+          {
+           "item": "plate armor"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "CONFLICTING-WORN",
+     "path": "delta.K.body.back.worn[1]",
+     "severity": "error"
+    },
+    {
+     "rule_id": "CONFLICTING-WORN",
+     "path": "delta.K.body.chest.worn[1]",
+     "severity": "error"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "K": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "chainmail"
+         }
+        ]
+       },
+       "back": {
+        "worn": [
+         {
+          "item": "chainmail"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "conflict-legit-layers-shirt-coat-robe-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "K": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "shirt"
+          },
+          {
+           "item": "coat"
+          },
+          {
+           "item": "robe"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.K.body.chest.worn[item=robe]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "K": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "shirt"
+         },
+         {
+          "item": "coat"
+         },
+         {
+          "item": "robe"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "conflict-single-chainmail-clean",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "K": {
+       "body": {
+        "chest": {
+         "worn": [
+          {
+           "item": "chainmail",
+           "damage": "pristine"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "K": {
+      "body": {
+       "chest": {
+        "worn": [
+         {
+          "item": "chainmail",
+          "damage": "pristine"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "conflict-sock-under-boot-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "K": {
+       "body": {
+        "left_foot": {
+         "worn": [
+          {
+           "item": "sock"
+          },
+          {
+           "item": "boot"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [
+    {
+     "rule_id": "MULTI-SLOT-INCOMPLETE",
+     "path": "delta.K.body.left_foot.worn[item=boot]",
+     "severity": "warning"
+    }
+   ],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "K": {
+      "body": {
+       "left_foot": {
+        "worn": [
+         {
+          "item": "sock"
+         },
+         {
+          "item": "boot"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "conflict-shoulder-armor-not-body-armor-keep",
+   "input": {
+    "merged": {
+     "changed": true,
+     "delta": {
+      "K": {
+       "body": {
+        "left_shoulder": {
+         "worn": [
+          {
+           "item": "chainmail"
+          },
+          {
+           "item": "shoulder armor"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    "prev": {},
+    "persona": null,
+    "prose": null
+   },
+   "findings": [],
+   "stripped": {
+    "changed": true,
+    "delta": {
+     "K": {
+      "body": {
+       "left_shoulder": {
+        "worn": [
+         {
+          "item": "chainmail"
+         },
+         {
+          "item": "shoulder armor"
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ]
+}
