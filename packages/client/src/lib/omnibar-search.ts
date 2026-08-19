@@ -26,15 +26,30 @@ export type OmnibarCategory =
   | "settings"
   | "professor"
   | "docs";
+/**
+ * What choosing a result does, when it is not the generic "open this entity"
+ * path. Results without an action fall back to their `target` / category.
+ * Result ids stay opaque: they are keys and ranking handles, never a protocol.
+ */
+export type OmnibarAction =
+  | { kind: "open-mari-chat"; chatId: string }
+  | { kind: "slash"; command: string }
+  | { kind: "goto-message"; chatId: string; messageNumber: number }
+  | { kind: "remove-character"; characterId: string }
+  | { kind: "personal-extension"; commandId: string }
+  | { kind: "open-docs"; path?: string }
+  | { kind: "open-faq"; itemId: string };
+
 export type OmnibarResult = {
   id: string;
   title: string;
   category: OmnibarCategory;
   target?: ProfessorMariNavigationTarget;
   score: number;
+  action?: OmnibarAction;
   aliases?: readonly string[];
   description?: string;
-  preview?: CommandCenterPreviewData;
+  preview?: () => CommandCenterPreviewData;
   metadata?: readonly CommandCenterResultMetadata[];
   media?: CommandCenterResultMedia;
   group?: CommandCenterResultGroupId;
@@ -62,6 +77,7 @@ export type OmnibarSearchData = {
     id: string;
     title: string;
     target?: ProfessorMariNavigationTarget;
+    action?: OmnibarAction;
     aliases?: readonly string[];
     kind?: CommandKind;
     icon?: CommandIcon;
@@ -74,11 +90,11 @@ export type OmnibarSearchData = {
   chats: readonly (ProfessorMariNavigationChat & {
     mode?: string;
     description?: string;
-    preview?: CommandCenterPreviewData;
+    preview?: () => CommandCenterPreviewData;
   })[];
   resources: readonly (ProfessorMariNavigationResource & {
     description?: string;
-    preview?: CommandCenterPreviewData;
+    preview?: () => CommandCenterPreviewData;
   })[];
   connections: readonly {
     id: string;
@@ -87,7 +103,7 @@ export type OmnibarSearchData = {
     model?: string;
     isDefault?: boolean;
     imagePath?: string | null;
-    preview?: CommandCenterPreviewData;
+    preview?: () => CommandCenterPreviewData;
   }[];
   browserTabs?: readonly ProfessorMariBrowserTab[];
   controls?: readonly OmnibarResult[];

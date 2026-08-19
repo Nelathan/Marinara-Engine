@@ -1,0 +1,1052 @@
+/**
+ * The omnibar's result producers. Each function is pure given an explicit input
+ * object: no hooks, no store access, no data fetching. The component keeps its
+ * `useMemo` wrappers so the memoisation boundaries — and therefore when each
+ * list recomputes — are unchanged.
+ *
+ * `preview` stays a thunk everywhere: it is only invoked for the focused row.
+ */
+import { normalizeTextForMatch, type Chat, type Lorebook, type Persona } from "@marinara-engine/shared";
+import type { AgentConfigRow } from "../hooks/use-agents";
+import type { HomeFaqItem } from "../components/chat/HomeFaq";
+import { readNamedRow } from "./omnibar-row-readers";
+import { parseChatMetadata } from "./chat-display";
+import { deriveActiveLorebookViews, getChatActiveLorebookIds, getChatExcludedLorebookIds } from "./chat-lorebooks";
+import { getChatCharacterIds } from "./chat-macros";
+import { isLanguageGenerationConnection, type ConnectionProviderLike } from "./connection-filters";
+import type { DocsCommandSearchPassage } from "./docs-command-search";
+import type { CreationProposal } from "./omnibar-creation-proposal";
+import type { parseChatExtraction } from "./omnibar-chat-extraction";
+import type { GameCommand } from "./omnibar-game-commands";
+import type { OmnibarNamedRow, OmnibarTranslate } from "./omnibar-entity-rows";
+import {
+  getUnambiguousOmnibarResult,
+  isOmnibarRemovalIntent,
+  parseOmnibarIntent,
+  searchOmnibar,
+  type OmnibarCategory,
+  type OmnibarContext,
+  type OmnibarContextReason,
+  type OmnibarResult,
+  type OmnibarSearchData,
+  type OmnibarSurface,
+} from "./omnibar-search";
+import { getOmnibarSettingsDestinations } from "./omnibar-settings";
+import { getSlashCompletions } from "./slash-commands";
+import { inferProfessorMariCommandCenterCapability } from "./professor-mari-command-center-context";
+
+const GAME_TOPIC_LABELS = {
+  party: "Change the party with Mari",
+  quests: "Review quests with Mari",
+  scene: "Change the scene with Mari",
+  encounter: "Continue the encounter with Mari",
+} as const;
+
+const EXTRACTION_LABELS = {
+  lorebook: "Create lorebook from {{chat}}",
+  characters: "Extract characters from {{chat}}",
+  locations: "Extract locations from {{chat}}",
+  campaign: "Create campaign from {{chat}}",
+} as const;
+
+/** Below this a message search matches most of the transcript. */
+export const MIN_MESSAGE_SEARCH_LENGTH = 3;
+const MAX_MESSAGE_SEARCH_RESULTS = 6;
+/**
+ * The context group answers "what am I on?", not "what is in this chat?" — past
+ * this many rows it buries recents and create actions.
+ */
+const CHAT_CONTEXT_MAX_RESULTS = 8;
+const MAX_SLASH_RESULTS = 8;
+/** A resumable creation session goes stale after a day. */
+const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/**
+ * Slash commands worth offering before anything is typed while a chat is open.
+ * Everything else stays discoverable by typing "/".
+ */
+const IDLE_CHAT_SLASH_COMMANDS = ["continue", "impersonate", "scene", "goto"] as const;
+/**
+ * Idle suggestions per surface: what you most likely reach for from where you
+ * already are. Missing ids are skipped, so this stays a hint list, not a
+ * contract with the command registry.
+ */
+const SURFACE_IDLE_COMMAND_IDS: Record<OmnibarSurface, readonly string[]> = {
+  home: ["chats", "character-library", "create-character"],
+  chat: [
+    "control:chat-connection",
+    "control:chat-preset",
+    "control:chat-persona",
+    "control:chat-agents",
+    "card-browser",
+    "create-lorebook",
+  ],
+  editor: ["documentation", "character-library", "import-data"],
+  settings: ["integrations", "diagnostics", "backups", "updates"],
+  library: ["create-character", "import-sillytavern", "card-browser"],
+  game: ["game-assets", "help"],
+};
+
+/** A one-line excerpt centred on the match, so the row shows why it matched. */
+function getMessageSearchSnippet(content: string, query: string): string {
+  const text = content.replace(/\s+/gu, " ").trim();
+  if (text.length <= 120) return text;
+  const matchIndex = normalizeTextForMatch(text).indexOf(normalizeTextForMatch(query));
+  const start = Math.max(0, matchIndex - 40);
+  const end = Math.min(text.length, start + 120);
+  return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
+}
+
+export type OmnibarUserStatus = "active" | "idle" | "dnd" | "invisible";
+
+/** The UI-store setters the settings rows drive, passed in rather than imported. */
+export type OmnibarControlSetters = {
+  setTheme: (value: "dark" | "light") => void;
+  setUserStatusManual: (value: OmnibarUserStatus) => void;
+  setCommandCenterMariEnabled: (value: boolean) => void;
+  setOmnibarSuggestionsEnabled: (value: boolean) => void;
+  setReduceAmbientEffects: (value: boolean) => void;
+  setMusicPlayerEnabled: (value: boolean) => void;
+  setSpeechToTextEnabled: (value: boolean) => void;
+  setNotificationSoundsOnlyWhenUnfocused: (value: boolean) => void;
+  setShowTimestamps: (value: boolean) => void;
+  setShowModelName: (value: boolean) => void;
+  setShowTokenUsage: (value: boolean) => void;
+};
+
+export type OmnibarControlResultsInput = {
+  mariEnabled: boolean;
+  musicPlayerEnabled: boolean;
+  notificationSoundsOnlyWhenUnfocused: boolean;
+  omnibarSuggestionsEnabled: boolean;
+  reduceAmbientEffects: boolean;
+  setters: OmnibarControlSetters;
+  showModelName: boolean;
+  showTimestamps: boolean;
+  showTokenUsage: boolean;
+  speechToTextEnabled: boolean;
+  t: OmnibarTranslate;
+  theme: string;
+  userStatus: OmnibarUserStatus;
+};
+
+export type OmnibarChatControlResultsInput = {
+  activeChat: Chat | null | undefined;
+  activeChatId: string | null | undefined;
+  connections: readonly (ConnectionProviderLike & { id: string; name: string })[];
+  patchChat: (input: {
+    id: string;
+    connectionId?: string | null;
+    promptPresetId?: string | null;
+    personaId?: string | null;
+  }) => unknown;
+  patchChatMetadata: (input: { id: string; enableAgents: boolean }) => unknown;
+  resources: readonly { kind: string; id: string; name: string }[];
+  t: OmnibarTranslate;
+};
+
+export type OmnibarSearchResultsInput = {
+  chatControls: readonly OmnibarResult[];
+  contextLabels: Partial<Record<OmnibarContextReason, string>>;
+  controls: readonly OmnibarResult[];
+  data: OmnibarSearchData;
+  deferredQuery: string;
+  docsResults: readonly DocsCommandSearchPassage[];
+  faqItems: readonly HomeFaqItem[];
+  /** Passed in so this module never pulls the FAQ component into its graph. */
+  getFaqSearchText: (item: HomeFaqItem, localize: (englishText: string) => string) => string;
+  localize: (englishText: string) => string;
+  mariEnabled: boolean;
+  omnibarContext: OmnibarContext;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarMariChatResultsInput = {
+  deferredQuery: string;
+  mariChats: readonly { id: string; name?: string | null }[];
+  t: OmnibarTranslate;
+};
+
+export type OmnibarMessageResultsInput = {
+  activeChatId: string | null | undefined;
+  messageSearchIndex: readonly { message: { content: string }; haystack: string | null }[];
+  messageSearchQuery: string;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarSlashResultsInput = {
+  activeChatId: string | null | undefined;
+  deferredQuery: string;
+  slashAvailability: Parameters<typeof getSlashCompletions>[1];
+  surface: OmnibarSurface;
+};
+
+export type OmnibarIdleResultsInput = {
+  allLocalResults: readonly OmnibarResult[];
+  recentEntries: readonly { id: string }[];
+  searchableCommandResults: readonly OmnibarResult[];
+  setupResultIds: readonly string[];
+  surface: OmnibarSurface;
+};
+
+export type OmnibarContextResultsInput = {
+  activeChat: Chat | null | undefined;
+  activeChatId: string | null | undefined;
+  activeEditorField: { label: string } | null | undefined;
+  agents: readonly AgentConfigRow[] | undefined;
+  allLocalResults: readonly OmnibarResult[];
+  characterNameById: ReadonlyMap<string, string>;
+  connectionById: ReadonlyMap<string, OmnibarNamedRow>;
+  creationSession: { createdAt: number; title: string; seed: string } | null | undefined;
+  lastAppError: { message: string; action?: string; retry?: { id: string } | null } | null | undefined;
+  lorebooks: Lorebook[] | undefined;
+  mariEnabled: boolean;
+  omnibarSuggestionsEnabled: boolean;
+  openAgentId: string | null | undefined;
+  openCharacterId: string | null | undefined;
+  openConnectionId: string | null | undefined;
+  openLorebookId: string | null | undefined;
+  openPersonaId: string | null | undefined;
+  openPresetId: string | null | undefined;
+  personaById: ReadonlyMap<string, Persona>;
+  personas: readonly unknown[] | undefined;
+  presets: readonly unknown[] | undefined;
+  surface: OmnibarSurface;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarRemovalSuggestionsInput = {
+  activeChat: Chat | null | undefined;
+  characterNameById: ReadonlyMap<string, string>;
+  deferredQuery: string;
+  omnibarSuggestionsEnabled: boolean;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarProposalResultInput = {
+  creationProposal: CreationProposal | null;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarExtractionResultInput = {
+  activeChat: Chat | null | undefined;
+  chatExtraction: ReturnType<typeof parseChatExtraction> | null;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarGameResultInput = {
+  gameCommand: GameCommand | null;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarContinueResultInput = {
+  mariEnabled: boolean;
+  t: OmnibarTranslate;
+  workspaceStatus: { active?: boolean; pendingApprovals: readonly unknown[] } | undefined;
+};
+
+export function buildOmnibarControlResults({
+  mariEnabled,
+  musicPlayerEnabled,
+  notificationSoundsOnlyWhenUnfocused,
+  omnibarSuggestionsEnabled,
+  reduceAmbientEffects,
+  setters,
+  showModelName,
+  showTimestamps,
+  showTokenUsage,
+  speechToTextEnabled,
+  t,
+  theme,
+  userStatus,
+}: OmnibarControlResultsInput): OmnibarResult[] {
+  const set = () => setters;
+  const toggleRows = [
+    ["commandCenterMariEnabled", "commandCenter.controls.mariAssist", mariEnabled, set().setCommandCenterMariEnabled],
+    [
+      "omnibarSuggestionsEnabled",
+      "commandCenter.controls.omnibarSuggestions",
+      omnibarSuggestionsEnabled,
+      set().setOmnibarSuggestionsEnabled,
+    ],
+    [
+      "reduceAmbientEffects",
+      "commandCenter.controls.reducedEffects",
+      reduceAmbientEffects,
+      set().setReduceAmbientEffects,
+    ],
+    ["musicPlayerEnabled", "commandCenter.controls.musicPlayer", musicPlayerEnabled, set().setMusicPlayerEnabled],
+    ["speechToTextEnabled", "commandCenter.controls.speechToText", speechToTextEnabled, set().setSpeechToTextEnabled],
+    [
+      "notificationSoundsOnlyWhenUnfocused",
+      "commandCenter.controls.unfocusedSounds",
+      notificationSoundsOnlyWhenUnfocused,
+      set().setNotificationSoundsOnlyWhenUnfocused,
+    ],
+    ["showTimestamps", "commandCenter.controls.timestamps", showTimestamps, set().setShowTimestamps],
+    ["showModelName", "commandCenter.controls.modelName", showModelName, set().setShowModelName],
+    ["showTokenUsage", "commandCenter.controls.tokenUsage", showTokenUsage, set().setShowTokenUsage],
+  ] as const;
+  const settingsDestinations = getOmnibarSettingsDestinations().map((setting) => ({
+    id: setting.id,
+    title: setting.title,
+    category: "settings" as const,
+    score: 165,
+    aliases: setting.aliases,
+    target: {
+      kind: "settings" as const,
+      tab: setting.tab,
+      controlId: setting.controlId,
+    },
+    description: `${setting.sectionLabel} · ${setting.description}`,
+    kind: "settings" as const,
+    icon: "settings" as const,
+  }));
+  return [
+    ...settingsDestinations,
+    {
+      id: "control:theme",
+      title: t("commandCenter.controls.theme", "Theme"),
+      category: "settings",
+      score: 180,
+      control: {
+        type: "choice",
+        label: t("commandCenter.controls.theme", "Theme"),
+        value: theme,
+        options: [
+          { value: "dark", label: t("commandCenter.values.dark", "Dark") },
+          { value: "light", label: t("commandCenter.values.light", "Light") },
+        ],
+        onChange: (value) => set().setTheme(String(value) as "dark" | "light"),
+      },
+    },
+    {
+      id: "control:presence",
+      title: t("commandCenter.controls.presence", "Presence"),
+      category: "settings",
+      score: 175,
+      control: {
+        type: "choice",
+        label: t("commandCenter.controls.presence", "Presence"),
+        value: userStatus,
+        options: (["active", "idle", "dnd", "invisible"] as const).map((value) => ({
+          value,
+          label: t(`commandCenter.presence.${value}`, value),
+        })),
+        onChange: (value) => set().setUserStatusManual(String(value) as typeof userStatus),
+      },
+    },
+    ...toggleRows.map(([id, key, value, onChange]) => ({
+      id: `control:${id}`,
+      title: t(key, id),
+      category: "settings" as const,
+      score: 170,
+      control: {
+        type: "toggle" as const,
+        label: t(key, id),
+        value,
+        onChange: (nextValue: string | boolean) => onChange(nextValue === true),
+      },
+    })),
+  ];
+}
+
+export function buildOmnibarChatControlResults({
+  activeChat,
+  activeChatId,
+  connections,
+  patchChat,
+  patchChatMetadata,
+  resources,
+  t,
+}: OmnibarChatControlResultsInput): OmnibarResult[] {
+  if (!activeChat || activeChat.id !== activeChatId) return [];
+  const chatId = activeChat.id;
+  // ponytail: the segmented control renders every option as a pill, so a long
+  // list would overflow the row. Cap it, and keep the current value visible.
+  // Swap in a searchable picker if users hit the cap often.
+  const capped = <T extends { id: string }>(items: readonly T[], activeId: string | null | undefined) => {
+    const head = items.slice(0, 6);
+    const active = activeId ? items.find((item) => item.id === activeId) : undefined;
+    return active && !head.includes(active) ? [...head, active] : head;
+  };
+  const noneOption = { value: "", label: t("commandCenter.values.none", "None") };
+  const chatMetadata = parseChatMetadata(activeChat.metadata);
+  const languageConnections = connections.filter(isLanguageGenerationConnection);
+  const resourcesOfKind = (kind: OmnibarCategory) =>
+    resources.filter((resource) => resource.kind === kind).map(({ id, name }) => ({ id, name }));
+  const chatPresets = resourcesOfKind("preset");
+  const chatPersonas = resourcesOfKind("persona");
+  const rows: OmnibarResult[] = [];
+  if (languageConnections.length > 1) {
+    rows.push({
+      id: "control:chat-connection",
+      title: t("commandCenter.controls.chatModel", "Model for this chat"),
+      category: "connection",
+      score: 190,
+      aliases: ["model", "connection", "switch model", "provider"],
+      group: "current-work",
+      icon: "connection",
+      control: {
+        type: "choice",
+        label: t("commandCenter.controls.chatModel", "Model for this chat"),
+        value: activeChat.connectionId ?? "",
+        options: capped(languageConnections, activeChat.connectionId).map((connection) => ({
+          value: connection.id,
+          label: connection.name,
+        })),
+        onChange: (value) => void patchChat({ id: chatId, connectionId: String(value) || null }),
+      },
+    });
+  }
+  if (chatPresets.length > 0) {
+    rows.push({
+      id: "control:chat-preset",
+      title: t("commandCenter.controls.chatPreset", "Preset for this chat"),
+      category: "preset",
+      score: 189,
+      aliases: ["preset", "prompt preset", "switch preset"],
+      group: "current-work",
+      icon: "preset",
+      control: {
+        type: "choice",
+        label: t("commandCenter.controls.chatPreset", "Preset for this chat"),
+        value: activeChat.promptPresetId ?? "",
+        options: [
+          noneOption,
+          ...capped(chatPresets, activeChat.promptPresetId).map((preset) => ({
+            value: preset.id,
+            label: preset.name,
+          })),
+        ],
+        onChange: (value) => void patchChat({ id: chatId, promptPresetId: String(value) || null }),
+      },
+    });
+  }
+  if (chatPersonas.length > 0) {
+    rows.push({
+      id: "control:chat-persona",
+      title: t("commandCenter.controls.chatPersona", "Persona for this chat"),
+      category: "persona",
+      score: 188,
+      aliases: ["persona", "swap persona", "who am i"],
+      group: "current-work",
+      icon: "persona",
+      control: {
+        type: "choice",
+        label: t("commandCenter.controls.chatPersona", "Persona for this chat"),
+        value: activeChat.personaId ?? "",
+        options: [
+          noneOption,
+          ...capped(chatPersonas, activeChat.personaId).map((persona) => ({
+            value: persona.id,
+            label: persona.name,
+          })),
+        ],
+        onChange: (value) => void patchChat({ id: chatId, personaId: String(value) || null }),
+      },
+    });
+  }
+  rows.push({
+    id: "control:chat-agents",
+    title: t("commandCenter.controls.chatAgents", "Agents in this chat"),
+    category: "agent",
+    score: 187,
+    aliases: ["agents", "tools", "enable agents"],
+    group: "current-work",
+    icon: "agent",
+    control: {
+      type: "toggle",
+      label: t("commandCenter.controls.chatAgents", "Agents in this chat"),
+      value: chatMetadata.enableAgents === true,
+      onChange: (value) => void patchChatMetadata({ id: chatId, enableAgents: value === true }),
+    },
+  });
+  return rows;
+}
+
+export function buildOmnibarSearchResults({
+  chatControls,
+  contextLabels,
+  controls,
+  data,
+  deferredQuery,
+  docsResults,
+  faqItems,
+  getFaqSearchText,
+  localize,
+  mariEnabled,
+  omnibarContext,
+  t,
+}: OmnibarSearchResultsInput): OmnibarResult[] {
+  const query = deferredQuery;
+  const normalizedQuery = query.trim().toLowerCase();
+  const faqResults =
+    normalizedQuery.length < 2
+      ? []
+      : faqItems.flatMap((item) => {
+          const searchText = getFaqSearchText(item, localize);
+          if (!searchText.includes(normalizedQuery)) return [];
+          const question = `${item.question} ${localize(item.question)}`.toLowerCase();
+          const score = question.includes(normalizedQuery) ? 230 : 130;
+          return [
+            {
+              id: `faq:${item.id}`,
+              title: localize(item.question),
+              category: "docs" as const,
+              action: { kind: "open-faq", itemId: item.id } as const,
+              score,
+              description: localize(item.answer),
+              preview: () => ({
+                kind: "docs" as const,
+                title: localize(item.question),
+                categoryLabel: t("omnibar.faq", "FAQ"),
+                description: localize(item.answer),
+                facts: (item.bullets ?? []).slice(0, 6).map((bullet) => ({
+                  label: t("omnibar.faq.step", "Useful step"),
+                  value: localize(bullet),
+                })),
+              }),
+              kind: "resource" as const,
+              icon: "documentation" as const,
+            } satisfies OmnibarResult,
+          ];
+        });
+  // Professor Mari blur: the fallback row speaks the query's intent, and is
+  // promoted above search hits when the query reads like a question or nothing
+  // matched well. Its preview "peeks" what Mari will do before you commit.
+  const trimmedQuery = query.trim();
+  const capability = inferProfessorMariCommandCenterCapability(trimmedQuery);
+  const intent = parseOmnibarIntent(trimmedQuery);
+  const askTitles: Partial<Record<typeof capability, string>> = {
+    repair: t("omnibar.askMari.repair", "Ask Mari to fix this"),
+    recommend: t("omnibar.askMari.recommend", "Ask Mari to compare & recommend"),
+    create: t("omnibar.askMari.create", "Ask Mari to create this"),
+    edit: t("omnibar.askMari.change", "Ask Mari to change this"),
+  };
+  const askPeeks: Partial<Record<typeof capability, string>> = {
+    repair: t("omnibar.askMari.peek.repair", "Mari will help troubleshoot and fix this."),
+    recommend: t("omnibar.askMari.peek.recommend", "Mari will compare the options and recommend one."),
+    create: t("omnibar.askMari.peek.create", "Mari will help you create this."),
+    edit: t("omnibar.askMari.peek.change", "Mari will help you change this."),
+  };
+  const askTitle = askTitles[capability] ?? t("omnibar.askProfessorMari", "Ask Professor Mari");
+  const askPeek =
+    askPeeks[capability] ?? t("omnibar.askMari.peek.explain", "Mari will explain this and guide your next step.");
+  const baseResults = searchOmnibar(query, {
+    ...data,
+    controls: [...controls, ...chatControls],
+    context: omnibarContext,
+    contextLabels,
+  }).filter((result) => mariEnabled || result.id !== "ask-professor-mari");
+  const bestMatchScore = baseResults.reduce(
+    (best, result) => (result.id === "ask-professor-mari" ? best : Math.max(best, result.score)),
+    -1,
+  );
+  const directResult = getUnambiguousOmnibarResult(baseResults);
+  const directIntent = intent?.kind === "navigate" || intent?.kind === "action" || intent?.kind === "create";
+  const directSetup =
+    intent?.kind === "repair" &&
+    directResult?.availability &&
+    typeof directResult.availability === "object" &&
+    directResult.availability.setupTarget;
+  const clearDirect = Boolean(directResult && directResult.score >= 250 && (directIntent || directSetup));
+  const promoteMari =
+    !clearDirect &&
+    (intent?.kind === "explain" ||
+      intent?.kind === "recommend" ||
+      intent?.kind === "repair" ||
+      /\?\s*$|^\s*(?:who|what|where|which|when|can|could|should|would|is|are|do|does|did|help|tell)\b/i.test(
+        trimmedQuery,
+      ) ||
+      bestMatchScore < 150);
+  const askResults = baseResults.map((result) =>
+    result.id === "ask-professor-mari"
+      ? {
+          ...result,
+          title: askTitle,
+          description: askPeek,
+          group: promoteMari ? ("professor-suggested" as const) : result.group,
+          score: promoteMari ? 500 : result.score,
+          preview: () => ({
+            kind: "docs" as const,
+            title: askTitle,
+            categoryLabel: t("omnibar.askProfessorMari", "Ask Professor Mari"),
+            description: askPeek,
+            facts: trimmedQuery
+              ? [{ label: t("omnibar.askMari.peek.searchLabel", "Your search"), value: trimmedQuery }]
+              : [],
+          }),
+        }
+      : result,
+  );
+  return [
+    ...askResults,
+    ...faqResults,
+    ...docsResults.map((result) => ({
+      ...result,
+      category: "docs" as const,
+      action: { kind: "open-docs", path: result.path } as const,
+      preview: () => ({
+        kind: "docs" as const,
+        title: result.title,
+        categoryLabel: result.source,
+        description: result.snippet,
+        facts: [
+          ...(result.source ? [{ label: t("commandCenter.preview.category", "Category"), value: result.source }] : []),
+          ...(result.path ? [{ label: t("commandCenter.preview.source", "Source"), value: result.path }] : []),
+          ...(result.line ? [{ label: t("commandCenter.preview.line", "Line"), value: result.line }] : []),
+          ...(result.snippet ? [{ label: t("commandCenter.preview.match", "Match"), value: result.snippet }] : []),
+        ],
+      }),
+      target: { kind: "window", window: "documentation" } as const,
+      kind: "resource" as const,
+      icon: "documentation" as const,
+    })),
+  ];
+}
+
+export function buildOmnibarMariChatResults({
+  deferredQuery,
+  mariChats,
+  t,
+}: OmnibarMariChatResultsInput): OmnibarResult[] {
+  const normalized = normalizeTextForMatch(deferredQuery.trim());
+  if (!normalized) return [];
+  return mariChats
+    .filter((chat) => normalizeTextForMatch(chat.name ?? "").includes(normalized))
+    .slice(0, 5)
+    .map((chat) => ({
+      id: `mari-chat:${chat.id}`,
+      action: { kind: "open-mari-chat", chatId: chat.id } as const,
+      title: chat.name || t("omnibar.categories.professor", "Professor Mari"),
+      description: t("commandCenter.mariChat", "Professor Mari conversation"),
+      category: "chat" as const,
+      group: "chats" as const,
+      score: 120,
+      kind: "action" as const,
+      icon: "professor" as const,
+    }));
+}
+
+export function buildOmnibarMessageResults({
+  activeChatId,
+  messageSearchIndex,
+  messageSearchQuery,
+  t,
+}: OmnibarMessageResultsInput): OmnibarResult[] {
+  const normalized = normalizeTextForMatch(messageSearchQuery);
+  if (!activeChatId || normalized.length < MIN_MESSAGE_SEARCH_LENGTH) return [];
+  const out: OmnibarResult[] = [];
+  messageSearchIndex.forEach(({ message, haystack }, index) => {
+    if (out.length >= MAX_MESSAGE_SEARCH_RESULTS) return;
+    if (haystack === null || !haystack.includes(normalized)) return;
+    out.push({
+      id: `message:${activeChatId}:${index + 1}`,
+      action: { kind: "goto-message", chatId: activeChatId, messageNumber: index + 1 },
+      title: getMessageSearchSnippet(message.content, messageSearchQuery),
+      description: t("commandCenter.messages.position", "Message {{number}}", { number: index + 1 }),
+      category: "chat",
+      group: "messages",
+      score: 300 - out.length,
+      kind: "action",
+      icon: "chats",
+    });
+  });
+  return out;
+}
+
+export function buildOmnibarSlashResults({
+  activeChatId,
+  deferredQuery,
+  slashAvailability,
+  surface,
+}: OmnibarSlashResultsInput): OmnibarResult[] {
+  if (!activeChatId || surface !== "chat") return [];
+  const typed = deferredQuery.trim();
+  const commands = typed.startsWith("/")
+    ? getSlashCompletions(typed, slashAvailability)
+    : typed
+      ? []
+      : getSlashCompletions("/", slashAvailability).filter((command) =>
+          (IDLE_CHAT_SLASH_COMMANDS as readonly string[]).includes(command.name),
+        );
+  return commands.slice(0, MAX_SLASH_RESULTS).map((command, index) => ({
+    id: `slash:${command.name}`,
+    action: { kind: "slash", command: command.name } as const,
+    title: command.usage,
+    description: command.description,
+    category: "chat" as const,
+    group: "messages" as const,
+    score: 320 - index,
+    kind: "action" as const,
+    icon: "command" as const,
+  }));
+}
+
+export function buildOmnibarIdleResults({
+  allLocalResults,
+  recentEntries,
+  searchableCommandResults,
+  setupResultIds,
+  surface,
+}: OmnibarIdleResultsInput): OmnibarResult[] {
+  const byId = new Map(allLocalResults.map((result) => [result.id, result]));
+  const selected: OmnibarResult[] = [];
+  const add = (id: string) => {
+    const result = byId.get(id);
+    if (result && !selected.some((item) => item.id === id)) selected.push(result);
+  };
+  // Unfinished setup beats everything else: the feature you cannot use yet is
+  // the most likely reason the omnibar is open at all. Capped so a fresh
+  // install does not bury recents under every un-configured integration.
+  setupResultIds.slice(0, 2).forEach(add);
+  recentEntries.forEach((entry) => add(entry.id));
+  SURFACE_IDLE_COMMAND_IDS[surface].forEach(add);
+  ["control:theme", "control:presence", "create-character", "create-persona", "documentation"].forEach(add);
+  for (const result of searchableCommandResults) {
+    if (selected.length >= 4) break;
+    add(result.id);
+  }
+  return selected.slice(0, 12);
+}
+
+export function buildOmnibarContextResults({
+  activeChat,
+  activeChatId,
+  activeEditorField,
+  agents,
+  allLocalResults,
+  characterNameById,
+  connectionById,
+  creationSession,
+  lastAppError,
+  lorebooks,
+  mariEnabled,
+  omnibarSuggestionsEnabled,
+  openAgentId,
+  openCharacterId,
+  openConnectionId,
+  openLorebookId,
+  openPersonaId,
+  openPresetId,
+  personaById,
+  personas,
+  presets,
+  surface,
+  t,
+}: OmnibarContextResultsInput): OmnibarResult[] {
+  const out: OmnibarResult[] = [];
+  const push = (result: OmnibarResult) => {
+    if (!out.some((item) => item.id === result.id)) out.push(result);
+  };
+  const nameOf = (map: ReadonlyMap<string, unknown>, id: string) => readNamedRow(map.get(id))?.name;
+  const listName = (list: readonly unknown[] | undefined, id: string) =>
+    readNamedRow((list ?? []).find((item) => readNamedRow(item)?.id === id))?.name;
+  const canonicalById = new Map(allLocalResults.map((result) => [result.id, result]));
+  const pushCanonical = (id: string, fallback: OmnibarResult) => {
+    const result = canonicalById.get(id);
+    push({ ...fallback, ...(result ?? {}), title: fallback.title, group: "current-work", score: 0 });
+  };
+
+  const isActiveChat = activeChat?.id === activeChatId;
+  const isActiveChatSurface = surface === "chat" && isActiveChat;
+  // A visible failure is the most useful next step, so it leads the group. The
+  // id must stay the real connection id so the existing connection branch in
+  // choose() opens the right editor (and still honours the dirty-editor guard).
+  if (lastAppError?.retry) {
+    pushCanonical(`connection:${lastAppError.retry.id}`, {
+      id: `connection:${lastAppError.retry.id}`,
+      title: lastAppError.action
+        ? t("commandCenter.context.fixFailed", "Fix: {{action}} failed", { action: lastAppError.action })
+        : t("commandCenter.context.fixError", "Fix the last error"),
+      description: lastAppError.message,
+      category: "connection",
+      score: 0,
+      icon: "connection",
+    });
+  }
+
+  // A creation session is persisted, so without an age limit "Continue
+  // building X" would lead the idle list forever.
+  if (creationSession && Date.now() - creationSession.createdAt < CREATION_SESSION_MAX_AGE_MS) {
+    push({
+      id: "resume-creation-session",
+      title: t("commandCenter.proposal.resume", "Continue building {{title}}", { title: creationSession.title }),
+      description: creationSession.seed,
+      category: "professor",
+      score: 0,
+      group: "current-work",
+      icon: "professor",
+    });
+  }
+
+  if (!isActiveChatSurface) {
+    if (omnibarSuggestionsEnabled && mariEnabled && activeEditorField) {
+      push({
+        id: "suggestion:edit-focused-field",
+        title: t("commandCenter.suggestions.editFocusedField", "Improve {{field}} with Mari", {
+          field: activeEditorField.label,
+        }),
+        description: t(
+          "commandCenter.suggestions.editFocusedFieldDescription",
+          "Ask Mari to suggest a useful change for the selected field.",
+        ),
+        category: "professor",
+        score: 460,
+        group: "professor-suggested",
+        kind: "action",
+        icon: "professor",
+      });
+    }
+    if (openCharacterId) {
+      const name = characterNameById.get(openCharacterId);
+      if (name)
+        pushCanonical(`character:${openCharacterId}`, {
+          id: `character:${openCharacterId}`,
+          title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
+          category: "character",
+          target: { kind: "resource", resource: "character", id: openCharacterId },
+          score: 0,
+          icon: "character",
+        });
+    }
+    for (const [id, kind, list, icon] of [
+      [openPersonaId, "persona", personas, "persona"],
+      [openLorebookId, "lorebook", lorebooks, "lorebook"],
+      [openPresetId, "preset", presets, "preset"],
+      [openAgentId, "agent", agents, "agent"],
+    ] as const) {
+      if (!id) continue;
+      const name = listName(list, id);
+      if (!name) continue;
+      pushCanonical(`${kind}:${id}`, {
+        id: `${kind}:${id}`,
+        title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
+        category: kind,
+        target: { kind: "resource", resource: kind, id },
+        score: 0,
+        icon,
+      });
+    }
+    if (openConnectionId) {
+      const name = connectionById.get(openConnectionId)?.name;
+      if (name)
+        pushCanonical(`connection:${openConnectionId}`, {
+          id: `connection:${openConnectionId}`,
+          title: t("commandCenter.context.editing", "Editing {{name}}", { name }),
+          category: "connection",
+          score: 0,
+          icon: "connection",
+        });
+    }
+  }
+  if (isActiveChat && activeChat) {
+    pushCanonical(`chat:${activeChat.id}`, {
+      id: `chat:${activeChat.id}`,
+      title: t("commandCenter.context.currentChat", "Current chat: {{name}}", { name: activeChat.name }),
+      category: "chat",
+      target: { kind: "chat", chatId: activeChat.id },
+      score: 0,
+      icon: "chats",
+    });
+    for (const characterId of getChatCharacterIds(activeChat)) {
+      const name = characterNameById.get(characterId);
+      if (!name) continue;
+      pushCanonical(`character:${characterId}`, {
+        id: `character:${characterId}`,
+        title: name,
+        category: "character",
+        target: { kind: "resource", resource: "character", id: characterId },
+        score: 0,
+        icon: "character",
+      });
+    }
+    if (activeChat.personaId) {
+      const name = nameOf(personaById, activeChat.personaId);
+      if (name)
+        pushCanonical(`persona:${activeChat.personaId}`, {
+          id: `persona:${activeChat.personaId}`,
+          title: name,
+          category: "persona",
+          target: { kind: "resource", resource: "persona", id: activeChat.personaId },
+          score: 0,
+          icon: "persona",
+        });
+    }
+    if (activeChat.promptPresetId) {
+      const name = listName(presets, activeChat.promptPresetId);
+      if (name)
+        pushCanonical(`preset:${activeChat.promptPresetId}`, {
+          id: `preset:${activeChat.promptPresetId}`,
+          title: name,
+          category: "preset",
+          target: { kind: "resource", resource: "preset", id: activeChat.promptPresetId },
+          score: 0,
+          icon: "preset",
+        });
+    }
+    if (activeChat.connectionId) {
+      const name = connectionById.get(activeChat.connectionId)?.name;
+      if (name)
+        pushCanonical(`connection:${activeChat.connectionId}`, {
+          id: `connection:${activeChat.connectionId}`,
+          title: name,
+          category: "connection",
+          score: 0,
+          icon: "connection",
+        });
+    }
+    const activeLorebooks = deriveActiveLorebookViews({
+      activeLorebookIds: getChatActiveLorebookIds(activeChat),
+      excludedLorebookIds: getChatExcludedLorebookIds(activeChat),
+      dropExcluded: true,
+      chat: activeChat,
+      lorebooks: lorebooks ?? [],
+    });
+    for (const lorebook of activeLorebooks) {
+      pushCanonical(`lorebook:${lorebook.id}`, {
+        id: `lorebook:${lorebook.id}`,
+        title: lorebook.name,
+        category: "lorebook",
+        target: { kind: "resource", resource: "lorebook", id: lorebook.id },
+        score: 0,
+        icon: "lorebook",
+      });
+    }
+    const chatMetadata = parseChatMetadata(activeChat.metadata);
+    if (chatMetadata.enableAgents === true) {
+      const activeAgentIds = Array.isArray(chatMetadata.activeAgentIds)
+        ? chatMetadata.activeAgentIds.filter((id): id is string => typeof id === "string")
+        : [];
+      for (const agentId of activeAgentIds) {
+        const agent = agents?.find((item) => item.id === agentId || item.type === agentId);
+        if (!agent) continue;
+        pushCanonical(`agent:${agent.type}`, {
+          id: `agent:${agent.type}`,
+          title: agent.name,
+          category: "agent",
+          target: { kind: "resource", resource: "agent", id: agent.type },
+          score: 0,
+          icon: "agent",
+        });
+      }
+    }
+  }
+  return out.slice(0, CHAT_CONTEXT_MAX_RESULTS);
+}
+
+export function buildOmnibarRemovalSuggestions({
+  activeChat,
+  characterNameById,
+  deferredQuery,
+  omnibarSuggestionsEnabled,
+  t,
+}: OmnibarRemovalSuggestionsInput): OmnibarResult[] {
+  if (!omnibarSuggestionsEnabled || !activeChat || !isOmnibarRemovalIntent(deferredQuery)) return [];
+  return getChatCharacterIds(activeChat).flatMap((characterId) => {
+    const name = characterNameById.get(characterId);
+    if (!name) return [];
+    return [
+      {
+        id: `action:remove-character:${characterId}`,
+        action: { kind: "remove-character", characterId } as const,
+        title: t("commandCenter.actions.removeCharacter", "Remove {{name}} from this chat", { name }),
+        description: t(
+          "commandCenter.actions.removeCharacterDescription",
+          "Detach this character from the current chat.",
+        ),
+        category: "character" as const,
+        score: 460,
+        kind: "action" as const,
+        icon: "character" as const,
+        group: "current-work" as const,
+      },
+    ];
+  });
+}
+
+export function buildOmnibarProposalResult({ creationProposal, t }: OmnibarProposalResultInput): OmnibarResult | null {
+  if (!creationProposal) return null;
+  const created = creationProposal.items.filter((item) => item.status === "missing").length;
+  return {
+    id: "creation-proposal",
+    title: t("commandCenter.proposal.title", "Set up {{title}}", { title: creationProposal.title }),
+    description: t("commandCenter.proposal.description", "Creates {{count}} things. Review before anything is made.", {
+      count: created,
+    }),
+    category: "professor",
+    score: 400,
+    kind: "action",
+    icon: "professor",
+  };
+}
+
+export function buildOmnibarExtractionResult({
+  activeChat,
+  chatExtraction,
+  t,
+}: OmnibarExtractionResultInput): OmnibarResult | null {
+  if (!chatExtraction || !activeChat) return null;
+  const label = EXTRACTION_LABELS[chatExtraction.kind];
+  return {
+    id: "chat-extraction",
+    title: t(`commandCenter.extract.${chatExtraction.kind}`, label, { chat: activeChat.name }),
+    description: t("commandCenter.extract.description", "From {{chat}}. Mari proposes the content for review.", {
+      chat: activeChat.name,
+    }),
+    category: "professor",
+    score: 400,
+    kind: "action",
+    icon: "professor",
+  };
+}
+
+export function buildOmnibarGameResult({ gameCommand, t }: OmnibarGameResultInput): OmnibarResult | null {
+  if (!gameCommand) return null;
+  return {
+    id: "game-command",
+    title:
+      gameCommand.kind === "roll"
+        ? t("commandCenter.game.roll", "Roll {{notation}}", { notation: gameCommand.notation })
+        : t(`commandCenter.game.${gameCommand.topic}`, GAME_TOPIC_LABELS[gameCommand.topic]),
+    description:
+      gameCommand.kind === "roll"
+        ? t("commandCenter.game.rollDescription", "Rolls in this game now.")
+        : t("commandCenter.game.assistDescription", "Continues with Mari using the current game state."),
+    category: gameCommand.kind === "roll" ? "chat" : "professor",
+    score: 420,
+    kind: "action",
+    icon: gameCommand.kind === "roll" ? "command" : "professor",
+  };
+}
+
+export function buildOmnibarContinueResult({
+  mariEnabled,
+  t,
+  workspaceStatus,
+}: OmnibarContinueResultInput): OmnibarResult | null {
+  if (!mariEnabled) return null;
+  const status = workspaceStatus;
+  const hasPendingApprovals = (status?.pendingApprovals.length ?? 0) > 0;
+  if (!hasPendingApprovals && !status?.active) return null;
+  const title = status?.active
+    ? t("commandCenter.continueMariActive", "Mari is working")
+    : hasPendingApprovals
+      ? t("commandCenter.continueMariReview", "Review Mari's pending work")
+      : t("commandCenter.continueMari", "Continue with Professor Mari");
+  const description = status?.active
+    ? t("commandCenter.continueMariActiveDescription", "Return to the active Mari workspace.")
+    : hasPendingApprovals
+      ? t("commandCenter.continueMariReviewDescription", "Mari is waiting for your review.")
+      : t("commandCenter.continueMariDescription", "Open Mari with the current work attached.");
+  return {
+    id: "ask-professor-mari",
+    title,
+    category: "professor",
+    description,
+    score: 140,
+    group: "continue",
+    kind: "action",
+    icon: "professor",
+  };
+}
