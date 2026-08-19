@@ -109,6 +109,7 @@ import {
   buildOmnibarMessageResults,
   buildOmnibarProposalResult,
   buildOmnibarAddSuggestions,
+  buildOmnibarVerbSuggestions,
   buildOmnibarRemovalSuggestions,
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
@@ -195,6 +196,13 @@ const CHAT_ATTACHABLE_CATEGORIES = new Set<OmnibarCategory>([
   "agent",
 ]);
 const BROWSE_BATCH_SIZE = 48;
+
+/**
+ * The overflow menu holding the suggestion toggles is hidden: the omnibar
+ * header is the wrong home for them. The toggles themselves still live in the
+ * UI store, so re-homing them is a matter of rendering them elsewhere.
+ */
+const SHOW_SUGGESTION_MENU = false;
 
 // Leading resource-kind words to strip from a "create <kind> <name>" query so the
 // create modal opens with just the typed name pre-filled.
@@ -1069,13 +1077,30 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   );
   const removalSuggestions = useMemo<OmnibarResult[]>(
     () =>
-      buildOmnibarRemovalSuggestions({ activeChat, characterNameById, deferredQuery, omnibarSuggestionsEnabled, t }),
-    [activeChat, characterNameById, deferredQuery, omnibarSuggestionsEnabled, t],
+      buildOmnibarRemovalSuggestions({
+        activeChat,
+        attachedResultIds,
+        contextResults,
+        deferredQuery,
+        omnibarSuggestionsEnabled,
+        t,
+      }),
+    [activeChat, attachedResultIds, contextResults, deferredQuery, omnibarSuggestionsEnabled, t],
   );
   const attachedResultIds = useMemo(
     () => new Set(omnibarContext.activeChat?.resultIds ?? []),
     [omnibarContext.activeChat?.resultIds],
   );
+  // A bare "add" has no search results to draw on, so the recently used rows
+  // stand in: a few concrete "Add Eliza to this chat" rows are worth more than
+  // six abstract kind rows alone. Kept short so the kind rows stay visible.
+  const recentAttachable = useMemo(() => {
+    const byId = new Map(allLocalResults.map((item) => [item.id, item]));
+    return ranking.recent.flatMap((entry) => {
+      const item = byId.get(entry.id);
+      return item && CHAT_ATTACHABLE_CATEGORIES.has(item.category) ? [item] : [];
+    });
+  }, [allLocalResults, ranking.recent]);
   const addSuggestions = useMemo<OmnibarResult[]>(
     () =>
       buildOmnibarAddSuggestions({
@@ -1083,10 +1108,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         attachedResultIds,
         deferredQuery,
         omnibarSuggestionsEnabled,
-        searchResults,
+        searchResults: searchResults.length ? searchResults : recentAttachable.slice(0, 3),
         t,
       }),
-    [activeChat, attachedResultIds, deferredQuery, omnibarSuggestionsEnabled, searchResults, t],
+    [activeChat, attachedResultIds, deferredQuery, omnibarSuggestionsEnabled, recentAttachable, searchResults, t],
+  );
+  const verbSuggestions = useMemo<OmnibarResult[]>(
+    () => buildOmnibarVerbSuggestions({ activeChat, allLocalResults, deferredQuery, t }),
+    [activeChat, allLocalResults, deferredQuery, t],
   );
   const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
   const proposalResult = useMemo<OmnibarResult | null>(
@@ -1115,6 +1144,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       deferredQuery.trim()
         ? [
             ...slashResults,
+            ...verbSuggestions,
             ...addSuggestions,
             ...removalSuggestions,
             ...(gameResult ? [gameResult] : []),
@@ -1139,6 +1169,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       searchResults,
       removalSuggestions,
       slashResults,
+      verbSuggestions,
     ],
   );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
@@ -1342,6 +1373,42 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else executeStateNavigation(definition.action.target);
     return true;
   };
+  /**
+   * Detaches one resource from the open chat. Each kind lives in a different
+   * field, so the mapping is explicit; a lorebook is also added to the excluded
+   * list, because dropping it from the active list alone lets a character
+   * re-activate it immediately.
+   */
+  const detachFromChat = (resource: ChatResourceDragKind, resourceId: string, label: string) => {
+    if (!activeChat || !resourceId) return false;
+    if (!window.confirm(t("commandCenter.actions.confirmRemove", "Remove {{name}} from this chat?", { name: label })))
+      return false;
+    const chatId = activeChat.id;
+    if (resource === "character") {
+      void patchChat({ id: chatId, characterIds: getChatCharacterIds(activeChat).filter((id) => id !== resourceId) });
+    } else if (resource === "persona") {
+      void patchChat({ id: chatId, personaId: null });
+    } else if (resource === "preset") {
+      void patchChat({ id: chatId, promptPresetId: null });
+    } else if (resource === "connection") {
+      void patchChat({ id: chatId, connectionId: null });
+    } else if (resource === "lorebook") {
+      void patchChatMetadata({
+        id: chatId,
+        activeLorebookIds: getChatActiveLorebookIds(activeChat).filter((id) => id !== resourceId),
+        excludedLorebookIds: [...new Set([...getChatExcludedLorebookIds(activeChat), resourceId])],
+      });
+    } else if (resource === "agent") {
+      const metadata = parseChatMetadata(activeChat.metadata);
+      const active = Array.isArray(metadata.activeAgentIds) ? metadata.activeAgentIds : [];
+      void patchChatMetadata({
+        id: chatId,
+        activeAgentIds: active.filter((id) => id !== resourceId),
+      });
+    } else return false;
+    onClose();
+    return true;
+  };
   /** Attaches one resource to the open chat and closes, unless the drop rules block it. */
   const attachToChat = (kind: ChatResourceDragKind, id: string, label: string, resultId: string) => {
     if (!activeChat || !id) return false;
@@ -1388,24 +1455,16 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         useChatStore.getState().requestGotoMessage(action.chatId, action.messageNumber);
         onClose();
         return;
+      case "refine-query":
+        setQuery(action.query);
+        setActiveResultId(null);
+        requestAnimationFrame(() => inputRef.current?.focus());
+        return;
       case "add-to-chat":
         attachToChat(action.resource, action.resourceId, action.label, result.id);
         return;
-      case "remove-character":
-        if (
-          activeChat &&
-          action.characterId &&
-          window.confirm(
-            t("commandCenter.actions.confirmRemoveCharacter", "Remove this character from the current chat?"),
-          )
-        ) {
-          void updateChat.mutateAsync({
-            id: activeChat.id,
-            characterIds: (activeChat.characterIds ?? []).filter((id) => id !== action.characterId),
-          });
-          recordUse(result.id);
-          onClose();
-        }
+      case "detach-from-chat":
+        if (detachFromChat(action.resource, action.resourceId, action.label)) recordUse(result.id);
         return;
       case "personal-extension":
         if (activatePersonalExtensionCommand(action.commandId)) {
@@ -2382,7 +2441,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 />
               </button>
             ) : null}
-            {pane !== "mari" ? (
+            {SHOW_SUGGESTION_MENU && pane !== "mari" ? (
               <div className="relative shrink-0">
                 <button
                   type="button"

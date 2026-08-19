@@ -22,6 +22,7 @@ import type { OmnibarNamedRow, OmnibarTranslate } from "./omnibar-entity-rows";
 import {
   getUnambiguousOmnibarResult,
   isOmnibarAddIntent,
+  isOmnibarRefinableVerb,
   isOmnibarRemovalIntent,
   parseOmnibarIntent,
   searchOmnibar,
@@ -216,6 +217,14 @@ export type OmnibarContextResultsInput = {
   t: OmnibarTranslate;
 };
 
+export type OmnibarVerbSuggestionsInput = {
+  activeChat: Chat | null | undefined;
+  /** Every locally known row, used to answer "enable" and "create" directly. */
+  allLocalResults: readonly OmnibarResult[];
+  deferredQuery: string;
+  t: OmnibarTranslate;
+};
+
 export type OmnibarAddSuggestionsInput = {
   activeChat: Chat | null | undefined;
   /** Result ids already attached to the open chat, so nothing is offered twice. */
@@ -228,7 +237,10 @@ export type OmnibarAddSuggestionsInput = {
 
 export type OmnibarRemovalSuggestionsInput = {
   activeChat: Chat | null | undefined;
-  characterNameById: ReadonlyMap<string, string>;
+  /** Result ids currently attached to the open chat. */
+  attachedResultIds: ReadonlySet<string>;
+  /** The already-derived rows for the open chat, which is where the names come from. */
+  contextResults: readonly OmnibarResult[];
   deferredQuery: string;
   omnibarSuggestionsEnabled: boolean;
   t: OmnibarTranslate;
@@ -969,6 +981,82 @@ const ADD_SUGGESTION_SCORE = 470;
  * results rather than re-deriving entities, so it inherits their media, icons
  * and matching.
  */
+/** Object kinds a bare "add"/"use" can attach, in the order they are offered. */
+const ADD_OBJECT_CATEGORIES = ["character", "persona", "lorebook", "preset", "connection", "agent"] as const;
+/** Object kinds a bare "open"/"show" can reach. Chats lead: it is the common case. */
+const OPEN_OBJECT_CATEGORIES = ["chat", "character", "persona", "lorebook", "preset", "connection", "agent"] as const;
+/** Words used in the refined query for each object kind, matching the parser's kind words. */
+const OBJECT_KIND_QUERY_WORDS: Record<string, string> = {
+  chat: "chat",
+  character: "character",
+  persona: "persona",
+  lorebook: "lorebook",
+  preset: "preset",
+  connection: "connection",
+  agent: "agent",
+};
+/** Below `ADD_SUGGESTION_SCORE`, so concrete "Add Eliza" rows lead and the kind rows follow as the fallback. */
+const VERB_SUGGESTION_SCORE = 460;
+const MAX_REMOVAL_SUGGESTIONS = 8;
+/** Matches the add rows, so both verbs put their concrete options in the same place. */
+const REMOVAL_SUGGESTION_SCORE = 470;
+
+/**
+ * Answers a bare verb — "add", "open", "enable" — with what can follow it.
+ *
+ * Two shapes, chosen by how many objects the verb can take. An unbounded verb
+ * ("add" can attach any of hundreds of characters) offers the object *kinds*,
+ * and choosing one refines the query rather than acting, so the next keystroke
+ * narrows instead of restarting. A bounded verb ("enable" has ten toggles,
+ * "create" has six kinds) lists the objects themselves and acts on Enter.
+ *
+ * "remove" is bounded too, but `buildOmnibarRemovalSuggestions` already lists
+ * the attached characters for a bare verb, so it is deliberately not repeated
+ * here.
+ */
+export function buildOmnibarVerbSuggestions({
+  activeChat,
+  allLocalResults,
+  deferredQuery,
+  t,
+}: OmnibarVerbSuggestionsInput): OmnibarResult[] {
+  const intent = isOmnibarRefinableVerb(deferredQuery);
+  if (!intent) return [];
+  const refineRows = (categories: readonly OmnibarCategory[], label: string, fallback: string) =>
+    categories.map((category, index) => ({
+      id: `verb:${intent.verb}:${category}`,
+      action: { kind: "refine-query", query: `${intent.verb} ${OBJECT_KIND_QUERY_WORDS[category]} ` } as const,
+      title: t(label, fallback, { kind: t(`commandCenter.kinds.${category}`, category) }),
+      description: t("commandCenter.verbs.refineDescription", "Choose which one next."),
+      category,
+      score: VERB_SUGGESTION_SCORE - index,
+      kind: "action" as const,
+      icon: category === "chat" ? ("chats" as const) : (category as OmnibarResult["icon"]),
+      group: "current-work" as const,
+    }));
+
+  // "add" only makes sense with somewhere to add to.
+  if (["add", "use", "activate", "set"].includes(intent.verb)) {
+    if (!activeChat) return [];
+    return refineRows([...ADD_OBJECT_CATEGORIES], "commandCenter.verbs.addKind", "Add a {{kind}} to this chat…");
+  }
+  if (["open", "show", "go to"].includes(intent.verb)) {
+    return refineRows([...OPEN_OBJECT_CATEGORIES], "commandCenter.verbs.openKind", "Open a {{kind}}…");
+  }
+  // Bounded verbs: list the objects themselves, because they all fit. "remove"
+  // is bounded too, but `buildOmnibarRemovalSuggestions` already owns it.
+  const bounded = ["create", "new", "import"].includes(intent.verb)
+    ? allLocalResults.filter((result) => /^(?:create|import)-/.test(result.id))
+    : ["enable", "disable", "turn on", "turn off"].includes(intent.verb)
+      ? allLocalResults.filter((result) => result.control?.type === "toggle")
+      : [];
+  return bounded.slice(0, 10).map((result, index) => ({
+    ...result,
+    score: VERB_SUGGESTION_SCORE - index,
+    group: "current-work" as const,
+  }));
+}
+
 export function buildOmnibarAddSuggestions({
   activeChat,
   attachedResultIds,
@@ -982,8 +1070,11 @@ export function buildOmnibarAddSuggestions({
   for (const result of searchResults) {
     if (out.length >= MAX_ADD_SUGGESTIONS) break;
     const resource = ADD_RESOURCE_KINDS[result.category];
-    if (!resource || result.kind !== "resource" || attachedResultIds.has(result.id)) continue;
-    const resourceId = result.id.slice(result.id.indexOf(":") + 1);
+    if (!resource || attachedResultIds.has(result.id)) continue;
+    // Entity rows are `<category>:<id>`. Control and command rows are not, and
+    // must never be offered as something to attach.
+    if (!result.id.startsWith(`${result.category}:`)) continue;
+    const resourceId = result.id.slice(result.category.length + 1);
     if (!resourceId) continue;
     out.push({
       id: `action:add-to-chat:${result.id}`,
@@ -1003,34 +1094,47 @@ export function buildOmnibarAddSuggestions({
   return out;
 }
 
+/**
+ * Answers "remove" with everything currently attached to the open chat —
+ * characters, persona, preset, connection, lorebooks, agents — not just
+ * characters. The list is read from the chat context rows, which are already
+ * derived from live chat state, so it never drifts from what is actually on.
+ *
+ * A bare "remove" lists all of it; "remove eliza" narrows by name.
+ */
 export function buildOmnibarRemovalSuggestions({
   activeChat,
-  characterNameById,
+  attachedResultIds,
+  contextResults,
   deferredQuery,
   omnibarSuggestionsEnabled,
   t,
 }: OmnibarRemovalSuggestionsInput): OmnibarResult[] {
   if (!omnibarSuggestionsEnabled || !activeChat || !isOmnibarRemovalIntent(deferredQuery)) return [];
-  return getChatCharacterIds(activeChat).flatMap((characterId) => {
-    const name = characterNameById.get(characterId);
-    if (!name) return [];
-    return [
-      {
-        id: `action:remove-character:${characterId}`,
-        action: { kind: "remove-character", characterId } as const,
-        title: t("commandCenter.actions.removeCharacter", "Remove {{name}} from this chat", { name }),
-        description: t(
-          "commandCenter.actions.removeCharacterDescription",
-          "Detach this character from the current chat.",
-        ),
-        category: "character" as const,
-        score: 460,
-        kind: "action" as const,
-        icon: "character" as const,
-        group: "current-work" as const,
-      },
-    ];
-  });
+  const target = normalizeTextForMatch(parseOmnibarIntent(deferredQuery)?.targetQuery ?? "");
+  const out: OmnibarResult[] = [];
+  for (const result of contextResults) {
+    if (out.length >= MAX_REMOVAL_SUGGESTIONS) break;
+    const resource = ADD_RESOURCE_KINDS[result.category];
+    if (!resource || !attachedResultIds.has(result.id)) continue;
+    if (!result.id.startsWith(`${result.category}:`)) continue;
+    if (target && !normalizeTextForMatch(result.title).includes(target)) continue;
+    out.push({
+      id: `action:detach-from-chat:${result.id}`,
+      action: { kind: "detach-from-chat", resource, resourceId: result.id.slice(result.category.length + 1), label: result.title } as const,
+      title: t("commandCenter.actions.removeFromChat", "Remove {{name}} from this chat", { name: result.title }),
+      description: t("commandCenter.actions.removeFromChatDescription", "Detach it from {{chat}}.", {
+        chat: activeChat.name,
+      }),
+      category: result.category,
+      media: result.media,
+      score: REMOVAL_SUGGESTION_SCORE - out.length,
+      kind: "action" as const,
+      icon: result.icon,
+      group: "current-work" as const,
+    });
+  }
+  return out;
 }
 
 export function buildOmnibarProposalResult({ creationProposal, t }: OmnibarProposalResultInput): OmnibarResult | null {

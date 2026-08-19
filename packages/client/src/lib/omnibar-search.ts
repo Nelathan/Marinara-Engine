@@ -36,8 +36,9 @@ export type OmnibarAction =
   | { kind: "open-mari-chat"; chatId: string }
   | { kind: "slash"; command: string }
   | { kind: "goto-message"; chatId: string; messageNumber: number }
-  | { kind: "remove-character"; characterId: string }
+  | { kind: "detach-from-chat"; resource: ChatResourceDragKind; resourceId: string; label: string }
   | { kind: "add-to-chat"; resource: ChatResourceDragKind; resourceId: string; label: string }
+  | { kind: "refine-query"; query: string }
   | { kind: "personal-extension"; commandId: string }
   | { kind: "open-docs"; path?: string }
   | { kind: "open-faq"; itemId: string };
@@ -120,6 +121,8 @@ export type OmnibarIntent = {
   kind: OmnibarIntentKind;
   verb: string;
   targetQuery: string;
+  /** Set when the query names the object kind ("add character eliza"), so the search can narrow to it. */
+  objectCategory?: OmnibarCategory;
 };
 
 export type OmnibarSurface = "home" | "chat" | "editor" | "settings" | "library" | "game";
@@ -193,9 +196,25 @@ export function createOmnibarContext(input: Partial<OmnibarContext> & Pick<Omnib
   };
 }
 
+/**
+ * Words naming an object kind, so "add character eliza" narrows to characters
+ * instead of searching for the literal word "character". Plurals included
+ * because a verb phrase reads either way ("open characters").
+ */
+const OBJECT_KIND_WORDS: readonly [OmnibarCategory, RegExp][] = [
+  ["character", /^characters?\b\s*/],
+  ["persona", /^personas?\b\s*/],
+  ["lorebook", /^lorebooks?\b\s*/],
+  ["preset", /^presets?\b\s*/],
+  ["connection", /^connections?\b\s*/],
+  ["agent", /^agents?\b\s*/],
+  ["chat", /^chats?\b\s*/],
+  ["settings", /^settings?\b\s*/],
+];
+
 const INTENT_PATTERNS: readonly [OmnibarIntentKind, RegExp][] = [
   ["navigate", /^(open|show|go\s+to)\b\s*/],
-  ["action", /^(add|use|activate|set|remove|drop|detach)\b\s*/],
+  ["action", /^(add|use|activate|set|enable|disable|turn\s+on|turn\s+off|remove|drop|detach)\b\s*/],
   ["create", /^(create|new|import)\b\s*/],
   ["explain", /^(explain|why|how)\b\s*/],
   ["recommend", /^(compare|recommend|improve)\b\s*/],
@@ -212,7 +231,15 @@ export function parseOmnibarIntent(query: string): OmnibarIntent | null {
       .replace(/^(?:a|an|the)\s+/, "")
       .replace(/\s+(?:to\s+this\s+chat|in\s+this\s+chat|as\s+(?:the\s+)?default)$/, "")
       .trim();
-    return { kind, verb: match[1]!.replace(/\s+/g, " "), targetQuery };
+    const verb = match[1]!.replace(/\s+/g, " ");
+    const objectKind = OBJECT_KIND_WORDS.find(([, pattern]) => pattern.test(targetQuery));
+    if (!objectKind) return { kind, verb, targetQuery };
+    return {
+      kind,
+      verb,
+      targetQuery: targetQuery.replace(objectKind[1], "").trim(),
+      objectCategory: objectKind[0],
+    };
   }
   if (/\b(?:broken|failed|error)\b/.test(normalized)) {
     return { kind: "repair", verb: normalized.match(/\b(broken|failed|error)\b/)![1]!, targetQuery: normalized };
@@ -229,6 +256,18 @@ export function isOmnibarRemovalIntent(query: string): boolean {
  * the `action` verb list with removal, so it is defined as "an action intent
  * that is not a removal" rather than a second verb list that can drift.
  */
+/**
+ * A verb typed on its own, with no object yet: "add", "open", "enable". Returns
+ * the intent so the caller can build the list of things that can follow it.
+ * A verb with a named kind ("add character") is not bare — the search narrows
+ * to that kind instead.
+ */
+export function isOmnibarRefinableVerb(query: string): OmnibarIntent | null {
+  const intent = parseOmnibarIntent(query);
+  if (!intent || intent.targetQuery || intent.objectCategory) return null;
+  return intent.kind === "action" || intent.kind === "navigate" || intent.kind === "create" ? intent : null;
+}
+
 export function isOmnibarAddIntent(query: string): boolean {
   return parseOmnibarIntent(query)?.kind === "action" && !isOmnibarRemovalIntent(query);
 }
@@ -261,6 +300,9 @@ export function getOmnibarActiveChatContextResultIds(
   }
   return ids;
 }
+
+/** A query no normalised title can equal, so a bare verb matches nothing by text. */
+const NO_MATCH = "\u0000";
 
 function scoreText(query: string, values: readonly string[]) {
   return values.reduce((best, value) => {
@@ -320,19 +362,26 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
   const normalized = normalizeProfessorMariNavigationQuery(query);
   if (!normalized) return [];
   const intent = parseOmnibarIntent(query);
-  const searchQuery = intent?.targetQuery || normalized;
+  // A bare verb ("add", "remove") is a half-sentence, not a search term. Text
+  // matching it just surfaces every row containing the word, so the verb is
+  // matched against nothing and the verb-suggestion builder answers it instead.
+  // "add character" is not bare: the kind narrows the list, and the empty
+  // target then matches every row in that category.
+  const bare = Boolean(intent && !intent.targetQuery && !intent.objectCategory);
+  const searchQuery = bare ? NO_MATCH : intent ? intent.targetQuery : normalized;
+  const fullQuery = bare ? NO_MATCH : normalized;
   const results: OmnibarResult[] = [];
   for (const control of data.controls ?? []) {
     const score = Math.max(
       scoreText(searchQuery, [control.title, ...(control.aliases ?? [])]),
-      scoreText(normalized, [control.title, ...(control.aliases ?? [])]),
+      scoreText(fullQuery, [control.title, ...(control.aliases ?? [])]),
     );
     if (score >= 0) results.push(finishResult({ ...control, score }, intent, data));
   }
   for (const command of data.commands) {
     const score = Math.max(
       scoreText(searchQuery, [command.title, ...(command.aliases ?? [])]),
-      scoreText(normalized, [command.title, ...(command.aliases ?? [])]),
+      scoreText(fullQuery, [command.title, ...(command.aliases ?? [])]),
     );
     const contextualRepair =
       intent?.kind === "repair" &&
@@ -354,7 +403,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
       );
   }
   for (const chat of data.chats) {
-    const score = Math.max(scoreText(searchQuery, [chat.name]), scoreText(normalized, [chat.name]));
+    const score = Math.max(scoreText(searchQuery, [chat.name]), scoreText(fullQuery, [chat.name]));
     if (score >= 0)
       results.push(
         finishResult(
@@ -377,7 +426,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
   for (const resource of data.resources) {
     const score = Math.max(
       scoreText(searchQuery, [resource.name, ...(resource.aliases ?? [])]),
-      scoreText(normalized, [resource.name, ...(resource.aliases ?? [])]),
+      scoreText(fullQuery, [resource.name, ...(resource.aliases ?? [])]),
     );
     if (score >= 0)
       results.push(
@@ -412,7 +461,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
   }
   for (const connection of data.connections) {
     const values = [connection.name, connection.provider ?? "", connection.model ?? ""];
-    const score = Math.max(scoreText(searchQuery, values), scoreText(normalized, values));
+    const score = Math.max(scoreText(searchQuery, values), scoreText(fullQuery, values));
     if (score >= 0)
       results.push(
         finishResult(
@@ -431,7 +480,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
         ),
       );
   }
-  return results
+  return (intent?.objectCategory ? results.filter((item) => item.category === intent.objectCategory) : results)
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
     .concat({
       id: "ask-professor-mari",
