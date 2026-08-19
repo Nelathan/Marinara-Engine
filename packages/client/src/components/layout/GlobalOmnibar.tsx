@@ -23,7 +23,6 @@ import {
   LayoutGrid,
   Loader2,
   MessageCircle,
-  MoreVertical,
   Play,
   Search,
   SlidersHorizontal,
@@ -197,13 +196,6 @@ const CHAT_ATTACHABLE_CATEGORIES = new Set<OmnibarCategory>([
   "agent",
 ]);
 const BROWSE_BATCH_SIZE = 48;
-
-/**
- * The overflow menu holding the suggestion toggles is hidden: the omnibar
- * header is the wrong home for them. The toggles themselves still live in the
- * UI store, so re-homing them is a matter of rendering them elsewhere.
- */
-const SHOW_SUGGESTION_MENU = false;
 
 // Leading resource-kind words to strip from a "create <kind> <name>" query so the
 // create modal opens with just the typed name pre-filled.
@@ -394,7 +386,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
-  const [suggestionMenuOpen, setSuggestionMenuOpen] = useState(false);
   const [browseCompareIds, setBrowseCompareIds] = useState<string[]>([]);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
@@ -1160,11 +1151,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             // An explicit "Add X to this chat" row replaces the plain entity row
             // for the same thing: showing both lists every character twice, and
             // the plain one reads like "open" while doing the same attach.
-            ...(addedResultIds.size
-              ? searchResults.filter((result) => !addedResultIds.has(result.id))
-              : searchResults),
+            ...(addedResultIds.size ? searchResults.filter((result) => !addedResultIds.has(result.id)) : searchResults),
           ]
-        : [...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS), ...slashResults, ...(continueResult ? [continueResult] : []), ...idleResults],
+        : [
+            ...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS),
+            ...slashResults,
+            ...(continueResult ? [continueResult] : []),
+            ...idleResults,
+          ],
     [
       addSuggestions,
       addedResultIds,
@@ -2455,66 +2449,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
                 />
               </button>
-            ) : null}
-            {SHOW_SUGGESTION_MENU && pane !== "mari" ? (
-              <div className="relative shrink-0">
-                <button
-                  type="button"
-                  aria-label={t("commandCenter.suggestionsMenu", "Suggestion settings")}
-                  aria-expanded={suggestionMenuOpen}
-                  title={t("commandCenter.suggestionsMenu", "Suggestion settings")}
-                  onClick={() => setSuggestionMenuOpen((open) => !open)}
-                  className="inline-flex size-11 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] sm:size-9"
-                >
-                  <MoreVertical size={18} />
-                </button>
-                {suggestionMenuOpen ? (
-                  <div
-                    role="menu"
-                    aria-label={t("commandCenter.suggestionsMenu", "Suggestion settings")}
-                    className="absolute right-0 top-12 z-20 w-72 rounded-lg border border-[var(--border)] bg-[var(--card)] p-2 shadow-xl"
-                  >
-                    <label className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-[var(--accent)]">
-                      <input
-                        type="checkbox"
-                        checked={omnibarSuggestionsEnabled}
-                        onChange={(event) => useUIStore.getState().setOmnibarSuggestionsEnabled(event.target.checked)}
-                        className="mt-0.5 accent-[var(--primary)]"
-                      />
-                      <span>
-                        <span className="block text-xs font-semibold text-[var(--foreground)]">
-                          {t("commandCenter.controls.omnibarSuggestions", "Context suggestions")}
-                        </span>
-                        <span className="mt-0.5 block text-[0.6875rem] leading-4 text-[var(--muted-foreground)]">
-                          {t(
-                            "commandCenter.controls.omnibarSuggestionsHelp",
-                            "Suggest useful actions for the current chat or screen.",
-                          )}
-                        </span>
-                      </span>
-                    </label>
-                    <label className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-[var(--accent)]">
-                      <input
-                        type="checkbox"
-                        checked={mariEnabled}
-                        onChange={(event) => useUIStore.getState().setCommandCenterMariEnabled(event.target.checked)}
-                        className="mt-0.5 accent-[var(--primary)]"
-                      />
-                      <span>
-                        <span className="block text-xs font-semibold text-[var(--foreground)]">
-                          {t("commandCenter.controls.mariAssist", "Professor Mari assistance")}
-                        </span>
-                        <span className="mt-0.5 block text-[0.6875rem] leading-4 text-[var(--muted-foreground)]">
-                          {t(
-                            "commandCenter.controls.mariAssistHelp",
-                            "Allow explicit handoffs to use the configured language model.",
-                          )}
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                ) : null}
-              </div>
             ) : null}
             <button
               type="button"
