@@ -220,24 +220,6 @@ function createModalPrefillName(modal: string, query: string): string | undefine
   return name || undefined;
 }
 
-export function GlobalOmnibar() {
-  const open = useUIStore((state) => state.omnibarOpen);
-  const setOpen = useUIStore((state) => state.setOmnibarOpen);
-
-  useEffect(() => {
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen(!useUIStore.getState().omnibarOpen);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [setOpen]);
-
-  return open ? <GlobalOmnibarDialog onClose={() => setOpen(false)} /> : null;
-}
-
 /**
  * Tier-2 preview data: fetched lazily only for the one focused result, gated by
  * a short focus dwell so arrow-key scrubbing does not fire a request per row.
@@ -351,7 +333,7 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
   return { extraFacts: [], detail: null, detailLoading: false };
 }
 
-function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
+export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const localize = useLocalizedUiText();
   const ui = useUIStore.getState;

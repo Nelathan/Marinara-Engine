@@ -4,7 +4,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatSidebar } from "./ChatSidebar";
 import { TopBar } from "./TopBar";
-import { GlobalOmnibar } from "./GlobalOmnibar";
+import { GlobalOmnibar } from "./GlobalOmnibarHost";
 import { SpotifyMobileWidget } from "../spotify/SpotifyMiniPlayer";
 import { YouTubeMobileWidget } from "../chat/YouTubePlayer";
 import { LocalMusicMobileWidget } from "../chat/LocalMusicPlayer";

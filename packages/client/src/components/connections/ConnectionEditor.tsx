@@ -161,6 +161,7 @@ const VIDEO_REFERENCE_UPLOAD_EXPIRY_OPTIONS: Array<{ value: VideoReferenceUpload
 
 function videoSourceToDefaultsService(value: string | null | undefined): VideoDefaultsService {
   if (value === "swarmui") return "comfyui";
+  if (value === "nanogpt") return "openrouter";
   return value === "xai" ||
     value === "openrouter" ||
     value === "atlas" ||
@@ -185,6 +186,7 @@ function videoSelectionToDefaultsService(
 
 function videoSourceToProviderOption(value: string | null | undefined): string {
   if (value?.trim() === "swarmui") return "swarmui";
+  if (value?.trim() === "nanogpt") return "nanogpt";
   const service = videoSourceToDefaultsService(value);
   return service === "gemini_omni" || service === "google_veo" ? "google_ai_studio" : service;
 }
@@ -202,6 +204,7 @@ function videoProviderServiceForModel(
 }
 
 function defaultVideoModelForService(value: string | null | undefined): string {
+  if (value === "nanogpt") return "";
   return DEFAULT_VIDEO_MODELS[videoSourceToDefaultsService(value)];
 }
 
@@ -339,6 +342,7 @@ export function ConnectionEditor() {
   const [localModel, setLocalModel] = useState("");
   const [localMaxContext, setLocalMaxContext] = useState(128000);
   const [localMaxParallelJobs, setLocalMaxParallelJobs] = useState(DEFAULT_MAX_PARALLEL_JOBS);
+  const [localMaxRequestsPerMinute, setLocalMaxRequestsPerMinute] = useState<number | null>(null);
   const [localEnableCaching, setLocalEnableCaching] = useState(false);
   const [localAnthropicExtendedCacheTtl, setLocalAnthropicExtendedCacheTtl] = useState(false);
   const [localCachingAtDepth, setLocalCachingAtDepth] = useState(DEFAULT_CACHING_AT_DEPTH);
@@ -436,6 +440,9 @@ export function ConnectionEditor() {
     setLocalModel(normalizeGrokCliEditorModel(provider, (c.model as string) ?? ""));
     setLocalMaxContext(normalizeConnectionMaxContext(provider, c.maxContext));
     setLocalMaxParallelJobs(normalizeMaxParallelJobs(c.maxParallelJobs));
+    setLocalMaxRequestsPerMinute(
+      typeof c.maxRequestsPerMinute === "number" && c.maxRequestsPerMinute > 0 ? c.maxRequestsPerMinute : null,
+    );
     setLocalEnableCaching(c.enableCaching === "true" || c.enableCaching === true);
     setLocalAnthropicExtendedCacheTtl(c.anthropicExtendedCacheTtl === "true" || c.anthropicExtendedCacheTtl === true);
     setLocalCachingAtDepth(normalizeCachingAtDepth(c.cachingAtDepth));
@@ -644,7 +651,9 @@ export function ConnectionEditor() {
             : localProvider === "video_generation" && selectedVideoDefaultsService === "xai"
               ? API_KEY_LINKS.xai
               : localProvider === "video_generation" && selectedVideoDefaultsService === "openrouter"
-                ? API_KEY_LINKS.openrouter
+                ? selectedVideoProvider === "nanogpt"
+                  ? API_KEY_LINKS.nanogpt
+                  : API_KEY_LINKS.openrouter
                 : localProvider === "video_generation" && selectedVideoDefaultsService === "seedance"
                   ? { label: "Open Seedance API docs", url: "https://seedance2.ai/api-docs" }
                   : localProvider === "video_generation" &&
@@ -682,8 +691,9 @@ export function ConnectionEditor() {
 
   // Model list for current provider
   const providerModels = useMemo(() => {
+    if (localProvider === "video_generation" && selectedVideoProvider === "nanogpt") return [];
     return MODEL_LISTS[localProvider] ?? [];
-  }, [localProvider]);
+  }, [localProvider, selectedVideoProvider]);
 
   // Merge known models with remote models (remote first, deduped)
   const allModels = useMemo(() => {
@@ -781,6 +791,7 @@ export function ConnectionEditor() {
       model: normalizedModel,
       maxContext: localMaxContext,
       maxParallelJobs: localMaxParallelJobs,
+      maxRequestsPerMinute: localMaxRequestsPerMinute,
       enableCaching: localEnableCaching,
       anthropicExtendedCacheTtl:
         localProvider === "anthropic" && localEnableCaching ? localAnthropicExtendedCacheTtl : false,
@@ -895,6 +906,7 @@ export function ConnectionEditor() {
     localModel,
     localMaxContext,
     localMaxParallelJobs,
+    localMaxRequestsPerMinute,
     localEnableCaching,
     localAnthropicExtendedCacheTtl,
     localCachingAtDepth,
@@ -1009,6 +1021,7 @@ export function ConnectionEditor() {
       maxContext: localMaxContext,
       maxTokensOverride: localMaxTokensOverride ?? null,
       maxParallelJobs: localMaxParallelJobs,
+      maxRequestsPerMinute: localMaxRequestsPerMinute,
       treatAsLocalEndpoint: canTreatAsLocalEndpoint ? localTreatAsLocalEndpoint : false,
       promptPresetId: !isMediaProvider ? localPromptPresetId || null : null,
       defaultParameters,
@@ -1056,6 +1069,7 @@ export function ConnectionEditor() {
     localMaxContext,
     localMaxTokensOverride,
     localMaxParallelJobs,
+    localMaxRequestsPerMinute,
     localTreatAsLocalEndpoint,
     localPromptPresetId,
     localDefaultParametersEnabled,
@@ -2458,6 +2472,7 @@ export function ConnectionEditor() {
           {localProvider === "video_generation" && localVideoDefaults && (
             <VideoGenerationDefaultsPanel
               value={localVideoDefaults}
+              source={selectedVideoProvider}
               remoteLoras={remoteLoras}
               expanded={videoDefaultsExpanded}
               onExpandedChange={setVideoDefaultsExpanded}
@@ -2564,6 +2579,39 @@ export function ConnectionEditor() {
               <p className="mt-1 text-[0.625rem] text-[var(--muted-foreground)]">
                 {localizeUi("ui.connections.connectioneditor.agentBatchesForTheSameConnectionCanBeSplit")}
               </p>
+            </FieldGroup>
+          )}
+
+          {/* ── Rate Limit (requests per minute) ── */}
+          {!isMediaGenerationProvider && (
+            <FieldGroup
+              label={localizeUi("ui.connections.connectioneditor.maxRequestsPerMinute")}
+              icon={
+                <SlidersHorizontal size="0.875rem" className="text-[var(--marinara-chat-chrome-button-text-active)]" />
+              }
+              help={localizeUi("ui.connections.connectioneditor.maxRequestsPerMinuteHelp")}
+            >
+              <div className="flex items-center gap-3">
+                <DraftNumberInput
+                  value={localMaxRequestsPerMinute ?? 0}
+                  ariaLabel={localizeUi("ui.connections.connectioneditor.maxRequestsPerMinute")}
+                  min={0}
+                  max={600}
+                  selectOnFocus
+                  onCommit={(nextValue) => {
+                    setLocalMaxRequestsPerMinute(nextValue > 0 ? Math.floor(nextValue) : null);
+                    markDirty();
+                  }}
+                  className="w-24 rounded-xl bg-[var(--secondary)] px-3 py-2.5 text-sm ring-1 ring-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                />
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {localMaxRequestsPerMinute === null
+                    ? localizeUi("ui.connections.connectioneditor.requestsPerMinuteUnlimited")
+                    : localizeUi("ui.connections.connectioneditor.value1RequestsPerMinute", {
+                        value1: localMaxRequestsPerMinute,
+                      })}
+                </span>
+              </div>
             </FieldGroup>
           )}
 
@@ -3937,6 +3985,7 @@ function TextSetting({
 
 function VideoGenerationDefaultsPanel({
   value,
+  source,
   remoteLoras,
   expanded,
   onExpandedChange,
@@ -3944,6 +3993,7 @@ function VideoGenerationDefaultsPanel({
   onReset,
 }: {
   value: VideoGenerationDefaultsProfile;
+  source: string;
   remoteLoras: RemoteConnectionModel[];
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -3952,6 +4002,7 @@ function VideoGenerationDefaultsPanel({
 }) {
   const { t: localizeUi } = useUiTranslation();
   const { t } = useTranslation();
+  const isNanoGpt = source === "nanogpt";
   const service =
     value.service === "xai" ||
     value.service === "openrouter" ||
@@ -3981,7 +4032,9 @@ function VideoGenerationDefaultsPanel({
       : service === "google_veo"
         ? "Google AI Studio Veo"
         : service === "openrouter"
-          ? "OpenRouter Video"
+          ? isNanoGpt
+            ? "NanoGPT"
+            : "OpenRouter Video"
           : service === "atlas"
             ? t("connections.mediaSources.atlas.name")
             : service === "seedance"
@@ -4052,9 +4105,13 @@ function VideoGenerationDefaultsPanel({
                 "ui.connections.videogenerationdefaultspanel.connectionScopedDefaultsForGoogleAiStudioVeoVideo",
               )
             : service === "openrouter"
-              ? localizeUi(
-                  "ui.connections.videogenerationdefaultspanel.connectionScopedDefaultsForOpenrouterAsynchronousVideoGeneration",
-                )
+              ? isNanoGpt
+                ? localizeUi(
+                    "ui.connections.videogenerationdefaultspanel.connectionScopedDefaultsForNanogptAsynchronousVideoGeneration",
+                  )
+                : localizeUi(
+                    "ui.connections.videogenerationdefaultspanel.connectionScopedDefaultsForOpenrouterAsynchronousVideoGeneration",
+                  )
               : service === "atlas"
                 ? t("connections.mediaSources.atlas.videoDefaultsHelp")
                 : service === "seedance"
@@ -4248,7 +4305,9 @@ function VideoGenerationDefaultsPanel({
                                 "ui.connections.videogenerationdefaultspanel.comfyuiReceivesDimensionsDurationFpsAndFrameCount",
                               )
                             : localizeUi(
-                                "ui.connections.videogenerationdefaultspanel.theseValuesAreSentToOpenrouterSAsynchronousVideos",
+                                isNanoGpt
+                                  ? "ui.connections.videogenerationdefaultspanel.theseValuesAreSentToNanogptSAsynchronousVideoApi"
+                                  : "ui.connections.videogenerationdefaultspanel.theseValuesAreSentToOpenrouterSAsynchronousVideos",
                               )}
                 </p>
               </>

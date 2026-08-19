@@ -138,6 +138,7 @@ import { resolveCustomAgentStyleProfileId } from "../services/generation/custom-
 import { buildSpotifyDjConstraints } from "../services/spotify/spotify-dj-constraints.js";
 import {
   assemblePrompt,
+  appendFallbackChatSummaryToSystemPrompt,
   buildPromptMacroContext,
   normalizeChatMacroVariables,
   collectCharacterAdvancedPromptEntries,
@@ -344,11 +345,15 @@ import {
 import { logger, logDebugOverride } from "../lib/logger.js";
 import {
   buildHistoricalLorebookKeeperContext,
+  customAgentUsesLorebookReadBehind,
+  customLorebookReadBehindRunKey,
+  getCustomLorebookReadBehindMessages,
   getLorebookKeeperAutomaticTarget,
   getLorebookKeeperSettings,
   loadLorebookKeeperExistingEntries,
   persistLorebookKeeperUpdates,
   resolveLorebookKeeperTarget,
+  tryClaimCustomLorebookReadBehindRun,
 } from "./generate/lorebook-keeper-utils.js";
 import { registerDryRunRoute } from "./generate/dry-run-route.js";
 import { registerRawRoute } from "./generate/raw-route.js";
@@ -525,10 +530,16 @@ import {
 } from "../services/generation/character-prompt-context.js";
 import { injectSceneContextMessages } from "../services/generation/scene-context-runtime.js";
 import { injectCommittedTrackerContext } from "../services/generation/committed-tracker-context.js";
+import { loadPriorBeholderState } from "../services/agents/beholder-state.js";
 import { injectGameGmPromptRuntime } from "../services/generation/game-gm-prompt-runtime.js";
 import { mergeConversationCharacterMemories } from "../services/generation/conversation-memory-context.js";
 import { injectMemoryRecallContext } from "../services/generation/memory-recall-context.js";
 import { shouldSkipAgentByMessageInterval } from "../services/generation/agent-cadence.js";
+import {
+  appendTrackerLorebookBatchContextKey,
+  applyTrackerLorebookContextPolicy,
+  getTrackerAgentTypes,
+} from "../services/generation/tracker-agent-context.js";
 import {
   createAgentEventDispatcher,
   shouldDeferExpressionAgentEvent,
@@ -772,6 +783,7 @@ export async function generateRoutes(app: FastifyInstance) {
    */
   const encryptedReasoningCache = new Map<string, unknown[]>();
   const activeGenerations = new Map<string, { abortController: AbortController; backendUrl: string | null }>();
+  const activeCustomLorebookReadBehindRuns = new Set<string>();
 
   /**
    * POST /api/generate
@@ -900,6 +912,7 @@ export async function generateRoutes(app: FastifyInstance) {
     // window where two requests for the same chat could both pass the guard.
     const abortController = new AbortController();
     const generationId = randomUUID();
+    const customLorebookReadBehindRunKeys = new Set<string>();
     activeGenerations.set(input.chatId, { abortController, backendUrl: null });
     const releaseActiveGeneration = () => {
       if (activeGenerations.get(input.chatId)?.abortController === abortController) {
@@ -3113,6 +3126,16 @@ export async function generateRoutes(app: FastifyInstance) {
           });
         }
 
+        if (chatMode === "roleplay" && !resolvedPreset) {
+          finalMessages = appendFallbackChatSummaryToSystemPrompt(
+            finalMessages,
+            activeChatSummary,
+            wrapFormat,
+            promptMacroContext,
+            deferCharacterMacros ? { deferCharacterMacros: "all" } : undefined,
+          );
+        }
+
         if (isSceneChat) {
           injectSceneContextMessages({ messages: finalMessages, chatMetadata: chatMeta, charInfo, personaName });
         }
@@ -3734,6 +3757,16 @@ export async function generateRoutes(app: FastifyInstance) {
           signal: abortController.signal,
         };
 
+        const latestBeholderState = await loadPriorBeholderState({
+          agentsStore,
+          chatId: input.chatId,
+          chatMode,
+          activeAgentIds: chatActiveAgentIds,
+          chatEnableAgents,
+          excludeMessageId: input.regenerateMessageId,
+        });
+        if (latestBeholderState) agentContext.memory._beholderState = latestBeholderState;
+
         if (personaId) {
           agentContext.memory._personaId = personaId;
           agentContext.memory._personaAvatarPath =
@@ -4250,6 +4283,7 @@ export async function generateRoutes(app: FastifyInstance) {
           chatEnableAgents,
           activeAgentIds: chatActiveAgentIds,
           latestGameState,
+          beholderState: latestBeholderState,
           chatMetadata: chatMeta,
           wrapFormat,
           dedupeLastMessageWrappers,
@@ -4331,16 +4365,24 @@ export async function generateRoutes(app: FastifyInstance) {
             },
           };
         };
+        const customLorebookReadBehindTargets = new Map<
+          string,
+          { context: AgentContext; messageId: string; swipeIndex: number }
+        >();
         const { sendAgentEvent: sendRawAgentEvent, sendAgentResultEvent: sendRawAgentResultEvent } =
           createAgentEventDispatcher({
             resolvedAgents: agentEventResolvedAgents,
             sendEvent: (payload) => sendSseEvent(reply, payload),
-            getOwnership: () => ({
-              chatId: input.chatId,
-              messageId: typeof lastSavedMsg?.id === "string" ? lastSavedMsg.id : null,
-              swipeIndex: lastSavedSwipeIndex,
-              generationId,
-            }),
+            getOwnership: (result) => {
+              const historicalTarget = customLorebookReadBehindTargets.get(result.agentId);
+              return {
+                chatId: input.chatId,
+                messageId:
+                  historicalTarget?.messageId ?? (typeof lastSavedMsg?.id === "string" ? lastSavedMsg.id : null),
+                swipeIndex: historicalTarget?.swipeIndex ?? lastSavedSwipeIndex,
+                generationId,
+              };
+            },
           });
         const sendAgentEvent = (result: AgentResult, options?: { finalized?: boolean }) => {
           const nextResult = markLorebookResultForApproval(result);
@@ -4391,15 +4433,16 @@ export async function generateRoutes(app: FastifyInstance) {
         let pipelineAgents = resolvedAgents.filter(
           (a) => !textRewriteAgentIds.has(a.id) && a.type !== "lorebook-keeper",
         );
+        const trackerAgentTypes = getTrackerAgentTypes();
+        const attachLorebooksToTrackers = chatMode === "roleplay" && chatMeta.attachLorebooksToTrackers === true;
 
         // Manual tracker agents are stripped from the automatic pipeline — the
         // user will trigger them manually via retry-agents.
         const manualTrackers = chatMeta.manualTrackers === true;
         const manualTrackerAgentTypes = normalizeManualTrackerAgentTypes(chatMeta.manualTrackerAgentTypes);
         if (manualTrackers || Object.keys(manualTrackerAgentTypes).length > 0) {
-          const trackerIds = new Set(BUILT_IN_AGENTS.filter((a) => a.category === "tracker").map((a) => a.id));
           pipelineAgents = pipelineAgents.filter(
-            (a) => !trackerIds.has(a.type) || (!manualTrackers && manualTrackerAgentTypes[a.type] !== true),
+            (a) => !trackerAgentTypes.has(a.type) || (!manualTrackers && manualTrackerAgentTypes[a.type] !== true),
           );
         }
 
@@ -4440,6 +4483,57 @@ export async function generateRoutes(app: FastifyInstance) {
           agentContext,
           emitMetadataPatch: (patch) => sendSseEvent(reply, { type: "metadata_patch", data: patch }),
         });
+        const eligiblePipelineAgents: typeof pipelineAgents = [];
+        for (const agent of pipelineAgents) {
+          const readBehindMessages = getCustomLorebookReadBehindMessages(agent.settings);
+          const usesCustomLorebookReadBehind = customAgentUsesLorebookReadBehind(agent);
+          if (!usesCustomLorebookReadBehind) {
+            eligiblePipelineAgents.push(agent);
+            continue;
+          }
+
+          const target = getLorebookKeeperAutomaticTarget(lorebookKeeperMessages, readBehindMessages);
+          if (!target) continue;
+          const context = buildHistoricalLorebookKeeperContext(agentContext, lorebookKeeperMessages, target.id);
+          if (!context) continue;
+          const runKey = customLorebookReadBehindRunKey(input.chatId, agent.id, target.id);
+          if (!tryClaimCustomLorebookReadBehindRun(activeCustomLorebookReadBehindRuns, runKey)) {
+            logger.debug(
+              "[agents] Skipping custom lorebook read-behind agent %s for in-flight message %s",
+              agent.type,
+              target.id,
+            );
+            continue;
+          }
+          customLorebookReadBehindRunKeys.add(runKey);
+          if (await agentsStore.hasSuccessfulRunForMessage(agent.id, input.chatId, target.id)) {
+            activeCustomLorebookReadBehindRuns.delete(runKey);
+            customLorebookReadBehindRunKeys.delete(runKey);
+            logger.debug(
+              "[agents] Skipping custom lorebook read-behind agent %s for already processed message %s",
+              agent.type,
+              target.id,
+            );
+            continue;
+          }
+          agent.batchContextKey = `message:${target.id}`;
+          customLorebookReadBehindTargets.set(agent.id, {
+            context,
+            messageId: target.id,
+            swipeIndex: typeof target.activeSwipeIndex === "number" ? target.activeSwipeIndex : 0,
+          });
+          eligiblePipelineAgents.push(agent);
+        }
+        pipelineAgents = eligiblePipelineAgents;
+        if (chatMode === "roleplay") {
+          for (const agent of pipelineAgents) {
+            if (!trackerAgentTypes.has(agent.type)) continue;
+            agent.batchContextKey = appendTrackerLorebookBatchContextKey(
+              agent.batchContextKey,
+              attachLorebooksToTrackers,
+            );
+          }
+        }
         if (enableChatTools && toolDefs && toolDefs.length > 0 && conn.treatAsLocalEndpoint === "true") {
           const toolLines = toolDefs.map(
             (t) =>
@@ -4451,16 +4545,20 @@ export async function generateRoutes(app: FastifyInstance) {
         // Pre-generation prompt-patch agents read the assembled prompt here; this is overwritten
         // with the fitted provider prompt before each main model call.
         agentContext.memory._mainPromptPreview = promptPreviewForAgents(finalMessages);
-        const resolveImagePromptAgentContext = async (
-          agent: AgentExecConfig,
-          context: AgentContext,
-        ): Promise<AgentContext> => {
+        const resolveAgentContext = async (agent: AgentExecConfig, context: AgentContext): Promise<AgentContext> => {
+          const resolvedContext = customLorebookReadBehindTargets.get(agent.id)?.context ?? context;
+          const trackerContext = applyTrackerLorebookContextPolicy({
+            context: resolvedContext,
+            chatMode,
+            isTracker: trackerAgentTypes.has(agent.type),
+            attachLorebooksToTrackers,
+          });
           const isImagePromptAgent =
             agent.type === "illustrator" ||
             (agent.isCustomAgent === true && customAgentHasCapability(agent.settings, "trigger_image_generation"));
-          if (!isImagePromptAgent) return context;
+          if (!isImagePromptAgent) return trackerContext;
 
-          const memory = { ...context.memory };
+          const memory = { ...trackerContext.memory };
           delete memory._imagePromptInstructions;
           const imageConnectionId =
             agent.type === "illustrator"
@@ -4472,13 +4570,13 @@ export async function generateRoutes(app: FastifyInstance) {
           imageConnection ??= await connections.getDefaultForImageGeneration();
           const imagePromptInstructions = normalizeImagePromptInstructions(imageConnection?.imagePromptInstructions);
           if (imagePromptInstructions) memory._imagePromptInstructions = imagePromptInstructions;
-          return { ...context, memory };
+          return { ...trackerContext, memory };
         };
         const pipeline = createAgentPipeline(
           pipelineAgents,
           agentContext,
           sendAgentEventAfterMainStream,
-          resolveImagePromptAgentContext,
+          resolveAgentContext,
         );
         let directorSecretPlotResults: AgentResult[] = [];
         let directorSecretPlotArcForPrompt: unknown = directorSecretPlotMemory.overarchingArc;
@@ -4948,12 +5046,14 @@ export async function generateRoutes(app: FastifyInstance) {
             contextInjections,
             { omitUnmatched: presetOwnsAgentPlacement },
           );
-          contextInjections = contextInjections.filter(
-            (injection) => !runtimeHandledCached.omittedInjections.includes(injection),
+          const unmatchedCachedLongTermMemory = runtimeHandledCached.omittedInjections.filter(
+            (injection) => injection.agentType === "long-term-memory",
           );
-          if (runtimeHandledCached.omittedInjections.some((injection) => injection.agentType === "long-term-memory")) {
-            longTermMemoryRecallReceipt = undefined;
-          }
+          contextInjections = contextInjections.filter(
+            (injection) =>
+              injection.agentType === "long-term-memory" || !runtimeHandledCached.omittedInjections.includes(injection),
+          );
+          runtimeHandledCached.fallbackInjections.push(...unmatchedCachedLongTermMemory);
 
           const cachedPipelineInjections = runtimeHandledCached.fallbackInjections.filter(
             (inj) => !SEPARATE_INJECTION_AGENTS.has(inj.agentType),
@@ -5004,11 +5104,17 @@ export async function generateRoutes(app: FastifyInstance) {
             const tokens = runtimeAgentSectionTokens.get("long-term-memory");
             const handledByPresetSection =
               tokens !== undefined && replaceRuntimeAgentSection(finalMessages, tokens, recall.text);
-            if (handledByPresetSection || !presetOwnsAgentPlacement) {
-              if (!handledByPresetSection) appendSeparateAgentInjection("long-term-memory", recall.text);
-              contextInjections.push({ agentType: "long-term-memory", text: recall.text });
-              longTermMemoryRecallReceipt = recall.receipt;
+            if (!handledByPresetSection) {
+              if (presetOwnsAgentPlacement) {
+                logger.warn(
+                  "[long-term-memory] Preset marker was not found; using fallback injection chatId=%s",
+                  input.chatId,
+                );
+              }
+              appendSeparateAgentInjection("long-term-memory", recall.text);
             }
+            contextInjections.push({ agentType: "long-term-memory", text: recall.text });
+            longTermMemoryRecallReceipt = recall.receipt;
           }
         }
         clearUnusedRuntimeAgentSections(finalMessages, runtimeAgentSectionTokens);
@@ -7878,7 +7984,7 @@ export async function generateRoutes(app: FastifyInstance) {
                       historicalLorebookTarget.id,
                     ) ?? phaseRetryContext)
                   : phaseRetryContext;
-                const resolvedRetryContext = await resolveImagePromptAgentContext(agentCfg, retryCtx);
+                const resolvedRetryContext = await resolveAgentContext(agentCfg, retryCtx);
                 const retried = await executeAgent(
                   agentCfg,
                   resolvedRetryContext,
@@ -7980,7 +8086,7 @@ export async function generateRoutes(app: FastifyInstance) {
             const resultMessageId =
               result.agentType === "lorebook-keeper" && lorebookKeeperProcessedMessageId
                 ? lorebookKeeperProcessedMessageId
-                : messageId;
+                : (customLorebookReadBehindTargets.get(result.agentId)?.messageId ?? messageId);
 
             // Validate background agent result — reject hallucinated filenames
             if (
@@ -10084,6 +10190,9 @@ export async function generateRoutes(app: FastifyInstance) {
           : "Generation failed";
       sendSseEvent(reply, { type: "error", data: message });
     } finally {
+      for (const runKey of customLorebookReadBehindRunKeys) {
+        activeCustomLorebookReadBehindRuns.delete(runKey);
+      }
       if (conversationGenerationStartedAt != null && !conversationAssistantSaved) {
         clearGenerationInProgress(input.chatId, conversationGenerationStartedAt);
       }
@@ -10145,5 +10254,5 @@ export async function generateRoutes(app: FastifyInstance) {
 
   await registerDryRunRoute(app);
   await registerRawRoute(app);
-  await registerRetryAgentsRoute(app);
+  await registerRetryAgentsRoute(app, activeCustomLorebookReadBehindRuns);
 }

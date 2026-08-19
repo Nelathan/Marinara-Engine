@@ -45,6 +45,7 @@ import {
   testSecondaryKeys,
   type AgentContext,
   type ChatMLMessage,
+  type MacroContext,
   DEFAULT_AGENT_PROMPT_TEMPLATE_ID,
   DEFAULT_CONVERSATION_PROMPT,
   getDefaultAgentPrompt,
@@ -266,7 +267,14 @@ import {
   executeAgentBatch,
   formatAgentMainResponseForPrompt,
   renderAgentPromptTemplate,
+  resolveAgentResultType,
 } from "../../packages/server/src/services/agents/agent-executor.js";
+import {
+  formatBeholderRequestContext,
+  loadPriorBeholderState,
+  normalizeBeholderState,
+  resolveBeholderStateResponse,
+} from "../../packages/server/src/services/agents/beholder-state.js";
 import {
   CLEAN_HTML_FIND_REGEX,
   CLEAN_HTML_ID,
@@ -284,7 +292,11 @@ import {
   mergeAdjacentMessages,
   squashLeadingSystemMessages,
 } from "../../packages/server/src/services/prompt/merger.js";
-import type { ResolvedAgent } from "../../packages/server/src/services/agents/agent-pipeline.js";
+import {
+  runParallelAgents,
+  runPreGenerationAgents,
+  type ResolvedAgent,
+} from "../../packages/server/src/services/agents/agent-pipeline.js";
 import { loadGameVideoPrompt } from "../../packages/server/src/services/video/game-video-prompt.js";
 import {
   resolveComfyUiVideoWorkflowPlaceholders,
@@ -779,11 +791,16 @@ import {
 import { fitMessagesForModelAccess } from "../../packages/server/src/services/generation/model-access-policy.js";
 import {
   assemblePrompt,
+  appendFallbackChatSummaryToSystemPrompt,
   resolveChoiceVariableValue,
   resolvePromptMessageMacros,
   scopePromptMacroContextToCharacter,
   type AssemblerInput,
 } from "../../packages/server/src/services/prompt/index.js";
+import {
+  appendTrackerLorebookBatchContextKey,
+  applyTrackerLorebookContextPolicy,
+} from "../../packages/server/src/services/generation/tracker-agent-context.js";
 import {
   createCustomToolArgumentsValidator,
   executeToolCalls,
@@ -842,12 +859,15 @@ type RegressionPromptSection = AssemblerInput["sections"][number];
 
 function makeCapturingProvider(response: string) {
   const calls: any[][] = [];
+  const callOptions: any[] = [];
   return {
     calls,
+    callOptions,
     provider: {
       maxTokensOverrideValue: null,
-      async chatComplete(messages: any[]) {
+      async chatComplete(messages: any[], options: any) {
         calls.push(messages);
+        callOptions.push(options);
         return {
           content: response,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
@@ -8297,7 +8317,7 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
     },
   },
   {
-    name: "character markers omit removed or disabled Example Dialogue sections",
+    name: "character markers own Example Dialogue only when no dedicated marker exists",
     async run() {
       const characterRow = {
         id: "char-example-fallback",
@@ -8382,13 +8402,21 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
         });
 
       for (const wrapFormat of ["xml", "markdown", "none"] as const) {
-        for (const dialogueMarker of ["absent", "disabled"] as const) {
-          const result = await assemble(wrapFormat, dialogueMarker);
-          const promptText = result.messages.map((message) => message.content).join("\n");
-          assert.equal(promptText.includes("CHARACTER_EXAMPLE_DIALOGUE"), false);
-          assert.equal(promptText.includes("mes_example"), false);
-          assert.equal(promptText.includes("dialogue_examples"), false);
-        }
+        const absentMarkerResult = await assemble(wrapFormat, "absent");
+        const absentMarkerPromptText = absentMarkerResult.messages.map((message) => message.content).join("\n");
+        assert.equal(absentMarkerPromptText.match(/CHARACTER_EXAMPLE_DIALOGUE/g)?.length, 1);
+        assert.ok(
+          absentMarkerPromptText.indexOf("CHARACTER_EXAMPLE_DIALOGUE") <
+            absentMarkerPromptText.indexOf("CHARACTER_SYSTEM_PROMPT"),
+          "fallback Example Dialogue should retain canonical character field order",
+        );
+        if (wrapFormat === "xml") assert.match(absentMarkerPromptText, /<mes_example>/);
+
+        const disabledMarkerResult = await assemble(wrapFormat, "disabled");
+        const disabledMarkerPromptText = disabledMarkerResult.messages.map((message) => message.content).join("\n");
+        assert.equal(disabledMarkerPromptText.includes("CHARACTER_EXAMPLE_DIALOGUE"), false);
+        assert.equal(disabledMarkerPromptText.includes("mes_example"), false);
+        assert.equal(disabledMarkerPromptText.includes("dialogue_examples"), false);
       }
 
       const explicitCharacterField = await assemble("xml", "absent", ["mes_example"]);
@@ -8681,6 +8709,163 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
         true,
       );
       assert.equal(result.messages[1]?.contextKind, "history");
+    },
+  },
+  {
+    name: "preset-less roleplay summary creates a leading system block before history",
+    run() {
+      const history: ChatMLMessage[] = [
+        { role: "user", content: "Where are we?", contextKind: "history" },
+        { role: "assistant", content: "At the harbor.", contextKind: "history" },
+      ];
+      const result = appendFallbackChatSummaryToSystemPrompt(
+        history,
+        "Mari and Dottore reached the harbor.",
+        "xml",
+        {} as MacroContext,
+      );
+
+      assert.equal(result[0]?.role, "system");
+      assert.equal(result[0]?.contextKind, "prompt");
+      assert.match(result[0]?.content ?? "", /<chat_summary>/u);
+      assert.match(result[0]?.content ?? "", /Mari and Dottore reached the harbor\./u);
+      assert.deepEqual(result.slice(1), history);
+
+      const generateRouteSource = readFileSync(
+        new URL("../../packages/server/src/routes/generate.routes.ts", import.meta.url),
+        "utf8",
+      );
+      const fallbackBranchStart = generateRouteSource.indexOf('if (chatMode === "roleplay" && !resolvedPreset) {');
+      const fallbackBranchEnd = generateRouteSource.indexOf("\n        }", fallbackBranchStart);
+      assert.notEqual(fallbackBranchStart, -1);
+      assert.notEqual(fallbackBranchEnd, -1);
+      assert.match(
+        generateRouteSource.slice(fallbackBranchStart, fallbackBranchEnd),
+        /appendFallbackChatSummaryToSystemPrompt\(/u,
+      );
+    },
+  },
+  {
+    name: "automatic agent phases keep distinct request contexts in separate batches",
+    async run() {
+      for (const phase of ["pre_generation", "parallel"] as const) {
+        const capture = makeCapturingProvider("Context checked.");
+        const agents = ["tracker-lorebooks-off", "tracker-lorebooks-on"].map(
+          (batchContextKey, index) =>
+            ({
+              ...makeRegressionAgentConfig({
+                id: `custom:${phase}-${index}`,
+                type: `context-reader-${index}`,
+                name: `Context Reader ${index}`,
+                isCustomAgent: true,
+                phase,
+                promptTemplate: "Check the supplied context.",
+                settings: { resultType: "context_injection" },
+              }),
+              provider: capture.provider,
+              model: "regression-model",
+              batchContextKey,
+            }) as ResolvedAgent,
+        );
+
+        if (phase === "pre_generation") {
+          await runPreGenerationAgents(agents, makeRegressionAgentContext());
+        } else {
+          await runParallelAgents(agents, makeRegressionAgentContext());
+        }
+
+        assert.equal(capture.calls.length, 2, `${phase} agents with different contexts must not share a batch`);
+      }
+    },
+  },
+  {
+    name: "roleplay tracker lorebook context is opt-in and keeps author notes",
+    run() {
+      const context = makeRegressionAgentContext({
+        authorNotes: "AUTHOR_NOTES_STAY_ATTACHED",
+        activatedLorebookEntries: [{ id: "lore-entry", content: "MAIN_GENERATION_LOREBOOK_MATCH" }],
+        vectorContext: {
+          recalledMemories: ["RECALLED_MEMORY_STAYS_ATTACHED"],
+          semanticLorebookEntries: [{ id: "semantic-lore-entry", content: "SEMANTIC_MAIN_GENERATION_LOREBOOK_MATCH" }],
+        },
+      });
+
+      const disabled = applyTrackerLorebookContextPolicy({
+        context,
+        chatMode: "roleplay",
+        isTracker: true,
+        attachLorebooksToTrackers: false,
+      });
+      assert.deepEqual(disabled.activatedLorebookEntries, []);
+      assert.deepEqual(disabled.vectorContext?.semanticLorebookEntries, []);
+      assert.deepEqual(disabled.vectorContext?.recalledMemories, ["RECALLED_MEMORY_STAYS_ATTACHED"]);
+      assert.equal(disabled.authorNotes, "AUTHOR_NOTES_STAY_ATTACHED");
+
+      const legacyContext = makeRegressionAgentContext({
+        vectorContext: { recalledMemories: ["LEGACY_RECALLED_MEMORY"] } as AgentContext["vectorContext"],
+      });
+      assert.equal(
+        applyTrackerLorebookContextPolicy({
+          context: legacyContext,
+          chatMode: "roleplay",
+          isTracker: true,
+          attachLorebooksToTrackers: false,
+        }),
+        legacyContext,
+      );
+
+      const enabled = applyTrackerLorebookContextPolicy({
+        context,
+        chatMode: "roleplay",
+        isTracker: true,
+        attachLorebooksToTrackers: true,
+      });
+      assert.equal(enabled, context);
+      assert.deepEqual(enabled.activatedLorebookEntries, context.activatedLorebookEntries);
+
+      const nonTracker = applyTrackerLorebookContextPolicy({
+        context,
+        chatMode: "roleplay",
+        isTracker: false,
+        attachLorebooksToTrackers: false,
+      });
+      assert.equal(nonTracker, context);
+      assert.equal(appendTrackerLorebookBatchContextKey(undefined, false), "tracker-lorebooks-off");
+      assert.equal(
+        appendTrackerLorebookBatchContextKey("message:previous", true),
+        "message:previous|tracker-lorebooks-on",
+      );
+
+      const retryRouteSource = readFileSync(
+        new URL("../../packages/server/src/routes/generate/retry-agents-route.ts", import.meta.url),
+        "utf8",
+      );
+      assert.match(retryRouteSource, /applyTrackerLorebookContextPolicy\(/u);
+      assert.match(retryRouteSource, /chatMeta\?\.attachLorebooksToTrackers === true/u);
+      assert.match(retryRouteSource, /getTrackerAgentTypes\(\)/u);
+
+      const chatSettingsSource = readFileSync(
+        new URL("../../packages/client/src/components/chat/ChatSettingsDrawer.tsx", import.meta.url),
+        "utf8",
+      );
+      const trackerControlsComment = chatSettingsSource.indexOf(
+        "{/* Manual trackers run only in roleplay-style chats. */}",
+      );
+      const trackerControlsStart = chatSettingsSource.indexOf(
+        "{metadata.enableAgents && isRoleplayMode && activeTrackerAgents.length > 0 && (",
+        trackerControlsComment,
+      );
+      const trackerControlsEnd = chatSettingsSource.indexOf(
+        "{metadata.enableAgents && isRoleplayMode && activeTrackerAgents.length > 0 && (",
+        trackerControlsStart + 1,
+      );
+      assert.notEqual(trackerControlsComment, -1);
+      assert.notEqual(trackerControlsStart, -1);
+      assert.notEqual(trackerControlsEnd, -1);
+      assert.match(
+        chatSettingsSource.slice(trackerControlsStart, trackerControlsEnd),
+        /ui\.chat\.chatsettingsdrawer\.attachLorebooksToTrackers/u,
+      );
     },
   },
   {
@@ -9004,6 +9189,59 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
         formatSeparateAgentInjection("long-term-memory", "MEMORY", "xml"),
         "<long_term_memory>\nMEMORY\n</long_term_memory>",
       );
+
+      const freshContextInjections = [
+        { agentType: "long-term-memory", text: "MEMORY" },
+        { agentType: "prose-guardian", text: "GUIDANCE" },
+      ];
+      const freshFallback = splitRuntimeHandledAgentInjectionsForTest(
+        [{ content: "preset" }],
+        new Map([["long-term-memory", tokens]]),
+        freshContextInjections,
+      );
+      assert.deepEqual(freshFallback.fallbackInjections, freshContextInjections);
+      assert.deepEqual(freshFallback.omittedInjections, []);
+
+      const fallbackForUnmatchedMarker = splitRuntimeHandledAgentInjectionsForTest(
+        [{ content: "preset" }],
+        new Map([["long-term-memory", tokens]]),
+        freshContextInjections,
+        { omitUnmatched: true },
+      );
+      const cachedFallbackInjections = [
+        ...fallbackForUnmatchedMarker.fallbackInjections,
+        ...fallbackForUnmatchedMarker.omittedInjections.filter(
+          (injection) => injection.agentType === "long-term-memory",
+        ),
+      ];
+      assert.deepEqual(fallbackForUnmatchedMarker.omittedInjections, freshContextInjections);
+      const regeneratedContextInjections = freshContextInjections.filter(
+        (injection) =>
+          injection.agentType === "long-term-memory" ||
+          !fallbackForUnmatchedMarker.omittedInjections.includes(injection),
+      );
+      const longTermMemoryOnly = [freshContextInjections[0]];
+      assert.deepEqual(regeneratedContextInjections, longTermMemoryOnly);
+      assert.deepEqual(cachedFallbackInjections, longTermMemoryOnly);
+      const generateRouteSource = readFileSync(
+        new URL("../../packages/server/src/routes/generate.routes.ts", import.meta.url),
+        "utf8",
+      );
+      const ltmFallbackStart = generateRouteSource.indexOf("if (!handledByPresetSection) {");
+      const ltmFallbackEnd = generateRouteSource.indexOf("longTermMemoryRecallReceipt = recall.receipt;", ltmFallbackStart);
+      const ltmFallbackSource = generateRouteSource.slice(
+        ltmFallbackStart,
+        ltmFallbackEnd + "longTermMemoryRecallReceipt = recall.receipt;".length,
+      );
+      assert.match(ltmFallbackSource, /appendSeparateAgentInjection/u);
+      assert.match(ltmFallbackSource, /longTermMemoryRecallReceipt = recall\.receipt/u);
+      assert.doesNotMatch(generateRouteSource, /handledByPresetSection \|\| !presetOwnsAgentPlacement/u);
+
+      const cachedReplayStart = generateRouteSource.indexOf("const runtimeHandledCached");
+      const cachedReplayEnd = generateRouteSource.indexOf("const cachedPipelineInjections", cachedReplayStart);
+      const cachedReplaySource = generateRouteSource.slice(cachedReplayStart, cachedReplayEnd);
+      assert.match(cachedReplaySource, /unmatchedCachedLongTermMemory/u);
+      assert.match(cachedReplaySource, /fallbackInjections\.push/u);
 
       const fallback = splitRuntimeHandledAgentInjectionsForTest([{ content: "conversation" }], new Map(), [
         { agentType: "long-term-memory", text: "MEMORY" },
@@ -9970,11 +10208,7 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
         "equipped",
         [{ name: "Short axe" }],
       );
-      assert.deepEqual(
-        equipMove.inventoryTrackerEquipped,
-        [{ name: "Short axe" }],
-        "the edited group must be written",
-      );
+      assert.deepEqual(equipMove.inventoryTrackerEquipped, [{ name: "Short axe" }], "the edited group must be written");
       assert.deepEqual(
         equipMove.inventoryTrackerInventory,
         [{ name: "Waterskin" }],
@@ -10152,6 +10386,222 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
       assert.match(inventoryPromptBlock ?? "", /Currencies:\n- Silver coin x6/);
       assert.match(inventoryPromptBlock ?? "", /Equipped:\n- Family heirloom longsword/);
       assert.match(inventoryPromptBlock ?? "", /Inventory:\n- Scavenged axe x2/);
+
+      const beholderState = normalizeBeholderState({
+        characters: [
+          {
+            name: "Mira<script>",
+            species: "human",
+            body: {
+              left_hand: {
+                holding: { item: "silver key", damage: "pristine" },
+                wounds: [{ text: "shallow cut", severity: "minor", bleeding: true }],
+              },
+              invented_slot: { bare: true },
+            },
+          },
+        ],
+      });
+      assert.ok(beholderState);
+      assert.equal(beholderState.characters[0]?.name, "Mirascript");
+      assert.equal("invented_slot" in (beholderState.characters[0]?.body ?? {}), false);
+
+      const beholderPromptBlock = buildCommittedTrackerContextBlock({
+        chatEnableAgents: true,
+        activeAgentIds: ["beholder"],
+        latestGameState: null,
+        beholderState,
+        chatMetadata: {},
+        wrapFormat: "markdown",
+      });
+      assert.match(beholderPromptBlock ?? "", /## Physical State/u);
+      assert.match(beholderPromptBlock ?? "", /left hand: holding: silver key/u);
+      assert.match(beholderPromptBlock ?? "", /shallow cut \(minor, bleeding\)/u);
+      assert.equal(resolveAgentResultType({ type: "beholder", settings: {} }), "context_injection");
+    },
+  },
+  {
+    name: "Beholder sends keyed state and safely resolves delta and legacy responses",
+    async run() {
+      let stateReads = 0;
+      const priorState = await loadPriorBeholderState({
+        agentsStore: {
+          async getLastSuccessfulRunByType() {
+            stateReads += 1;
+            return { resultData: `{"characters":[{"name":"Mira","body":{}}]}` };
+          },
+        },
+        chatId: "roleplay-chat",
+        chatMode: "roleplay",
+        activeAgentIds: ["beholder"],
+        chatEnableAgents: true,
+      });
+      assert.equal(priorState?.characters[0]?.name, "Mira");
+      assert.equal(stateReads, 1);
+      assert.equal(
+        await loadPriorBeholderState({
+          agentsStore: {
+            async getLastSuccessfulRunByType() {
+              stateReads += 1;
+              return null;
+            },
+          },
+          chatId: "conversation-chat",
+          chatMode: "conversation",
+          activeAgentIds: ["beholder"],
+          chatEnableAgents: true,
+        }),
+        null,
+      );
+      assert.equal(stateReads, 1);
+      assert.equal(
+        await loadPriorBeholderState({
+          agentsStore: {
+            async getLastSuccessfulRunByType() {
+              stateReads += 1;
+              return null;
+            },
+          },
+          chatId: "roleplay-chat-no-prior-run",
+          chatMode: "roleplay",
+          activeAgentIds: ["beholder"],
+          chatEnableAgents: true,
+        }),
+        null,
+      );
+      assert.equal(stateReads, 2);
+
+      const previousState = normalizeBeholderState({
+        characters: [
+          {
+            name: "Mari",
+            species: "human",
+            body: {
+              chest: {
+                worn: [
+                  { item: "dress", color: "blue", damage: "pristine" },
+                  { item: "coat", color: "black", damage: "pristine" },
+                ],
+              },
+              face: { worn: [{ item: "veil", damage: "pristine" }] },
+              left_hand: { holding: { item: "silver key", damage: "pristine" } },
+              right_arm: { wounds: [{ text: "shallow cut", severity: "minor", bleeding: true }] },
+            },
+          },
+          { name: "Dottore", body: { head: { bare: true } } },
+        ],
+      });
+      assert.ok(previousState);
+      const requestContext = formatBeholderRequestContext(previousState, "Mari");
+      assert.match(requestContext, /^Persona: Mari\nCurrent state:/u);
+      assert.match(requestContext, /"self": \{/u);
+      assert.match(requestContext, /"Dottore": \{/u);
+
+      const unchanged = resolveBeholderStateResponse({ changed: false }, previousState, "Mari");
+      assert.equal(unchanged.valid, true);
+      assert.deepEqual(unchanged.state, previousState);
+
+      const merged = resolveBeholderStateResponse(
+        {
+          changed: true,
+          delta: {
+            self: {
+              body: {
+                chest: { worn: [{ item: "dress", color: "red", damage: "damaged" }] },
+                face: { worn: [] },
+                left_hand: { holding: {} },
+                right_arm: {
+                  missing: true,
+                  worn: [{ item: "bracelet", damage: "pristine" }],
+                  wounds: [{ text: "ignored wound", severity: "critical", bleeding: true }],
+                  bare: true,
+                },
+              },
+            },
+            Dottore: { species: "human", body: { left_eye: { bare: true } } },
+            Columbina: { species: "seer", body: { neck: { bare: true } } },
+          },
+        },
+        previousState,
+        "Mari",
+      );
+      assert.equal(merged.valid, true);
+      const mergedMari = merged.state.characters.find((character) => character.name === "Mari");
+      assert.deepEqual(mergedMari?.body.chest?.worn, [
+        { item: "dress", color: "red", damage: "damaged" },
+        { item: "coat", color: "black", damage: "pristine" },
+      ]);
+      assert.equal(mergedMari?.body.face?.worn, undefined);
+      assert.equal(mergedMari?.body.left_hand?.holding, undefined);
+      assert.deepEqual(mergedMari?.body.right_arm, { missing: true });
+      assert.equal(merged.state.characters.find((character) => character.name === "Dottore")?.species, "human");
+      assert.equal(
+        merged.state.characters.some((character) => character.name === "Columbina"),
+        true,
+      );
+
+      const invalid = resolveBeholderStateResponse(
+        { changed: true, delta: { self: { body: { invented_slot: { bare: true } } } } },
+        previousState,
+        "Mari",
+      );
+      assert.equal(invalid.valid, false);
+      assert.deepEqual(invalid.state, previousState);
+
+      const legacy = resolveBeholderStateResponse(
+        { characters: [{ name: "Mira", body: { left_hand: { holding: { item: "key" } } } }] },
+        previousState,
+        "Mari",
+      );
+      assert.equal(legacy.valid, true);
+      assert.deepEqual(legacy.state.characters, [
+        { name: "Mira", body: { left_hand: { holding: { item: "key", damage: "pristine" } } } },
+      ]);
+
+      const { calls, callOptions, provider } = makeCapturingProvider(`{"changed":false}`);
+      const config = makeRegressionAgentConfig({
+        id: "builtin:beholder",
+        type: "beholder",
+        name: "Beholder",
+        promptTemplate: "Return a physical-state delta as JSON.",
+        temperature: 1.7,
+        settings: { resultType: "context_injection" },
+      });
+      const context = makeRegressionAgentContext({
+        mainResponse: "Mari keeps hold of the silver key.",
+        memory: { _beholderState: previousState },
+      });
+      const result = await executeAgent(config as any, context, provider as any, "regression-model");
+      const system = calls[0]?.[0]?.content ?? "";
+      assert.match(system, /Persona: Mari\nCurrent state:/u);
+      assert.match(system, /"self": \{/u);
+      assert.equal(callOptions[0]?.temperature, 0);
+      assert.equal(result.success, true);
+      assert.deepEqual(result.data, previousState);
+
+      const suppressed = makeCapturingProvider(`{"changed":false}`);
+      await executeAgent(
+        { ...config, suppressModelParameters: true } as any,
+        context,
+        suppressed.provider as any,
+        "regression-model",
+      );
+      assert.equal(suppressed.callOptions[0]?.temperature, undefined);
+
+      const firstRun = makeCapturingProvider(`{"changed":false}`);
+      const firstRunResult = await executeAgent(
+        config as any,
+        makeRegressionAgentContext({ memory: {} }),
+        firstRun.provider as any,
+        "regression-model",
+      );
+      assert.match(firstRun.calls[0]?.[0]?.content ?? "", /Current state:\n\{\}/u);
+      assert.deepEqual(firstRunResult.data, { characters: [] });
+
+      const invalidRun = makeCapturingProvider(`{"changed":true,"delta":{"self":{"body":{"fake":{}}}}}`);
+      const invalidResult = await executeAgent(config as any, context, invalidRun.provider as any, "regression-model");
+      assert.equal(invalidResult.success, false);
+      assert.deepEqual(invalidResult.data, previousState);
     },
   },
   {
