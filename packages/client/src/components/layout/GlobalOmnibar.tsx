@@ -1263,6 +1263,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   }, [activeChat, pane, query, results, t]);
   const resultIdsKey = results.map((result) => result.id).join("\u0000");
   const reconciledResultIdsKeyRef = useRef<string | null>(null);
+  const reconciledQueryRef = useRef(deferredQuery);
   const activeIndex = results.findIndex((result) => result.id === activeResultId);
   const activeResult = activeIndex >= 0 ? results[activeIndex] : undefined;
   const loading =
@@ -1310,8 +1311,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       !deferredQuery.trim() && presentation.groups[0]?.id === "current-work"
         ? presentation.groups[0].results[0]?.id
         : undefined;
+    // A new query re-ranks everything, so the selection must follow the new top
+    // row instead of sticking to whatever was highlighted before. Otherwise
+    // "remove eliza" keeps the plain "Eliza" row selected from earlier
+    // keystrokes and Enter opens her editor instead of detaching her.
+    const queryChanged = reconciledQueryRef.current !== deferredQuery;
+    reconciledQueryRef.current = deferredQuery;
     const next = reconcileActiveResultId(
-      resultOrderChanged && firstCurrentWorkId ? firstCurrentWorkId : activeResultId,
+      queryChanged ? null : resultOrderChanged && firstCurrentWorkId ? firstCurrentWorkId : activeResultId,
       results.map((result) => result.id),
     );
     setSession((current) => (current.activeResultId === next ? current : { ...current, activeResultId: next }));
@@ -2424,6 +2431,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       setSessionValue("detailResultId", null);
                     }}
                     type="search"
+                    // The browser's own suggestion popup steals ArrowUp/ArrowDown
+                    // from the result list, so every native assist is off here.
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
                     aria-label={t("omnibar.inputLabel", "Search Marinara")}
                     onKeyDown={onInputKeyDown}
                     placeholder={t(
