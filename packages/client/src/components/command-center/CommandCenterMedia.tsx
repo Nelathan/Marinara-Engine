@@ -101,8 +101,11 @@ export function CommandCenterMedia({
         <img
           // A cached image can complete before React attaches onLoad, which used
           // to leave it stuck at opacity-0. Read the state on mount instead.
+          // The inline callback is a new function every render, so React
+          // reattaches the ref on every commit; without the equality guard a
+          // cached image would set state on each reattach and never settle.
           ref={(node) => {
-            if (node?.complete && node.naturalWidth > 0) setLoadedSrc(resolvedSrc);
+            if (node?.complete && node.naturalWidth > 0 && loadedSrc !== resolvedSrc) setLoadedSrc(resolvedSrc);
           }}
           src={resolvedSrc}
           alt={role === "row" ? "" : alt}

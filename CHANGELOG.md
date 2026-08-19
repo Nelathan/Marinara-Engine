@@ -74,6 +74,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Fixed a Command Center crash ("Maximum update depth exceeded") when a result preview showed an already-cached image, which happened on touch devices because tapping a result opens the preview.
+
 - Fixed a Command Center render loop when a restored detail result changed the result list, and normalized legacy Windows avatar paths to the app avatar endpoint.
 
 - Empty omnibar suggestions in an active chat now show the chat's attached context with canonical previews and stable keyboard ordering.
