@@ -1067,6 +1067,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       t,
     ],
   );
+  const attachedResultIds = useMemo(
+    () => new Set(omnibarContext.activeChat?.resultIds ?? []),
+    [omnibarContext.activeChat?.resultIds],
+  );
   const removalSuggestions = useMemo<OmnibarResult[]>(
     () =>
       buildOmnibarRemovalSuggestions({
@@ -1078,10 +1082,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         t,
       }),
     [activeChat, attachedResultIds, contextResults, deferredQuery, omnibarSuggestionsEnabled, t],
-  );
-  const attachedResultIds = useMemo(
-    () => new Set(omnibarContext.activeChat?.resultIds ?? []),
-    [omnibarContext.activeChat?.resultIds],
   );
   // A bare "add" has no search results to draw on, so the recently used rows
   // stand in: a few concrete "Add Eliza to this chat" rows are worth more than
