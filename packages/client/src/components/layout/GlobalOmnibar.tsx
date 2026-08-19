@@ -108,6 +108,7 @@ import {
   buildOmnibarMariChatResults,
   buildOmnibarMessageResults,
   buildOmnibarProposalResult,
+  buildOmnibarAddSuggestions,
   buildOmnibarRemovalSuggestions,
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
@@ -1071,6 +1072,22 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       buildOmnibarRemovalSuggestions({ activeChat, characterNameById, deferredQuery, omnibarSuggestionsEnabled, t }),
     [activeChat, characterNameById, deferredQuery, omnibarSuggestionsEnabled, t],
   );
+  const attachedResultIds = useMemo(
+    () => new Set(omnibarContext.activeChat?.resultIds ?? []),
+    [omnibarContext.activeChat?.resultIds],
+  );
+  const addSuggestions = useMemo<OmnibarResult[]>(
+    () =>
+      buildOmnibarAddSuggestions({
+        activeChat,
+        attachedResultIds,
+        deferredQuery,
+        omnibarSuggestionsEnabled,
+        searchResults,
+        t,
+      }),
+    [activeChat, attachedResultIds, deferredQuery, omnibarSuggestionsEnabled, searchResults, t],
+  );
   const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
   const proposalResult = useMemo<OmnibarResult | null>(
     () => buildOmnibarProposalResult({ creationProposal, t }),
@@ -1098,6 +1115,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       deferredQuery.trim()
         ? [
             ...slashResults,
+            ...addSuggestions,
             ...removalSuggestions,
             ...(gameResult ? [gameResult] : []),
             ...(proposalResult ? [proposalResult] : []),
@@ -1108,6 +1126,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           ]
         : [...contextResults, ...slashResults, ...(continueResult ? [continueResult] : []), ...idleResults],
     [
+      addSuggestions,
       contextResults,
       continueResult,
       deferredQuery,
@@ -1323,6 +1342,16 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else executeStateNavigation(definition.action.target);
     return true;
   };
+  /** Attaches one resource to the open chat and closes, unless the drop rules block it. */
+  const attachToChat = (kind: ChatResourceDragKind, id: string, label: string, resultId: string) => {
+    if (!activeChat || !id) return false;
+    const payload: ChatResourceDragPayload = { version: 1, kind, ids: [id], label };
+    if (resolveChatResourceDropAction(payload, activeChat)?.type === "blocked") return false;
+    requestChatResourceAssignment(payload);
+    recordUse(resultId);
+    onClose();
+    return true;
+  };
   const runDirectChatAction = (result: OmnibarResult) => {
     if (!activeChat || !isDirectActiveChatAction(query, result, searchResults)) return false;
     const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
@@ -1335,18 +1364,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     };
     const kind = resourceKinds[result.category];
     if (!kind) return false;
-    const id = getOmnibarResourceId(result);
-    const payload: ChatResourceDragPayload = {
-      version: 1,
-      kind,
-      ids: [id],
-      label: result.title,
-    };
-    if (resolveChatResourceDropAction(payload, activeChat)?.type === "blocked") return false;
-    requestChatResourceAssignment(payload);
-    recordUse(result.id);
-    onClose();
-    return true;
+    return attachToChat(kind, getOmnibarResourceId(result), result.title, result.id);
   };
   // Typed dispatch for the results that do something other than open an entity.
   // Results without an `action` fall through to the generic entity-open path in
@@ -1369,6 +1387,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       case "goto-message":
         useChatStore.getState().requestGotoMessage(action.chatId, action.messageNumber);
         onClose();
+        return;
+      case "add-to-chat":
+        attachToChat(action.resource, action.resourceId, action.label, result.id);
         return;
       case "remove-character":
         if (

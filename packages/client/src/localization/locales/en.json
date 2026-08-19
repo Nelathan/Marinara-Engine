@@ -276,6 +276,8 @@
   "chat.toolbar.switchToConnected": "Switch to connected chat",
   "commandCenter.actions.activatePersona": "Activate persona",
   "commandCenter.actions.activePersona": "Active persona",
+  "commandCenter.actions.addToChat": "Add {{name}} to this chat",
+  "commandCenter.actions.addToChatDescription": "Attach it to {{chat}} now.",
   "commandCenter.actions.addToThisChat": "Add to this chat",
   "commandCenter.actions.confirmRemoveCharacter": "Remove this character from the current chat?",
   "commandCenter.actions.continueWithMari": "Continue with Mari",

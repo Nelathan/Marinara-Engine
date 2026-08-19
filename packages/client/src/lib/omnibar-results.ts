@@ -21,6 +21,7 @@ import type { GameCommand } from "./omnibar-game-commands";
 import type { OmnibarNamedRow, OmnibarTranslate } from "./omnibar-entity-rows";
 import {
   getUnambiguousOmnibarResult,
+  isOmnibarAddIntent,
   isOmnibarRemovalIntent,
   parseOmnibarIntent,
   searchOmnibar,
@@ -32,6 +33,7 @@ import {
   type OmnibarSurface,
 } from "./omnibar-search";
 import { getOmnibarSettingsDestinations } from "./omnibar-settings";
+import type { ChatResourceDragKind } from "./chat-resource-drag";
 import { getSlashCompletions } from "./slash-commands";
 import { inferProfessorMariCommandCenterCapability } from "./professor-mari-command-center-context";
 
@@ -211,6 +213,16 @@ export type OmnibarContextResultsInput = {
   personas: readonly unknown[] | undefined;
   presets: readonly unknown[] | undefined;
   surface: OmnibarSurface;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarAddSuggestionsInput = {
+  activeChat: Chat | null | undefined;
+  /** Result ids already attached to the open chat, so nothing is offered twice. */
+  attachedResultIds: ReadonlySet<string>;
+  deferredQuery: string;
+  omnibarSuggestionsEnabled: boolean;
+  searchResults: readonly OmnibarResult[];
   t: OmnibarTranslate;
 };
 
@@ -933,6 +945,62 @@ export function buildOmnibarContextResults({
     }
   }
   return out.slice(0, CHAT_CONTEXT_MAX_RESULTS);
+}
+
+/** Which omnibar categories map onto a chat-attachable resource kind. */
+const ADD_RESOURCE_KINDS: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
+  character: "character",
+  persona: "persona",
+  lorebook: "lorebook",
+  preset: "preset",
+  connection: "connection",
+  agent: "agent",
+};
+const MAX_ADD_SUGGESTIONS = 5;
+/**
+ * Above the plain entity rows for the same names, so the explicit
+ * "Add X to this chat" row is what Enter lands on.
+ */
+const ADD_SUGGESTION_SCORE = 470;
+
+/**
+ * Turns "add Eliza" into a real, labelled row instead of relying on the ranked
+ * character row secretly doing an attach. Reads the already-ranked search
+ * results rather than re-deriving entities, so it inherits their media, icons
+ * and matching.
+ */
+export function buildOmnibarAddSuggestions({
+  activeChat,
+  attachedResultIds,
+  deferredQuery,
+  omnibarSuggestionsEnabled,
+  searchResults,
+  t,
+}: OmnibarAddSuggestionsInput): OmnibarResult[] {
+  if (!omnibarSuggestionsEnabled || !activeChat || !isOmnibarAddIntent(deferredQuery)) return [];
+  const out: OmnibarResult[] = [];
+  for (const result of searchResults) {
+    if (out.length >= MAX_ADD_SUGGESTIONS) break;
+    const resource = ADD_RESOURCE_KINDS[result.category];
+    if (!resource || result.kind !== "resource" || attachedResultIds.has(result.id)) continue;
+    const resourceId = result.id.slice(result.id.indexOf(":") + 1);
+    if (!resourceId) continue;
+    out.push({
+      id: `action:add-to-chat:${result.id}`,
+      action: { kind: "add-to-chat", resource, resourceId, label: result.title } as const,
+      title: t("commandCenter.actions.addToChat", "Add {{name}} to this chat", { name: result.title }),
+      description: t("commandCenter.actions.addToChatDescription", "Attach it to {{chat}} now.", {
+        chat: activeChat.name,
+      }),
+      category: result.category,
+      media: result.media,
+      score: ADD_SUGGESTION_SCORE - out.length,
+      kind: "action" as const,
+      icon: result.icon,
+      group: "current-work" as const,
+    });
+  }
+  return out;
 }
 
 export function buildOmnibarRemovalSuggestions({

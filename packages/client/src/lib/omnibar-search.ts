@@ -13,6 +13,7 @@ import type {
   CommandKind,
 } from "./command-center";
 import type { CommandCenterPreviewData } from "../components/command-center/command-result-preview.types";
+import type { ChatResourceDragKind } from "./chat-resource-drag";
 
 export type OmnibarCategory =
   | "navigation"
@@ -36,6 +37,7 @@ export type OmnibarAction =
   | { kind: "slash"; command: string }
   | { kind: "goto-message"; chatId: string; messageNumber: number }
   | { kind: "remove-character"; characterId: string }
+  | { kind: "add-to-chat"; resource: ChatResourceDragKind; resourceId: string; label: string }
   | { kind: "personal-extension"; commandId: string }
   | { kind: "open-docs"; path?: string }
   | { kind: "open-faq"; itemId: string };
@@ -220,6 +222,15 @@ export function parseOmnibarIntent(query: string): OmnibarIntent | null {
 
 export function isOmnibarRemovalIntent(query: string): boolean {
   return /^(?:remove|drop|detach)\b/i.test(normalizeProfessorMariNavigationQuery(query));
+}
+
+/**
+ * The attach half of the action intent: "add Eliza", "use this preset". Shares
+ * the `action` verb list with removal, so it is defined as "an action intent
+ * that is not a removal" rather than a second verb list that can drift.
+ */
+export function isOmnibarAddIntent(query: string): boolean {
+  return parseOmnibarIntent(query)?.kind === "action" && !isOmnibarRemovalIntent(query);
 }
 
 export type OmnibarActiveChatContext = {
