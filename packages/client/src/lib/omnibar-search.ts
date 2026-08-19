@@ -247,14 +247,18 @@ export function parseOmnibarIntent(query: string): OmnibarIntent | null {
   return null;
 }
 
+/** Verbs that take something away. "disable" belongs here: disabling a lorebook detaches it. */
+const DETACHING_VERBS = /^(?:remove|drop|detach|disable|turn\s+off)\b/i;
+
 export function isOmnibarRemovalIntent(query: string): boolean {
-  return /^(?:remove|drop|detach)\b/i.test(normalizeProfessorMariNavigationQuery(query));
+  return DETACHING_VERBS.test(normalizeProfessorMariNavigationQuery(query));
 }
 
 /**
  * The attach half of the action intent: "add Eliza", "use this preset". Shares
  * the `action` verb list with removal, so it is defined as "an action intent
  * that is not a removal" rather than a second verb list that can drift.
+ * "disable Tavern" therefore never offers to attach Tavern.
  */
 /**
  * A verb typed on its own, with no object yet: "add", "open", "enable". Returns

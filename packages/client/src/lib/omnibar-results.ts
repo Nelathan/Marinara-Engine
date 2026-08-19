@@ -57,9 +57,11 @@ export const MIN_MESSAGE_SEARCH_LENGTH = 3;
 const MAX_MESSAGE_SEARCH_RESULTS = 6;
 /**
  * The context group answers "what am I on?", not "what is in this chat?" — past
- * this many rows it buries recents and create actions.
+ * this many rows it buries recents and create actions. Applied by the idle list
+ * rather than the builder, because "remove" reads the same rows and must see
+ * every attached thing, not the first eight.
  */
-const CHAT_CONTEXT_MAX_RESULTS = 8;
+export const CHAT_CONTEXT_MAX_RESULTS = 8;
 const MAX_SLASH_RESULTS = 8;
 /** A resumable creation session goes stale after a day. */
 const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -956,7 +958,7 @@ export function buildOmnibarContextResults({
       }
     }
   }
-  return out.slice(0, CHAT_CONTEXT_MAX_RESULTS);
+  return out;
 }
 
 /** Which omnibar categories map onto a chat-attachable resource kind. */
@@ -969,6 +971,12 @@ const ADD_RESOURCE_KINDS: Partial<Record<OmnibarCategory, ChatResourceDragKind>>
   agent: "agent",
 };
 const MAX_ADD_SUGGESTIONS = 5;
+/**
+ * Browsing a kind ("add character ") is a picker, not a guess, so every row
+ * should be attachable — a list where the first five attach and the rest open
+ * the editor reads as broken.
+ */
+const MAX_ADD_SUGGESTIONS_BROWSING = 40;
 /**
  * Above the plain entity rows for the same names, so the explicit
  * "Add X to this chat" row is what Enter lands on.
@@ -1022,6 +1030,12 @@ export function buildOmnibarVerbSuggestions({
 }: OmnibarVerbSuggestionsInput): OmnibarResult[] {
   const intent = isOmnibarRefinableVerb(deferredQuery);
   if (!intent) return [];
+  const bounded = (rows: readonly OmnibarResult[]) =>
+    rows.slice(0, 10).map((result, index) => ({
+      ...result,
+      score: VERB_SUGGESTION_SCORE - index,
+      group: "current-work" as const,
+    }));
   const refineRows = (categories: readonly OmnibarCategory[], label: string, fallback: string) =>
     categories.map((category, index) => ({
       id: `verb:${intent.verb}:${category}`,
@@ -1035,26 +1049,23 @@ export function buildOmnibarVerbSuggestions({
       group: "current-work" as const,
     }));
 
-  // "add" only makes sense with somewhere to add to.
+  const createRows = () => allLocalResults.filter((result) => /^(?:create|import)-/.test(result.id));
+  // "add" needs somewhere to add to. With no chat open it can only mean "make a
+  // new one", which is a better answer than an empty list.
   if (["add", "use", "activate", "set"].includes(intent.verb)) {
-    if (!activeChat) return [];
-    return refineRows([...ADD_OBJECT_CATEGORIES], "commandCenter.verbs.addKind", "Add a {{kind}} to this chat…");
+    if (activeChat)
+      return refineRows([...ADD_OBJECT_CATEGORIES], "commandCenter.verbs.addKind", "Add a {{kind}} to this chat…");
+    return bounded(createRows());
   }
   if (["open", "show", "go to"].includes(intent.verb)) {
     return refineRows([...OPEN_OBJECT_CATEGORIES], "commandCenter.verbs.openKind", "Open a {{kind}}…");
   }
   // Bounded verbs: list the objects themselves, because they all fit. "remove"
   // is bounded too, but `buildOmnibarRemovalSuggestions` already owns it.
-  const bounded = ["create", "new", "import"].includes(intent.verb)
-    ? allLocalResults.filter((result) => /^(?:create|import)-/.test(result.id))
-    : ["enable", "disable", "turn on", "turn off"].includes(intent.verb)
-      ? allLocalResults.filter((result) => result.control?.type === "toggle")
-      : [];
-  return bounded.slice(0, 10).map((result, index) => ({
-    ...result,
-    score: VERB_SUGGESTION_SCORE - index,
-    group: "current-work" as const,
-  }));
+  if (["create", "new", "import"].includes(intent.verb)) return bounded(createRows());
+  if (["enable", "disable", "turn on", "turn off"].includes(intent.verb))
+    return bounded(allLocalResults.filter((result) => result.control?.type === "toggle"));
+  return [];
 }
 
 export function buildOmnibarAddSuggestions({
@@ -1066,9 +1077,11 @@ export function buildOmnibarAddSuggestions({
   t,
 }: OmnibarAddSuggestionsInput): OmnibarResult[] {
   if (!omnibarSuggestionsEnabled || !activeChat || !isOmnibarAddIntent(deferredQuery)) return [];
+  const browsingKind = Boolean(parseOmnibarIntent(deferredQuery)?.objectCategory);
+  const limit = browsingKind ? MAX_ADD_SUGGESTIONS_BROWSING : MAX_ADD_SUGGESTIONS;
   const out: OmnibarResult[] = [];
   for (const result of searchResults) {
-    if (out.length >= MAX_ADD_SUGGESTIONS) break;
+    if (out.length >= limit) break;
     const resource = ADD_RESOURCE_KINDS[result.category];
     if (!resource || attachedResultIds.has(result.id)) continue;
     // Entity rows are `<category>:<id>`. Control and command rows are not, and

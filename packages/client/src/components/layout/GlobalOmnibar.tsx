@@ -110,6 +110,7 @@ import {
   buildOmnibarProposalResult,
   buildOmnibarAddSuggestions,
   buildOmnibarVerbSuggestions,
+  CHAT_CONTEXT_MAX_RESULTS,
   buildOmnibarRemovalSuggestions,
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
@@ -1117,6 +1118,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => buildOmnibarVerbSuggestions({ activeChat, allLocalResults, deferredQuery, t }),
     [activeChat, allLocalResults, deferredQuery, t],
   );
+  const addedResultIds = useMemo(
+    () => new Set(addSuggestions.map((item) => item.id.replace("action:add-to-chat:", ""))),
+    [addSuggestions],
+  );
   const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
   const proposalResult = useMemo<OmnibarResult | null>(
     () => buildOmnibarProposalResult({ creationProposal, t }),
@@ -1152,11 +1157,17 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...(extractionResult ? [extractionResult] : []),
             ...messageResults,
             ...mariChatResults,
-            ...searchResults,
+            // An explicit "Add X to this chat" row replaces the plain entity row
+            // for the same thing: showing both lists every character twice, and
+            // the plain one reads like "open" while doing the same attach.
+            ...(addedResultIds.size
+              ? searchResults.filter((result) => !addedResultIds.has(result.id))
+              : searchResults),
           ]
-        : [...contextResults, ...slashResults, ...(continueResult ? [continueResult] : []), ...idleResults],
+        : [...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS), ...slashResults, ...(continueResult ? [continueResult] : []), ...idleResults],
     [
       addSuggestions,
+      addedResultIds,
       contextResults,
       continueResult,
       deferredQuery,
@@ -1401,9 +1412,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else if (resource === "agent") {
       const metadata = parseChatMetadata(activeChat.metadata);
       const active = Array.isArray(metadata.activeAgentIds) ? metadata.activeAgentIds : [];
+      // A chat stores either the agent's id or its type, while the row id is
+      // always the type. Comparing the raw values would silently detach nothing.
       void patchChatMetadata({
         id: chatId,
-        activeAgentIds: active.filter((id) => id !== resourceId),
+        activeAgentIds: active.filter(
+          (id) => (agents.data?.find((agent) => agent.id === id || agent.type === id)?.type ?? id) !== resourceId,
+        ),
       });
     } else return false;
     onClose();
