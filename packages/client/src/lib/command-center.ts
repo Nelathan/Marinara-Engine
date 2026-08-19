@@ -175,6 +175,11 @@ export const COMMAND_CENTER_CATEGORY_FILTERS: readonly CommandCenterCategoryFilt
   "docs",
 ];
 export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGroupId[] = [
+  // Intent rows ("Remove Eliza from this chat") first: the user named the verb,
+  // so acting on the object beats another way to look at it. Omitting this group
+  // dropped those rows back into their category bucket, where a same-named chat
+  // outranked them.
+  "current-work",
   "professor-suggested",
   "messages",
   "navigation",
