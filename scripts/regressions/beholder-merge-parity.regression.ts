@@ -3,6 +3,7 @@
 
 import assert from "node:assert/strict";
 import {
+  dropHallucinatedCharacters,
   resolveBeholderStateResponse,
   stripModelMissing,
 } from "../../packages/server/src/services/agents/beholder-state.js";
@@ -123,4 +124,34 @@ const strippedToEmpty = applyBeholderValidator(
 assert.ok(
   !JSON.stringify(strippedToEmpty.stripped).includes('"worn":[]'),
   "a list emptied by stripping collapses to a no-op instead of clearing the slot",
+);
+
+// A character the extractor invented — named nowhere, never tracked — is discarded,
+// while everyone with a claim to being real is kept.
+const guarded = dropHallucinatedCharacters(
+  { self: {}, Hesperia: {}, Mara: {}, Rissha: {} },
+  "Hesperia steps back as the stone cracks.",
+  "Tim",
+  ["Rissha"],
+);
+assert.deepEqual(Object.keys(guarded.delta as Record<string, unknown>).sort(), ["Hesperia", "Rissha", "self"]);
+assert.deepEqual(guarded.dropped, ["Mara"], "only the invented name is dropped");
+
+// The persona is kept under its own name as well as `self`.
+assert.deepEqual(
+  Object.keys(dropHallucinatedCharacters({ Tim: {} }, "She waits.", "Tim").delta as Record<string, unknown>),
+  ["Tim"],
+);
+
+// Matching is whole-word, so a name inside another word does not count as present.
+assert.deepEqual(
+  dropHallucinatedCharacters({ Ann: {} }, "The banner is torn.", null).dropped,
+  ["Ann"],
+  "a substring match does not make a character real",
+);
+
+// A name with regex-significant characters must not throw or silently drop.
+assert.deepEqual(
+  Object.keys(dropHallucinatedCharacters({ "A.B": {} }, "A.B nods once.", null).delta as Record<string, unknown>),
+  ["A.B"],
 );

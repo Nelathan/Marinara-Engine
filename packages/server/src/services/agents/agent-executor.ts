@@ -47,6 +47,7 @@ import {
   BEHOLDER_PASS_LANES,
   buildBeholderUserMessage,
   keyBeholderStateByCharacter,
+  dropHallucinatedCharacters,
   stripModelMissing,
   formatBeholderRequestContext,
   isBeholderLaneResponse,
@@ -1831,10 +1832,26 @@ function resolveStructuredAgentResult(
   // Model-emitted `missing` is dropped before anything else looks at it: amputation is
   // the one field the extractor misfires on badly enough to be manual-only.
   const withoutModelMissing = stripModelMissing(data);
+  // Discard characters the extractor invented: not the persona, not tracked, and not
+  // named anywhere in the narration.
+  const narration = beholderNarration(config as AgentExecConfig, context);
+  const priorKeyed = keyBeholderStateByCharacter(context.memory._beholderState, personaName);
+  if (isRecord(withoutModelMissing) && isRecord(withoutModelMissing.delta)) {
+    const { delta: keptDelta, dropped } = dropHallucinatedCharacters(
+      withoutModelMissing.delta,
+      narration,
+      personaName,
+      Object.keys(priorKeyed),
+    );
+    if (dropped.length) {
+      logger.warn("[agent] beholder: ignoring character(s) not named in the message: %s", dropped.join(", "));
+      withoutModelMissing.delta = keptDelta;
+    }
+  }
   const { findings, stripped } = applyBeholderValidator(withoutModelMissing, {
     persona: personaName,
-    prevState: keyBeholderStateByCharacter(context.memory._beholderState, personaName),
-    prose: beholderNarration(config as AgentExecConfig, context),
+    prevState: priorKeyed,
+    prose: narration,
   });
   const strippedCount = findings.filter((entry) => entry.severity === "error").length;
   if (findings.length) {

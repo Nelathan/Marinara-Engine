@@ -541,6 +541,52 @@ export function normalizeBeholderState(value: unknown): BeholderState | null {
  * purpose-trained extractor reads this as one fixed shape; drifting from it moves the
  * input away from the distribution the model's accuracy was measured on.
  */
+/** True when `name` appears as a whole word in `text`. */
+function characterNamedIn(text: string, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  try {
+    return new RegExp(`\\b${escaped}\\b`, "iu").test(text || "");
+  } catch {
+    return true; // an unusable name pattern must never silently drop a character
+  }
+}
+
+/**
+ * Drop character keys the extractor invented.
+ *
+ * On a cold start or a first-person turn the model can attribute state to a name that
+ * appears nowhere — a character borrowed from its training examples. A real character is
+ * either the persona, already tracked, or written in the narration; anything else is
+ * discarded. Tracked characters are kept even when unnamed this turn, because a
+ * pronoun-only sentence ("she unbuttons her coat") attributes by context.
+ */
+export function dropHallucinatedCharacters(
+  delta: unknown,
+  narration: string,
+  personaName: string | null,
+  knownNames: readonly string[] = [],
+): { delta: unknown; dropped: string[] } {
+  if (!isRecord(delta)) return { delta, dropped: [] };
+  const known = new Set(knownNames.map((name) => name.toLocaleLowerCase("en-US")));
+  const persona = personaName?.toLocaleLowerCase("en-US");
+  const kept: Record<string, unknown> = {};
+  const dropped: string[] = [];
+  for (const [name, value] of Object.entries(delta)) {
+    const lowered = name.toLocaleLowerCase("en-US");
+    if (
+      lowered === "self" ||
+      (persona && lowered === persona) ||
+      known.has(lowered) ||
+      characterNamedIn(narration, name)
+    ) {
+      kept[name] = value;
+    } else {
+      dropped.push(name);
+    }
+  }
+  return { delta: kept, dropped };
+}
+
 /**
  * Strip `missing` from a model delta.
  *
