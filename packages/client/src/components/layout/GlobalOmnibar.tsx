@@ -2289,6 +2289,26 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })()
     : [];
 
+  // The side panel only earns its space when the result carries more than a
+  // title: media, prose, facts, an inline control, or lazily fetched detail.
+  const previewIsRich = (() => {
+    if (!previewResult) return false;
+    if (previewResult.control) return true;
+    if (previewDetail.detail || previewDetail.detailLoading || previewDetail.extraFacts.length) return true;
+    const preview = previewResult.preview?.();
+    if (!preview) return false;
+    return Boolean(
+      preview.media ||
+      preview.description ||
+      preview.supportingInfo ||
+      preview.metadataLine ||
+      preview.status ||
+      preview.facts?.length ||
+      preview.badges?.length ||
+      preview.tags?.length,
+    );
+  })();
+
   // One preview body shared by the three detail surfaces (mobile inline, browse,
   // and the external xl panel) so they never drift apart.
   const renderResultPreview = () =>
@@ -2802,7 +2822,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : null}
       </div>
 
-      {(pane === "detail" || pane === "results") && previewResult ? (
+      {(pane === "detail" || pane === "results") && previewResult && previewIsRich ? (
         <motion.aside
           data-component="GlobalOmnibar.ExternalDetail"
           initial={reduceMotion ? false : { opacity: 0, x: -18 }}
