@@ -94,6 +94,7 @@ export interface FloatingWidgetPosition {
   x: number;
   y: number;
 }
+export const DEFAULT_MOBILE_MUSIC_WIDGET_POSITION = { x: 16, y: 144 } as const;
 export interface SummaryPopoverSettings {
   sourceMode: SummaryPopoverSourceMode;
   contextSize: number | null;
@@ -1547,7 +1548,7 @@ export const useUIStore = create<UIState>()(
       conversationCallVoiceVolume: 100,
       conversationCallVoiceMuted: false,
       spotifyMobileWidgetCollapsed: true,
-      spotifyMobileWidgetPosition: { x: 16, y: 96 },
+      spotifyMobileWidgetPosition: { ...DEFAULT_MOBILE_MUSIC_WIDGET_POSITION },
       intuitiveSwipeNavigation: false,
       intuitiveSwipeRerollLatest: false,
       editLastMessageOnArrowUp: true,
@@ -2353,8 +2354,12 @@ export const useUIStore = create<UIState>()(
       setSpotifyMobileWidgetPosition: (position) =>
         set({
           spotifyMobileWidgetPosition: {
-            x: Number.isFinite(position.x) ? Math.max(8, Math.round(position.x)) : 16,
-            y: Number.isFinite(position.y) ? Math.max(8, Math.round(position.y)) : 96,
+            x: Number.isFinite(position.x)
+              ? Math.max(8, Math.round(position.x))
+              : DEFAULT_MOBILE_MUSIC_WIDGET_POSITION.x,
+            y: Number.isFinite(position.y)
+              ? Math.max(8, Math.round(position.y))
+              : DEFAULT_MOBILE_MUSIC_WIDGET_POSITION.y,
           },
         }),
       setIntuitiveSwipeNavigation: (v) => set({ intuitiveSwipeNavigation: v }),
@@ -2563,11 +2568,8 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "marinara-engine-ui",
-      // v93 -> v94: add the Inventory tracker-panel section. The bump matters:
-      // `migrate` re-normalizes `trackerPanelSectionOrder`, and it only runs when
-      // the persisted version changes. Without it an existing user's saved order
-      // never gains "inventory" and the section stays invisible until they
-      // reorder the panel by hand.
+      // Bump whenever a migration below is added: `migrate` only runs when the
+      // persisted version changes.
       version: 96,
       // Debounce localStorage writes to avoid sync I/O on every state change
       storage: createJSONStorage(() => {
@@ -2760,7 +2762,7 @@ export const useUIStore = create<UIState>()(
         if (version <= 19) {
           if (persisted.spotifyMobileWidgetCollapsed === undefined) persisted.spotifyMobileWidgetCollapsed = true;
           if (persisted.spotifyMobileWidgetPosition === undefined) {
-            persisted.spotifyMobileWidgetPosition = { x: 16, y: 96 };
+            persisted.spotifyMobileWidgetPosition = { ...DEFAULT_MOBILE_MUSIC_WIDGET_POSITION };
           }
         }
         // v20 -> v21: remember Game setup free-text fields and learned preference chips.
@@ -3136,6 +3138,15 @@ export const useUIStore = create<UIState>()(
         // v94 -> v95: Command Center Mari LLM assistance defaults on for existing users.
         if (version <= 94 && persisted.commandCenterMariEnabled === undefined) {
           persisted.commandCenterMariEnabled = true;
+        }
+        // v94 -> v95: existing custom positions stay untouched; the exact legacy
+        // default is the only reliable indication that the widget was never moved.
+        if (
+          version <= 94 &&
+          persisted.spotifyMobileWidgetPosition?.x === 16 &&
+          persisted.spotifyMobileWidgetPosition?.y === 96
+        ) {
+          persisted.spotifyMobileWidgetPosition = { ...DEFAULT_MOBILE_MUSIC_WIDGET_POSITION };
         }
         // v84 -> v85: keep the historical blank-line behavior for /continue by default.
         if (version <= 84 && persisted.continueAddsNewline === undefined) {

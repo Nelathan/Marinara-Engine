@@ -1134,7 +1134,12 @@ export function buildOmnibarRemovalSuggestions({
     if (target && !normalizeTextForMatch(result.title).includes(target)) continue;
     out.push({
       id: `action:detach-from-chat:${result.id}`,
-      action: { kind: "detach-from-chat", resource, resourceId: result.id.slice(result.category.length + 1), label: result.title } as const,
+      action: {
+        kind: "detach-from-chat",
+        resource,
+        resourceId: result.id.slice(result.category.length + 1),
+        label: result.title,
+      } as const,
       title: t("commandCenter.actions.removeFromChat", "Remove {{name}} from this chat", { name: result.title }),
       description: t("commandCenter.actions.removeFromChatDescription", "Detach it from {{chat}}.", {
         chat: activeChat.name,

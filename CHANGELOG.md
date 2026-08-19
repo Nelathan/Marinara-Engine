@@ -4,8 +4,19 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+### Added
+
+- Chat Settings now shows the current chat ID with a one-click copy action, making exact chats easy to reference in Professor Mari and other tools (#5235).
+- Conversation and Roleplay automatic summaries can now keep recent summaries in context while semantically retrieving relevant older summaries for long-running chats (#5240).
+
 ### Fixed
 
+- Mobile full-screen navigation now places the slightly larger Home icon first, opens Chats from the right like the resource tabs, swaps between Chats and resource tabs without replaying the entrance animation, deactivates Home while another surface is open, lets Home dismiss that surface and return to the Home page, and starts the draggable Music DJ control below Home bookmarks; the Characters tab underline now also matches its pink icon on mobile and desktop (#5248).
+- Docker update checks now recognize stable-to-Staging/UAT channel switches and show the correct `staging` image tag and host-side switch instructions instead of claiming the stable container is already current (#5249).
+- Roleplay's Agents menu now offers a Stop Agents action while parallel or post-processing work is still running, without blocking new messages or swipes (#5237).
+- ComfyUI Video Generation workflows now support the same Base64 reference-image placeholders as image workflows, including `%reference_image%` and `%reference_image_01%` through `%reference_image_04%` (#5238).
+- Automatic backups, manual backups, and profile exports no longer fail at an artificial 8,192-entry ZIP ceiling; archive size and path-safety protections remain enforced (#5239).
+- Professor Mari now accepts an explicit authorization clause together with the concrete character or lorebook edit in the same user message, while preserving operation and entity safeguards (#5245).
 - Windows installer sources now refuse to download or install a release unless they were built or invoked with its exact commit pin, preserving the existing verified path used by official release executables.
 
 ## [2.4.3]

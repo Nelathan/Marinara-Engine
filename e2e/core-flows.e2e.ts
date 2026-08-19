@@ -11646,6 +11646,131 @@ test("Conversation Chat Settings can attach and retain custom agents", async ({ 
   }
 });
 
+test("Roleplay Chat Summaries persists semantic retrieval without overflowing its mobile panel", async ({
+  page,
+  request,
+}, testInfo) => {
+  const chatResponse = await request.post("/api/chats", {
+    data: { name: "Roleplay Semantic Summary Smoke", mode: "roleplay", characterIds: [] },
+  });
+  expect(chatResponse.ok()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+  const metadataResponse = await request.patch(`/api/chats/${chat.id}/metadata`, {
+    data: { automaticSummaryEnabled: true },
+  });
+  expect(metadataResponse.ok()).toBeTruthy();
+
+  const readSemanticSetting = async () => {
+    const response = await request.get(`/api/chats/${chat.id}`);
+    const current = (await response.json()) as { metadata?: unknown };
+    const metadata =
+      typeof current.metadata === "string"
+        ? (JSON.parse(current.metadata) as Record<string, unknown>)
+        : ((current.metadata ?? {}) as Record<string, unknown>);
+    return metadata.semanticSummaryRetrievalEnabled;
+  };
+  const openSummary = async () => {
+    if (testInfo.project.name.includes("mobile")) {
+      await page.getByRole("button", { name: "More options", exact: true }).click();
+    }
+    const summaryButton = page.getByRole("button", { name: "Chat Summary", exact: true }).filter({ visible: true });
+    await expect(summaryButton).toHaveCount(1);
+    await summaryButton.click();
+    const panel = page.locator("[data-chat-floating-panel]").filter({ hasText: "Automatic Summaries" });
+    await expect(panel).toBeVisible();
+    return panel;
+  };
+
+  try {
+    await page.addInitScript((chatId) => localStorage.setItem("marinara-active-chat-id", chatId), chat.id);
+    await page.goto("/");
+
+    let panel = await openSummary();
+    const semanticSwitch = panel.getByRole("checkbox", { name: "Semantic retrieval", exact: true });
+    await expect(semanticSwitch).not.toBeChecked();
+    await semanticSwitch.click();
+    await expect.poll(readSemanticSetting).toBe(true);
+    await expect(semanticSwitch).toBeChecked();
+
+    const [panelBounds, panelOverflow] = await Promise.all([
+      panel.boundingBox(),
+      panel.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth })),
+    ]);
+    const viewport = page.viewportSize();
+    expect(panelBounds).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(panelBounds!.x).toBeGreaterThanOrEqual(0);
+    expect(panelBounds!.x + panelBounds!.width).toBeLessThanOrEqual(viewport!.width + 1);
+    expect(panelOverflow.scrollWidth).toBeLessThanOrEqual(panelOverflow.clientWidth + 1);
+
+    await page.reload();
+    panel = await openSummary();
+    await expect(panel.getByRole("checkbox", { name: "Semantic retrieval", exact: true })).toBeChecked();
+    await page.evaluate(async () => {
+      const module = await import("/src/stores/ui.store.ts");
+      module.useUIStore.getState().setTheme("light");
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(panel.getByRole("checkbox", { name: "Semantic retrieval", exact: true })).toBeVisible();
+  } finally {
+    await request.delete(`/api/chats/${chat.id}`);
+  }
+});
+
+test("Chat Settings exposes the chat ID and persists semantic summary retrieval", async ({
+  context,
+  page,
+  request,
+}, testInfo) => {
+  const chatResponse = await request.post("/api/chats", {
+    data: { name: "Chat ID and Semantic Summary Smoke", mode: "conversation", characterIds: [] },
+  });
+  expect(chatResponse.ok()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+
+  const openSettings = async () => {
+    if (testInfo.project.name.includes("mobile")) {
+      await page.getByRole("button", { name: "More options", exact: true }).click();
+    }
+    await page.getByRole("button", { name: "Chat Settings", exact: true }).filter({ visible: true }).click();
+    await expect(page.locator(".mari-chat-settings-drawer")).toBeVisible();
+  };
+  const readSemanticSetting = async () => {
+    const response = await request.get(`/api/chats/${chat.id}`);
+    const current = (await response.json()) as { metadata?: unknown };
+    const metadata =
+      typeof current.metadata === "string"
+        ? (JSON.parse(current.metadata) as Record<string, unknown>)
+        : ((current.metadata ?? {}) as Record<string, unknown>);
+    return metadata.semanticSummaryRetrievalEnabled;
+  };
+
+  try {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.addInitScript((chatId) => localStorage.setItem("marinara-active-chat-id", chatId), chat.id);
+    await page.goto("/");
+    await openSettings();
+
+    const drawer = page.locator(".mari-chat-settings-drawer");
+    const chatNameSection = drawer.locator('[role="button"][aria-expanded]').filter({ hasText: "Chat Name" });
+    await chatNameSection.click();
+    await expect(drawer.getByText(chat.id, { exact: true })).toBeVisible();
+    await drawer.getByRole("button", { name: "Copy chat ID", exact: true }).click();
+    await expect(page.getByText("Chat ID copied.", { exact: true })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(chat.id);
+
+    const summarySection = drawer.locator('[data-chat-settings-section="conversation-automatic-summarization"]');
+    await summarySection.locator(':scope > [role="button"]').click();
+    const semanticSwitch = summarySection.getByRole("checkbox", { name: /^Semantic summary retrieval/u });
+    await expect(semanticSwitch).not.toBeChecked();
+    await semanticSwitch.locator("xpath=following-sibling::label[1]").click();
+    await expect.poll(readSemanticSetting).toBe(true);
+    await expect(semanticSwitch).toBeChecked();
+  } finally {
+    await request.delete(`/api/chats/${chat.id}`);
+  }
+});
+
 test("Conversation Chat Settings exposes and persists Long-Term Memory activation", async ({
   page,
   request,
@@ -16179,35 +16304,217 @@ test("mobile topbar remains reachable while sidebars switch", async ({ page }, t
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile shell smoke only runs in the mobile project.");
 
   const errors = collectUnexpectedErrors(page);
+  await page.route("**/api/capability-packages/installed", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
   await page.goto("/");
 
-  await page.locator('[data-tour="sidebar-toggle"]').click();
+  const topbar = page.locator('[data-component="TopBar"]');
+  const homeButton = topbar.getByTitle("Home");
+  const chatsButton = topbar.locator('[data-tour="sidebar-toggle"]');
+  const homeBounds = await homeButton.boundingBox();
+  const chatsBounds = await chatsButton.boundingBox();
+  expect(homeBounds).not.toBeNull();
+  expect(chatsBounds).not.toBeNull();
+  const mobileActionOrder = [
+    "home",
+    "chats",
+    "characters",
+    "personas",
+    "lorebooks",
+    "presets",
+    "connections",
+    "agents",
+    "settings",
+  ];
+  const mobileActionOffsets = await Promise.all(
+    mobileActionOrder.map(async (key) =>
+      Math.round((await topbar.locator(`[data-topbar-hover-key="${key}"]`).boundingBox())?.x ?? -1),
+    ),
+  );
+  expect(mobileActionOffsets.every((offset) => offset >= 0)).toBe(true);
+  expect(new Set(mobileActionOffsets).size).toBe(mobileActionOrder.length);
+  expect(mobileActionOffsets).toEqual([...mobileActionOffsets].sort((left, right) => left - right));
+  const mobileDomActionOrder = await topbar.locator("[data-topbar-hover-key]").evaluateAll((elements) =>
+    elements
+      .map((element) => (element as HTMLElement).dataset.topbarHoverKey)
+      .filter((key): key is string => Boolean(key)),
+  );
+  expect(mobileDomActionOrder.slice(0, mobileActionOrder.length)).toEqual(mobileActionOrder);
+  const homeIconBounds = await homeButton.locator("svg").boundingBox();
+  const chatsIconBounds = await chatsButton.locator("svg").boundingBox();
+  expect(homeIconBounds).not.toBeNull();
+  expect(chatsIconBounds).not.toBeNull();
+  expect(homeIconBounds!.width).toBeGreaterThan(chatsIconBounds!.width);
+
+  const musicDjButton = page.getByRole("button", { name: "Open Music DJ download prompt" });
+  await expect(musicDjButton).toBeVisible();
+  const bookmarksBounds = await page.getByRole("navigation", { name: "Home bookmarks" }).boundingBox();
+  const initialMusicDjBounds = await musicDjButton.boundingBox();
+  expect(bookmarksBounds).not.toBeNull();
+  expect(initialMusicDjBounds).not.toBeNull();
+  const musicDjOverlapsBookmarks =
+    initialMusicDjBounds!.x < bookmarksBounds!.x + bookmarksBounds!.width &&
+    initialMusicDjBounds!.x + initialMusicDjBounds!.width > bookmarksBounds!.x &&
+    initialMusicDjBounds!.y < bookmarksBounds!.y + bookmarksBounds!.height &&
+    initialMusicDjBounds!.y + initialMusicDjBounds!.height > bookmarksBounds!.y;
+  expect(musicDjOverlapsBookmarks).toBe(false);
+  const initialMusicDjPosition = await page.evaluate(async () => {
+    const { useUIStore } = await import("/src/stores/ui.store.ts");
+    return useUIStore.getState().spotifyMobileWidgetPosition;
+  });
+  await musicDjButton.dispatchEvent("pointerdown", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: initialMusicDjBounds!.x + 24,
+    clientY: initialMusicDjBounds!.y + 24,
+  });
+  await musicDjButton.dispatchEvent("pointermove", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: initialMusicDjBounds!.x + 88,
+    clientY: initialMusicDjBounds!.y + 88,
+  });
+  await musicDjButton.dispatchEvent("pointerup", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: initialMusicDjBounds!.x + 88,
+    clientY: initialMusicDjBounds!.y + 88,
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { useUIStore } = await import("/src/stores/ui.store.ts");
+        return useUIStore.getState().spotifyMobileWidgetPosition.x;
+      }),
+    )
+    .toBeGreaterThan(initialMusicDjPosition.x + 32);
+
+  await chatsButton.click();
   await expect(page.locator('[data-component="TopBar"]')).toBeVisible();
   await expect(page.locator('[data-component="ChatSidebar"]')).toBeVisible();
+  await expect(homeButton).toHaveAttribute("aria-pressed", "false");
+  await expect(chatsButton).toHaveAttribute("aria-pressed", "true");
   const mobileChatSidebar = page.locator('[data-component="ChatSidebarPanel"]');
+  await expect.poll(async () => (await mobileChatSidebar.boundingBox())?.x ?? Number.POSITIVE_INFINITY).toBeLessThan(1);
+  await mobileChatSidebar.evaluate((element) => element.setAttribute("data-e2e-mobile-shell", "preserved"));
+
+  await page.locator('[data-tour="panel-characters"]').click();
+  const swappedRightPanel = page.locator('[data-component="RightPanelMobile"]');
+  await expect(swappedRightPanel).toBeVisible();
+  await expect(swappedRightPanel).toHaveAttribute("data-e2e-mobile-shell", "preserved");
+  await expect(homeButton).toHaveAttribute("aria-pressed", "false");
+  const charactersUnderline = topbar.locator('[data-component="CharactersTopbarUnderline"]');
+  await expect(charactersUnderline).toBeVisible();
+  await expect
+    .poll(() =>
+      charactersUnderline.evaluate((element) =>
+        getComputedStyle(element).getPropertyValue("--mari-panel-gradient-start").trim(),
+      ),
+    )
+    .toBe("#f472b6");
+
+  await chatsButton.click();
+  await expect(mobileChatSidebar).toBeVisible();
+  await expect(mobileChatSidebar).toHaveAttribute("data-e2e-mobile-shell", "preserved");
   const openMobileSidebarX = (await mobileChatSidebar.boundingBox())?.x ?? 0;
-  await page.locator('[data-tour="sidebar-toggle"]').click();
-  await expect(mobileChatSidebar).toHaveClass(/mari-shell-panel-exit-left/);
+  await homeButton.click();
   expect((await mobileChatSidebar.boundingBox())?.width ?? 0).toBeGreaterThan(
     (await page.evaluate(() => innerWidth)) * 0.9,
   );
   await expect
     .poll(async () => (await mobileChatSidebar.boundingBox())?.x ?? Number.POSITIVE_INFINITY)
-    .toBeLessThan(openMobileSidebarX - 8);
-  await expect(mobileChatSidebar).toHaveAttribute("aria-hidden", "true");
+    .toBeGreaterThan(openMobileSidebarX + 8);
+  await expect(mobileChatSidebar).toHaveCount(0);
+  await expect(homeButton).toHaveAttribute("aria-pressed", "true");
 
-  await page.locator('[data-tour="sidebar-toggle"]').click();
-  await expect(page.locator('[data-component="ChatSidebar"]')).toBeVisible();
-
-  await page.locator('[data-tour="panel-characters"]').click();
-  await expect(page.locator('[data-component="TopBar"]')).toBeVisible();
-  await expect(page.locator('[data-component="RightPanelMobile"]')).toBeVisible();
-
-  await page.locator('[data-tour="panel-settings"]').click();
-  await expect(page.locator('[data-component="TopBar"]')).toBeVisible();
-  await expect(page.locator('[data-component="RightPanelMobile"]')).toBeVisible();
+  for (const panel of ["characters", "personas", "lorebooks", "presets", "connections", "agents", "settings"]) {
+    await page.locator(`[data-tour="panel-${panel}"]`).click();
+    await expect(page.locator('[data-component="TopBar"]')).toBeVisible();
+    await expect(page.locator('[data-component="RightPanelMobile"]')).toBeVisible();
+    await expect(homeButton).toHaveAttribute("aria-pressed", "false");
+    await homeButton.click();
+    await expect(page.locator('[data-component="RightPanelMobile"]')).toHaveCount(0);
+    await expect(homeButton).toHaveAttribute("aria-pressed", "true");
+  }
 
   expect(errors).toEqual([]);
+});
+
+test("Characters topbar underline uses the Characters pink", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('[data-tour="panel-characters"]').click();
+
+  const underline = page.locator('[data-component="CharactersTopbarUnderline"]');
+  await expect(underline).toBeVisible();
+  await expect
+    .poll(() =>
+      underline.evaluate((element) =>
+        getComputedStyle(element).getPropertyValue("--mari-panel-gradient-start").trim(),
+      ),
+    )
+    .toBe("#f472b6");
+});
+
+test("mobile Docker update checks offer the selected staging image", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Mobile Docker channel regression.");
+
+  await page.route("**/api/updates/check?channel=staging", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        currentVersion: APP_VERSION,
+        currentCommit: "stable123456",
+        currentBuild: `${APP_VERSION}+stable123456`,
+        channel: "staging",
+        channelLabel: "Staging/UAT",
+        currentBranch: `v${APP_VERSION}`,
+        channels: [
+          { id: "stable", label: "Latest Stable", branch: "main", targetRef: "origin/main", warning: null },
+          {
+            id: "staging",
+            label: "Staging/UAT",
+            branch: "staging",
+            targetRef: "origin/staging",
+            warning: "Staging builds are pre-release tester builds. Back up your app data before applying them.",
+          },
+        ],
+        targetRef: "origin/staging",
+        targetCommit: null,
+        latestVersion: APP_VERSION,
+        updateAvailable: true,
+        channelSwitch: true,
+        versionUpdate: false,
+        commitsBehind: 0,
+        releaseUrl: `https://github.com/Pasta-Devs/Marinara-Engine/releases/tag/v${APP_VERSION}`,
+        releaseNotes: "",
+        publishedAt: "",
+        dockerImage: "ghcr.io/pasta-devs/marinara-engine",
+        dockerImageTag: "ghcr.io/pasta-devs/marinara-engine:staging",
+        dockerLiteImageTag: null,
+        installType: "docker",
+        serverPlatform: "linux",
+        clientPlatform: "android",
+        applyAvailable: false,
+        updatesApplyEnabled: false,
+        applyUnavailableReason: "container-install",
+        manualUpdateCommand: "docker compose pull && docker compose up -d",
+        manualUpdateHint:
+          "Set the Compose image to ghcr.io/pasta-devs/marinara-engine:staging, then pull it and restart the container. Use a separate data volume for staging.",
+      }),
+    }),
+  );
+
+  await page.goto("/");
+  await page.locator('[data-tour="panel-settings"]').click();
+  await page.getByRole("tab", { name: "Advanced" }).click();
+  await page.getByLabel("Release Channel").selectOption("staging");
+  await page.getByRole("button", { name: "Check for Updates" }).click();
+
+  await expect(page.getByText("Switch to Staging/UAT", { exact: true })).toBeVisible();
+  await expect(page.getByText("ghcr.io/pasta-devs/marinara-engine:staging", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Set the Compose image to .*:staging, then pull it and restart the container\./)).toBeVisible();
+  await expect(page.getByText(/latest Staging\/UAT target/)).toHaveCount(0);
 });
 
 test("coarse-pointer iPad widths use full-screen side panels", async ({ page }, testInfo) => {
@@ -16224,6 +16531,11 @@ test("coarse-pointer iPad widths use full-screen side panels", async ({ page }, 
   const panelBounds = await mobilePanel.boundingBox();
   expect(panelBounds).not.toBeNull();
   expect(panelBounds!.width).toBeGreaterThanOrEqual(1023);
+  const homeButton = page.locator('[data-component="TopBar"]').getByTitle("Home");
+  await expect(homeButton).toHaveAttribute("aria-pressed", "false");
+  await homeButton.click();
+  await expect(mobilePanel).toHaveCount(0);
+  await expect(homeButton).toHaveAttribute("aria-pressed", "true");
 });
 
 test("mobile Game keeps CYOA usable above four HUD widgets", async ({ page, request }, testInfo) => {
