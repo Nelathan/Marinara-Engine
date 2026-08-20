@@ -307,9 +307,7 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
   if (characterId) {
     const data = (character.data as Character | undefined)?.data;
     const greeting = data?.first_mes?.trim();
-    const tags = (data?.tags ?? []).filter(Boolean).slice(0, 6);
     const extraFacts: CommandCenterPreviewFact[] = [
-      ...(tags.length ? [{ label: t("commandCenter.preview.tags", "Tags"), value: tags.join(", ") }] : []),
       ...(data?.alternate_greetings?.length
         ? [
             {
@@ -324,7 +322,7 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
     const detail = greeting ? (
       <div className="rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-2.5 py-1.5 ring-1 ring-inset ring-[var(--border)]/50">
         <div className="text-[0.625rem] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
-          {t("commandCenter.preview.greeting", "Greeting")}
+          {t("commandCenter.preview.openingMessage", "Opening message")}
         </div>
         <p className="mt-0.5 line-clamp-4 break-words text-xs leading-5 text-[var(--foreground)]">{greeting}</p>
       </div>
@@ -2413,10 +2411,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 }
               : null;
           return [
-            ...mariActions,
-            startChatAction,
             editAction,
             ...(removeFromChatAction ? [removeFromChatAction] : addToChatAction ? [addToChatAction] : []),
+            startChatAction,
           ];
         }
         const requiresSetup = previewResult.command.availability?.status === "requires-capability";
@@ -2470,6 +2467,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           detail={previewDetail.detail}
           detailLoading={previewDetail.detailLoading}
           controlPending={resultControlPending(previewResult)}
+          contextStatusLabel={
+            previewResult.category === "character" &&
+            activeChat?.characterIds?.includes(getOmnibarResourceId(previewResult))
+              ? t("commandCenter.preview.inThisChat", "In this chat")
+              : undefined
+          }
         />
       </Suspense>
     ) : null;

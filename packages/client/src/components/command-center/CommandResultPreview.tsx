@@ -116,7 +116,7 @@ export function CommandResultPreview({
                 "max-w-[70ch] whitespace-pre-line break-words text-sm leading-5 text-[var(--foreground)]",
                 // A resource description is often the full card text. Show the
                 // opening; the editor has the rest.
-                compact && "line-clamp-6",
+                preview.kind === "character" ? "line-clamp-4" : compact && "line-clamp-6",
               )}
             >
               {preview.description}

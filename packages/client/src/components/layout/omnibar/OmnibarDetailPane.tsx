@@ -19,6 +19,8 @@ export interface OmnibarDetailPaneProps {
   detailLoading: boolean;
   /** True while the mutation behind this result's inline control is in flight. */
   controlPending: boolean;
+  /** Contextual state that is useful in the preview but does not belong to the resource itself. */
+  contextStatusLabel?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export function OmnibarDetailPane({
   detail,
   detailLoading,
   controlPending,
+  contextStatusLabel,
 }: OmnibarDetailPaneProps) {
   const { t } = useTranslation();
   return (
@@ -53,7 +56,7 @@ export function OmnibarDetailPane({
               })
             : result.command.availability?.status === "requires-admin"
               ? t("commandCenter.adminRequired", "Administrator access required")
-              : undefined
+              : contextStatusLabel
         }
         actions={actions}
         extraFacts={extraFacts}

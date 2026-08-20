@@ -1,9 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, FileText, Sparkles, X } from "lucide-react";
+import { Check, FileText, Sparkles, UserRound, X } from "lucide-react";
 import type { ProfessorMariAskContext } from "@marinara-engine/shared";
 import { useTranslation } from "react-i18next";
+import type { CharacterPreviewModel } from "../../lib/character-preview";
 import { cn } from "../../lib/utils";
+import { CharacterSubject } from "../characters/CharacterSubject";
+import { CommandCenterMedia } from "../command-center/CommandCenterMedia";
 
 interface Props {
   context: ProfessorMariAskContext | null;
@@ -11,6 +14,7 @@ interface Props {
   onOpen: () => void;
   onRemoveFocus: () => void;
   onViewAttachedContext: () => void;
+  character?: CharacterPreviewModel | null;
 }
 
 type PanelPosition = { top: number; right: number };
@@ -30,6 +34,7 @@ export function ProfessorMariContextControl({
   onOpen,
   onRemoveFocus,
   onViewAttachedContext,
+  character,
 }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -47,6 +52,7 @@ export function ProfessorMariContextControl({
       : t("ui.chat.homeprofessormarichat.contextControlResource");
   const focusLabel = context?.resource?.label ?? context?.resource?.kind ?? context?.source;
   const capabilityLabel = context ? CAPABILITY_LABELS[context.capability] : "";
+  const showCapability = Boolean(context && (context.query || context.field || context.error || context.action));
   const relatedCount = context?.relatedResources?.length ?? 0;
 
   useEffect(() => {
@@ -158,18 +164,30 @@ export function ProfessorMariContextControl({
         <div className="min-h-0 overflow-y-auto p-3">
           {context ? (
             <div className="rounded-lg border border-[var(--primary)]/25 bg-[var(--primary)]/8 p-3">
-              <p className="text-[0.625rem] font-semibold uppercase text-[var(--muted-foreground)]">
-                {t("ui.chat.homeprofessormarichat.contextControlWorkingWith", { type: focusType })}
-              </p>
-              <p className="mt-1 truncate text-sm font-semibold text-[var(--foreground)]">{focusLabel}</p>
+              {character ? (
+                <CharacterSubject
+                  character={character}
+                  label={t("ui.chat.homeprofessormarichat.contextControlWorkingWithCharacter")}
+                  className="border-0 bg-transparent p-0"
+                />
+              ) : (
+                <>
+                  <p className="text-[0.625rem] font-semibold uppercase text-[var(--muted-foreground)]">
+                    {t("ui.chat.homeprofessormarichat.contextControlWorkingWith", { type: focusType })}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-[var(--foreground)]">{focusLabel}</p>
+                </>
+              )}
               {context.query && (
                 <p className="mt-1 line-clamp-3 break-words text-xs text-[var(--muted-foreground)]">
                   {t("ui.chat.homeprofessormarichat.contextControlQuery", { query: context.query })}
                 </p>
               )}
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                {t("ui.chat.homeprofessormarichat.contextControlCapability", { capability: capabilityLabel })}
-              </p>
+              {showCapability && (
+                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                  {t("ui.chat.homeprofessormarichat.contextControlCapability", { capability: capabilityLabel })}
+                </p>
+              )}
               {context.field && (
                 <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
                   {t("ui.chat.homeprofessormarichat.contextControlFieldLabel", { field: context.field })}
@@ -246,8 +264,23 @@ export function ProfessorMariContextControl({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
       >
-        <Sparkles size="0.75rem" />
-        <span className="max-[420px]:hidden">{t("ui.chat.homeprofessormarichat.contextControlLabel")}</span>
+        {character ? (
+          <CommandCenterMedia
+            size="row"
+            role="row"
+            icon={UserRound}
+            src={character.avatarSrc}
+            alt=""
+            kind="avatar"
+            avatarCropStyle={character.avatarCropStyle}
+            className="size-6"
+          />
+        ) : (
+          <Sparkles size="0.75rem" />
+        )}
+        <span className="max-w-28 truncate max-[420px]:hidden">
+          {character?.name ?? t("ui.chat.homeprofessormarichat.contextControlLabel")}
+        </span>
         {totalCount > 0 && <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">{totalCount}</span>}
         {context && <span className="sr-only">{t("ui.chat.homeprofessormarichat.contextControlFocused")}</span>}
       </button>

@@ -2224,11 +2224,12 @@ export class ProfessorMariWorkspaceService {
       directUserText: promptText,
       previousAssistantText: previousAssistantText ?? null,
     };
-    if (attachments.length > 0) {
-      const extra = { attachments };
-      await chatStorage.updateMessageExtra(userMessage.id, extra);
-      await chatStorage.updateSwipeExtra(userMessage.id, 0, extra);
-    }
+    const userMessageExtra = {
+      ...(attachments.length > 0 ? { attachments } : {}),
+      professorMariContext: args.context ?? null,
+    };
+    await chatStorage.updateMessageExtra(userMessage.id, userMessageExtra);
+    await chatStorage.updateSwipeExtra(userMessage.id, 0, userMessageExtra);
 
     const controller = new AbortController();
     this.abortController?.abort();
@@ -2263,6 +2264,7 @@ export class ProfessorMariWorkspaceService {
       if (thinkingText.trim()) extraUpdate.thinking = thinkingText;
       if (storedTrace.length > 0) extraUpdate.mariWorkspaceTimeline = storedTrace;
       if (workspaceActionResults.length > 0) extraUpdate.mariWorkspaceActionResults = workspaceActionResults;
+      extraUpdate.professorMariContext = args.context ?? null;
       const continuity = buildWorkspaceContinuitySnapshot({
         userText: promptText,
         assistantText: persistedText,

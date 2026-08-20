@@ -13,6 +13,7 @@ import type {
   CommandCenterChatModeLabels,
 } from "../components/command-center/command-center-visuals";
 import { formatDate, readNamedRow, readString } from "./omnibar-row-readers";
+import { buildCharacterPreviewModel } from "./character-preview";
 import { parseCharacterDisplayData } from "./character-display";
 import { resolvePresetArtwork } from "./preset-artwork";
 import { getAvatarCropStyle } from "./utils";
@@ -115,64 +116,52 @@ export function buildOmnibarCharacterRows({
   return characters.flatMap((item) => {
     const row = readNamedRow(item);
     if (!row) return [];
-    const record = item as Record<string, unknown>;
-    const display = parseCharacterDisplayData({
-      data: record.data,
-      comment: record.comment as string | null | undefined,
+    const character = buildCharacterPreviewModel(item, {
+      lorebookCount: lorebookNamesByCharacter.get(row.id)?.length ?? 0,
     });
-    const avatarPath = typeof record.avatarPath === "string" ? record.avatarPath : undefined;
+    if (!character) return [];
     return [
       {
         kind: "character" as const,
         ...row,
-        name: display.name,
-        description: display.description ?? undefined,
+        name: character.name,
+        description: character.description,
         preview: () => ({
           kind: "character" as const,
-          title: display.name,
-          description: display.description ?? undefined,
+          title: character.name,
+          description: character.description,
           categoryLabel: categoryLabels.character,
-          media: avatarPath
+          media: character.avatarSrc
             ? {
-                src: avatarPath,
-                alt: display.name,
+                src: character.avatarSrc,
+                alt: character.name,
                 kind: "avatar" as const,
-                avatarCropStyle: getAvatarCropStyle(display.avatarCrop),
+                avatarCropStyle: character.avatarCropStyle,
               }
             : undefined,
           metadataLine:
             [
-              display.creator
-                ? t("commandCenter.preview.byCreator", "by {{creator}}", { creator: display.creator })
+              character.creator
+                ? t("commandCenter.preview.byCreator", "by {{creator}}", { creator: character.creator })
                 : null,
-              readString(record.version)
-                ? t("commandCenter.preview.versionShort", "v{{version}}", { version: readString(record.version)! })
+              character.version
+                ? t("commandCenter.preview.versionShort", "v{{version}}", { version: character.version })
                 : null,
             ]
               .filter(Boolean)
               .join(" · ") || undefined,
-          facts: [
-            ...(display.creator
-              ? [{ label: t("commandCenter.preview.creator", "Creator"), value: display.creator }]
-              : []),
-            ...(readString(record.version)
-              ? [{ label: t("commandCenter.preview.version", "Version"), value: readString(record.version)! }]
-              : []),
-            ...(lorebookNamesByCharacter.get(row.id)?.length
-              ? [
-                  {
-                    label: t("commandCenter.preview.lorebooks", "Lorebooks"),
-                    value: lorebookNamesByCharacter.get(row.id)!.join(", "),
-                  },
-                ]
-              : []),
-            ...(display.comment
-              ? [{ label: t("commandCenter.preview.comment", "Comment"), value: display.comment }]
-              : []),
-          ],
-          badges: (display.tags ?? []).length
-            ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: (display.tags ?? []).join(", ") })]
+          facts: character.lorebookCount
+            ? [{ label: t("commandCenter.preview.lorebooks", "Lorebooks"), value: character.lorebookCount }]
             : [],
+          tags: character.tags.slice(0, 6).concat(
+            character.tags.length > 6
+              ? [
+                  t("commandCenter.preview.moreTags", "+{{count}}", {
+                    count: character.tags.length - 6,
+                  }),
+                ]
+              : [],
+          ),
         }),
       },
     ];

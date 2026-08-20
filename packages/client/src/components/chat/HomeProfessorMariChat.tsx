@@ -78,6 +78,7 @@ import { useTrackAchievement } from "../../hooks/use-achievements";
 import { chatKeys } from "../../hooks/use-chats";
 import { characterKeys, useCharacters, usePersonas } from "../../hooks/use-characters";
 import { getCharacterDisplayIdentity } from "../../lib/character-display";
+import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../lib/character-preview";
 import { completeInline } from "../../lib/inline-completion";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
@@ -87,6 +88,7 @@ import { MariAttachButton } from "./MariAttachButton";
 import { MariChatHistoryPicker } from "./MariChatHistoryPicker";
 import { MariContextViewer } from "./MariContextViewer";
 import { ProfessorMariContextControl } from "./ProfessorMariContextControl";
+import { CharacterSubject } from "../characters/CharacterSubject";
 import { homeFeedKeys } from "../../hooks/use-home-feed";
 import { filterLanguageGenerationConnections } from "../../lib/connection-filters";
 import { api, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
@@ -431,7 +433,12 @@ function createWelcomeMessage(chatId: string | null): Message {
   };
 }
 
-function createLocalUserMessage(chatId: string, content: string, attachments: ProfessorMariAttachment[] = []): Message {
+function createLocalUserMessage(
+  chatId: string,
+  content: string,
+  attachments: ProfessorMariAttachment[] = [],
+  context: ProfessorMariAskContext | null = null,
+): Message {
   return {
     id: `__professor_mari_local_${Date.now()}`,
     chatId,
@@ -446,7 +453,41 @@ function createLocalUserMessage(chatId: string, content: string, attachments: Pr
       tokenCount: null,
       generationInfo: null,
       ...(attachments.length > 0 ? { attachments } : {}),
+      professorMariContext: context,
     },
+  };
+}
+
+function getProfessorMariMessageContext(message: Message): ProfessorMariAskContext | null | undefined {
+  const extra = toMessageExtra(message);
+  if (!extra || typeof extra !== "object" || !("professorMariContext" in extra)) return undefined;
+  return extra.professorMariContext ?? null;
+}
+
+function resolveContextCharacter(
+  context: ProfessorMariAskContext | null | undefined,
+  characters: ReadonlyMap<string, CharacterPreviewModel>,
+  fallbackName: string,
+): CharacterPreviewModel | null {
+  if (context?.resource?.kind !== "character") return null;
+  return (
+    characters.get(context.resource.id) ?? {
+      id: context.resource.id,
+      name: context.resource.label ?? fallbackName,
+      tags: [],
+      lorebookCount: 0,
+    }
+  );
+}
+
+function persistentCharacterContext(
+  context: ProfessorMariAskContext | null | undefined,
+): ProfessorMariAskContext | null {
+  if (context?.resource?.kind !== "character") return null;
+  return {
+    source: context.source,
+    capability: "explain",
+    resource: context.resource,
   };
 }
 
@@ -1646,6 +1687,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onRemoveAttachment,
   onOpenActionResult,
   onReviewActionResult,
+  characterSubject,
 }: {
   message: Message;
   thinking?: string | null;
@@ -1656,6 +1698,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onRemoveAttachment?: (messageId: string, attachmentIndex: number) => void;
   onOpenActionResult: (result: MariWorkspaceActionResult) => void;
   onReviewActionResult: (reviewId: string) => void;
+  characterSubject?: CharacterPreviewModel | null;
 }) {
   const { t: localizeUi } = useUiTranslation();
   const content = message.content ?? "";
@@ -1751,6 +1794,14 @@ const CompactMariMessage = memo(function CompactMariMessage({
   if (workspaceTrace) {
     return (
       <div className="group">
+        {characterSubject ? (
+          <CharacterSubject
+            character={characterSubject}
+            label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
+            compact
+            className="mb-2 w-fit max-w-full border-0 bg-[var(--primary)]/6"
+          />
+        ) : null}
         <WorkspaceTimelineList items={timelineItemsFromTrace(workspaceTrace, message)} active={false} openReasoning />
         {actionResults.map((result) => (
           <MariWorkspaceActionResultRow
@@ -1793,6 +1844,14 @@ const CompactMariMessage = memo(function CompactMariMessage({
   return (
     <>
       <TranscriptRow className="group" marker={<MariAvatar />}>
+        {characterSubject ? (
+          <CharacterSubject
+            character={characterSubject}
+            label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
+            compact
+            className="mb-2 w-fit max-w-full border-0 bg-[var(--primary)]/6"
+          />
+        ) : null}
         <CompactMarkdown content={content} />
         {actionResults.map((result) => (
           <MariWorkspaceActionResultRow
@@ -3384,12 +3443,22 @@ export function HomeProfessorMariChat({
     ],
     [completionCharacters.data, completionLorebooks.data, completionPersonas.data, completionPresets.data],
   );
+  const characterPreviewById = useMemo(() => {
+    const previews = new Map<string, CharacterPreviewModel>();
+    for (const item of completionCharacters.data ?? []) {
+      const preview = buildCharacterPreviewModel(item);
+      if (preview) previews.set(preview.id, preview);
+    }
+    return previews;
+  }, [completionCharacters.data]);
   const draftSuffix = useMemo(() => completeInline(draft, completionCandidates), [completionCandidates, draft]);
   const acceptDraftCompletion = useCallback(() => {
     if (draftSuffix) setDraft((current) => current + draftSuffix);
   }, [draftSuffix, setDraft]);
   const [attachments, setAttachments] = useState<ProfessorMariAttachment[]>([]);
   const [handoffContext, setHandoffContext] = useState<ProfessorMariAskContext | null>(null);
+  const characterFallbackName = t("omnibar.categories.character", "Character");
+  const focusedCharacter = resolveContextCharacter(handoffContext, characterPreviewById, characterFallbackName);
   const [isReadingAttachments, setIsReadingAttachments] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(() => readStoredConnectionId());
   const [workspaceStatus, setWorkspaceStatus] = useState<MariWorkspaceStatus | null>(null);
@@ -3693,7 +3762,10 @@ export function HomeProfessorMariChat({
   }, [controlledChatWindowOpen, floatingMode]);
 
   const loadMessages = useCallback(
-    async (id: string, options: { clearSuggestions?: boolean; shouldApply?: () => boolean } = {}) => {
+    async (
+      id: string,
+      options: { clearSuggestions?: boolean; restoreFocus?: boolean; shouldApply?: () => boolean } = {},
+    ) => {
       messageLoadAbortRef.current?.abort();
       const controller = new AbortController();
       messageLoadAbortRef.current = controller;
@@ -3709,7 +3781,16 @@ export function HomeProfessorMariChat({
         ) {
           return;
         }
-        setMessages(items.map((message) => ({ ...message, extra: toMessageExtra(message) })));
+        const normalizedMessages = items.map((message) => ({ ...message, extra: toMessageExtra(message) }));
+        setMessages(normalizedMessages);
+        let restoredContext: ProfessorMariAskContext | null = null;
+        for (let index = normalizedMessages.length - 1; index >= 0; index -= 1) {
+          const messageContext = getProfessorMariMessageContext(normalizedMessages[index]!);
+          if (messageContext === undefined) continue;
+          restoredContext = messageContext;
+          break;
+        }
+        if (options.restoreFocus !== false) setHandoffContext(persistentCharacterContext(restoredContext));
         setLoadedMessagesChatId(id);
         if (options.clearSuggestions) clearMariChips();
       } catch (error) {
@@ -3916,7 +3997,7 @@ export function HomeProfessorMariChat({
           setSelectedConnectionId(restoredConnectionId);
           rememberConnectionId(restoredConnectionId);
         }
-        return loadMessages(chat.id);
+        return loadMessages(chat.id, { restoreFocus: !initialAskContext });
       })
       .catch((error) => {
         console.error("[Professor Mari] Failed to load home assistant", error);
@@ -3926,7 +4007,15 @@ export function HomeProfessorMariChat({
         });
       })
       .finally(() => setLoadingHistory(false));
-  }, [connectionOptions, connectionsLoading, ensureProfessorMariChat, loadMessages, selectedConnectionId, localizeUi]);
+  }, [
+    connectionOptions,
+    connectionsLoading,
+    ensureProfessorMariChat,
+    initialAskContext,
+    loadMessages,
+    selectedConnectionId,
+    localizeUi,
+  ]);
 
   useEffect(() => {
     if (!pageActive) return;
@@ -4981,6 +5070,7 @@ export function HomeProfessorMariChat({
       text: string,
       attachments: ProfessorMariAttachment[] = [],
       existingUserMessageId?: string,
+      context: ProfessorMariAskContext | null = handoffContext,
     ) => {
       const runId = ++workspaceRunIdRef.current;
       const controller = new AbortController();
@@ -5005,7 +5095,7 @@ export function HomeProfessorMariChat({
             connectionId: effectiveConnectionId,
             debugMode: useUIStore.getState().debugMode,
             attachments,
-            context: handoffContext ?? undefined,
+            context: context ?? undefined,
             existingUserMessageId,
           },
           controller.signal,
@@ -5246,6 +5336,7 @@ export function HomeProfessorMariChat({
           userMessage.content,
           getProfessorMariAttachments(userMessage),
           userMessage.id,
+          getProfessorMariMessageContext(userMessage) ?? null,
         );
         if (!received) throw new Error("Professor Mari did not return a regenerated response");
         void refreshAfterWorkspaceRun(chatId, runId);
@@ -5333,8 +5424,11 @@ export function HomeProfessorMariChat({
       setMariChips(chat.id, []);
       clearMariPlan();
       setAttachments([]);
-      setHandoffContext(null);
-      setMessages((current) => [...current, createLocalUserMessage(chat.id, messageText, submittedAttachments)]);
+      setHandoffContext(persistentCharacterContext(submittedContext));
+      setMessages((current) => [
+        ...current,
+        createLocalUserMessage(chat.id, messageText, submittedAttachments, submittedContext),
+      ]);
       if (messages.length === 0 && (chat.name ?? "") === PROFESSOR_MARI_DEFAULT_CHAT_NAME) {
         const autoTitle = buildProfessorMariAutoTitle(messageText);
         if (autoTitle) {
@@ -5346,7 +5440,13 @@ export function HomeProfessorMariChat({
         }
       }
       trackAchievement.mutate("prof_mari_message_sent");
-      const { received, runId } = await sendWorkspaceMessage(chat, messageText, submittedAttachments);
+      const { received, runId } = await sendWorkspaceMessage(
+        chat,
+        messageText,
+        submittedAttachments,
+        undefined,
+        submittedContext,
+      );
       setRecovery(null);
       void refreshAfterWorkspaceRun(chat.id, runId);
       if (!received) {
@@ -5487,6 +5587,10 @@ export function HomeProfessorMariChat({
 
   const renderDisplayMessage = (message: Message) => {
     const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;
+    const messageCharacter =
+      message.role === "assistant"
+        ? resolveContextCharacter(getProfessorMariMessageContext(message), characterPreviewById, characterFallbackName)
+        : null;
     return (
       <CompactMariMessage
         key={message.id}
@@ -5499,6 +5603,7 @@ export function HomeProfessorMariChat({
         onRemoveAttachment={canManageMessage && !isBusy ? handleRemoveAttachment : undefined}
         onOpenActionResult={openActionResult}
         onReviewActionResult={reviewActionResult}
+        characterSubject={messageCharacter}
       />
     );
   };
@@ -5534,6 +5639,14 @@ export function HomeProfessorMariChat({
         ) : (
           <>
             {displayMessages.map(renderDisplayMessage)}
+            {workspaceTimelineActive && focusedCharacter ? (
+              <CharacterSubject
+                character={focusedCharacter}
+                label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
+                compact
+                className="w-fit max-w-full border-0 bg-[var(--primary)]/6"
+              />
+            ) : null}
             {workspaceTimeline.length === 0 && workspaceTimelineActive && !showDottoreSupport && (
               <WorkspaceStatusEvent content={workspaceActivity ?? "Thinking..."} />
             )}
@@ -6263,6 +6376,7 @@ export function HomeProfessorMariChat({
                             </button>
                             <ProfessorMariContextControl
                               context={handoffContext}
+                              character={focusedCharacter}
                               attachedContextCount={attachedContext?.length ?? 0}
                               onOpen={() => {
                                 setConnectionMenuOpen(false);
@@ -6327,6 +6441,14 @@ export function HomeProfessorMariChat({
                           ) : (
                             <>
                               {displayMessages.map(renderDisplayMessage)}
+                              {workspaceTimelineActive && focusedCharacter ? (
+                                <CharacterSubject
+                                  character={focusedCharacter}
+                                  label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
+                                  compact
+                                  className="w-fit max-w-full border-0 bg-[var(--primary)]/6"
+                                />
+                              ) : null}
                               {workspaceTimeline.length === 0 && workspaceTimelineActive && !showDottoreSupport && (
                                 <WorkspaceStatusEvent content={workspaceActivity ?? "Thinking..."} />
                               )}
