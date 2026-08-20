@@ -198,6 +198,57 @@ function parseExtraRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
+export type MessageSearchHit = { chatId: string; chatName: string; messageNumber: number; content: string };
+
+/**
+ * The matching half of {@link ChatsStorage.searchMessagesAcrossChats}, kept pure
+ * so it can be checked without a store. `messageNumber` is the 1-based position
+ * the goto-message jump takes, so it counts every message of the chat — hidden
+ * and system rows included — while only visible rows can be returned.
+ * `chats` is already filtered to the visible ones, so hidden chats can never
+ * crowd the cap.
+ */
+export function collectMessageSearchHits(
+  query: string,
+  limit: number,
+  chats: readonly { id: string; name: string }[],
+  orderedMessages: readonly { chatId: string; role: string; content: string; extra: unknown; createdAt: string }[],
+): MessageSearchHit[] {
+  const term = query.trim();
+  if (term.length < 2) return [];
+  // Matched here rather than with like(), whose % and _ are wildcards: a typed
+  // "100%" or "___" must stay a literal. A regex keeps the match
+  // case-insensitive without copying every message body to lower case.
+  const needle = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const chatById = new Map(chats.map((chat) => [chat.id, chat]));
+  const positionByChat = new Map<string, number>();
+  const hits: (MessageSearchHit & { createdAt: string })[] = [];
+  for (const message of orderedMessages) {
+    const messageNumber = (positionByChat.get(message.chatId) ?? 0) + 1;
+    positionByChat.set(message.chatId, messageNumber);
+    const chat = chatById.get(message.chatId);
+    if (!chat || message.role === "system") continue;
+    const extra = parseExtraRecord(message.extra);
+    if (extra.hiddenFromUser === true || extra.commandOnly === true) continue;
+    const matchIndex = message.content.search(needle);
+    if (matchIndex < 0) continue;
+    // Window the body around the match: a snippet cut from character 0 can miss
+    // the term entirely in a long message.
+    const windowStart = Math.max(0, matchIndex - 80);
+    hits.push({
+      chatId: chat.id,
+      chatName: chat.name,
+      messageNumber,
+      content: `${windowStart > 0 ? "…" : ""}${message.content.slice(windowStart, windowStart + 600)}`,
+      createdAt: message.createdAt,
+    });
+  }
+  return hits
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, Math.max(1, Math.floor(limit)))
+    .map(({ createdAt: _createdAt, ...hit }) => hit);
+}
+
 function freshSwipeMessageExtra(value: unknown): Record<string, unknown> {
   const current = parseExtraRecord(value);
   const next: Record<string, unknown> = {
@@ -1026,6 +1077,28 @@ export function createChatsStorage(db: DB) {
         .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(Math.max(1, Math.floor(limit)));
       return rows.reverse();
+    },
+
+    /**
+     * Message search across every chat, for the omnibar's "search all chats".
+     *
+     * ponytail: one in-memory pass per query. Add an index if a large library
+     * makes typing lag.
+     */
+    async searchMessagesAcrossChats(
+      query: string,
+      limit: number,
+      isChatVisible?: (chat: { id: string; metadata: unknown }) => boolean,
+    ) {
+      if (query.trim().length < 2) return [];
+      const chatRows = await db.select().from(chats);
+      const ordered = await db.select().from(messages).orderBy(messages.createdAt, messages.id);
+      return collectMessageSearchHits(
+        query,
+        limit,
+        chatRows.filter((chat) => !isChatVisible || isChatVisible(chat)),
+        ordered,
+      );
     },
 
     async getMessage(id: string) {

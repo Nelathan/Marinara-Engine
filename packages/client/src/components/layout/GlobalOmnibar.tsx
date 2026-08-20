@@ -40,6 +40,7 @@ import {
   useChatMessageCount,
   useChatMessagePeek,
   useChatMessageSearchSource,
+  useGlobalMessageSearch,
   useProfessorMariChats,
   useCreateChat,
   useUpdateChat,
@@ -103,6 +104,7 @@ import {
   buildOmnibarControlResults,
   buildOmnibarExtractionResult,
   buildOmnibarGameResult,
+  buildOmnibarGlobalMessageResults,
   buildOmnibarIdleResults,
   buildOmnibarMariChatResults,
   buildOmnibarMessageResults,
@@ -114,6 +116,7 @@ import {
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
 } from "../../lib/omnibar-results";
+import { matchesOmnibarScope, parseOmnibarScope } from "../../lib/omnibar-scope";
 import {
   buildOmnibarAgentRows,
   buildOmnibarCharacterRows,
@@ -365,7 +368,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setQuery = (value: string) => setSessionValue("query", value);
   // Keep typing responsive: the heavy search/rank/present pipeline reruns against
   // the deferred query so keystrokes paint immediately on large libraries.
-  const deferredQuery = useDeferredValue(query);
+  const rawDeferredQuery = useDeferredValue(query);
+  // "faq: import", "msg: dragon" — a typed prefix narrows the result list to one
+  // kind. Everything downstream sees only the part after the prefix, so ranking
+  // and matching never see the scope word as a search term.
+  const { scope: queryScope, query: deferredQuery } = useMemo(
+    () => parseOmnibarScope(rawDeferredQuery),
+    [rawDeferredQuery],
+  );
   const setFilter = (value: CommandCenterCategoryFilter) => setSessionValue("filter", value);
   const setPane = (value: OmnibarPane) => setSessionValue("pane", value);
   const setActiveResultId = (value: string | null) => setSessionValue("activeResultId", value);
@@ -983,6 +993,23 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => buildOmnibarMessageResults({ activeChatId, messageSearchIndex, messageSearchQuery, t }),
     [activeChatId, messageSearchIndex, messageSearchQuery, t],
   );
+  // The other chats' transcripts are not on the client, so searching them is a
+  // server read. Only asked for once the query is long enough to be selective.
+  const globalMessageScoped = !queryScope || queryScope === "messages";
+  const globalMessageSearch = useGlobalMessageSearch(
+    messageSearchQuery,
+    messageSearchQuery.length >= MIN_MESSAGE_SEARCH_LENGTH && globalMessageScoped,
+  );
+  const globalMessageResults = useMemo<OmnibarResult[]>(
+    () =>
+      buildOmnibarGlobalMessageResults({
+        activeChatId,
+        hits: globalMessageSearch.data ?? [],
+        messageSearchQuery,
+        t,
+      }),
+    [activeChatId, globalMessageSearch.data, messageSearchQuery, t],
+  );
   // The chat input already owns a slash-command registry; the omnibar reuses it
   // so "what can I do in this chat" is answerable from one place. Choosing a row
   // types the command into the chat input instead of running it, so args and
@@ -1144,31 +1171,38 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   );
   const rawResults = useMemo(
     () =>
-      deferredQuery.trim()
-        ? [
-            ...slashResults,
-            ...verbSuggestions,
-            ...addSuggestions,
-            ...removalSuggestions,
-            ...(gameResult ? [gameResult] : []),
-            ...(proposalResult ? [proposalResult] : []),
-            ...(extractionResult ? [extractionResult] : []),
-            ...messageResults,
-            ...mariChatResults,
-            // An explicit "Add X to this chat" row replaces the plain entity row
-            // for the same thing: showing both lists every character twice, and
-            // the plain one reads like "open" while doing the same attach.
-            ...(addedResultIds.size || removedResultIds.size
-              ? searchResults.filter((result) => !addedResultIds.has(result.id) && !removedResultIds.has(result.id))
-              : searchResults),
-          ]
-        : [
-            ...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS),
-            ...slashResults,
-            ...(continueResult ? [continueResult] : []),
-            ...idleResults,
-          ],
+      // A scope with nothing typed after it ("char:") is a request to browse that
+      // kind, so the whole local list answers it instead of the idle suggestions.
+      queryScope && !deferredQuery.trim()
+        ? allLocalResults.filter((result) => matchesOmnibarScope(result, queryScope))
+        : deferredQuery.trim()
+          ? [
+              ...slashResults,
+              ...verbSuggestions,
+              ...addSuggestions,
+              ...removalSuggestions,
+              ...(gameResult ? [gameResult] : []),
+              ...(proposalResult ? [proposalResult] : []),
+              ...(extractionResult ? [extractionResult] : []),
+              ...messageResults,
+              ...globalMessageResults,
+              ...mariChatResults,
+              // An explicit "Add X to this chat" row replaces the plain entity row
+              // for the same thing: showing both lists every character twice, and
+              // the plain one reads like "open" while doing the same attach.
+              ...(addedResultIds.size || removedResultIds.size
+                ? searchResults.filter((result) => !addedResultIds.has(result.id) && !removedResultIds.has(result.id))
+                : searchResults),
+            ]
+          : [
+              ...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS),
+              ...slashResults,
+              ...(continueResult ? [continueResult] : []),
+              ...idleResults,
+            ],
     [
+      allLocalResults,
+      queryScope,
       addSuggestions,
       addedResultIds,
       removedResultIds,
@@ -1177,6 +1211,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       deferredQuery,
       extractionResult,
       gameResult,
+      globalMessageResults,
       idleResults,
       mariChatResults,
       messageResults,
@@ -1187,9 +1222,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       verbSuggestions,
     ],
   );
+  const scopedRawResults = useMemo(
+    () => (queryScope ? rawResults.filter((result) => matchesOmnibarScope(result, queryScope)) : rawResults),
+    [queryScope, rawResults],
+  );
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map<string, OmnibarResult>();
-    for (const result of rawResults) {
+    for (const result of scopedRawResults) {
       if (!sourceById.has(result.id)) sourceById.set(result.id, result);
     }
     const uniqueRawResults = [...sourceById.values()];
@@ -1221,7 +1260,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })),
       searchRanking,
     ).map(({ result }) => ({ ...sourceById.get(result.command.id)!, command: result.command }));
-  }, [deferredQuery, ranking, rawResults]);
+  }, [deferredQuery, ranking, scopedRawResults]);
   const presentation = useMemo(
     () =>
       presentCommandCenterResults(rankedResults, {
@@ -1277,10 +1316,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const activeIndex = results.findIndex((result) => result.id === activeResultId);
   const activeResult = activeIndex >= 0 ? results[activeIndex] : undefined;
   const loading =
-    [chats, characters, personas, lorebooks, presets, connections, agents].some((item) => item.isLoading) ||
-    docs.isSearching;
+    [chats, characters, personas, lorebooks, presets, connections, agents]
+      .concat(globalMessageScoped ? [globalMessageSearch] : [])
+      .some((item) => item.isLoading) || docs.isSearching;
   const failed =
-    [chats, characters, personas, lorebooks, presets, connections, agents].some((item) => item.isError) || docs.isError;
+    [chats, characters, personas, lorebooks, presets, connections, agents]
+      .concat(globalMessageScoped ? [globalMessageSearch] : [])
+      .some((item) => item.isError) || docs.isError;
   const browseFilter = BROWSE_FILTERS.includes(filter as BrowseFilter)
     ? (filter as BrowseFilter)
     : (BROWSE_FILTERS.find((item) => browseAvailability[item] > 0) ?? "characters");
@@ -1478,6 +1520,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         return;
       }
       case "goto-message":
+        // The request is keyed by chat id and survives the switch, so a hit in
+        // another chat opens that chat and the jump is picked up on arrival.
+        if (action.chatId !== activeChatId && !navigate({ kind: "chat", chatId: action.chatId })) return;
         useChatStore.getState().requestGotoMessage(action.chatId, action.messageNumber);
         onClose();
         return;
@@ -1614,8 +1659,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     else if (result.control?.type === "choice") showResultDetail(result);
     else choose(result);
   };
+  // Keyboard navigation scrolls the list under a resting cursor, and the browser
+  // then fires a mousemove for the row that slid beneath it — which would drag the
+  // selection back. Only a move to genuinely new screen coordinates counts as hover.
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const handleResultMouseMove = (result: RankedOmnibarResult, event: MouseEvent<HTMLLIElement>) => {
-    if (event.movementX === 0 && event.movementY === 0) return;
+    const previous = pointerRef.current;
+    pointerRef.current = { x: event.clientX, y: event.clientY };
+    if (previous && previous.x === event.clientX && previous.y === event.clientY) return;
     setActiveResultId(result.id);
   };
   const handleEscape = () => {
@@ -1716,7 +1767,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const focusedRowButton = focusedRow?.querySelector<HTMLElement>(":scope > button");
     if (focusedRow && event.target === focusedRowButton && pane === "results") {
       const rowId = focusedRow.dataset.resultId;
-      const rowIndex = results.findIndex((result) => result.id === rowId);
+      // Hover moves the highlight without moving DOM focus, so arrows continue
+      // from what is highlighted — otherwise they jump back to the focused row.
+      const rowIndex = activeIndex >= 0 ? activeIndex : results.findIndex((result) => result.id === rowId);
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
         event.preventDefault();
         const nextIndex =
@@ -2451,7 +2504,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     onKeyDown={onInputKeyDown}
                     placeholder={t(
                       "commandCenter.placeholder",
-                      "Search Marinara commands, chats, resources, and guides",
+                      "Search everything — or narrow with faq:, docs:, msg:, char:",
                     )}
                     className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)] [&::-webkit-search-cancel-button]:hidden"
                   />

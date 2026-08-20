@@ -1,0 +1,56 @@
+import type { OmnibarResult } from "./omnibar-search";
+
+/**
+ * Typed prefixes that narrow the omnibar to one kind of thing: "faq: import",
+ * "msg: dragon". The colon is required, so an ordinary search for the word
+ * "chat" still searches everything.
+ */
+export type OmnibarScopeId =
+  | "faq"
+  | "docs"
+  | "messages"
+  | "chat"
+  | "character"
+  | "persona"
+  | "lorebook"
+  | "preset"
+  | "connection"
+  | "agent"
+  | "settings";
+
+const SCOPE_ALIASES: Readonly<Record<OmnibarScopeId, readonly string[]>> = {
+  faq: ["faq", "help"],
+  docs: ["docs", "doc", "documentation"],
+  messages: ["msg", "message", "messages", "transcript"],
+  chat: ["chat", "chats"],
+  character: ["char", "character", "characters"],
+  persona: ["persona", "personas"],
+  lorebook: ["lore", "lorebook", "lorebooks"],
+  preset: ["preset", "presets"],
+  connection: ["conn", "connection", "connections"],
+  agent: ["agent", "agents"],
+  settings: ["set", "setting", "settings"],
+};
+
+const SCOPE_BY_ALIAS = new Map<string, OmnibarScopeId>(
+  Object.entries(SCOPE_ALIASES).flatMap(([scope, aliases]) =>
+    aliases.map((alias) => [alias, scope as OmnibarScopeId] as const),
+  ),
+);
+
+export type OmnibarScopedQuery = { scope: OmnibarScopeId | null; query: string };
+
+/** Splits "faq: import" into its scope and the rest. Unknown prefixes stay part of the query. */
+export function parseOmnibarScope(rawQuery: string): OmnibarScopedQuery {
+  const match = rawQuery.match(/^\s*([a-z]+)\s*:\s*/i);
+  const scope = match ? (SCOPE_BY_ALIAS.get(match[1]!.toLowerCase()) ?? null) : null;
+  return scope ? { scope, query: rawQuery.slice(match![0].length) } : { scope: null, query: rawQuery };
+}
+
+export function matchesOmnibarScope(result: Pick<OmnibarResult, "id" | "category" | "group">, scope: OmnibarScopeId) {
+  if (scope === "faq") return result.id.startsWith("faq:");
+  if (scope === "docs") return result.category === "docs" && !result.id.startsWith("faq:");
+  if (scope === "messages") return result.group === "messages";
+  if (scope === "chat") return result.category === "chat" && result.group !== "messages";
+  return result.category === scope;
+}

@@ -305,6 +305,15 @@ export function getOmnibarActiveChatContextResultIds(
   return ids;
 }
 
+/** Resource kinds whose icon is not the generic package. */
+const RESOURCE_ICONS: Partial<Record<string, CommandIcon>> = {
+  character: "character",
+  persona: "persona",
+  lorebook: "lorebook",
+  preset: "preset",
+  agent: "agent",
+};
+
 /** A query no normalised title can equal, so a bare verb matches nothing by text. */
 const NO_MATCH = "\u0000";
 
@@ -445,18 +454,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
             description: resource.description,
             preview: resource.preview,
             kind: "resource",
-            icon:
-              resource.kind === "character"
-                ? "character"
-                : resource.kind === "persona"
-                  ? "persona"
-                  : resource.kind === "lorebook"
-                    ? "lorebook"
-                    : resource.kind === "preset"
-                      ? "preset"
-                      : resource.kind === "agent"
-                        ? "agent"
-                        : "package",
+            icon: RESOURCE_ICONS[resource.kind] ?? "package",
           },
           intent,
           data,

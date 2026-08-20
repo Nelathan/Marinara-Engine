@@ -8,6 +8,7 @@
  */
 import { normalizeTextForMatch, type Chat, type Lorebook, type Persona } from "@marinara-engine/shared";
 import type { AgentConfigRow } from "../hooks/use-agents";
+import type { GlobalMessageSearchHit } from "../hooks/use-chats";
 import type { HomeFaqItem } from "../components/chat/HomeFaq";
 import { readNamedRow } from "./omnibar-row-readers";
 import { parseChatMetadata } from "./chat-display";
@@ -55,6 +56,7 @@ const EXTRACTION_LABELS = {
 /** Below this a message search matches most of the transcript. */
 export const MIN_MESSAGE_SEARCH_LENGTH = 3;
 const MAX_MESSAGE_SEARCH_RESULTS = 6;
+const MAX_GLOBAL_MESSAGE_SEARCH_RESULTS = 6;
 /**
  * The context group answers "what am I on?", not "what is in this chat?" — past
  * this many rows it buries recents and create actions. Applied by the idle list
@@ -174,6 +176,13 @@ export type OmnibarMariChatResultsInput = {
 export type OmnibarMessageResultsInput = {
   activeChatId: string | null | undefined;
   messageSearchIndex: readonly { message: { content: string }; haystack: string | null }[];
+  messageSearchQuery: string;
+  t: OmnibarTranslate;
+};
+
+export type OmnibarGlobalMessageResultsInput = {
+  activeChatId: string | null;
+  hits: readonly GlobalMessageSearchHit[];
   messageSearchQuery: string;
   t: OmnibarTranslate;
 };
@@ -679,6 +688,37 @@ export function buildOmnibarMessageResults({
     });
   });
   return out;
+}
+
+/**
+ * The same rows as {@link buildOmnibarMessageResults}, but for every other chat.
+ * Ids match the active-chat shape on purpose: when both lists cover the same
+ * message the omnibar's id de-duplication keeps one row.
+ */
+export function buildOmnibarGlobalMessageResults({
+  activeChatId,
+  hits,
+  messageSearchQuery,
+  t,
+}: OmnibarGlobalMessageResultsInput): OmnibarResult[] {
+  if (messageSearchQuery.trim().length < MIN_MESSAGE_SEARCH_LENGTH) return [];
+  return hits
+    .filter((hit) => hit.chatId !== activeChatId)
+    .slice(0, MAX_GLOBAL_MESSAGE_SEARCH_RESULTS)
+    .map((hit, index) => ({
+      id: `message:${hit.chatId}:${hit.messageNumber}`,
+      action: { kind: "goto-message" as const, chatId: hit.chatId, messageNumber: hit.messageNumber },
+      title: getMessageSearchSnippet(hit.content, messageSearchQuery),
+      description: t("commandCenter.messages.inChat", "{{chat}} · message {{number}}", {
+        chat: hit.chatName,
+        number: hit.messageNumber,
+      }),
+      category: "chat" as const,
+      group: "messages" as const,
+      score: 280 - index,
+      kind: "action" as const,
+      icon: "chats" as const,
+    }));
 }
 
 export function buildOmnibarSlashResults({

@@ -333,6 +333,28 @@ export function useChatMessageSearchSource(chatId: string | null, enabled: boole
   });
 }
 
+export type GlobalMessageSearchHit = {
+  chatId: string;
+  chatName: string;
+  messageNumber: number;
+  content: string;
+};
+
+/**
+ * Message search across every chat. Runs on the server because the client only
+ * ever holds the open chat's transcript.
+ */
+export function useGlobalMessageSearch(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["chat-message-search-all", query],
+    queryFn: ({ signal }) =>
+      api.get<GlobalMessageSearchHit[]>(`/chats/search/messages?q=${encodeURIComponent(query)}`, { signal }),
+    enabled: enabled && query.trim().length > 0,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+  });
+}
+
 /**
  * Professor Mari's own conversations. They are ordinary chats behind an internal
  * marker, so they are absent from the normal chat list and need their own read.

@@ -1744,6 +1744,16 @@ export async function chatsRoutes(app: FastifyInstance) {
     },
   );
 
+  // Message search across every chat, for the omnibar. Static path, so it is
+  // matched ahead of the "/:id/messages" parameter route.
+  app.get<{ Querystring: { q?: string; limit?: string } }>("/search/messages", async (req) => {
+    const query = (req.query.q ?? "").slice(0, 200);
+    const requested = req.query.limit ? parseInt(req.query.limit, 10) : 20;
+    const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 50) : 20;
+    // Mari's own chats are excluded inside the search, before the cap.
+    return storage.searchMessagesAcrossChats(query, limit, (chat) => !shouldHideProfessorMariChat(chat));
+  });
+
   // Total message count for a chat (lightweight, for absolute numbering)
   app.get<{ Params: { id: string } }>("/:id/message-count", async (req) => {
     return { count: await storage.countMessages(req.params.id) };
