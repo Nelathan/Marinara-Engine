@@ -6,6 +6,9 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
+- Professor Mari is now a state of the omnibar rather than a separate destination: Home, the FAQ, and error hand-offs open the same workspace, Chat, Chats, Skills, Memories, and Context are labelled single-column destinations that keep search, selection, scroll, drafts, and the composer intact, and her pixel art reacts to what she is actually doing (with static poses under reduced motion).
+- Quick assistance in the omnibar answers bounded questions and proposes single-field edits with exactly one model call, labelled `Quick · 1 model call` before it runs, with an optional cheaper connection that visibly falls back to Mari's usual connection. Proposed edits expire, are rejected when the field changed underneath them, and are applied through the existing reversible Keep/Restore review without a second model call.
+- Professor Mari's custom skills are now injected as a name-and-summary index instead of in full on every turn, so a long skill no longer costs its whole body each request; short skills stay inline and Mari fetches a full skill only when it is relevant.
 - Character previews in the omnibar now foreground the character's opening message, show compact tag and relationship summaries, and prioritize contextual chat actions; Professor Mari also keeps a focused character visible in Context and labels replies that discuss them.
 - Lorebook previews in the omnibar now lead with scope, contents, and current-chat state instead of generation limits, with reusable lorebook context markers in Professor Mari.
 - Custom pre-generation agents can now opt in to choose the active characters for the current Conversation or Roleplay reply, keeping unused character cards out of that turn's prompt (#5310).
