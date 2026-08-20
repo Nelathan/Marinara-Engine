@@ -1,0 +1,1004 @@
+/* Beholder paper-doll styles.
+ *
+ * Extracted from the reference extractor's stylesheet (GetBeholder/Beholder-ME,
+ * AGPL-3.0-only) so the panel renders the way it was designed rather than being
+ * re-styled from scratch. Selectors are unchanged and match the markup that
+ * paperdoll.ts emits; only rules the doll does not use were left behind.
+ */
+
+/* The doll's own design tokens, carried over so it renders as designed rather than
+ * inheriting the host's spacing and palette. They are scoped to .beholder-panel, so
+ * nothing outside the panel is affected. */
+.beholder-panel {
+    position: fixed;
+    z-index: 9000;
+    width: min(420px, calc(100vw - 40px));
+    max-height: 86vh;
+    min-width: 240px;
+    min-height: 180px;
+    /* Fixed-width panel (no resize). Container queries below auto-switch
+       to the single-column list layout when the panel is narrow. */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--SmartThemeBlurTintColor, rgba(20, 20, 24, 0.92));
+    color: var(--SmartThemeBodyColor, #e0e0e0);
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+    border-radius: 12px;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 12px 40px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    user-select: none;
+
+    /* ────── DESIGN TOKENS ──────────────────────────────────────────────
+       Every panel-scoped value should reference one of these. Adding a
+       new font-size or padding without a token is a design-system bug. */
+
+    /* Master scale knob. Bumps the whole panel proportionally. Slot cards
+       cancel this out (font-size: 1em / --bh-ui-scale) to keep their
+       content density stable while the surrounding chrome breathes. */
+    --bh-ui-scale: 1.1;
+    font-size: calc(0.875em * var(--bh-ui-scale));
+
+    /* Type ramp (em, relative to panel base). Five steps, named by role —
+       NOT by size. Use the role, not the number, when picking. */
+    --bh-text-meta:      0.78em;   /* slot caps, POV hint, tab pulse */
+    --bh-text-secondary: 0.875em;  /* species, gauge label, drawer hint */
+    --bh-text-body:      1em;      /* chips, tabs, drawer buttons */
+    --bh-text-large:     1.143em;  /* panel title, gauge value, drawer focus */
+    --bh-text-display:   1.357em;  /* char name */
+
+    /* Font families. Scoped via `font-family: var(--bh-font-display)` etc.
+       so the host site's body font keeps governing default text — these
+       only apply where we explicitly opt in. */
+    --bh-font-display: "Cinzel", "Trajan Pro", "Georgia", serif;
+    --bh-font-data:    "JetBrains Mono", "SF Mono", "Menlo", "Consolas", monospace;
+
+    /* Spacing scale — multiples of 4. Em-based so it co-scales with the type. */
+    --bh-space-1: 0.286em;   /*  4px @ 14px base */
+    --bh-space-2: 0.571em;   /*  8px */
+    --bh-space-3: 0.857em;   /* 12px */
+    --bh-space-4: 1.143em;   /* 16px */
+    --bh-space-5: 1.714em;   /* 24px */
+
+    /* Color roles — neutrals layered over the host theme background. Used
+       for elevated/inset surfaces and divider strengths. */
+    --bh-surface-1: rgba(255, 255, 255, 0.025);  /* inset (drawer, gauge bg) */
+    --bh-surface-2: rgba(255, 255, 255, 0.05);   /* elevated (header, hover) */
+    --bh-surface-3: rgba(255, 255, 255, 0.085);  /* pressed / active control */
+    --bh-divider:   rgba(255, 255, 255, 0.08);   /* hairline dividers */
+    --bh-border:    rgba(255, 255, 255, 0.18);   /* control borders, focus */
+
+    /* Opacity roles — apply via opacity: var(...) for consistent muting. */
+    --bh-mute-strong: 0.45;  /* meta, POV hint */
+    --bh-mute-soft:   0.7;   /* secondary text */
+    --bh-mute-none:   1;     /* primary */
+}
+.beholder-panel {
+    --bh-tier-0: #6ad48b; /* pristine, lightly worn */
+    --bh-tier-1: #e3c969; /* frayed, soiled */
+    --bh-tier-2: #e9933b; /* damaged, cracked */
+    --bh-tier-3: #e26464; /* torn, bloodstained */
+    --bh-tier-4: #8c3030; /* tatters, ruined */
+    /* Brand gold accent. --bh-accent defaults to gold; a user accent
+       preference (or "match host theme" toggle) sets --bh-accent-pref
+       inline on the panel to override it. --bh-holding tracks the gold. */
+    --bh-gold: #ffeaa7;
+    --bh-gold-deep: #c9a55a;
+    --bh-holding: var(--bh-gold);
+    --bh-body: var(--SmartThemeBodyColor, #cfd2d6);
+    --bh-body-soft: color-mix(in srgb, var(--bh-body) 25%, transparent);
+    --bh-accent: var(--bh-accent-pref, var(--bh-gold-deep));
+    --bh-wound: #ff5252;
+}
+/* (Legacy data-mode rules removed — only one layout now. Mobile is
+   handled via @container query below.) */
+
+/* No tracked state renders a full-size default-human placeholder (same width +
+   chrome as a populated panel) so the extension shows at its real size on first
+   open, with all header tools visible. data-empty only mutes the placeholder
+   name + caption and drops its interactive view controls (it's visual-only
+   until real state arrives). */
+.beholder-panel[data-empty="true"] .bh-char-name {
+    opacity: 0.4;
+}
+.bh-layer-cell {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--bh-space-1) 0 calc(var(--bh-space-1) + 2px);
+    min-width: 0;
+}
+.bh-layer-cell input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.bh-layer-cell span {
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-meta);
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--bh-body);
+    opacity: var(--bh-mute-strong);
+    line-height: 1;
+    text-align: center;
+    transition: opacity 0.12s ease, color 0.12s ease, letter-spacing 0.12s ease;
+    position: relative;
+    padding: 1px 2px 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+}
+/* Disengaged: a thin overstrike line through the label — editorial "redacted"
+   cue, gentler than strikethrough. Drawn as a pseudo-element so it doesn't
+   shift typographic metrics. */
+.bh-layer-cell span::before {
+    content: "";
+    position: absolute;
+    left: 8%; right: 8%;
+    top: calc(50% - 1px);
+    height: 1px;
+    background: currentColor;
+    opacity: 0.35;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    transform-origin: center;
+}
+/* Engagement bar — the "instrument" cue. Sits beneath the label, drawn as
+   the cell's own pseudo so it tracks cell width, not text width. */
+.bh-layer-cell::after {
+    content: "";
+    position: absolute;
+    left: 18%; right: 18%;
+    bottom: 0;
+    height: 2px;
+    background: var(--bh-accent, #c9a55a);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+    opacity: 0;
+}
+.bh-layer-cell:hover span {
+    opacity: var(--bh-mute-none);
+    color: var(--bh-accent, #c9a55a);
+}
+.bh-layer-cell:hover span::before { opacity: 0; }
+.bh-layer-cell:hover::after {
+    transform: scaleX(0.55);
+    opacity: 0.55;
+}
+.bh-layer-cell input:checked + span {
+    opacity: var(--bh-mute-none);
+    color: var(--SmartThemeBodyColor, #e8eaee);
+    letter-spacing: 0.26em;        /* fractionally widens — "tuned in" */
+}
+.bh-layer-cell input:checked + span::before { opacity: 0; }
+.bh-layer-cell:has(input:checked)::after {
+    transform: scaleX(1);
+    opacity: 1;
+}
+.bh-layer-cell input:focus-visible + span {
+    outline: 1px dashed var(--bh-accent);
+    outline-offset: 3px;
+}
+.bh-layer-cell span { letter-spacing: 0.14em; font-size: 0.72em; }
+.bh-layer-cell input:checked + span { letter-spacing: 0.18em; }
+.bh-char-doll {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.bh-char-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bh-space-3);
+    padding: var(--bh-space-1) 0 var(--bh-space-2);
+    border-bottom: 1px solid var(--bh-divider);
+    margin-bottom: var(--bh-space-2);
+    position: relative;
+}
+/* Decorative inscription rule under the character name — codex page feel.
+   Sits over the head's bottom border, accenting the left edge. */
+.bh-char-head::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 32px;
+    height: 1px;
+    background: var(--SmartThemeEmColor, #ffeaa7);
+    opacity: 0.55;
+}
+.bh-char-name {
+    font-family: var(--bh-font-display);
+    font-weight: 600;
+    font-size: var(--bh-text-display);
+    color: var(--SmartThemeEmColor, #ffeaa7);
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+}
+/* (Stamina gauge removed — the stamina field is no longer tracked. Any
+   residual gauge element is hidden via the .bh-char-head .bh-gauge
+   display:none rule appended below.) */
+.bh-char-species {
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-secondary);
+    font-weight: 600;
+    color: var(--primary, var(--bh-body));
+    opacity: 1;
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+    padding: 1px var(--bh-space-2);
+    border: 1px solid color-mix(in srgb, var(--primary, var(--bh-divider)) 45%, transparent);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--primary, var(--bh-surface-1)) 12%, transparent);
+}
+/* v0.4 (2026-06-03): `bh-char-gender` rules removed along with the gender
+   field. The wings rules below are kept defensively in case a v0.5+ state
+   still emits a `wings` slot — they harmlessly do nothing when paperdoll.js
+   never renders the element. */
+.bh-char-species::before {
+    content: "·";
+    margin-right: 4px;
+    opacity: 0.5;
+}
+/* The 3-col grid: left labels | silhouette | right labels */
+.bh-doll-grid {
+    display: grid;
+    /* minmax(0, 1fr) — NOT bare 1fr. A bare `1fr` track has an implicit min of
+       min-content, so a wide chip (a long item name) forces the side column — and the
+       whole grid — past the panel's right edge. minmax(0,…) lets the track shrink and
+       the content wrap/clip instead of overflowing. */
+    grid-template-columns: minmax(0, 1fr) 140px minmax(0, 1fr);
+    gap: 6px;
+    align-items: start;
+}
+.bh-doll-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+}
+.bh-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.bh-col-empty { min-height: 1px; }
+/* ─── Mobile / narrow context = section digest (auto) ─────────────────────
+   Above 360px the panel is the paperdoll grid. Below, the digest takes
+   over: wounds → held → worn → state flags, sorted by IMPORTANCE rather
+   than by anatomy. The silhouette + slot cards aren't useful at narrow
+   widths once the spatial cue is gone — the digest reformats the same
+   data as a priority feed. Both are always rendered; CSS picks one. */
+.bh-digest { display: none; }
+.bh-doll-grid     { display: none; }
+.bh-doll-grid.bh-paired { display: none; }
+.bh-digest        { display: block; }
+/* Auto-narrow always shows the digest; hide the digest-side layout
+       switch (the panel has no doll grid to switch between at this width). */
+    .bh-layout-switch-row { display: none; }
+/* Per-slot CARD: one card per anatomical slot, contains chips for each
+   worn item / held item / wound that belongs to it. Replaces the
+   one-row-per-thing layout (which repeated the slot name on every card).
+   The card's left border = worst damage tier across all items in that slot. */
+.bh-slot-card {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 4px 6px 5px 9px;
+    position: relative;
+    line-height: 1.3;
+    /* In paired mode the card IS the grid item (the .bh-col wrapper is display:contents),
+       so it needs its own min-width:0 to shrink below its content and let the text wrap
+       instead of forcing the track — and the panel — wider. */
+    min-width: 0;
+    /* Cancel the panel's --bh-ui-scale so cards keep their original density
+       regardless of how much the surrounding UI is scaled up. */
+    font-size: calc(1em / var(--bh-ui-scale, 1));
+}
+/* Card no longer carries a tier border — damage tier reads off each chip's
+   own left bar (CSS ::before below) so the colored stripes match each
+   chip's actual height. Empty card still gets faint outline via main
+   .bh-slot-card border style above. */
+
+/* Wound-count marker in the slot card header (✚ or ✚N for >1). */
+.bh-slot-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+}
+/* (Slot-head wound mark removed — the wound chips inside the card already
+   say the same thing; the head-level glyph was duplicating info.) */
+/* Right-column = true mirror of left. Border anchors to the right edge
+   (toward the silhouette), and chip content reverses so dots/swatches/
+   glyphs cluster on the right side near the border, multi-slot tags
+   + wound marks float to the left. Text within each label still reads
+   left-to-right — only the element order flips. */
+.bh-col-right .bh-slot-card-head { flex-direction: row-reverse; }
+.bh-slot-card .bh-slot-name {
+    font-family: var(--bh-font-data);
+    font-size: 0.82em;          /* slot card scale already shrinks; bump back to readable */
+    font-weight: 500;
+    opacity: 0.65;
+    text-transform: lowercase;
+    letter-spacing: 0.06em;
+    font-style: normal;
+}
+/* Right-column cards mirror the border. */
+.bh-col-right .bh-slot-card { text-align: right; padding-left: 6px; padding-right: 9px; }
+.bh-col-right .bh-slot-card::before { inset: 0 0 0 auto; border-radius: 0 6px 6px 0; }
+/* Empty / ghost slot card: faint one-liner, no chips. Lets users see what
+   slots ARE available without dominating the visual. */
+.bh-slot-card.bh-slot-empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.05);
+    opacity: 0.35;
+    padding: 2px 6px 2px 9px;
+}
+.bh-slot-card.bh-slot-empty::before {
+    background: rgba(255, 255, 255, 0.06);
+}
+.bh-slot-card.bh-slot-empty:hover { opacity: 0.7; }
+/* Bare slot card (v0.3 — narration explicitly confirmed uncovered).
+   Skin-tone left bar + italic "bare" tag in the same slot as missing's tag.
+   Visually distinct from .bh-slot-empty (which means "unknown / nothing said").
+   Mutually exclusive with worn/items per schema, so no chips. */
+.bh-slot-card.bh-slot-bare {
+    background: rgba(220, 188, 156, 0.04);
+    border-style: solid;
+    border-color: rgba(220, 188, 156, 0.18);
+    opacity: 0.85;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px 4px 9px;
+}
+.bh-slot-card.bh-slot-bare::before {
+    background: linear-gradient(180deg, rgba(220, 188, 156, 0.5), rgba(220, 188, 156, 0.25));
+}
+.bh-slot-bare-tag {
+    color: rgba(220, 188, 156, 0.95);
+    font-family: var(--bh-font-data);
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-style: normal;
+    font-weight: 600;
+}
+.bh-slot-card.bh-slot-bare:hover {
+    opacity: 1;
+    border-color: rgba(220, 188, 156, 0.45);
+}
+/* Right-column layered chips mirror: index ends up on the right side (toward
+   the body), connector tick still runs vertically through the index gutter. */
+.bh-col-right .bh-chip-layered { flex-direction: row-reverse; }
+/* Missing / lost slot card: vertical gray slits, strikethrough on the slot
+   name, "missing" tag. Distinct from empty and off-body. */
+.bh-slot-card.bh-slot-missing {
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(140, 140, 140, 0.07) 0px, rgba(140, 140, 140, 0.07) 1px,
+        transparent 1px, transparent 6px
+    );
+    border-style: dashed;
+    border-color: rgba(140, 140, 140, 0.3);
+    opacity: 0.65;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px 4px 9px;
+}
+.bh-slot-card.bh-slot-missing::before { background: rgba(140, 140, 140, 0.45); }
+.bh-slot-card.bh-slot-missing .bh-slot-name {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+.bh-slot-missing-tag {
+    color: rgba(160, 160, 160, 0.95);
+    font-family: var(--bh-font-data);
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-style: normal;
+    font-weight: 600;
+}
+.bh-slot-card.bh-slot-missing:hover {
+    opacity: 0.85;
+    border-color: rgba(160, 160, 160, 0.5);
+}
+/* Chips inside a slot card: one per item / wound. Damage tier shows as a
+   small dot before the item name; the card border still shows the worst
+   tier across all items, the per-chip dot tells you which item is which. */
+.bh-slot-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+}
+.bh-chip.bh-tier-1 .bh-chip-dot { background: var(--bh-tier-1); }
+.bh-chip.bh-tier-2 .bh-chip-dot { background: var(--bh-tier-2); }
+.bh-chip.bh-tier-3 .bh-chip-dot { background: var(--bh-tier-3); }
+.bh-chip.bh-tier-4 .bh-chip-dot { background: var(--bh-tier-4); }
+/* Hide the per-chip damage dot in desktop (doll-grid) — the card's left
+   border already encodes the same tier for each item. Mobile (digest)
+   keeps the dot because there's no card border to read off. */
+.bh-doll-grid .bh-chip-dot { display: none; }
+/* Per-chip damage bar (desktop only) — positioned at the CARD'S LEFT EDGE
+   (negative offset hops out of the chip's normal flow, into the card's
+   padding-left). Each bar's height matches its own chip exactly, so a
+   chest with three layered items shows three stacked bars at the card
+   edge — together they read as a single segmented "card border" that's
+   item-aware. Wounds get no bar (different concern).
+   Adjacent bars extend ±1px so they meet across the chip-gap, forming a
+   continuous left edge. Mobile digest uses chip-dots instead. */
+.bh-doll-grid .bh-chip {
+    position: relative;
+}
+.bh-doll-grid .bh-chip::before {
+    content: "";
+    position: absolute;
+    left: -9px;            /* card has padding-left: 9px → bar lands at card edge */
+    top: -1px;
+    bottom: -1px;
+    width: 3px;
+    background: var(--chip-bar, transparent);
+}
+.bh-doll-grid .bh-chip.bh-tier-0 { --chip-bar: var(--bh-tier-0); }
+.bh-doll-grid .bh-chip.bh-tier-1 { --chip-bar: var(--bh-tier-1); }
+.bh-doll-grid .bh-chip.bh-tier-2 { --chip-bar: var(--bh-tier-2); }
+.bh-doll-grid .bh-chip.bh-tier-3 { --chip-bar: var(--bh-tier-3); }
+.bh-doll-grid .bh-chip.bh-tier-4 { --chip-bar: var(--bh-tier-4); }
+/* Wound chips have no bar — gear damage is a different concern. */
+.bh-doll-grid .bh-chip-wound::before { display: none; }
+/* Right-column mirror — bars on the right edge (card has padding-right: 9px
+   on right-col cards). */
+.bh-doll-grid .bh-col-right .bh-chip::before { left: auto; right: -9px; }
+/* Layered worn chips: the bar is positioned on the WRAPPER (not the inner
+   chip), so it lands at the card's left edge instead of inside the wrapper
+   (where it was overlapping the layer-index gutter and hiding the 1/2/3).
+   The tier class is copied onto the wrapper at render time. */
+.bh-doll-grid .bh-chip-layered::before {
+    content: "";
+    position: absolute;
+    left: -9px;
+    top: -1px;
+    bottom: -1px;
+    width: 3px;
+    background: var(--chip-bar, transparent);
+}
+.bh-doll-grid .bh-chip-layered.bh-tier-0 { --chip-bar: var(--bh-tier-0); }
+.bh-doll-grid .bh-chip-layered.bh-tier-1 { --chip-bar: var(--bh-tier-1); }
+.bh-doll-grid .bh-chip-layered.bh-tier-2 { --chip-bar: var(--bh-tier-2); }
+.bh-doll-grid .bh-chip-layered.bh-tier-3 { --chip-bar: var(--bh-tier-3); }
+.bh-doll-grid .bh-chip-layered.bh-tier-4 { --chip-bar: var(--bh-tier-4); }
+/* Inner chip's bar is suppressed when wrapped, to avoid double drawing. */
+.bh-doll-grid .bh-chip-layered .bh-chip::before { display: none; }
+/* Right-column wrapper bar mirrors to the right edge. */
+.bh-doll-grid .bh-col-right .bh-chip-layered::before { left: auto; right: -9px; }
+/* Wound group divider — dashed hairline above the wounds sub-list so the
+   gear group and the wound group read as distinct sections inside one
+   slot card. */
+.bh-slot-wounds {
+    margin-top: var(--bh-space-2);
+    padding-top: var(--bh-space-2);
+    border-top: 1px dashed var(--bh-divider);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+/* Right-col chip content mirrors: dot/swatch/glyph end up on the right
+   (toward the silhouette in the middle), multi-slot tag flips to the left,
+   text still reads LTR inside its element. The row-reverse goes on the
+   head (the inner prefix line); the chip itself stays normal so the verbose
+   row stays BELOW the head, not above. */
+.bh-col-right .bh-chip-head { flex-direction: row-reverse; }
+/* Verbose sub-row indent flips for right-col: indent on the RIGHT (away from
+   the body), labels stacked vertically and right-aligned so they sit under
+   the item text as it appears in the mirrored layout. */
+.bh-col-right .bh-chip-verbose-row {
+    padding-left: 0;
+    padding-right: 20px;
+    align-items: flex-end;
+}
+/* (Obsolete single-row card styling removed — replaced by .bh-slot-card +
+   .bh-chip layout above. Left intentionally so the file is shorter.) */
+
+/* (Right-column mirroring moved into .bh-slot-card / .bh-chip rules above.) */
+
+/* Silhouette — scales with the panel's --bh-ui-scale knob. */
+.bh-silhouette {
+    width: calc(140px * var(--bh-ui-scale, 1));
+    height: calc(440px * var(--bh-ui-scale, 1));
+    display: block;
+    color: var(--bh-body);
+}
+.bh-body-fill {
+    fill: var(--bh-body-soft);
+    stroke: var(--bh-body);
+    stroke-width: 1;
+    stroke-opacity: 0.45;
+}
+.bh-wound-marker .bh-wound-dot {
+    fill: var(--bh-wound);
+    stroke: rgba(0, 0, 0, 0.5);
+    stroke-width: 0.8;
+    filter: drop-shadow(0 0 3px rgba(255, 60, 60, 0.55));
+    /* Animation budget ≤1 at a time (per UX research). A static dot is
+       legible on its own; reserve motion for future severity tiers
+       (critical/bleeding) which will animate exclusively. */
+}
+.bh-wound-marker .bh-wound-count {
+    font-size: 7px;
+    fill: #fff;
+    font-weight: 700;
+    pointer-events: none;
+}
+/* Held-item marker on the silhouette hand — just the ✦ glyph, no circle.
+   pointer-events: none so the hand part underneath stays hoverable for
+   the hover-link with the slot card. */
+.bh-hold-marker {
+    pointer-events: none;
+}
+.bh-hold-marker .bh-hold-icon {
+    font-size: 8px;
+    fill: var(--bh-holding);
+    font-weight: 700;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.65));
+}
+/* (Gauge CSS removed — the only consumer was the stamina gauge, which is no
+   longer tracked. A defensive .bh-char-head .bh-gauge{display:none}
+is
+   appended below to hide any residual gauge element.) */
+
+/* Old .bh-wounds-block (bottom <details> list) removed — wounds are now
+   first-class slot rows alongside worn/holding (see .bh-row-wound below). */
+
+/* Viewer-perspective hint below the silhouette: the figure faces the user,
+   so character-right renders on viewer-left. Without this, ~30% of first-
+   time testers think the model swapped hands. */
+.bh-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--bh-space-2);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+/* ─── Body-part tinting on the silhouette ────────────────────────────── */
+/* Per-part visual encoding:
+     STROKE (ring outside the part) = armor damage tier
+     FILL   (interior of the part)  = wound severity
+   `paint-order: stroke` shifts the fill to paint OVER the inner half of
+   the stroke, so the visible stroke ring sits entirely OUTSIDE the fill —
+   no muddled blend when armor and wound are both red. Thicker stroke at
+   high tiers makes the ring unambiguous. */
+.bh-part .bh-body-fill {
+    paint-order: stroke fill;
+    transition: stroke 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
+}
+.bh-part .bh-body-fill.bh-part-tier-2 { stroke: var(--bh-tier-2); stroke-width: 3.0; stroke-opacity: 1; }
+.bh-part .bh-body-fill.bh-part-tier-3 { stroke: var(--bh-tier-3); stroke-width: 4.0; stroke-opacity: 1; }
+.bh-part .bh-body-fill.bh-part-tier-4 { stroke: var(--bh-tier-4); stroke-width: 5.0; stroke-opacity: 1; }
+/* Body-part wound fill — tier by MAX SEVERITY. Hue + opacity both shift so
+   the three severities are unambiguous at a glance:
+     minor    = soft amber, ~20% — a passing visual nudge ("there's a wound")
+     serious  = clear orange, ~40% — body part is meaningfully hurt
+     critical = saturated red, ~65% — alarming, draws the eye
+   Critical also gets a thin red stroke overlay so it pops even when the
+   part is small (eyes, ears). */
+/* Wound fill — interior tint by severity. Stroke is reserved for ARMOR;
+   wound severity reads from the fill color (no stroke override). This
+   keeps the two channels orthogonal: ring = armor, interior = body. */
+.bh-part .bh-body-fill.bh-part-wound-1 {
+    fill: rgba(235, 200, 110, 0.20);
+}
+.bh-part .bh-body-fill.bh-part-wound-2 {
+    fill: rgba(233, 147, 59, 0.42);
+}
+.bh-part .bh-body-fill.bh-part-wound-3 {
+    fill: rgba(255, 71, 71, 0.65);
+}
+/* Missing / acquired-loss body part: gray vertical hatch + dashed outline.
+   Distinct from off-body (species lacks this part — handled in row layer with
+   ⌀ glyph) and from empty (no item — handled by ghost card). */
+.bh-part .bh-body-fill.bh-part-missing {
+    fill: url(#bh-missing-pattern);
+    stroke: rgba(140, 140, 140, 0.6) !important;
+    stroke-opacity: 0.7 !important;
+    stroke-dasharray: 4 3;
+}
+/* Hover any part to see slot + damage + wounds tooltip via <title>. */
+.bh-part { cursor: help; }
+.bh-part:hover .bh-body-fill { filter: brightness(1.15); }
+/* Hover-link: visually pair a body part with its slot row(s) and vice versa.
+   !important here because the hide-damage / hide-wounds rules above use
+   !important to neutralize tier strokes and wound fills — without it the
+   hover-link highlight gets stomped in every view except Full.
+
+   The fill is explicitly mixed with the accent color (not just a brightness
+   filter) so the highlight reads as a tinted REGION rather than a bright
+   outline. Critical on slim slots like legs/arms where the silhouette's
+   pale soft-body fill barely shifts under a brightness filter alone. */
+.bh-part.bh-hover-link .bh-body-fill {
+    fill: var(--bh-accent, #c9a55a) !important;
+    fill-opacity: 0.55 !important;
+    filter: drop-shadow(0 0 5px var(--bh-accent, #c9a55a)) !important;
+    stroke: var(--bh-accent, #c9a55a) !important;
+    stroke-width: 2 !important;
+    stroke-opacity: 0.95 !important;
+}
+.bh-slot-card.bh-hover-link {
+    background: rgba(201, 165, 90, 0.1);
+    border-color: rgba(201, 165, 90, 0.55);
+}
+.bh-slot-card.bh-hover-link::before {
+    box-shadow: 0 0 6px var(--bh-accent, #c9a55a);
+}
+/* Stroke-only body parts (digitigrade legs, serpentine tail) — inherit
+   tier/wound strokes from .bh-part-tier-* / .bh-part-wound-*. */
+.bh-silhouette .bh-tail,
+.bh-silhouette .bh-digi-leg {
+    stroke: var(--bh-body);
+    stroke-opacity: 0.45;
+}
+/* Wings (v0.4) — drawn behind the body in the SVG layering, slightly
+   reduced opacity so they read as "behind / further from camera"
+   rather than competing with the torso. The full saturation comes
+   back on hover-link. Feathered vs leathery just change the path
+   geometry, not the visual treatment. */
+.bh-silhouette .bh-wings {
+    opacity: 0.72;
+}
+.bh-silhouette .bh-wings.bh-part-tier-2,
+.bh-silhouette .bh-wings.bh-part-tier-3,
+.bh-silhouette .bh-wings.bh-part-tier-4 {
+    opacity: 0.9;
+}
+.bh-silhouette .bh-tail.bh-part-tier-2,
+.bh-silhouette .bh-digi-leg.bh-part-tier-2 { stroke: var(--bh-tier-2); stroke-opacity: 1; }
+.bh-silhouette .bh-tail.bh-part-tier-3,
+.bh-silhouette .bh-digi-leg.bh-part-tier-3 { stroke: var(--bh-tier-3); stroke-opacity: 1; }
+.bh-silhouette .bh-tail.bh-part-tier-4,
+.bh-silhouette .bh-digi-leg.bh-part-tier-4 { stroke: var(--bh-tier-4); stroke-opacity: 1; }
+/* Off-silhouette slot row hint: a serpentine character's worn boot still
+   shows in the row list, but flagged so users know it doesn't appear on
+   the body diagram. */
+.bh-row-off-body {
+    opacity: 0.6;
+}
+.bh-off-body {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--bh-tier-2);
+    font-size: 0.85em;
+    opacity: 0.8;
+    cursor: help;
+}
+.bh-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    line-height: 1.3;
+}
+.bh-legend-bar {
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.bh-legend-bar.bh-tier-0 { background: var(--bh-tier-0); }
+.bh-legend-bar.bh-tier-1 { background: var(--bh-tier-1); }
+.bh-legend-bar.bh-tier-2 { background: var(--bh-tier-2); }
+.bh-legend-bar.bh-tier-3 { background: var(--bh-tier-3); }
+.bh-legend-bar.bh-tier-4 { background: var(--bh-tier-4); }
+.bh-legend-bar.bh-tier-holding { background: var(--bh-holding); }
+.bh-legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--bh-wound);
+    box-shadow: 0 0 4px var(--bh-wound);
+    margin-left: 0;
+    flex-shrink: 0;
+}
+/* ─── Mobile digest ────────────────────────────────────────────────────
+   The narrow-width replacement for the doll grid. Four sections in
+   priority order: Wounds → Held → Worn → State (missing/bare). Each row
+   is one chip + a faint slot annotation on the right. */
+.bh-digest-section {
+    margin-bottom: var(--bh-space-3);
+}
+.bh-digest-section:last-child { margin-bottom: 0; }
+.bh-digest-heading {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bh-space-2);
+    margin: 0 0 var(--bh-space-2);
+    padding-bottom: var(--bh-space-1);
+    border-bottom: 1px solid var(--bh-divider);
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--bh-body);
+    opacity: var(--bh-mute-soft);
+}
+.bh-digest-count {
+    font-size: 0.85em;
+    opacity: 0.6;
+    font-weight: 500;
+    margin-left: auto;
+}
+.bh-digest-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--bh-space-1);
+}
+/* Grouped worn list: each anatomical region (head, torso, arms, legs) is a
+   sub-block with its own subheading + nested list. Visually separates a
+   long worn list into 4 scannable chunks instead of one wall. */
+.bh-digest-list-grouped {
+    gap: var(--bh-space-3);
+}
+.bh-digest-group {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.bh-digest-subhead {
+    display: flex;
+    align-items: center;
+    gap: var(--bh-space-2);
+    font-family: var(--bh-font-display);
+    font-size: var(--bh-text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--SmartThemeEmColor, #ffeaa7);
+    opacity: 0.85;
+    margin: 0 0 var(--bh-space-2);
+    padding: var(--bh-space-1) 0 var(--bh-space-1) var(--bh-space-2);
+    border-left: 2px solid var(--SmartThemeEmColor, #ffeaa7);
+    background: linear-gradient(90deg, rgba(255, 234, 167, 0.06), transparent 60%);
+    border-radius: 0 4px 4px 0;
+}
+.bh-digest-group-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--bh-space-1);
+}
+.bh-digest-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bh-space-2);
+    padding: var(--bh-space-1) 0;
+    line-height: 1.35;
+}
+.bh-digest-row .bh-chip {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.bh-digest-slot {
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-meta);
+    text-transform: lowercase;
+    letter-spacing: 0.06em;
+    opacity: 0.55;
+    flex-shrink: 0;
+    text-align: right;
+    align-self: center;
+}
+.bh-digest-layer {
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-meta);
+    font-weight: 600;
+    color: var(--SmartThemeEmColor, #ffeaa7);
+    opacity: 0.65;
+    margin-left: var(--bh-space-1);
+    flex-shrink: 0;
+}
+.bh-digest-flag {
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-meta);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 2px 8px;
+    border: 1px solid var(--bh-border);
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.bh-digest-flag-missing {
+    color: rgba(160, 160, 160, 0.95);
+    border-color: rgba(140, 140, 140, 0.4);
+    background: rgba(140, 140, 140, 0.06);
+}
+.bh-digest-flag-bare {
+    color: rgba(220, 188, 156, 0.95);
+    border-color: rgba(220, 188, 156, 0.4);
+    background: rgba(220, 188, 156, 0.06);
+}
+.bh-digest-row-flag {
+    justify-content: space-between;
+}
+/* Section-level color cues, semantic (not nth-of-type — those break when an
+   earlier section is filtered out). */
+.bh-digest-section-wounds .bh-digest-heading { color: var(--bh-wound); }
+.bh-digest-section-held   .bh-digest-heading { color: var(--bh-holding); }
+/* ─── Mobile digest × view-ladder filters ──────────────────────────────
+   The doll-grid selectors above don't fire in mobile (the grid is
+   display:none). These mirror the same hide semantics for the digest. */
+
+/* hide-wounds: drop the whole wounds section + heading + count. */
+.beholder-panel.bh-hide-wounds .bh-digest-section-wounds {
+    display: none !important;
+}
+/* hide-damage: tier-colored heading on wounds is fine (it's wound color,
+   not damage). But neutralize held heading's gold "holding" tint so the
+   visual budget matches the wider hide-damage view. */
+.beholder-panel.bh-hide-damage .bh-digest-section-held .bh-digest-heading {
+    color: var(--bh-body) !important;
+    opacity: var(--bh-mute-soft);
+}
+/* Restore the default body-part fill / stroke (var(--bh-body-soft) is the
+   default `.bh-body-fill` color; var(--bh-body) is text-near-white and was
+   the white-out bug). */
+.beholder-panel.bh-hide-wounds .bh-body-fill.bh-part-wound-1,
+.beholder-panel.bh-hide-wounds .bh-body-fill.bh-part-wound-2,
+.beholder-panel.bh-hide-wounds .bh-body-fill.bh-part-wound-3 {
+    fill: var(--bh-body-soft) !important;
+    stroke: var(--bh-body) !important;
+    stroke-opacity: 0.45 !important;
+    filter: none !important;
+}
+.beholder-panel.bh-hide-damage .bh-chip.bh-tier-0,
+.beholder-panel.bh-hide-damage .bh-chip.bh-tier-1,
+.beholder-panel.bh-hide-damage .bh-chip.bh-tier-2,
+.beholder-panel.bh-hide-damage .bh-chip.bh-tier-3,
+.beholder-panel.bh-hide-damage .bh-chip.bh-tier-4 {
+    color: inherit !important;
+}
+/* Body-part armor-tier stroke off */
+.beholder-panel.bh-hide-damage .bh-body-fill.bh-part-tier-2,
+.beholder-panel.bh-hide-damage .bh-body-fill.bh-part-tier-3,
+.beholder-panel.bh-hide-damage .bh-body-fill.bh-part-tier-4 {
+    stroke: none !important;
+    stroke-width: 0 !important;
+}
+.beholder-panel.bh-hide-damage .bh-silhouette .bh-tail.bh-part-tier-2,
+.beholder-panel.bh-hide-damage .bh-silhouette .bh-tail.bh-part-tier-3,
+.beholder-panel.bh-hide-damage .bh-silhouette .bh-tail.bh-part-tier-4,
+.beholder-panel.bh-hide-damage .bh-silhouette .bh-digi-leg.bh-part-tier-2,
+.beholder-panel.bh-hide-damage .bh-silhouette .bh-digi-leg.bh-part-tier-3,
+.beholder-panel.bh-hide-damage .bh-silhouette .bh-digi-leg.bh-part-tier-4 {
+    stroke-opacity: 0 !important;
+}
+/* Defensive: hide any residual char-head gauge element (stamina retired). */
+.beholder-panel .bh-char-head .bh-gauge { display: none !important; }
+/* Idle (untracked) facial features on the silhouette render faintly so the
+   face still reads as a face even when no eye/ear/mouth slot is populated. */
+.bh-silhouette .bh-face-idle { fill: rgba(207, 210, 214, 0.1); stroke-opacity: 0.28; }
+display: grid;
+    /* minmax(0, …) side tracks — see the base .bh-doll-grid note. Extra-important here
+       because `.bh-col { display: contents }
+.bh-doll-grid.bh-paired .bh-col { display: contents; }
+.bh-doll-grid.bh-paired .bh-figure { align-self: start; }
+.bh-doll-grid.bh-paired .bh-slot-ghosted { opacity: 0.22; }
+.bh-doll-grid.bh-paired .bh-slot-ghosted:hover { opacity: 0.5; }
+/* ─── Layout switch (paired / columns / list) ────────────────────────────
+   List mode forces the digest render via .bh-layout-compact. */
+.beholder-panel.bh-layout-compact .bh-doll-grid { display: none; }
+.beholder-panel.bh-layout-compact .bh-digest { display: block; }
+.bh-layout-switch {
+    display: inline-flex;
+    margin-top: var(--bh-space-2);
+    border: 1px solid var(--bh-border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--bh-surface-1);
+}
+.bh-layout-switch .bh-ls-opt {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--bh-body);
+    opacity: var(--bh-mute-strong);
+    padding: 2px 9px;
+    font-size: var(--bh-text-meta);
+    line-height: 1.2;
+    transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+.bh-layout-switch .bh-ls-opt + .bh-ls-opt { border-left: 1px solid var(--bh-divider); }
+.bh-layout-switch .bh-ls-opt:hover {
+    opacity: 0.85;
+    color: var(--SmartThemeBodyColor, #e8eaee);
+}
+.bh-layout-switch .bh-ls-opt.bh-ls-active {
+    opacity: 1;
+    color: var(--bh-gold, #ffeaa7);
+    background: var(--bh-surface-2);
+}
+.bh-layout-switch-row { display: flex; justify-content: flex-end; }
+/* Digest toolbar — "Edit slots" action on the left, a layout switch on the
+   right, above the digest priority feed. */
+.bh-digest-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bh-space-2);
+    margin-bottom: var(--bh-space-3);
+}
+.bh-digest-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: linear-gradient(160deg, rgba(201, 165, 90, 0.2), rgba(201, 165, 90, 0.06));
+    border: 1px solid rgba(201, 165, 90, 0.5);
+    color: rgb(243, 227, 184);
+    font-family: var(--bh-font-data);
+    font-size: var(--bh-text-secondary);
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+.bh-digest-edit:hover {
+    box-shadow: rgba(201, 165, 90, 0.2) 0 3px 14px;
+    border-color: var(--bh-gold-deep);
+}
+.bh-digest-edit i { font-size: 0.9em; }
+.bh-slot-picker { display: flex; flex-direction: column; gap: var(--bh-space-3); }
+.bh-row-actions { display: flex; gap: var(--bh-space-2); flex-wrap: wrap; align-items: center; }
+.bh-editor-body.bhe-missing-mode > :not(.bh-row-actions):not(.bh-editor-group-label:last-of-type) {
+    opacity: 0.35;
+    pointer-events: none;
+}
+.bh-editor-body.bhe-missing-mode > .bh-row-actions,
+.bh-editor-body.bhe-missing-mode > .bh-editor-group-label:last-of-type {
+    opacity: 1;
+    pointer-events: auto;
+}
+/* ─── Slot card lock / user-edited decoration ────────────────────────────
+   A locked slot is pinned by the user so model deltas can't overwrite it; a
+   user-edited slot carries a small ✎ mark. */
+.bh-slot-card { cursor: pointer; }
+.bh-slot-card.bh-slot-locked {
+    border-color: rgba(201, 165, 90, 0.45);
+    background: rgba(201, 165, 90, 0.05);
+}
+.bh-slot-lock-glyph {
+    color: var(--bh-gold);
+    font-size: 0.72em;
+    margin-left: 5px;
+    text-shadow: rgba(255, 234, 167, 0.45) 0 0 7px;
+    flex-shrink: 0;
+}
+.bh-slot-card.bh-slot-user-edited .bh-slot-name::after {
+    content: "✎";
+    color: var(--bh-gold-deep);
+    font-size: 0.85em;
+    margin-left: 5px;
+    opacity: 0.8;
+}
