@@ -178,6 +178,8 @@ import {
   searchStandardEmojiShortcodes,
 } from "../../packages/client/src/lib/emoji-shortcodes.js";
 import { persistGeneratedImageToEntityGalleries } from "../../packages/server/src/services/image/generated-image-entity-gallery.js";
+import { withGalleryFileLifecycleLock } from "../../packages/server/src/services/image/gallery-file-lifecycle.js";
+import { runRetrySetupPhase } from "../../packages/server/src/routes/generate/retry-agents-route.js";
 import {
   parseImageGenerationUserSettings,
   resolveIllustratorImageSize,
@@ -3954,17 +3956,20 @@ assert.equal(orLogicLorebookEntry.selectiveLogic, "or");
       name: "Ordered Memory",
       keys: ["memory"],
       tag: "event",
+      targetLorebook: "world",
       order: 200,
       content: "A durable memory.",
     },
   ]);
   assert.match(approvalText, /\nOrder: 200\n/u);
+  assert.match(approvalText, /\nLorebook: world\n/u);
   assert.deepEqual(parseLorebookWriteApprovalText(approvalText), [
     {
       action: "append",
       name: "Ordered Memory",
       keys: ["memory"],
       tag: "event",
+      targetLorebook: "world",
       order: 200,
       content: "A durable memory.",
     },
@@ -4016,6 +4021,69 @@ assert.equal(orLogicLorebookEntry.selectiveLogic, "or");
   assert.equal(updatedEntries[0]?.changes.order, 200);
   assert.equal(createdEntries[0]?.order, 300);
   assert.equal(Object.hasOwn(createdEntries[1] ?? {}, "order"), false);
+
+  const cancelledPersistence = new AbortController();
+  let cancelledEntryWrites = 0;
+  await assert.rejects(
+    persistLorebookKeeperUpdates({
+      lorebooksStore: {
+        listEntries: async () => {
+          cancelledPersistence.abort();
+          return [];
+        },
+        createEntry: async () => {
+          cancelledEntryWrites += 1;
+          return null;
+        },
+      } as any,
+      chatId: "chat-cancelled",
+      chatName: "Cancelled proof",
+      preferredTargetLorebookId: "book-cancelled",
+      writableLorebookIds: ["book-cancelled"],
+      updates: [{ entryName: "Must not persist", content: "Cancelled fact." }],
+      signal: cancelledPersistence.signal,
+    }),
+    /aborted/iu,
+  );
+  assert.equal(cancelledEntryWrites, 0, "Cancellation after an awaited read must stop the following lorebook write");
+
+  const routedEntries: Array<Record<string, unknown>> = [];
+  const createdBooks: Array<Record<string, unknown>> = [];
+  const routedStore = {
+    list: async () => [{ id: "book-world", name: "My World — World Lore" }],
+    create: async (input: Record<string, unknown>) => {
+      createdBooks.push(input);
+      return { id: "book-scene", ...input };
+    },
+    listEntries: async () => [],
+    createEntry: async (input: Record<string, unknown>) => {
+      routedEntries.push(input);
+      return { id: `routed-${routedEntries.length}`, ...input };
+    },
+    updateEntry: async () => null,
+  };
+  await persistLorebookKeeperUpdates({
+    lorebooksStore: routedStore as any,
+    chatId: "chat-439",
+    chatName: "Campaign",
+    preferredTargetLorebookId: "book-world",
+    writableLorebookIds: ["book-world"],
+    writableLorebooks: [{ id: "book-world", name: "My World — World Lore" }],
+    lorebookNamingScheme: { scene: "[WorldName] — Scene Log" },
+    worldName: "Campaign",
+    updates: [
+      { targetLorebook: "My World — World Lore", entryName: "Magic", content: "World fact." },
+      { targetLorebook: "scene", entryName: "Tavern", content: "Scene fact." },
+      { entryName: "Fallback", content: "Default-book fact." },
+    ],
+  });
+  assert.deepEqual(
+    routedEntries.map((entry) => entry.lorebookId),
+    ["book-world", "book-scene", "book-world"],
+    "exact names and aliases route independently while omitted targets retain the default book",
+  );
+  assert.equal(createdBooks[0]?.name, "Campaign — Scene Log", "a missing configured alias creates its named book");
+  assert.equal(createdBooks[0]?.chatId, "chat-439", "auto-created routing books link to the active chat");
 }
 
 assert.equal(
@@ -5418,6 +5486,14 @@ const personaEditorSource = readFileSync(
   new URL("../../packages/client/src/components/personas/PersonaEditor.tsx", import.meta.url),
   "utf8",
 );
+const chatSetupWizardSource = readFileSync(
+  new URL("../../packages/client/src/components/chat/ChatSetupWizard.tsx", import.meta.url),
+  "utf8",
+);
+const setupGenerationParametersStart = chatSetupWizardSource.indexOf("function SetupGenerationParametersPanel");
+const chatSetupWizardEnd = chatSetupWizardSource.indexOf("export function ChatSetupWizard");
+assert.ok(setupGenerationParametersStart >= 0 && chatSetupWizardEnd > setupGenerationParametersStart);
+const setupGenerationParametersSource = chatSetupWizardSource.slice(setupGenerationParametersStart, chatSetupWizardEnd);
 const convoProfileFieldsSource = readFileSync(
   new URL("../../packages/client/src/components/characters/ConvoProfileFields.tsx", import.meta.url),
   "utf8",
@@ -5457,6 +5533,10 @@ const androidMainActivitySource = readFileSync(
   new URL("../../android/app/src/main/java/com/marinara/engine/MainActivity.java", import.meta.url),
   "utf8",
 );
+const configureWebViewStart = androidMainActivitySource.indexOf("private void configureWebView()");
+const configureWebViewEnd = androidMainActivitySource.indexOf("private void tryConnect()", configureWebViewStart);
+assert.ok(configureWebViewStart >= 0 && configureWebViewEnd > configureWebViewStart);
+const configureWebViewSource = androidMainActivitySource.slice(configureWebViewStart, configureWebViewEnd);
 const gameJournalSource = readFileSync(
   new URL("../../packages/client/src/components/game/GameJournal.tsx", import.meta.url),
   "utf8",
@@ -5743,6 +5823,26 @@ assert.match(
   "Android file saves must require the authenticated top-frame bridge token",
 );
 assert.match(androidMainActivitySource, /MediaStore\.Images\.Media\.getContentUri/u);
+assert.match(
+  configureWebViewSource,
+  /settings\.setTextZoom\(100\);/u,
+  "The Android wrapper must not inherit oversized WebView text zoom",
+);
+assert.match(
+  characterEditorSource,
+  /<SettingsSwitch\s+checked=\{formData\.extensions\.versioningEnabled !== false\}/u,
+  "Character versioning must use the shared aligned settings switch",
+);
+assert.match(
+  personaEditorSource,
+  /<SettingsSwitch\s+checked=\{formData\.versioningEnabled\}/u,
+  "Persona versioning must use the shared aligned settings switch",
+);
+assert.match(
+  setupGenerationParametersSource,
+  /className="flex min-w-0 w-full items-center justify-between gap-3 text-left"[\s\S]*className="min-w-0 flex-1"[\s\S]*"h-5 w-9 shrink-0 rounded-full/u,
+  "The New Chat parameter toggle must stay within its card when Android enlarges text",
+);
 assert.match(
   characterEditorSource,
   /"mari-editor-avatar-tile group relative"/u,
@@ -7151,9 +7251,134 @@ try {
   assert.equal(readFileSync(characterFile, "utf8"), "generated-image");
   assert.equal(readFileSync(personaFile, "utf8"), "generated-image");
   assert.equal(existsSync(join(sourceDir, "generated.png")), true);
+
+  const cancelledGalleryPersistence = new AbortController();
+  let cancelledCharacterWrites = 0;
+  let cancelledPersonaWrites = 0;
+  await assert.rejects(
+    persistGeneratedImageToEntityGalleries({
+      sourceFilePath: "chat-id/generated.png",
+      characterIds: ["character-cancelled"],
+      personaIds: ["persona-cancelled"],
+      characterGallery: {
+        create: async () => {
+          cancelledCharacterWrites += 1;
+          cancelledGalleryPersistence.abort();
+          return {};
+        },
+      },
+      personaGallery: {
+        create: async () => {
+          cancelledPersonaWrites += 1;
+          return {};
+        },
+      },
+      prompt: "Cancelled gallery propagation.",
+      provider: "image_generation",
+      model: "regression-image-model",
+      width: 1024,
+      height: 1024,
+      signal: cancelledGalleryPersistence.signal,
+      galleryRoot: entityGalleryRoot,
+    }),
+    /aborted/iu,
+  );
+  assert.equal(cancelledCharacterWrites, 1);
+  assert.equal(cancelledPersonaWrites, 0, "Cancellation must stop later generated-image gallery writes");
+
+  let releaseHeldGalleryLock: () => void = () => undefined;
+  let markGalleryLockEntered: () => void = () => undefined;
+  const galleryLockEntered = new Promise<void>((resolve) => {
+    markGalleryLockEntered = resolve;
+  });
+  const heldGalleryLock = withGalleryFileLifecycleLock(
+    "chat-id/generated.png",
+    async () => {
+      markGalleryLockEntered();
+      await new Promise<void>((resolve) => {
+        releaseHeldGalleryLock = resolve;
+      });
+    },
+    entityGalleryRoot,
+  );
+  await galleryLockEntered;
+
+  const waitingGalleryLockAbort = new AbortController();
+  let waitingGalleryOperationRan = false;
+  const waitingGalleryLock = withGalleryFileLifecycleLock(
+    "chat-id/generated.png",
+    () => {
+      waitingGalleryOperationRan = true;
+    },
+    entityGalleryRoot,
+    waitingGalleryLockAbort.signal,
+  );
+  waitingGalleryLockAbort.abort();
+  let galleryLockTimeout: ReturnType<typeof setTimeout> | undefined;
+  let followingGalleryOperationRan = false;
+  let followingGalleryLock: Promise<void> | undefined;
+  try {
+    await assert.rejects(
+      Promise.race([
+        waitingGalleryLock,
+        new Promise<never>((_, reject) => {
+          galleryLockTimeout = setTimeout(() => reject(new Error("Gallery lock abort timed out")), 500);
+        }),
+      ]),
+      /aborted/iu,
+    );
+    followingGalleryLock = withGalleryFileLifecycleLock(
+      "chat-id/generated.png",
+      () => {
+        followingGalleryOperationRan = true;
+      },
+      entityGalleryRoot,
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(followingGalleryOperationRan, false, "An aborted waiter must preserve the preceding gallery lock");
+  } finally {
+    if (galleryLockTimeout) clearTimeout(galleryLockTimeout);
+    releaseHeldGalleryLock();
+    await heldGalleryLock;
+    await followingGalleryLock;
+  }
+  assert.equal(waitingGalleryOperationRan, false, "An aborted gallery lock waiter must never run its operation");
+  assert.equal(followingGalleryOperationRan, true);
 } finally {
   rmSync(entityGalleryRoot, { recursive: true, force: true });
 }
+
+const preAbortedRetrySetup = new AbortController();
+preAbortedRetrySetup.abort();
+let preAbortedRetrySetupRan = false;
+await assert.rejects(
+  runRetrySetupPhase(preAbortedRetrySetup.signal, async () => {
+    preAbortedRetrySetupRan = true;
+  }),
+  /aborted/iu,
+);
+assert.equal(preAbortedRetrySetupRan, false, "A cancelled retry must not start another setup phase");
+
+let releaseRetrySetupPhase: () => void = () => undefined;
+let markRetrySetupPhaseStarted: () => void = () => undefined;
+const retrySetupPhaseStarted = new Promise<void>((resolve) => {
+  markRetrySetupPhaseStarted = resolve;
+});
+const inFlightRetrySetupAbort = new AbortController();
+const inFlightRetrySetup = runRetrySetupPhase(inFlightRetrySetupAbort.signal, async () => {
+  markRetrySetupPhaseStarted();
+  await new Promise<void>((resolve) => {
+    releaseRetrySetupPhase = resolve;
+  });
+});
+await retrySetupPhaseStarted;
+inFlightRetrySetupAbort.abort();
+releaseRetrySetupPhase();
+await assert.rejects(
+  inFlightRetrySetup,
+  /aborted/iu,
+  "A retry cancelled during setup must stop before the next write or event",
+);
 
 const nextEventLoopTurn = () => new Promise<void>((resolve) => setImmediate(resolve));
 const queuedImageEvents: string[] = [];
@@ -9104,6 +9329,10 @@ assert.equal(({} as { tags?: string[] }).tags, undefined, "Background metadata m
     join(REPOSITORY_ROOT, "packages/server/src/routes/generate.routes.ts"),
     "utf8",
   );
+  const retryAgentsRouteSource = readFileSync(
+    join(REPOSITORY_ROOT, "packages/server/src/routes/generate/retry-agents-route.ts"),
+    "utf8",
+  );
   const turnGameBotRunnerSource = readFileSync(
     join(REPOSITORY_ROOT, "packages/server/src/services/turn-games/turn-game-bot-runner.service.ts"),
     "utf8",
@@ -9201,12 +9430,25 @@ assert.equal(({} as { tags?: string[] }).tags, undefined, "Background metadata m
     join(REPOSITORY_ROOT, "packages/server/src/routes/generate.routes.ts"),
     "utf8",
   );
+  const retryAgentsRouteSource = readFileSync(
+    join(REPOSITORY_ROOT, "packages/server/src/routes/generate/retry-agents-route.ts"),
+    "utf8",
+  );
+  const lorebookKeeperUtilsSource = readFileSync(
+    join(REPOSITORY_ROOT, "packages/server/src/routes/generate/lorebook-keeper-utils.ts"),
+    "utf8",
+  );
   assert.match(
     generateRouteSource,
     /chatMode === "roleplay" && assistantMessageReadySent\) moveToActiveAgentRuns\(\)/u,
     "A durable Roleplay reply must release the main generation slot while retaining its cancellable agent tail",
   );
   assert.match(generateRouteSource, /const activeAgentRuns = new Map<string, Set<ActiveGeneration>>\(\)/u);
+  assert.match(
+    generateRouteSource,
+    /registerRetryAgentsRoute\(app, activeCustomLorebookReadBehindRuns, activeAgentRuns\)/u,
+    "Forced Agent retries must join the same cancellable registry as automatic Agent tails",
+  );
   assert.match(
     generateRouteSource,
     /active: activeGenerations\.has\(req\.params\.chatId\) \|\| \(activeAgentRuns\.get\(req\.params\.chatId\)\?\.size \?\? 0\) > 0/u,
@@ -9222,12 +9464,98 @@ assert.equal(({} as { tags?: string[] }).tags, undefined, "Background metadata m
     "Stopping an old agent tail must not send a backend-wide abort that can kill a newer reply",
   );
   assert.doesNotMatch(generateRouteSource, /targets\.map\(\(target\) => target\.backendUrl\)/u);
+  assert.match(
+    retryAgentsRouteSource,
+    /for \(const result of results\) \{\s*if \(abortController\.signal\.aborted\) return;[\s\S]{0,500}sendSseEvent\(reply, \{\s*type: "agent_result"/u,
+    "Forced retries must stop emitting results as soon as their shared abort signal fires",
+  );
+  for (const phase of ["persistRetryResults", "applyRetryResultEffects"]) {
+    assert.match(
+      retryAgentsRouteSource,
+      new RegExp(`if \\(abortController\\.signal\\.aborted\\) return;\\s*await ${phase}\\(`, "u"),
+      `Forced retries must check cancellation immediately before ${phase}`,
+    );
+  }
+  assert.match(
+    retryAgentsRouteSource,
+    /if \(abortController\.signal\.aborted\) return;\s*sendSseEvent\(reply, \{ type: "done"/u,
+    "A cancelled retry must not emit its completion event",
+  );
+  assert.match(
+    retryAgentsRouteSource,
+    /assertRetrySetupActive\(\);\s*sendSseEvent\(reply, \{ type: "agent_start"/u,
+    "A cancelled retry must not emit agent_start after asynchronous setup",
+  );
+  assert.match(
+    retryAgentsRouteSource,
+    /signal\.throwIfAborted\(\);\s*return \{[\s\S]{0,220}macroVariables/u,
+    "Retry macro persistence must re-check cancellation when its queued write begins",
+  );
+  assert.match(
+    retryAgentsRouteSource,
+    /const assertRetryActive = \(\) => signal\.throwIfAborted\(\);[\s\S]{0,300}const sortedResults/u,
+    "Retry side effects must use the native abort guard across awaited writes and events",
+  );
+  assert.match(
+    retryAgentsRouteSource,
+    /const rawResult = await executeAgent\([\s\S]{0,350}if \(baseContext\.signal\?\.aborted\) return results;/u,
+    "Lorebook retries must stop after provider completion",
+  );
+  assert.match(
+    retryAgentsRouteSource,
+    /preferredTargetLorebookId = await persistLorebookKeeperUpdates\([\s\S]{0,700}signal: baseContext\.signal/u,
+    "Lorebook retry persistence must receive the shared cancellation signal",
+  );
+  assert.match(
+    lorebookKeeperUtilsSource,
+    /signal\?: AbortSignal/u,
+    "Lorebook Keeper persistence must accept a cancellation signal",
+  );
+  assert.match(
+    lorebookKeeperUtilsSource,
+    /signal\?\.throwIfAborted\(\);\s*const (?:created|updated) = await lorebooksStore\.(?:create|updateEntry|createEntry)/u,
+    "Lorebook persistence must honor retry cancellation before database writes",
+  );
+  assert.match(
+    retryAgentsRouteSource,
+    /const customWritableLorebookIds =\s*!isBuiltInLorebookAgent && resultAgent[\s\S]{0,220}resolveCustomWritableLorebookIds\(resultAgent\.settings\)[\s\S]{0,900}writableLorebooks/u,
+    "Custom-agent retry approvals must carry that agent's writable lorebook routing metadata",
+  );
+  assert.equal(
+    retryAgentsRouteSource.match(
+      /worldName: (?:retryContext|agentContext)\.characters\[0\]\?\.world \?\? (?:chatName|\(chat as any\)\.name)/gu,
+    )?.length,
+    3,
+    "Retry approval and persistence must expand [WorldName] from the persisted character world, then the chat name",
+  );
+  assert.equal(
+    generateRouteSource.match(/worldName: agentContext\.characters\[0\]\?\.world \?\? chat\.name/gu)?.length,
+    2,
+    "Normal approval and persistence must expand [WorldName] from the persisted character world, then the chat name",
+  );
+  const characterPromptContextSource = readFileSync(
+    join(REPOSITORY_ROOT, "packages/server/src/services/generation/character-prompt-context.ts"),
+    "utf8",
+  );
+  assert.match(characterPromptContextSource, /world: cardPromptText\(charData\.extensions\?\.world\) \|\| undefined/u);
+  assert.match(retryAgentsRouteSource, /world: cardPromptText\(extensions\.world\) \|\| undefined/u);
   const roleplayActionsSource = readFileSync(
     join(REPOSITORY_ROOT, "packages/client/src/components/chat/RoleplayHUDActionsMenu.tsx"),
     "utf8",
   );
   assert.match(roleplayActionsSource, /showStopAgentsAction = isAgentProcessing && !!onStopAgents/u);
   assert.match(roleplayActionsSource, /ui\.chat\.roleplayhudactionsmenu\.stopAgents/u);
+  assert.doesNotMatch(
+    roleplayActionsSource,
+    /stopAgents[\s\S]{0,700}text-\[var\(--destructive\)\]/u,
+    "Stop Agents should use the same neutral action styling as its neighboring controls",
+  );
+  const appSource = readFileSync(join(REPOSITORY_ROOT, "packages/client/src/App.tsx"), "utf8");
+  assert.doesNotMatch(
+    appSource,
+    /const paused = !\([\s\S]{0,220}!reduceAmbientEffects/u,
+    "Reduced ambient motion must not pause Desktop Mari's functional navigation callbacks",
+  );
   assert.match(
     generateRouteSource,
     /const targetSwipeIndex =[\s\S]{0,300}lastSavedMsg[\s\S]{0,300}activeSwipeIndex/u,
@@ -9288,10 +9616,6 @@ assert.equal(({} as { tags?: string[] }).tags, undefined, "Background metadata m
   assert.match(settingsPanelSource, /\/backup\/download\/status\/\$\{encodeURIComponent\(started\.jobId\)\}/u);
   assert.match(settingsPanelSource, /window\.location\.assign\(status\.downloadUrl\)/u);
 
-  const retryAgentsRouteSource = readFileSync(
-    join(REPOSITORY_ROOT, "packages/server/src/routes/generate/retry-agents-route.ts"),
-    "utf8",
-  );
   assert.match(
     retryAgentsRouteSource,
     /persistRetryMacroVariables\([\s\S]{0,240}agentContextResult\.macroVariables/u,
