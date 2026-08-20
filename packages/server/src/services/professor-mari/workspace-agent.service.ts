@@ -2,6 +2,7 @@
 // Professor Mari native command workspace runtime
 // ──────────────────────────────────────────────
 import { constants, existsSync, realpathSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { copyFile, link, mkdir, readdir, readFile, rmdir, stat, unlink, writeFile } from "node:fs/promises";
 import { delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -85,6 +86,8 @@ import type {
   ProfessorMariAskContext,
   ProfessorMariQuickPromptEvent,
   ProfessorMariQuickPromptRequest,
+  ProfessorMariQuickEditApplyResponse,
+  ProfessorMariQuickEditProposal,
 } from "@marinara-engine/shared";
 import { getMariDbService } from "../mari-db/mari-db.service.js";
 import { getProfessorMariWorkspaceSkillsService } from "./workspace-skills.service.js";
@@ -96,6 +99,7 @@ import {
   WorkspaceChangeReviewService,
   workspacePathAccessPolicy,
 } from "./workspace-change-review.service.js";
+import { quickEditFingerprint, validateQuickEditProposal } from "./quick-edit-proposal.js";
 
 type DbConnectionWithKey = typeof apiConnections.$inferSelect & { apiKey: string };
 type WorkspaceConnection = Pick<
@@ -2101,6 +2105,8 @@ function parseDirectMariArgv(command: string, cwd: string): string[] | null {
   return normalizeMariPathFlagArgs(tokens.slice(1), cwd);
 }
 
+const QUICK_EDIT_EXPIRY_MS = 10 * 60_000;
+
 export class ProfessorMariWorkspaceService {
   private enabled = true;
   private workspaceRoot = getMonorepoRoot();
@@ -2112,6 +2118,7 @@ export class ProfessorMariWorkspaceService {
   // her mutations so path validation and the operation cannot overlap another
   // agent mutation; user and host processes remain outside this sandbox boundary.
   private workspaceMutationTail: Promise<void> = Promise.resolve();
+  private readonly quickEditProposals = new Map<string, ProfessorMariQuickEditProposal>();
 
   constructor(private readonly app: FastifyInstance) {}
 
@@ -2180,6 +2187,65 @@ export class ProfessorMariWorkspaceService {
     return this.workspaceChangeReviews.reject(id);
   }
 
+  private async readQuickEditTarget(context: ProfessorMariQuickPromptRequest["context"]) {
+    if (context?.capability !== "edit" || context.resource?.kind !== "character") return null;
+    const fieldKey =
+      context.fieldId === "description" ? "description" : context.fieldId === "first_mes" ? "first_mes" : null;
+    if (!fieldKey) return null;
+    const row = await createCharactersStorage(this.app.db).getById(context.resource.id);
+    if (!row) return null;
+    let data: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(row.data);
+      data = isRecord(parsed) ? parsed : {};
+    } catch {
+      return null;
+    }
+    const currentValue = typeof data[fieldKey] === "string" ? data[fieldKey] : "";
+    if (currentValue.length > 8_000) return null;
+    return {
+      resource: context.resource,
+      fieldId: fieldKey,
+      fieldKey,
+      fieldLabel: context.field?.trim() || (fieldKey === "first_mes" ? "Greeting" : "Description"),
+      currentValue,
+    };
+  }
+
+  async applyQuickEditProposal(id: string): Promise<ProfessorMariQuickEditApplyResponse> {
+    const proposal = this.quickEditProposals.get(id);
+    if (!proposal) throw new Error("Quick edit proposal was not found or has already been applied.");
+    const target = await this.readQuickEditTarget({
+      source: "command-center",
+      capability: "edit",
+      resource: proposal.resource,
+      field: proposal.fieldLabel,
+      fieldId: proposal.fieldId,
+    });
+    const validation = target ? validateQuickEditProposal(proposal, target.currentValue) : "stale";
+    if (validation === "expired") {
+      this.quickEditProposals.delete(id);
+      throw new Error("Quick edit proposal expired. Ask Quick Mari again to refresh it.");
+    }
+    if (!target || validation === "stale") {
+      this.quickEditProposals.delete(id);
+      throw new Error("The field changed after Quick Mari prepared this proposal. Nothing was applied.");
+    }
+    const result = await getMariDbService(this.app.db).executeAction({
+      action: "character.update",
+      id: proposal.resource.id,
+      patch: { [target.fieldKey]: proposal.after },
+      apply: true,
+      reason: `Quick Mari edit proposal for ${proposal.fieldLabel}`,
+      sessionId: "professor-mari-quick",
+    });
+    if (!result.ok || !result.approval?.id) throw new Error(result.error ?? "Quick edit could not be applied.");
+    const actionResult = buildMariWorkspaceActionResult("character.update", result);
+    if (!actionResult) throw new Error("Quick edit applied without a reviewable result.");
+    this.quickEditProposals.delete(id);
+    return { ok: true, proposalId: id, reviewId: result.approval.id, actionResult };
+  }
+
   async quickPrompt(
     args: ProfessorMariQuickPromptRequest & {
       signal: AbortSignal;
@@ -2213,6 +2279,7 @@ export class ProfessorMariWorkspaceService {
           action: args.context.action,
         })
       : null;
+    const quickEditTarget = await this.readQuickEditTarget(args.context);
     const systemParts = [
       "You are Professor Mari inside Marinara Engine's Quick mode.",
       "Answer the user's focused question directly and concisely. Prefer a useful recommendation or explanation over broad background.",
@@ -2223,6 +2290,12 @@ export class ProfessorMariWorkspaceService {
     if (memorySections.length > 0) {
       systemParts.push(`Persistent user memories (bounded):\n${memorySections.join("\n\n")}`);
     }
+    if (quickEditTarget) {
+      systemParts.push(
+        `The user focused an editable ${quickEditTarget.fieldLabel} field. Its current value is:\n<current_field_value>\n${quickEditTarget.currentValue}\n</current_field_value>`,
+        'If you can propose the requested rewrite, end your response with exactly one machine-readable block in this form: <quick_edit>{"after":"the complete replacement text"}</quick_edit>. Keep your human explanation before the block. Do not use this block for anything except a complete replacement of the focused field.',
+      );
+    }
 
     const provider = createProviderForConnection(connection);
     const baseOptions = this.baseChatOptions(connection, args.signal, () => {});
@@ -2231,10 +2304,12 @@ export class ProfessorMariWorkspaceService {
       ...baseOptions,
       maxTokens: Math.min(baseOptions.maxTokens ?? 700, 700),
       responseFormat: undefined,
-      onToken: (token) => {
-        streamed = true;
-        args.onEvent({ type: "token", data: token });
-      },
+      onToken: quickEditTarget
+        ? undefined
+        : (token) => {
+            streamed = true;
+            args.onEvent({ type: "token", data: token });
+          },
     };
     const messages: ChatMessage[] = [
       { role: "system", content: systemParts.join("\n\n"), contextKind: "prompt" },
@@ -2259,7 +2334,39 @@ export class ProfessorMariWorkspaceService {
 
     args.onEvent({ type: "status", data: { phase: "thinking" } });
     const result = await provider.chatComplete(messages, options);
-    if (!streamed && result.content) args.onEvent({ type: "token", data: result.content });
+    let answer = result.content ?? "";
+    if (quickEditTarget) {
+      const match = answer.match(/<quick_edit>\s*([\s\S]*?)\s*<\/quick_edit>/u);
+      answer = answer.replace(/<quick_edit>[\s\S]*?<\/quick_edit>/gu, "").trimEnd();
+      if (answer) args.onEvent({ type: "token", data: answer });
+      if (match?.[1]) {
+        try {
+          const parsed: unknown = JSON.parse(match[1]);
+          const after = isRecord(parsed) && typeof parsed.after === "string" ? parsed.after : null;
+          if (after !== null && after !== quickEditTarget.currentValue) {
+            const proposal: ProfessorMariQuickEditProposal = {
+              id: randomUUID(),
+              resource: quickEditTarget.resource,
+              fieldId: quickEditTarget.fieldId,
+              fieldLabel: quickEditTarget.fieldLabel,
+              before: quickEditTarget.currentValue,
+              after,
+              fingerprint: quickEditFingerprint(quickEditTarget.currentValue),
+              expiresAt: new Date(Date.now() + QUICK_EDIT_EXPIRY_MS).toISOString(),
+            };
+            for (const [proposalId, stored] of this.quickEditProposals) {
+              if (Date.parse(stored.expiresAt) <= Date.now()) this.quickEditProposals.delete(proposalId);
+            }
+            this.quickEditProposals.set(proposal.id, proposal);
+            args.onEvent({ type: "edit_proposal", data: proposal });
+          }
+        } catch {
+          logger.debug("Professor Mari Quick returned an invalid edit proposal block; ignoring it");
+        }
+      }
+    } else if (!streamed && result.content) {
+      args.onEvent({ type: "token", data: result.content });
+    }
     const usage = mapUsage(result.usage);
     const fallbackUsed = Boolean(args.connectionId && args.connectionId !== connection.id);
     args.onEvent({

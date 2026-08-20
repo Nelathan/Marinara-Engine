@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowRight, Loader2, RotateCcw, Sparkles, Square } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Loader2, RotateCcw, Sparkles, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   ProfessorMariAskContext,
   ProfessorMariQuickMetadata,
   ProfessorMariQuickPromptRequest,
+  ProfessorMariQuickEditApplyResponse,
+  ProfessorMariQuickEditProposal,
 } from "@marinara-engine/shared";
 import { api } from "../../../lib/api-client";
 import type { CommandCenterQuickTask } from "../../../lib/command-center";
@@ -16,6 +18,7 @@ export function OmnibarQuickMariPane({
   debugMode,
   onTaskChange,
   onPromote,
+  onReviewChanges,
 }: {
   task: CommandCenterQuickTask;
   connectionId: string | null;
@@ -23,6 +26,7 @@ export function OmnibarQuickMariPane({
   debugMode: boolean;
   onTaskChange: (task: CommandCenterQuickTask) => void;
   onPromote: () => void;
+  onReviewChanges: () => void;
 }) {
   const { t } = useTranslation();
   const abortRef = useRef<AbortController | null>(null);
@@ -33,6 +37,9 @@ export function OmnibarQuickMariPane({
   onTaskChangeRef.current = onTaskChange;
   const [attempt, setAttempt] = useState(0);
   const [metadata, setMetadata] = useState<ProfessorMariQuickMetadata | null>(null);
+  const [proposal, setProposal] = useState<ProfessorMariQuickEditProposal | null>(null);
+  const [applyState, setApplyState] = useState<"idle" | "applying" | "applied" | "stale">("idle");
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (task.status !== "streaming" || startedTaskRef.current?.startsWith(`${task.id}:`)) return;
@@ -76,6 +83,8 @@ export function OmnibarQuickMariPane({
             onTaskChangeRef.current({ ...initialTask, status: "streaming", answer });
           } else if (event.type === "metadata" && event.data && typeof event.data === "object") {
             setMetadata(event.data as ProfessorMariQuickMetadata);
+          } else if (event.type === "edit_proposal" && event.data && typeof event.data === "object") {
+            setProposal(event.data as ProfessorMariQuickEditProposal);
           } else if (event.type === "complete") {
             onTaskChangeRef.current({ ...initialTask, status: "complete", answer });
           } else if (event.type === "error") {
@@ -100,8 +109,24 @@ export function OmnibarQuickMariPane({
   const retry = () => {
     startedTaskRef.current = null;
     setMetadata(null);
+    setProposal(null);
+    setApplyState("idle");
+    setApplyError(null);
     onTaskChange({ ...task, status: "ready", answer: "" });
     setAttempt((current) => current + 1);
+  };
+
+  const applyProposal = async () => {
+    if (!proposal || applyState === "applying") return;
+    setApplyState("applying");
+    setApplyError(null);
+    try {
+      await api.post<ProfessorMariQuickEditApplyResponse>(`/professor-mari/quick/proposals/${proposal.id}/apply`, {});
+      setApplyState("applied");
+    } catch (error) {
+      setApplyState("stale");
+      setApplyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   return (
@@ -144,6 +169,65 @@ export function OmnibarQuickMariPane({
               ) : null}
             </div>
           </div>
+          {proposal ? (
+            <div className="mari-workspace-artifact mt-5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[var(--foreground)]">
+                  {t("commandCenter.quick.editProposal", "Proposed {{field}} edit", {
+                    field: proposal.fieldLabel,
+                  })}
+                </span>
+                <span className="ml-auto text-[0.625rem] text-[var(--muted-foreground)]">
+                  {t("commandCenter.quick.noSecondCall", "Apply · no second model call")}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                    {t("commandCenter.quick.before", "Before")}
+                  </p>
+                  <pre className="mt-1 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--border)]/70 bg-[var(--background)]/60 p-2 text-xs text-[var(--muted-foreground)]">
+                    {proposal.before}
+                  </pre>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                    {t("commandCenter.quick.after", "After")}
+                  </p>
+                  <pre className="mt-1 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--primary)]/20 bg-[var(--primary)]/5 p-2 text-xs text-[var(--foreground)]">
+                    {proposal.after}
+                  </pre>
+                </div>
+              </div>
+              {applyError ? (
+                <p className="mt-2 text-xs text-[var(--destructive)]" role="alert">
+                  {applyError}
+                </p>
+              ) : null}
+              <div className="mt-3 flex justify-end gap-2">
+                {applyState === "applied" ? (
+                  <button
+                    type="button"
+                    onClick={onReviewChanges}
+                    className="mari-chrome-control mari-chrome-control--primary mari-chrome-control--small"
+                  >
+                    <Check size="0.75rem" />
+                    {t("commandCenter.quick.reviewChanges", "Review Keep / Restore")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void applyProposal()}
+                    disabled={applyState === "applying" || applyState === "stale"}
+                    className="mari-chrome-control mari-chrome-control--primary mari-chrome-control--small"
+                  >
+                    {applyState === "applying" ? <Loader2 size="0.75rem" className="animate-spin" /> : null}
+                    {t("commandCenter.quick.apply", "Apply")}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[var(--border)]/50 px-3 py-2.5">

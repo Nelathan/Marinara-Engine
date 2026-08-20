@@ -138,9 +138,28 @@ export interface ProfessorMariQuickMetadata {
   totalTokens?: number;
 }
 
+export interface ProfessorMariQuickEditProposal {
+  id: string;
+  resource: ProfessorMariContextResource;
+  fieldId: string;
+  fieldLabel: string;
+  before: string;
+  after: string;
+  fingerprint: string;
+  expiresAt: string;
+}
+
+export interface ProfessorMariQuickEditApplyResponse {
+  ok: true;
+  proposalId: string;
+  reviewId: string;
+  actionResult: MariWorkspaceActionResult;
+}
+
 export type ProfessorMariQuickPromptEvent =
   | { type: "status"; data: { phase: "starting" | "thinking" } }
   | { type: "token"; data: string }
+  | { type: "edit_proposal"; data: ProfessorMariQuickEditProposal }
   | { type: "metadata"; data: ProfessorMariQuickMetadata }
   | { type: "complete"; data: { ok: true } }
   | { type: "error"; data: string };

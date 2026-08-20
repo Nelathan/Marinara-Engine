@@ -47,6 +47,15 @@ export const professorMariQuickPromptSchema = z
   .strict();
 
 export async function professorMariQuickRoutes(app: FastifyInstance) {
+  app.post<{ Params: { id: string } }>("/proposals/:id/apply", async (request, reply) => {
+    if (!requirePrivilegedAccess(request, reply, { feature: "Professor Mari Quick" })) return;
+    try {
+      return await getProfessorMariWorkspaceService(app).applyQuickEditProposal(request.params.id);
+    } catch (error) {
+      return reply.status(409).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   app.post("/prompt", async (request, reply) => {
     if (!requirePrivilegedAccess(request, reply, { feature: "Professor Mari Quick" })) return;
     const body = professorMariQuickPromptSchema.parse(request.body);

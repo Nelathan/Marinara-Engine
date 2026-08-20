@@ -2889,6 +2889,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 setMariChatOpen(true);
                 setPane("mari");
               }}
+              onReviewChanges={() => {
+                setMariReturnPane("results");
+                setMariContext(quickContext);
+                setMariMounted(true);
+                setMariChatOpen(true);
+                setMariPendingReviewRequest((current) => current + 1);
+                setPane("mari");
+              }}
             />
           </Suspense>
         ) : pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
