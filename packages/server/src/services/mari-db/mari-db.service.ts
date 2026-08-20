@@ -56,6 +56,7 @@ import { HomeWidgetCatalogConflictError, replaceHomeWidgetCatalog } from "../hom
 import { createMariWherePredicate } from "./mari-where-expression.js";
 import { runMariTransformSandbox } from "./mari-transform-sandbox.js";
 import { encryptCustomToolWebhookUrl, ENCRYPTED_WEBHOOK_PREFIX } from "../../utils/custom-tool-webhook.js";
+import { getProfessorMariWorkspaceSkillsService } from "../professor-mari/workspace-skills.service.js";
 
 type Row = Record<string, unknown>;
 type Table = AnyFileTable;
@@ -2518,6 +2519,7 @@ export class MariDbService {
           return this.executeHomeWidgetAction(key.slice("homewidget.".length), envelope, context);
         // #4851: the user's saved memories. Canonical surface is `instruction.*` (the code
         // namespace stays instruction_/mari_); those are the entries in the tool catalog enum.
+        if (key.startsWith("skill.")) return this.executeSkillAction(key.slice("skill.".length), envelope, context);
         if (key.startsWith("instruction."))
           return this.executeInstructionAction(key.slice("instruction.".length), envelope, context);
         return {
@@ -2525,7 +2527,7 @@ export class MariDbService {
           mode: "read",
           command,
           error:
-            "Unsupported app_data action. Use character.*, persona.*, lorebook.*, theme.*, personal_extension.*, agent.*, preset.*, home_widget.*, or instruction.* actions for structured no-shell app-data work.",
+            "Unsupported app_data action. Use character.*, persona.*, lorebook.*, theme.*, personal_extension.*, agent.*, preset.*, home_widget.*, skill.*, or instruction.* actions for structured no-shell app-data work.",
         };
       };
       // Field-aware bounding keeps a single read response within the workspace
@@ -3158,6 +3160,29 @@ export class MariDbService {
   // #4851: Professor Mari's persistent standing instructions ("memories").
   // Reads (list/get) back the index-and-fetch injection; writes (remember/update/
   // forget) run through executeMutation so each surfaces a Keep/Restore card.
+  // Custom skills are injected index-and-fetch, so Mari reads a full skill body here.
+  // Read-only: skills are managed from the Skills panel, never by Mari.
+  private async executeSkillAction(
+    sub: string,
+    args: Row,
+    context: { command: string; sessionId: string; cwd?: string },
+  ): Promise<MariDbCommandResult> {
+    const { skills } = await getProfessorMariWorkspaceSkillsService().list();
+    switch (sub) {
+      case "list": {
+        const items = skills.map(({ content: _content, ...summary }) => summary);
+        return { ok: true, mode: "read", command: context.command, output: { items, total: items.length } };
+      }
+      case "get": {
+        const id = requiredString(args, ["id", "skillId"], "skill id");
+        const row = skills.find((skill) => skill.id === id) ?? null;
+        return { ok: Boolean(row), mode: "read", command: context.command, output: row };
+      }
+      default:
+        return { ok: false, mode: "read", command: context.command, error: `Unsupported skill action: ${sub}` };
+    }
+  }
+
   private async executeInstructionAction(
     sub: string,
     args: Row,
