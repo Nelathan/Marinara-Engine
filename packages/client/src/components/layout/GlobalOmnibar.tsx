@@ -158,6 +158,7 @@ import { InlineGhostText } from "../ui/InlineGhostText";
 import { CommandCenterResultRow } from "../command-center/CommandCenterResultRow";
 import { CommandCenterSegmentedChoice } from "../command-center/CommandCenterSegmentedChoice";
 import { CommandCenterToggle } from "../command-center/CommandCenterToggle";
+import type { ProfessorMariVisualState } from "../../lib/professor-mari-visual-state";
 import {
   getCommandCenterCategoryVisual,
   getCommandCenterChatModeVisual,
@@ -439,6 +440,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
+  const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
+  const [mariHasConversation, setMariHasConversation] = useState(false);
   // When set, the Work pane shows the creation proposal for review instead of
   // the Mari transcript. Nothing is created until the user accepts.
   const [proposalDraft, setProposalDraft] = useState<CreationProposal | null>(null);
@@ -2586,8 +2589,19 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <span className="mari-workspace-portrait" aria-hidden="true">
-                    <img src={PROFESSOR_MARI_PEEK_URL} alt="" draggable={false} />
+                  <span
+                    className="mari-workspace-portrait"
+                    data-state={mariVisualState}
+                    data-conversation={mariHasConversation ? "true" : "false"}
+                    aria-hidden="true"
+                  >
+                    <img src={PROFESSOR_MARI_PEEK_URL} alt="" draggable={false} data-part="idle" />
+                    <img
+                      src="/sprites/mari/generated/professor-mari-assistant-blink-v3.png"
+                      alt=""
+                      draggable={false}
+                      data-part="blink"
+                    />
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold leading-tight text-[var(--foreground)]">
@@ -2740,6 +2754,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               }}
               completionActions={completionActions}
               onCompletionAction={runCompletionAction}
+              onVisualStateChange={(state, hasConversation) => {
+                setMariVisualState(state);
+                setMariHasConversation(hasConversation);
+              }}
             />
           </Suspense>
         ) : null}

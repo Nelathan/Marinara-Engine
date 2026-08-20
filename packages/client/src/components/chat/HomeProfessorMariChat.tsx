@@ -95,6 +95,7 @@ import { homeFeedKeys } from "../../hooks/use-home-feed";
 import { filterLanguageGenerationConnections } from "../../lib/connection-filters";
 import { api, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
 import { describeProfessorMariError } from "../../lib/professor-mari-errors";
+import { resolveProfessorMariVisualState, type ProfessorMariVisualState } from "../../lib/professor-mari-visual-state";
 import { useMariApprovals } from "../../hooks/use-mari-approvals";
 import { showConfirmDialog } from "../../lib/app-dialogs";
 import { useChatStore } from "../../stores/chat.store";
@@ -136,6 +137,7 @@ import {
 } from "../../lib/professor-mari-open";
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
+const MARI_WORKSPACE_SPRITE_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
 const PROFESSOR_MARI_WELCOME_MESSAGE_ID = "__professor_mari_home_welcome__";
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
@@ -3425,6 +3427,7 @@ type HomeProfessorMariChatProps = {
   onChatWindowOpenChange?: (open: boolean) => void;
   onChatWindowExitComplete?: () => void;
   onFloatingDismiss?: () => void;
+  onVisualStateChange?: (state: ProfessorMariVisualState, hasConversation: boolean) => void;
 };
 
 export function HomeProfessorMariChat({
@@ -3441,6 +3444,7 @@ export function HomeProfessorMariChat({
   onChatWindowOpenChange,
   onChatWindowExitComplete,
   onFloatingDismiss,
+  onVisualStateChange,
 }: HomeProfessorMariChatProps) {
   const { t: localizeUi } = useUiTranslation();
   const { t } = useTranslation();
@@ -4199,6 +4203,20 @@ export function HomeProfessorMariChat({
   const showDottoreSupport = workspaceTimelineActive && !workspaceHasResponseText;
   const visiblePendingChangeReviews = !sending && !workspaceTimelineActive ? pendingChangeReviews : [];
   const visiblePendingChangeReviewKey = visiblePendingChangeReviews.map((approval) => approval.id).join("|");
+  const latestMessage = messages[messages.length - 1];
+  const latestActionResults = latestMessage ? getMessageWorkspaceActionResults(latestMessage) : [];
+  const mariVisualState = resolveProfessorMariVisualState({
+    busy: isBusy,
+    hasActionResult: latestActionResults.length > 0,
+    hasAssistantReply: latestMessage?.role === "assistant",
+    hasConversation: messages.length > 0,
+    needsAttention: Boolean(recovery) || visiblePendingChangeReviews.length > 0,
+  });
+
+  useEffect(() => {
+    if (!omnibarMode) return;
+    onVisualStateChange?.(mariVisualState, messages.length > 0);
+  }, [mariVisualState, messages.length, omnibarMode, onVisualStateChange]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -6502,6 +6520,16 @@ export function HomeProfessorMariChat({
                             <LoadingHistoryState />
                           ) : (
                             <>
+                              {omnibarMode && messages.length === 0 ? (
+                                <div
+                                  className="mari-workspace-idle"
+                                  data-component="HomeProfessorMariChat.IdleMari"
+                                  aria-hidden="true"
+                                >
+                                  <span data-part="aura" />
+                                  <img src={MARI_WORKSPACE_SPRITE_URL} alt="" draggable={false} />
+                                </div>
+                              ) : null}
                               {displayMessages.map(renderDisplayMessage)}
                               {workspaceTimelineActive ? (
                                 <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />

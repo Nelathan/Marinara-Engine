@@ -6,6 +6,7 @@ import type { ProfessorMariAskContext } from "@marinara-engine/shared";
 
 import type { CreationProposal } from "../../../lib/omnibar-creation-proposal";
 import type { OmnibarCompletionAction } from "../../../lib/omnibar-completion-actions";
+import type { ProfessorMariVisualState } from "../../../lib/professor-mari-visual-state";
 
 const OmnibarProfessorMariChat = lazy(() =>
   import("../../chat/HomeProfessorMariChat").then((module) => ({ default: module.HomeProfessorMariChat })),
@@ -26,6 +27,7 @@ export interface OmnibarMariPaneProps {
   onChatWindowOpenChange: (open: boolean) => void;
   completionActions: readonly OmnibarCompletionAction[];
   onCompletionAction: (action: OmnibarCompletionAction) => void;
+  onVisualStateChange: (state: ProfessorMariVisualState, hasConversation: boolean) => void;
 }
 
 export function OmnibarMariPane({
@@ -42,6 +44,7 @@ export function OmnibarMariPane({
   onChatWindowOpenChange,
   completionActions,
   onCompletionAction,
+  onVisualStateChange,
 }: OmnibarMariPaneProps) {
   const { t } = useTranslation();
   return (
@@ -125,6 +128,7 @@ export function OmnibarMariPane({
             pendingReviewRequest={mariPendingReviewRequest}
             chatWindowOpen={mariChatOpen}
             onChatWindowOpenChange={onChatWindowOpenChange}
+            onVisualStateChange={onVisualStateChange}
           />
         </Suspense>
       )}
