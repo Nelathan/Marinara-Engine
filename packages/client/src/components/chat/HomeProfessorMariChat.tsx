@@ -79,6 +79,7 @@ import { chatKeys } from "../../hooks/use-chats";
 import { characterKeys, useCharacters, usePersonas } from "../../hooks/use-characters";
 import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../lib/character-preview";
+import { buildLorebookPreviewModel, type LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { completeInline } from "../../lib/inline-completion";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
@@ -89,6 +90,7 @@ import { MariChatHistoryPicker } from "./MariChatHistoryPicker";
 import { MariContextViewer } from "./MariContextViewer";
 import { ProfessorMariContextControl } from "./ProfessorMariContextControl";
 import { CharacterSubject } from "../characters/CharacterSubject";
+import { LorebookSubject } from "../lorebooks/LorebookSubject";
 import { homeFeedKeys } from "../../hooks/use-home-feed";
 import { filterLanguageGenerationConnections } from "../../lib/connection-filters";
 import { api, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
@@ -480,10 +482,29 @@ function resolveContextCharacter(
   );
 }
 
-function persistentCharacterContext(
+function resolveContextLorebook(
+  context: ProfessorMariAskContext | null | undefined,
+  lorebooks: ReadonlyMap<string, LorebookPreviewModel>,
+  fallbackName: string,
+): LorebookPreviewModel | null {
+  if (context?.resource?.kind !== "lorebook") return null;
+  return (
+    lorebooks.get(context.resource.id) ?? {
+      id: context.resource.id,
+      name: context.resource.label ?? fallbackName,
+      category: "uncategorized",
+      isGlobal: false,
+      enabled: true,
+      linkedNames: [],
+      tags: [],
+    }
+  );
+}
+
+function persistentResourceContext(
   context: ProfessorMariAskContext | null | undefined,
 ): ProfessorMariAskContext | null {
-  if (context?.resource?.kind !== "character") return null;
+  if (context?.resource?.kind !== "character" && context?.resource?.kind !== "lorebook") return null;
   return {
     source: context.source,
     capability: "explain",
@@ -1677,6 +1698,39 @@ function MariWorkspaceActionResultRow({
   );
 }
 
+function MariResourceSubject({
+  character,
+  lorebook,
+  className,
+}: {
+  character?: CharacterPreviewModel | null;
+  lorebook?: LorebookPreviewModel | null;
+  className?: string;
+}) {
+  const { t } = useUiTranslation();
+  if (character) {
+    return (
+      <CharacterSubject
+        character={character}
+        label={t("ui.chat.homeprofessormarichat.aboutCharacter")}
+        compact
+        className={cn("w-fit max-w-full border-0 bg-[var(--primary)]/6", className)}
+      />
+    );
+  }
+  if (lorebook) {
+    return (
+      <LorebookSubject
+        lorebook={lorebook}
+        label={t("ui.chat.homeprofessormarichat.aboutLorebook")}
+        compact
+        className={cn("w-fit max-w-full border-0 bg-[var(--primary)]/6", className)}
+      />
+    );
+  }
+  return null;
+}
+
 const CompactMariMessage = memo(function CompactMariMessage({
   message,
   thinking,
@@ -1688,6 +1742,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onOpenActionResult,
   onReviewActionResult,
   characterSubject,
+  lorebookSubject,
 }: {
   message: Message;
   thinking?: string | null;
@@ -1699,6 +1754,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onOpenActionResult: (result: MariWorkspaceActionResult) => void;
   onReviewActionResult: (reviewId: string) => void;
   characterSubject?: CharacterPreviewModel | null;
+  lorebookSubject?: LorebookPreviewModel | null;
 }) {
   const { t: localizeUi } = useUiTranslation();
   const content = message.content ?? "";
@@ -1794,14 +1850,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   if (workspaceTrace) {
     return (
       <div className="group">
-        {characterSubject ? (
-          <CharacterSubject
-            character={characterSubject}
-            label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
-            compact
-            className="mb-2 w-fit max-w-full border-0 bg-[var(--primary)]/6"
-          />
-        ) : null}
+        <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <WorkspaceTimelineList items={timelineItemsFromTrace(workspaceTrace, message)} active={false} openReasoning />
         {actionResults.map((result) => (
           <MariWorkspaceActionResultRow
@@ -1844,14 +1893,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   return (
     <>
       <TranscriptRow className="group" marker={<MariAvatar />}>
-        {characterSubject ? (
-          <CharacterSubject
-            character={characterSubject}
-            label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
-            compact
-            className="mb-2 w-fit max-w-full border-0 bg-[var(--primary)]/6"
-          />
-        ) : null}
+        <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <CompactMarkdown content={content} />
         {actionResults.map((result) => (
           <MariWorkspaceActionResultRow
@@ -3451,6 +3493,16 @@ export function HomeProfessorMariChat({
     }
     return previews;
   }, [completionCharacters.data]);
+  const lorebookPreviewById = useMemo(
+    () =>
+      new Map(
+        (completionLorebooks.data ?? []).map((item) => {
+          const preview = buildLorebookPreviewModel(item);
+          return [preview.id, preview] as const;
+        }),
+      ),
+    [completionLorebooks.data],
+  );
   const draftSuffix = useMemo(() => completeInline(draft, completionCandidates), [completionCandidates, draft]);
   const acceptDraftCompletion = useCallback(() => {
     if (draftSuffix) setDraft((current) => current + draftSuffix);
@@ -3459,6 +3511,8 @@ export function HomeProfessorMariChat({
   const [handoffContext, setHandoffContext] = useState<ProfessorMariAskContext | null>(null);
   const characterFallbackName = t("omnibar.categories.character", "Character");
   const focusedCharacter = resolveContextCharacter(handoffContext, characterPreviewById, characterFallbackName);
+  const lorebookFallbackName = t("omnibar.categories.lorebook", "Lorebook");
+  const focusedLorebook = resolveContextLorebook(handoffContext, lorebookPreviewById, lorebookFallbackName);
   const [isReadingAttachments, setIsReadingAttachments] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(() => readStoredConnectionId());
   const [workspaceStatus, setWorkspaceStatus] = useState<MariWorkspaceStatus | null>(null);
@@ -3790,7 +3844,7 @@ export function HomeProfessorMariChat({
           restoredContext = messageContext;
           break;
         }
-        if (options.restoreFocus !== false) setHandoffContext(persistentCharacterContext(restoredContext));
+        if (options.restoreFocus !== false) setHandoffContext(persistentResourceContext(restoredContext));
         setLoadedMessagesChatId(id);
         if (options.clearSuggestions) clearMariChips();
       } catch (error) {
@@ -5424,7 +5478,7 @@ export function HomeProfessorMariChat({
       setMariChips(chat.id, []);
       clearMariPlan();
       setAttachments([]);
-      setHandoffContext(persistentCharacterContext(submittedContext));
+      setHandoffContext(persistentResourceContext(submittedContext));
       setMessages((current) => [
         ...current,
         createLocalUserMessage(chat.id, messageText, submittedAttachments, submittedContext),
@@ -5587,9 +5641,14 @@ export function HomeProfessorMariChat({
 
   const renderDisplayMessage = (message: Message) => {
     const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;
+    const messageContext = message.role === "assistant" ? getProfessorMariMessageContext(message) : null;
     const messageCharacter =
       message.role === "assistant"
-        ? resolveContextCharacter(getProfessorMariMessageContext(message), characterPreviewById, characterFallbackName)
+        ? resolveContextCharacter(messageContext, characterPreviewById, characterFallbackName)
+        : null;
+    const messageLorebook =
+      message.role === "assistant"
+        ? resolveContextLorebook(messageContext, lorebookPreviewById, lorebookFallbackName)
         : null;
     return (
       <CompactMariMessage
@@ -5604,6 +5663,7 @@ export function HomeProfessorMariChat({
         onOpenActionResult={openActionResult}
         onReviewActionResult={reviewActionResult}
         characterSubject={messageCharacter}
+        lorebookSubject={messageLorebook}
       />
     );
   };
@@ -5639,13 +5699,8 @@ export function HomeProfessorMariChat({
         ) : (
           <>
             {displayMessages.map(renderDisplayMessage)}
-            {workspaceTimelineActive && focusedCharacter ? (
-              <CharacterSubject
-                character={focusedCharacter}
-                label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
-                compact
-                className="w-fit max-w-full border-0 bg-[var(--primary)]/6"
-              />
+            {workspaceTimelineActive ? (
+              <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
             ) : null}
             {workspaceTimeline.length === 0 && workspaceTimelineActive && !showDottoreSupport && (
               <WorkspaceStatusEvent content={workspaceActivity ?? "Thinking..."} />
@@ -6377,6 +6432,7 @@ export function HomeProfessorMariChat({
                             <ProfessorMariContextControl
                               context={handoffContext}
                               character={focusedCharacter}
+                              lorebook={focusedLorebook}
                               attachedContextCount={attachedContext?.length ?? 0}
                               onOpen={() => {
                                 setConnectionMenuOpen(false);
@@ -6441,13 +6497,8 @@ export function HomeProfessorMariChat({
                           ) : (
                             <>
                               {displayMessages.map(renderDisplayMessage)}
-                              {workspaceTimelineActive && focusedCharacter ? (
-                                <CharacterSubject
-                                  character={focusedCharacter}
-                                  label={localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")}
-                                  compact
-                                  className="w-fit max-w-full border-0 bg-[var(--primary)]/6"
-                                />
+                              {workspaceTimelineActive ? (
+                                <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
                               ) : null}
                               {workspaceTimeline.length === 0 && workspaceTimelineActive && !showDottoreSupport && (
                                 <WorkspaceStatusEvent content={workspaceActivity ?? "Thinking..."} />

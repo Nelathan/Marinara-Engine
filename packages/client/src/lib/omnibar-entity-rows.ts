@@ -15,8 +15,17 @@ import type {
 import { formatDate, readNamedRow, readString } from "./omnibar-row-readers";
 import { buildCharacterPreviewModel } from "./character-preview";
 import { parseCharacterDisplayData } from "./character-display";
+import { buildLorebookPreviewModel } from "./lorebook-preview";
 import { resolvePresetArtwork } from "./preset-artwork";
 import { getAvatarCropStyle } from "./utils";
+
+const LOREBOOK_CATEGORY_FALLBACKS: Record<Lorebook["category"], string> = {
+  world: "World",
+  character: "Character",
+  npc: "NPC",
+  spellbook: "Spellbook",
+  uncategorized: "Uncategorized",
+};
 
 /** The `t` shape these builders need, without the i18next generic machinery. */
 export type OmnibarTranslate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
@@ -259,52 +268,52 @@ export function buildOmnibarLorebookRows({
       ...(item.characterIds ?? []).map((id) => characterNameById.get(id)),
       ...(item.personaIds ?? []).map((id) => personaById.get(id)?.name),
     ].filter((name): name is string => Boolean(name));
+    const lorebook = buildLorebookPreviewModel(item, { linkedNames });
     return {
       kind: "lorebook" as const,
       id: item.id,
       name: item.name,
-      description: item.description,
+      description: lorebook.description,
       preview: () => ({
         kind: "lorebook" as const,
-        title: item.name,
-        description: item.description,
+        title: lorebook.name,
+        description: lorebook.description,
         categoryLabel: categoryLabels.lorebook,
-        media: item.imagePath ? { src: item.imagePath, alt: item.name, kind: "artwork" as const } : undefined,
+        media: lorebook.imageSrc ? { src: lorebook.imageSrc, alt: lorebook.name, kind: "artwork" as const } : undefined,
         metadataLine:
           [
-            typeof item.entryCount === "number"
-              ? t("commandCenter.preview.entryCount", "{{count}} entries", { count: item.entryCount })
+            typeof lorebook.entryCount === "number"
+              ? t("commandCenter.preview.entryCountValue", "{{count}} entries", { count: lorebook.entryCount })
               : null,
-            item.isGlobal ? t("commandCenter.values.global", "Global") : t("commandCenter.values.scoped", "Scoped"),
-            linkedNames.length
-              ? t("commandCenter.preview.linkedCount", "{{count}} linked", { count: linkedNames.length })
-              : null,
+            t(
+              `commandCenter.values.lorebookCategory.${lorebook.category}`,
+              LOREBOOK_CATEGORY_FALLBACKS[lorebook.category],
+            ),
+            lorebook.isGlobal ? t("commandCenter.values.global", "Global") : t("commandCenter.values.scoped", "Scoped"),
           ]
             .filter(Boolean)
             .join(" · ") || undefined,
         status: {
-          label: item.enabled
+          label: lorebook.enabled
             ? t("commandCenter.values.enabled", "Enabled")
             : t("commandCenter.values.disabled", "Disabled"),
-          tone: item.enabled ? ("success" as const) : ("neutral" as const),
+          tone: lorebook.enabled ? ("success" as const) : ("neutral" as const),
         },
-        facts: [
-          { label: t("commandCenter.preview.category", "Category"), value: item.category },
-          { label: t("commandCenter.preview.tokenBudget", "Token budget"), value: item.tokenBudget },
-          { label: t("commandCenter.preview.entryLimit", "Entry limit"), value: item.entryLimit },
-          {
-            label: t("commandCenter.preview.scope", "Scope"),
-            value: item.isGlobal
-              ? t("commandCenter.values.global", "Global")
-              : t("commandCenter.values.scoped", "Scoped"),
-          },
-          ...(linkedNames.length
-            ? [{ label: t("commandCenter.preview.linkedTo", "Linked to"), value: linkedNames.join(", ") }]
-            : []),
-        ],
-        badges: item.tags?.length
-          ? [t("commandCenter.preview.tagsValue", "Tags: {{tags}}", { tags: item.tags.join(", ") })]
-          : [],
+        supportingInfo: lorebook.linkedNames.length
+          ? t("commandCenter.preview.linkedToValue", "Linked to {{names}}", {
+              names: lorebook.linkedNames.slice(0, 3).join(", "),
+            }) +
+            (lorebook.linkedNames.length > 3
+              ? t("commandCenter.preview.moreLinked", " +{{count}}", { count: lorebook.linkedNames.length - 3 })
+              : "")
+          : undefined,
+        tags: lorebook.tags
+          .slice(0, 6)
+          .concat(
+            lorebook.tags.length > 6
+              ? [t("commandCenter.preview.moreTags", "+{{count}}", { count: lorebook.tags.length - 6 })]
+              : [],
+          ),
       }),
       control: {
         type: "toggle" as const,

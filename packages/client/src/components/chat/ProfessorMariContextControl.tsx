@@ -1,12 +1,14 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, FileText, Sparkles, UserRound, X } from "lucide-react";
+import { BookOpen, Check, FileText, Sparkles, UserRound, X } from "lucide-react";
 import type { ProfessorMariAskContext } from "@marinara-engine/shared";
 import { useTranslation } from "react-i18next";
 import type { CharacterPreviewModel } from "../../lib/character-preview";
+import type { LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { cn } from "../../lib/utils";
 import { CharacterSubject } from "../characters/CharacterSubject";
 import { CommandCenterMedia } from "../command-center/CommandCenterMedia";
+import { LorebookSubject } from "../lorebooks/LorebookSubject";
 
 interface Props {
   context: ProfessorMariAskContext | null;
@@ -15,6 +17,7 @@ interface Props {
   onRemoveFocus: () => void;
   onViewAttachedContext: () => void;
   character?: CharacterPreviewModel | null;
+  lorebook?: LorebookPreviewModel | null;
 }
 
 type PanelPosition = { top: number; right: number };
@@ -35,6 +38,7 @@ export function ProfessorMariContextControl({
   onRemoveFocus,
   onViewAttachedContext,
   character,
+  lorebook,
 }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -170,6 +174,12 @@ export function ProfessorMariContextControl({
                   label={t("ui.chat.homeprofessormarichat.contextControlWorkingWithCharacter")}
                   className="border-0 bg-transparent p-0"
                 />
+              ) : lorebook ? (
+                <LorebookSubject
+                  lorebook={lorebook}
+                  label={t("ui.chat.homeprofessormarichat.contextControlWorkingWithLorebook")}
+                  className="border-0 bg-transparent p-0"
+                />
               ) : (
                 <>
                   <p className="text-[0.625rem] font-semibold uppercase text-[var(--muted-foreground)]">
@@ -275,11 +285,21 @@ export function ProfessorMariContextControl({
             avatarCropStyle={character.avatarCropStyle}
             className="size-6"
           />
+        ) : lorebook ? (
+          <CommandCenterMedia
+            size="row"
+            role="row"
+            icon={BookOpen}
+            src={lorebook.imageSrc}
+            alt=""
+            kind="artwork"
+            className="size-6"
+          />
         ) : (
           <Sparkles size="0.75rem" />
         )}
         <span className="max-w-28 truncate max-[420px]:hidden">
-          {character?.name ?? t("ui.chat.homeprofessormarichat.contextControlLabel")}
+          {character?.name ?? lorebook?.name ?? t("ui.chat.homeprofessormarichat.contextControlLabel")}
         </span>
         {totalCount > 0 && <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">{totalCount}</span>}
         {context && <span className="sr-only">{t("ui.chat.homeprofessormarichat.contextControlFocused")}</span>}

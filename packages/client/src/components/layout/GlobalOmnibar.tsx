@@ -332,51 +332,54 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
 
   if (lorebookId) {
     const list = entries.data ?? [];
-    const extraFacts: CommandCenterPreviewFact[] = list.length
-      ? [{ label: t("commandCenter.preview.entryCount", "Entries"), value: list.length }]
-      : [];
-    // Entries used to be flattened into two comma-joined strings, which read as
-    // a wall of text. One card per entry shows the shape of the book instead.
-    const detail = list.length ? (
-      <div className="space-y-1.5">
-        {list.slice(0, 5).map((entry, index) => {
-          const keys = (entry.keys ?? []).filter(Boolean).slice(0, 4);
-          return (
-            <div
-              key={entry.id ?? `${entry.name ?? "entry"}-${index}`}
-              className="rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-2.5 py-1.5 ring-1 ring-inset ring-[var(--border)]/50"
-            >
-              <div className="truncate text-xs font-semibold text-[var(--foreground)]">
-                {entry.name?.trim() || t("commandCenter.preview.untitledEntry", "Untitled entry")}
-              </div>
-              {keys.length ? (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {keys.map((key, keyIndex) => (
-                    <span
-                      key={`${key}-${keyIndex}`}
-                      className="rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-1.5 py-0.5 text-[0.625rem] font-medium leading-4 text-[color-mix(in_srgb,var(--primary)_70%,var(--foreground))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]"
-                    >
-                      {key}
-                    </span>
-                  ))}
+    // A short table of contents says more about a lorebook than its generation
+    // limits. Keep it visually part of the preview instead of nesting cards.
+    const detail = entries.isLoading ? null : list.length ? (
+      <div>
+        <p className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
+          {t("commandCenter.preview.insideLorebook", "Inside this lorebook")}
+        </p>
+        <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
+          {list.slice(0, 3).map((entry, index) => {
+            const keys = (entry.keys ?? []).filter(Boolean).slice(0, 3);
+            return (
+              <div key={entry.id ?? `${entry.name ?? "entry"}-${index}`} className="py-2 first:pt-1.5 last:pb-1.5">
+                <div className="truncate text-xs font-semibold text-[var(--foreground)]">
+                  {entry.name?.trim() || t("commandCenter.preview.untitledEntry", "Untitled entry")}
                 </div>
-              ) : null}
-              {entry.content ? (
-                <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-[var(--muted-foreground)]">
-                  {entry.content}
-                </p>
-              ) : null}
-            </div>
-          );
-        })}
-        {list.length > 5 ? (
+                {keys.length ? (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {keys.map((key, keyIndex) => (
+                      <span
+                        key={`${key}-${keyIndex}`}
+                        className="rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-1.5 py-0.5 text-[0.625rem] font-medium leading-4 text-[color-mix(in_srgb,var(--primary)_70%,var(--foreground))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]"
+                      >
+                        {key}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {entry.content ? (
+                  <p className="mt-1 line-clamp-1 break-words text-xs leading-5 text-[var(--muted-foreground)]">
+                    {entry.content}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        {list.length > 3 ? (
           <p className="px-0.5 text-[0.6875rem] text-[var(--muted-foreground)]">
-            {t("commandCenter.preview.moreEntries", "+{{count}} more", { count: list.length - 5 })}
+            {t("commandCenter.preview.moreEntries", "+{{count}} more", { count: list.length - 3 })}
           </p>
         ) : null}
       </div>
-    ) : null;
-    return { extraFacts, detail, detailLoading: entries.isLoading };
+    ) : (
+      <p className="text-xs text-[var(--muted-foreground)]">
+        {t("commandCenter.preview.noLorebookEntries", "No entries yet")}
+      </p>
+    );
+    return { extraFacts: [], detail, detailLoading: entries.isLoading };
   }
 
   return { extraFacts: [], detail: null, detailLoading: false };
@@ -2363,6 +2366,29 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ...(addToChatAction ? [addToChatAction] : []),
           ];
         }
+        if (previewResult.category === "lorebook") {
+          const inActiveChat = Boolean(activeChat && attachedResultIds.has(previewResult.id));
+          const editAction = {
+            label: t("commandCenter.actions.editLorebook", "Edit lorebook"),
+            icon: Edit3,
+            onSelect: () => choose(previewResult),
+          };
+          const askMariAction = mariEnabled
+            ? {
+                label: t("commandCenter.mode.work", "Ask Mari"),
+                icon: Sparkles,
+                onSelect: () => openProfessorMari(previewResult),
+              }
+            : null;
+          const contextAction = inActiveChat
+            ? {
+                label: t("commandCenter.actions.removeFromThisChat", "Remove from this chat"),
+                icon: X,
+                onSelect: () => detachFromChat("lorebook", resourceId, previewResult.title),
+              }
+            : addToChatAction;
+          return [editAction, ...(askMariAction ? [askMariAction] : []), ...(contextAction ? [contextAction] : [])];
+        }
         if (previewResult.control?.type === "toggle") {
           return [
             ...mariActions,
@@ -2468,10 +2494,15 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           detailLoading={previewDetail.detailLoading}
           controlPending={resultControlPending(previewResult)}
           contextStatusLabel={
-            previewResult.category === "character" &&
-            activeChat?.characterIds?.includes(getOmnibarResourceId(previewResult))
-              ? t("commandCenter.preview.inThisChat", "In this chat")
-              : undefined
+            previewResult.category === "character"
+              ? activeChat?.characterIds?.includes(getOmnibarResourceId(previewResult))
+                ? t("commandCenter.preview.inThisChat", "In this chat")
+                : undefined
+              : previewResult.category === "lorebook" && activeChat
+                ? attachedResultIds.has(previewResult.id)
+                  ? t("commandCenter.preview.activeInThisChat", "Active in this chat")
+                  : t("commandCenter.preview.notInThisChat", "Not in this chat")
+                : undefined
           }
         />
       </Suspense>
