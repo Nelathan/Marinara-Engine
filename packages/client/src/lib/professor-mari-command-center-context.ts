@@ -53,6 +53,7 @@ export function buildProfessorMariCommandCenterContext(
     activeChat?: { id: string; label?: string; mode?: string };
     settingsLocation?: { tab?: string; controlId?: string };
     field?: string;
+    fieldId?: string;
     error?: { message: string; code?: string };
   } = {},
 ): ProfessorMariAskContext {
@@ -81,6 +82,7 @@ export function buildProfessorMariCommandCenterContext(
     ...(options.activeChat ? { activeChat: options.activeChat } : {}),
     ...(options.settingsLocation ? { settingsLocation: options.settingsLocation } : {}),
     ...(options.field ? { field: options.field } : {}),
+    ...(options.fieldId ? { fieldId: options.fieldId } : {}),
     ...(options.error ? { error: options.error } : {}),
   };
 }

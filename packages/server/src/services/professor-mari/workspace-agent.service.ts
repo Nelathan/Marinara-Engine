@@ -83,6 +83,8 @@ import type {
   MariWorkspaceToolName,
   MariWorkspaceTraceItem,
   ProfessorMariAskContext,
+  ProfessorMariQuickPromptEvent,
+  ProfessorMariQuickPromptRequest,
 } from "@marinara-engine/shared";
 import { getMariDbService } from "../mari-db/mari-db.service.js";
 import { getProfessorMariWorkspaceSkillsService } from "./workspace-skills.service.js";
@@ -2176,6 +2178,109 @@ export class ProfessorMariWorkspaceService {
 
   rejectSecurityReview(id: string) {
     return this.workspaceChangeReviews.reject(id);
+  }
+
+  async quickPrompt(
+    args: ProfessorMariQuickPromptRequest & {
+      signal: AbortSignal;
+      onEvent: (event: ProfessorMariQuickPromptEvent) => void;
+    },
+  ) {
+    if (!this.enabled) throw new Error("Professor Mari workspace mode is disabled.");
+    const connection = await this.resolveConnection(args.connectionId);
+    if (!connection) throw new Error("Set up a language connection before using Quick Mari.");
+
+    const persistentRows = (await createMariInstructionsStorage(this.app.db).list()).filter(
+      (row) => row.enabled && row.persistent && row.content.trim(),
+    );
+    const memorySections: string[] = [];
+    let memoryChars = 0;
+    for (const row of persistentRows) {
+      const section = `${row.name.trim()}:\n${row.content.trim()}`;
+      if (memorySections.length >= 8 || memoryChars + section.length > 4_000) break;
+      memorySections.push(section);
+      memoryChars += section.length;
+    }
+
+    const context = args.context
+      ? JSON.stringify({
+          source: args.context.source,
+          capability: args.context.capability,
+          query: args.context.query,
+          resource: args.context.resource,
+          field: args.context.field,
+          fieldId: args.context.fieldId,
+          action: args.context.action,
+        })
+      : null;
+    const systemParts = [
+      "You are Professor Mari inside Marinara Engine's Quick mode.",
+      "Answer the user's focused question directly and concisely. Prefer a useful recommendation or explanation over broad background.",
+      "You have no tools, attachments, chat history, or ability to change data in this mode. Never claim that you opened, created, edited, repaired, or applied anything.",
+      "Keep the answer under 300 words. If the request needs creation, execution, attachments, or multiple steps, explain that Full Mari is the right next step and prepare a short follow-up the user can review.",
+    ];
+    if (context) systemParts.push(`Selected workspace context (bounded):\n${context}`);
+    if (memorySections.length > 0) {
+      systemParts.push(`Persistent user memories (bounded):\n${memorySections.join("\n\n")}`);
+    }
+
+    const provider = createProviderForConnection(connection);
+    const baseOptions = this.baseChatOptions(connection, args.signal, () => {});
+    let streamed = false;
+    const options: ChatOptions = {
+      ...baseOptions,
+      maxTokens: Math.min(baseOptions.maxTokens ?? 700, 700),
+      responseFormat: undefined,
+      onToken: (token) => {
+        streamed = true;
+        args.onEvent({ type: "token", data: token });
+      },
+    };
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemParts.join("\n\n"), contextKind: "prompt" },
+      { role: "user", content: args.message, contextKind: "history" },
+    ];
+    const debugOverrideEnabled = args.debugMode === true || isDebugAgentsEnabled();
+    logger.debug(
+      "[debug/professor-mari-quick] One-call prompt: model=%s maxTokens=%d messages=%d contextChars=%d memoryChars=%d",
+      connection.model,
+      options.maxTokens ?? 700,
+      messages.length,
+      context?.length ?? 0,
+      memoryChars,
+    );
+    if (debugOverrideEnabled) {
+      logDebugOverride(
+        true,
+        "[debug/professor-mari-quick] Final prompt messages:\n%s",
+        JSON.stringify(messages, null, 2),
+      );
+    }
+
+    args.onEvent({ type: "status", data: { phase: "thinking" } });
+    const result = await provider.chatComplete(messages, options);
+    if (!streamed && result.content) args.onEvent({ type: "token", data: result.content });
+    const usage = mapUsage(result.usage);
+    const fallbackUsed = Boolean(args.connectionId && args.connectionId !== connection.id);
+    args.onEvent({
+      type: "metadata",
+      data: {
+        connectionId: connection.id,
+        connectionName: connection.name,
+        model: connection.model,
+        fallbackUsed,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+      },
+    });
+    logger.info(
+      "Professor Mari Quick completed one provider call: model=%s promptTokens=%d completionTokens=%d fallback=%s",
+      connection.model,
+      usage.promptTokens,
+      usage.completionTokens,
+      fallbackUsed,
+    );
   }
 
   async prompt(args: {

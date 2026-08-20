@@ -187,9 +187,30 @@ const OmnibarDetailPane = lazy(() =>
   import("./omnibar/OmnibarDetailPane").then((m) => ({ default: m.OmnibarDetailPane })),
 );
 const OmnibarMariPane = lazy(() => import("./omnibar/OmnibarMariPane").then((m) => ({ default: m.OmnibarMariPane })));
+const OmnibarQuickMariPane = lazy(() =>
+  import("./omnibar/OmnibarQuickMariPane").then((m) => ({ default: m.OmnibarQuickMariPane })),
+);
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
+const PROFESSOR_MARI_QUICK_CONNECTION_KEY = "marinara.professorMari.quickConnection";
+
+function readQuickConnectionPreference() {
+  try {
+    return window.localStorage.getItem(PROFESSOR_MARI_QUICK_CONNECTION_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberQuickConnectionPreference(connectionId: string) {
+  try {
+    if (connectionId) window.localStorage.setItem(PROFESSOR_MARI_QUICK_CONNECTION_KEY, connectionId);
+    else window.localStorage.removeItem(PROFESSOR_MARI_QUICK_CONNECTION_KEY);
+  } catch {
+    /* Preference storage is optional; Same as Mari remains the safe default. */
+  }
+}
 /** Categories whose result rows open an editor rather than the thing itself. */
 const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
   "character",
@@ -414,6 +435,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     detailResultId,
     mariReturnResultId,
     mariHandoff,
+    quickTask,
   } = session;
   const mariFinished = mariHandoff?.status === "finished";
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
@@ -439,7 +461,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
+  const [quickContext, setQuickContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
+  const [quickConnectionId, setQuickConnectionId] = useState(readQuickConnectionPreference);
   const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
   const [mariHasConversation, setMariHasConversation] = useState(false);
   // When set, the Work pane shows the creation proposal for review instead of
@@ -456,6 +480,22 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const lorebooks = useLorebooks(undefined, { includeHidden: true });
   const presets = usePresets();
   const connections = useConnections();
+  const quickConnectionOptions = useMemo(
+    () =>
+      (connections.data ?? []).flatMap((value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+        const record = value as Record<string, unknown>;
+        const row = readNamedRow(record);
+        if (
+          !row ||
+          !isLanguageGenerationConnection({ provider: typeof record.provider === "string" ? record.provider : null })
+        ) {
+          return [];
+        }
+        return [{ id: row.id, name: row.name, model: typeof record.model === "string" ? record.model : "" }];
+      }),
+    [connections.data],
+  );
   const agents = useAgentConfigs();
   const activatePersona = useActivatePersona();
   const updateLorebook = useUpdateLorebook();
@@ -1976,6 +2016,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       focusMariReturnRow();
       return;
     }
+    if (pane === "quick") {
+      setPane("results");
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
     const destination = pane === "detail" ? detailOrigin : "results";
     setDetailResult(null);
     setSessionValue("detailResultId", null);
@@ -1998,6 +2043,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
           : undefined,
       field: activeEditorField?.label,
+      fieldId: activeEditorField?.id,
       error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
     });
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
@@ -2006,6 +2052,31 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setSessionValue("mariReturnResultId", returnResultId);
     enterMariPane(askContext);
     if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
+  };
+  const startQuickMari = () => {
+    const message = query.trim();
+    if (!message) return;
+    const focusResult = contextResults[0] ?? null;
+    const context = buildProfessorMariCommandCenterContext(message, focusResult, [], focusResult?.id, {
+      activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
+      settingsLocation:
+        settingsPanelVisible && (settingsTab || settingsTargetControlId)
+          ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
+          : undefined,
+      field: activeEditorField?.label,
+      fieldId: activeEditorField?.id,
+      error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
+    });
+    setQuickContext(context);
+    setSessionValue("quickTask", {
+      id: crypto.randomUUID(),
+      status: "ready",
+      message,
+      answer: "",
+      resultId: focusResult?.id ?? null,
+      createdAt: Date.now(),
+    });
+    setPane("quick");
   };
   // A handed-off task is "finished" once Mari has been seen working and then
   // stops. Advancing the persisted status rather than detecting the edge in a ref
@@ -2671,6 +2742,38 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <X size={13} strokeWidth={2.5} />
               </button>
             ) : null}
+            {query.trim() && pane !== "mari" && pane !== "quick" && mariEnabled ? (
+              <div className="flex shrink-0 items-center gap-1">
+                <select
+                  value={quickConnectionId}
+                  onChange={(event) => {
+                    setQuickConnectionId(event.target.value);
+                    rememberQuickConnectionPreference(event.target.value);
+                  }}
+                  aria-label={t("commandCenter.quick.connection", "Quick Mari connection")}
+                  title={t("commandCenter.quick.connection", "Quick Mari connection")}
+                  className="hidden h-8 max-w-28 rounded-md border border-[var(--border)] bg-[var(--card)] px-1.5 text-[0.625rem] text-[var(--muted-foreground)] outline-none focus:border-[var(--primary)] sm:block"
+                >
+                  <option value="">{t("commandCenter.quick.sameAsMari", "Same as Mari")}</option>
+                  {quickConnectionOptions.map((connection) => (
+                    <option key={connection.id} value={connection.id}>
+                      {connection.name || connection.model}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={startQuickMari}
+                  className="mari-workspace-destination shrink-0 border border-[var(--primary)]/20 bg-[var(--primary)]/7 text-[var(--foreground)]"
+                  aria-label={t("commandCenter.quick.start", "Ask Quick Mari with one model call")}
+                  title={t("commandCenter.quick.start", "Ask Quick Mari with one model call")}
+                >
+                  <Sparkles size={13} />
+                  <span className="hidden sm:inline">{t("commandCenter.quick.costLabel", "Quick · 1 model call")}</span>
+                  <span className="sm:hidden">{t("commandCenter.quick.shortLabel", "Quick")}</span>
+                </button>
+              </div>
+            ) : null}
             {pane !== "mari" && mariEnabled ? (
               <button
                 type="button"
@@ -2698,7 +2801,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <X size={18} />
             </button>
           </div>
-          {(query.trim() || pane === "browse") && pane !== "mari" ? (
+          {(query.trim() || pane === "browse") && pane !== "mari" && pane !== "quick" ? (
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -2761,7 +2864,34 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             />
           </Suspense>
         ) : null}
-        {pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
+        {pane === "quick" && quickTask ? (
+          <Suspense fallback={null}>
+            <OmnibarQuickMariPane
+              task={quickTask}
+              connectionId={quickConnectionId || mariWorkspaceStatus.data?.connection?.id || null}
+              context={quickContext}
+              debugMode={useUIStore.getState().debugMode}
+              onTaskChange={(task) => setSessionValue("quickTask", task)}
+              onPromote={() => {
+                useChatStore
+                  .getState()
+                  .setInputDraft(
+                    PROFESSOR_MARI_DRAFT_KEY,
+                    t(
+                      "commandCenter.quick.promotionDraft",
+                      "{{message}}\n\nContinue from the Quick Mari answer below. Review the request with me before taking action:\n\n{{answer}}",
+                      { message: quickTask.message, answer: quickTask.answer },
+                    ),
+                  );
+                setMariReturnPane("results");
+                setMariContext(quickContext);
+                setMariMounted(true);
+                setMariChatOpen(true);
+                setPane("mari");
+              }}
+            />
+          </Suspense>
+        ) : pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
           <div className="flex min-h-0 flex-1">
             <div
               ref={listRef}

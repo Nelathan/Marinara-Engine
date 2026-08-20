@@ -94,6 +94,8 @@ export interface ProfessorMariAskContext {
   resource?: ProfessorMariContextResource;
   relatedResources?: ProfessorMariRelatedResource[];
   field?: string;
+  /** Stable editor field identifier; `field` remains the human-readable compatibility label. */
+  fieldId?: string;
   error?: { message: string; code?: string };
   action?: string;
   commandCenterResultId?: string;
@@ -115,6 +117,33 @@ export interface ProfessorMariHandoff {
   context?: ProfessorMariAskContext;
   completion?: ProfessorMariCompletion;
 }
+
+export interface ProfessorMariQuickPromptRequest {
+  message: string;
+  connectionId?: string | null;
+  context?: Pick<
+    ProfessorMariAskContext,
+    "source" | "capability" | "query" | "resource" | "field" | "fieldId" | "action"
+  >;
+  debugMode?: boolean;
+}
+
+export interface ProfessorMariQuickMetadata {
+  connectionId: string;
+  connectionName: string;
+  model: string;
+  fallbackUsed: boolean;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export type ProfessorMariQuickPromptEvent =
+  | { type: "status"; data: { phase: "starting" | "thinking" } }
+  | { type: "token"; data: string }
+  | { type: "metadata"; data: ProfessorMariQuickMetadata }
+  | { type: "complete"; data: { ok: true } }
+  | { type: "error"; data: string };
 
 export type MariWorkspaceActionResourceKind = Extract<
   ProfessorMariContextResourceKind,
