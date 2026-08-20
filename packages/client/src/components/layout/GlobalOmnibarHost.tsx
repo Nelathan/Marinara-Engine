@@ -1,7 +1,12 @@
 import { Component, Suspense, lazy, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { DEFAULT_COMMAND_CENTER_SESSION_STATE, writeCommandCenterSessionState } from "../../lib/command-center";
+import {
+  DEFAULT_COMMAND_CENTER_SESSION_STATE,
+  readCommandCenterSessionState,
+  writeCommandCenterSessionState,
+} from "../../lib/command-center";
+import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
 import { useUIStore } from "../../stores/ui.store";
 
 // The dialog carries the whole Command Center (search, browse, Mari panes), so it
@@ -81,6 +86,35 @@ export function GlobalOmnibar() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, [setOpen]);
+
+  useEffect(() => {
+    const openProfessorMari = (event: Event) => {
+      const request = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
+      if ((request.destination ?? "omnibar") !== "omnibar") return;
+      if (!useUIStore.getState().omnibarOpen) {
+        const current = readCommandCenterSessionState();
+        writeCommandCenterSessionState({
+          ...current,
+          pane: "mari",
+          mariDestination: "chat",
+          mariDetailId: null,
+          mariHandoff: request.context
+            ? {
+                status: "pending",
+                context: {
+                  capability: request.context.capability,
+                  resource: request.context.resource,
+                  field: request.context.field,
+                },
+              }
+            : current.mariHandoff,
+        });
+      }
+      setOpen(true);
+    };
+    window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, openProfessorMari);
+    return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, openProfessorMari);
   }, [setOpen]);
 
   if (!open) return null;

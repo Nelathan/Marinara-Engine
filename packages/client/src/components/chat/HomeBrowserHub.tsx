@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -67,11 +66,7 @@ import {
   type ProfessorMariNavigationResource,
   type ProfessorMariNavigationTarget,
 } from "../../lib/professor-mari-navigation";
-import {
-  peekProfessorMariOpenRequest,
-  PROFESSOR_MARI_OPEN_EVENT,
-  type ProfessorMariOpenDetail,
-} from "../../lib/professor-mari-open";
+import { requestProfessorMariOpen } from "../../lib/professor-mari-open";
 import { cn, getAvatarCropStyle } from "../../lib/utils";
 import { useUIStore } from "../../stores/ui.store";
 import { useChatStore } from "../../stores/chat.store";
@@ -1048,21 +1043,8 @@ export function HomeBrowserHub({
     onProfessorChatExitComplete();
     if (target) setActiveTab(target);
   };
-  const openProfessor = () => selectTab("professor");
+  const openProfessor = () => requestProfessorMariOpen();
   const closeProfessor = () => selectTab("home");
-  const openProfessorFromRequest = useEffectEvent(() => openProfessor());
-
-  useEffect(() => {
-    const openRequestedProfessor = (event: Event) => {
-      const request = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
-      if (request.destination && request.destination !== "home") return;
-      openProfessorFromRequest();
-    };
-    const pending = peekProfessorMariOpenRequest();
-    if (pending && (!pending.destination || pending.destination === "home")) openProfessorFromRequest();
-    window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessor);
-    return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessor);
-  }, []);
   const moveDraggedWidget = useCallback(
     (target: { kind: "widget"; id: HomeWidgetId } | { kind: "empty"; index: number }) => {
       const source = draggedWidgetIdRef.current;

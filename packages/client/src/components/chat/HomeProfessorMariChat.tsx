@@ -3760,7 +3760,7 @@ export function HomeProfessorMariChat({
   );
 
   useEffect(() => {
-    const destination = floatingMode ? "floating-assistant" : "home";
+    const destination = floatingMode ? "floating-assistant" : omnibarMode ? "omnibar" : "home";
     const pending = consumeProfessorMariOpenRequest(destination);
     if (pending) applyHandoff(pending);
     const handleOpen = (event: Event) => {
@@ -3770,7 +3770,7 @@ export function HomeProfessorMariChat({
     };
     window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
     return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
-  }, [applyHandoff, floatingMode]);
+  }, [applyHandoff, floatingMode, omnibarMode]);
 
   // Direct prop channel (e.g. the omnibar Mari pane) — avoids the global open
   // event so a co-mounted Home instance never steals the handoff context.

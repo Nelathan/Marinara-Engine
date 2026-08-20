@@ -101,7 +101,7 @@ export interface ProfessorMariAskContext {
   settingsLocation?: { tab?: string; controlId?: string };
 }
 
-export type ProfessorMariHandoffDestination = "home" | "floating-assistant" | "character-chat";
+export type ProfessorMariHandoffDestination = "omnibar" | "home" | "floating-assistant" | "character-chat";
 
 export type ProfessorMariCompletion =
   | { kind: "open-resource"; resource: ProfessorMariContextResource }

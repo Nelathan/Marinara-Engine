@@ -480,10 +480,23 @@ assert.deepEqual(
   },
 );
 
-// The omnibar reopens on search, never a stale Professor Mari pane: the session
-// normalizer must reset an unsupported persisted pane back to "results".
-assert.equal(normalizeCommandCenterSessionState({ pane: "mari" }).pane, "results");
+// Full and Quick Mari are canonical omnibar depths and survive close/reopen.
+assert.equal(normalizeCommandCenterSessionState({ pane: "mari" }).pane, "mari");
+assert.equal(normalizeCommandCenterSessionState({ pane: "quick" }).pane, "quick");
 assert.equal(normalizeCommandCenterSessionState({ pane: "browse" }).pane, "browse");
 assert.equal(normalizeCommandCenterSessionState({ pane: "detail" }).pane, "detail");
+
+const mariSession = normalizeCommandCenterSessionState({
+  pane: "mari",
+  mariDestination: "memories",
+  mariDetailId: "memory-one",
+  returnStack: [
+    { pane: "results", resultId: "character:luna" },
+    { pane: "mari", destination: "memories", detailId: "memory-one" },
+  ],
+});
+assert.equal(mariSession.mariDestination, "memories");
+assert.equal(mariSession.mariDetailId, "memory-one");
+assert.equal(mariSession.returnStack.length, 2);
 
 console.info("Command Center regression checks passed.");

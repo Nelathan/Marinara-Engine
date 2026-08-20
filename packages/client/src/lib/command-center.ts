@@ -201,8 +201,25 @@ const MAX_COMMAND_ID_LENGTH = 256;
 const MAX_USE_COUNT = 10_000;
 const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type CommandCenterPane = "results" | "browse" | "detail" | "mari";
-export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "mari">;
+export type CommandCenterPane = "results" | "browse" | "detail" | "quick" | "mari";
+export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "quick" | "mari">;
+export type CommandCenterMariDestination = "chat" | "chats" | "memories" | "skills" | "context";
+
+export interface CommandCenterQuickTask {
+  id: string;
+  status: "ready" | "streaming" | "complete" | "error";
+  message: string;
+  answer: string;
+  resultId: string | null;
+  createdAt: number;
+}
+
+export type CommandCenterReturnTarget =
+  | { pane: "results"; resultId: string | null }
+  | { pane: "browse"; resultId: string | null }
+  | { pane: "detail"; resultId: string | null; origin: CommandCenterDetailOrigin }
+  | { pane: "quick"; taskId: string | null }
+  | { pane: "mari"; destination: CommandCenterMariDestination; detailId: string | null };
 
 /**
  * A task handed to Professor Mari, held in session state rather than component
@@ -227,6 +244,10 @@ export interface CommandCenterSessionState {
   browseLimit: number;
   mariReturnResultId: string | null;
   mariHandoff: CommandCenterMariHandoff | null;
+  mariDestination: CommandCenterMariDestination;
+  mariDetailId: string | null;
+  quickTask: CommandCenterQuickTask | null;
+  returnStack: CommandCenterReturnTarget[];
 }
 
 export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
@@ -240,6 +261,10 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
   browseLimit: 48,
   mariReturnResultId: null,
   mariHandoff: null,
+  mariDestination: "chat",
+  mariDetailId: null,
+  quickTask: null,
+  returnStack: [],
 };
 
 function getCommandCenterSessionStorage(): CommandStorage | null {
@@ -251,7 +276,10 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
   const filter = COMMAND_CENTER_CATEGORY_FILTERS.includes(source.filter as CommandCenterCategoryFilter)
     ? (source.filter as CommandCenterCategoryFilter)
     : "all";
-  const pane = source.pane === "browse" || source.pane === "detail" ? source.pane : "results";
+  const pane =
+    source.pane === "browse" || source.pane === "detail" || source.pane === "quick" || source.pane === "mari"
+      ? source.pane
+      : "results";
   const detailOrigin = source.detailOrigin === "browse" ? "browse" : "results";
   const stringOrNull = (next: unknown) => (typeof next === "string" && next.trim() ? next.trim() : null);
   const browseLimit =
@@ -270,7 +298,55 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
     browseLimit,
     mariReturnResultId: stringOrNull(source.mariReturnResultId),
     mariHandoff: normalizeMariHandoff(source.mariHandoff),
+    mariDestination: normalizeMariDestination(source.mariDestination),
+    mariDetailId: stringOrNull(source.mariDetailId),
+    quickTask: normalizeQuickTask(source.quickTask),
+    returnStack: normalizeReturnStack(source.returnStack),
   };
+}
+
+function normalizeMariDestination(value: unknown): CommandCenterMariDestination {
+  return value === "chats" || value === "memories" || value === "skills" || value === "context" ? value : "chat";
+}
+
+function normalizeQuickTask(value: unknown): CommandCenterQuickTask | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const status = source.status;
+  if (status !== "ready" && status !== "streaming" && status !== "complete" && status !== "error") return null;
+  if (typeof source.id !== "string" || typeof source.message !== "string") return null;
+  return {
+    id: source.id.slice(0, 128),
+    status,
+    message: source.message.slice(0, 4_000),
+    answer: typeof source.answer === "string" ? source.answer.slice(0, 20_000) : "",
+    resultId: typeof source.resultId === "string" ? source.resultId.slice(0, 256) : null,
+    createdAt:
+      typeof source.createdAt === "number" && Number.isFinite(source.createdAt) ? source.createdAt : Date.now(),
+  };
+}
+
+function normalizeReturnStack(value: unknown): CommandCenterReturnTarget[] {
+  if (!Array.isArray(value)) return [];
+  const targets: CommandCenterReturnTarget[] = [];
+  for (const item of value.slice(-8)) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const source = item as Record<string, unknown>;
+    const resultId = typeof source.resultId === "string" ? source.resultId.slice(0, 256) : null;
+    if (source.pane === "results" || source.pane === "browse") targets.push({ pane: source.pane, resultId });
+    else if (source.pane === "detail") {
+      targets.push({ pane: "detail", resultId, origin: source.origin === "browse" ? "browse" : "results" });
+    } else if (source.pane === "quick") {
+      targets.push({ pane: "quick", taskId: typeof source.taskId === "string" ? source.taskId.slice(0, 128) : null });
+    } else if (source.pane === "mari") {
+      targets.push({
+        pane: "mari",
+        destination: normalizeMariDestination(source.destination),
+        detailId: typeof source.detailId === "string" ? source.detailId.slice(0, 256) : null,
+      });
+    }
+  }
+  return targets;
 }
 
 /**

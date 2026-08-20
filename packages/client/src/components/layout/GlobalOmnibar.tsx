@@ -3,6 +3,7 @@ import {
   Suspense,
   useDeferredValue,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -143,6 +144,7 @@ import { parseCreationSeed, splitProposalWork, type CreationProposal } from "../
 import { parseChatExtraction } from "../../lib/omnibar-chat-extraction";
 import { parseGameCommand } from "../../lib/omnibar-game-commands";
 import { buildProfessorMariCommandCenterContext } from "../../lib/professor-mari-command-center-context";
+import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
@@ -1496,6 +1498,18 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setMariMounted(true);
     setPane("mari");
   };
+  const enterRequestedMariPane = useEffectEvent((request: ProfessorMariOpenDetail) => {
+    enterMariPane(request.context);
+  });
+  useEffect(() => {
+    const openRequestedProfessorMari = (event: Event) => {
+      const request = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
+      if ((request.destination ?? "omnibar") !== "omnibar") return;
+      enterRequestedMariPane(request);
+    };
+    window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessorMari);
+    return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessorMari);
+  }, []);
   /** Guards every path that leaves an open editor, so no route skips the prompt. */
   const confirmLeaveEditor = () =>
     !ui().editorDirty || window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"));
