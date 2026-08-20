@@ -1666,7 +1666,7 @@ function MariWorkspaceActionResultRow({
 }) {
   const { t: localizeUi } = useUiTranslation();
   return (
-    <div className="mt-2 flex min-w-0 items-center gap-2 border-l-2 border-[var(--primary)]/50 pl-2 text-xs">
+    <div className="mari-workspace-artifact mt-2 flex min-w-0 items-center gap-2 border-l-2 border-[var(--primary)]/50 pl-2 text-xs">
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-[var(--foreground)]">{result.summary}</p>
         {result.changedFields.length > 0 && (
@@ -1892,7 +1892,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
 
   return (
     <>
-      <TranscriptRow className="group" marker={<MariAvatar />}>
+      <TranscriptRow className="mari-workspace-mari-message group" marker={<MariAvatar />}>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <CompactMarkdown content={content} />
         {actionResults.map((result) => (
@@ -2034,7 +2034,7 @@ function ProfessorMariTrustStrip({
   return (
     <div
       data-component="HomeProfessorMariChat.TrustStrip"
-      className="flex min-w-0 flex-wrap items-center gap-1 border-b border-[var(--border)]/45 bg-[var(--background)]/55 px-2 py-1 text-[0.625rem] text-[var(--muted-foreground)] sm:px-3"
+      className="mari-workspace-capabilities scrollbar-hide flex min-w-0 shrink-0 items-center gap-1 overflow-x-auto border-b border-[var(--border)]/45 px-2 py-1.5 text-[0.625rem] text-[var(--muted-foreground)] overscroll-x-contain sm:px-3"
     >
       <button
         type="button"
@@ -6104,7 +6104,19 @@ export function HomeProfessorMariChat({
                               {localizeUi("ui.chat.homeprofessormarichat.restartSavesTheCurrentChatHere")}
                             </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-1">
+                          <div
+                            className="mari-workspace-destinations scrollbar-hide flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overscroll-x-contain"
+                            role="navigation"
+                            aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
+                          >
+                            <button
+                              type="button"
+                              className="mari-workspace-destination mari-workspace-destination--active"
+                              aria-current="page"
+                            >
+                              <MessageCircle size="0.75rem" />
+                              <span>{localizeUi("ui.chat.homeprofessormarichat.chat")}</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => {
@@ -6380,29 +6392,27 @@ export function HomeProfessorMariChat({
                               onClick={toggleChatHistory}
                               disabled={isBusy && !chatHistoryOpen}
                               className={cn(
-                                "inline-flex h-8 items-center gap-1 rounded-md px-2 text-[0.6875rem] font-semibold transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50",
+                                "mari-workspace-destination",
                                 "mari-chrome-accent-text-muted mari-accent-animated hover:text-[var(--marinara-chat-chrome-button-text-hover)]",
                               )}
                               title={t("home.professorMari.openPreviousChats")}
                               aria-expanded={chatHistoryOpen}
                             >
                               <BookOpen size="0.75rem" />
-                              <span className="max-[360px]:hidden">{localizeUi("navigation.common.chats")}</span>
+                              <span>{localizeUi("navigation.common.chats")}</span>
                             </button>
                             <button
                               type="button"
                               onClick={toggleSkillsMenu}
                               className={cn(
-                                "inline-flex h-8 items-center gap-1 rounded-md px-2 text-[0.6875rem] font-semibold transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50",
+                                "mari-workspace-destination",
                                 "mari-chrome-accent-text-muted mari-accent-animated hover:text-[var(--marinara-chat-chrome-button-text-hover)]",
                               )}
                               title={localizeUi("ui.chat.homeprofessormarichat.openSkills")}
                               aria-expanded={skillsMenuOpen}
                             >
                               <ArrowDown size="0.75rem" />
-                              <span className="max-[360px]:hidden">
-                                {localizeUi("ui.chat.homeprofessormarichat.skills")}
-                              </span>
+                              <span>{localizeUi("ui.chat.homeprofessormarichat.skills")}</span>
                               {skills.length > 0 && (
                                 <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">
                                   {activeSkillCount}
@@ -6413,16 +6423,14 @@ export function HomeProfessorMariChat({
                               type="button"
                               onClick={toggleMemoriesMenu}
                               className={cn(
-                                "inline-flex h-8 items-center gap-1 rounded-md px-2 text-[0.6875rem] font-semibold transition-colors hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50",
+                                "mari-workspace-destination",
                                 "mari-chrome-accent-text-muted mari-accent-animated hover:text-[var(--marinara-chat-chrome-button-text-hover)]",
                               )}
                               title={localizeUi("ui.chat.homeprofessormarichat.openMemories")}
                               aria-expanded={memoriesMenuOpen}
                             >
                               <Brain size="0.75rem" />
-                              <span className="max-[360px]:hidden">
-                                {localizeUi("ui.chat.homeprofessormarichat.memories")}
-                              </span>
+                              <span>{localizeUi("ui.chat.homeprofessormarichat.memories")}</span>
                               {memories.length > 0 && (
                                 <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">
                                   {activeMemoryCount}
@@ -6457,14 +6465,12 @@ export function HomeProfessorMariChat({
                               type="button"
                               onClick={() => void runRestart()}
                               disabled={isBusy}
-                              className="mari-chrome-accent-text-muted mari-accent-animated inline-flex items-center gap-1 rounded-md px-2 py-1 text-[0.6875rem] transition-colors hover:bg-[var(--marinara-chat-chrome-highlight-bg)] hover:text-[var(--marinara-chat-chrome-button-text-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                              className="mari-workspace-destination mari-chrome-accent-text-muted mari-accent-animated disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label={t("home.professorMari.restart")}
                               title={t("home.professorMari.restart")}
                             >
                               <RefreshCw size="0.75rem" />
-                              <span className="max-[380px]:hidden">
-                                {localizeUi("ui.chat.homeprofessormarichat.restart")}
-                              </span>
+                              <span>{localizeUi("ui.chat.homeprofessormarichat.restart")}</span>
                             </button>
                             {!embeddedTab && (
                               <button
@@ -6488,7 +6494,7 @@ export function HomeProfessorMariChat({
                           className={cn(
                             "min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3 pb-4 text-left",
                             omnibarMode
-                              ? "bg-transparent"
+                              ? "mari-workspace-transcript bg-transparent"
                               : "bg-[radial-gradient(circle_at_12%_8%,oklch(0.79_0.16_205/0.06),transparent_26%),radial-gradient(circle_at_88%_12%,oklch(0.73_0.21_345/0.07),transparent_28%)]",
                           )}
                         >
@@ -6534,7 +6540,7 @@ export function HomeProfessorMariChat({
                         <form
                           className={cn(
                             "border-t border-[var(--border)]/60 px-2.5 py-2.5",
-                            omnibarMode && "bg-[var(--card)]/35 px-2 py-2",
+                            omnibarMode && "mari-workspace-composer-dock px-2 py-2",
                           )}
                           onSubmit={(event) => {
                             event.preventDefault();
@@ -6584,8 +6590,7 @@ export function HomeProfessorMariChat({
                           <div
                             className={cn(
                               "mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50",
-                              omnibarMode &&
-                                "rounded-lg border-[var(--border)]/70 bg-[var(--card)]/70 shadow-none focus-within:border-[var(--primary)]/50",
+                              omnibarMode && "mari-workspace-composer rounded-xl shadow-none",
                             )}
                           >
                             <MariAttachButton

@@ -147,6 +147,7 @@ import { buildProfessorMariCommandCenterContext } from "../../lib/professor-mari
 import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
+import { cn } from "../../lib/utils";
 import { useLocalizedUiText } from "../../localization/use-localized-ui-text";
 import { useChatStore } from "../../stores/chat.store";
 import { isMessageHiddenFromUser } from "../../lib/chat-message-visibility";
@@ -2540,7 +2541,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="global-omnibar-title"
         data-component="GlobalOmnibar.Panel"
-        className={`relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60 motion-safe:transition-[height,max-height] motion-safe:duration-300 motion-safe:ease-out motion-reduce:transition-none ${pane === "mari" ? "sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]" : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"}`}
+        className={`relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60 motion-safe:transition-[height,max-height] motion-safe:duration-300 motion-safe:ease-out motion-reduce:transition-none ${pane === "mari" ? "mari-workspace-shell sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]" : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"}`}
       >
         <div
           aria-hidden="true"
@@ -2550,7 +2551,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           {pane === "mari" ? t("commandCenter.workTitle", "Professor Mari") : t("omnibar.title", "Search Marinara")}
         </h2>
         <header className="shrink-0 pt-[env(safe-area-inset-top)]">
-          <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4">
+          <div
+            className={cn(
+              "flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4",
+              pane === "mari" && "mari-workspace-header",
+            )}
+          >
             {pane !== "results" ? (
               <button
                 ref={backButtonRef}
@@ -2580,13 +2586,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <img
-                    src={PROFESSOR_MARI_PEEK_URL}
-                    alt=""
-                    aria-hidden="true"
-                    draggable={false}
-                    className="size-9 shrink-0 rounded-full object-cover object-top ring-1 ring-[var(--primary)]/30 ring-offset-2 ring-offset-[var(--card)]"
-                  />
+                  <span className="mari-workspace-portrait" aria-hidden="true">
+                    <img src={PROFESSOR_MARI_PEEK_URL} alt="" draggable={false} />
+                  </span>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold leading-tight text-[var(--foreground)]">
                       {t("omnibar.categories.professor", "Professor Mari")}

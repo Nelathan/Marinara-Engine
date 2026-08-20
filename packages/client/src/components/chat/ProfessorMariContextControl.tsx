@@ -265,7 +265,7 @@ export function ProfessorMariContextControl({
           setOpen((current) => !current);
         }}
         className={cn(
-          "mari-chrome-accent-text-muted mari-accent-animated inline-flex h-8 items-center gap-1 rounded-md px-2 text-[0.6875rem] font-semibold transition-colors hover:bg-[var(--accent)] hover:text-[var(--marinara-chat-chrome-button-text-hover)]",
+          "mari-workspace-destination mari-chrome-accent-text-muted mari-accent-animated",
           context && "text-[var(--primary)]",
         )}
         title={t("ui.chat.homeprofessormarichat.contextControlOpen")}
@@ -298,7 +298,7 @@ export function ProfessorMariContextControl({
         ) : (
           <Sparkles size="0.75rem" />
         )}
-        <span className="max-w-28 truncate max-[420px]:hidden">
+        <span className="max-w-28 truncate">
           {character?.name ?? lorebook?.name ?? t("ui.chat.homeprofessormarichat.contextControlLabel")}
         </span>
         {totalCount > 0 && <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">{totalCount}</span>}

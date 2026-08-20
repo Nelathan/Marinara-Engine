@@ -51,7 +51,7 @@ export function OmnibarMariPane({
       initial={active ? { opacity: 0, y: -14, scale: 0.985 } : false}
       animate={active ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -12, scale: 0.995 }}
       transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
-      className={`min-h-0 overflow-hidden bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.10),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.12),transparent_32%),var(--background)] ${active ? "relative flex-1" : "pointer-events-none absolute inset-0"}`}
+      className={`mari-workspace-canvas min-h-0 overflow-hidden ${active ? "relative flex-1" : "pointer-events-none absolute inset-0"}`}
       aria-hidden={!active}
     >
       {proposalDraft ? (
