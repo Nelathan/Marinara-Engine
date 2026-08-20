@@ -1969,6 +1969,24 @@ function buildCustomAgentCapabilityBlock(config: AgentExecConfig, context: Agent
     }
   }
 
+  if (capabilities.manage_chat_characters) {
+    const chatCharacters = context.chatCharacters ?? [];
+    parts.push(
+      context.chatMode === "conversation" || context.chatMode === "roleplay"
+        ? `Chat character activity control is enabled. For Character Activity output, return {"activeCharacterIds":["exact-character-id"]}. Select at least one ID from <chat_characters>; that selection controls the current main reply.`
+        : `Chat character activity control is unavailable in this chat mode.`,
+    );
+    if (chatCharacters.length > 0) {
+      parts.push("<chat_characters>");
+      for (const character of chatCharacters) {
+        parts.push(
+          `<character id="${escapeXml(character.id)}" active="${character.active ? "true" : "false"}">${escapeXml(character.name)}</character>`,
+        );
+      }
+      parts.push("</chat_characters>");
+    }
+  }
+
   if (capabilities.access_vectors) {
     const contextSources = getAgentContextSources(config);
     const vectorContextAvailable =
@@ -2997,6 +3015,17 @@ function buildAgentExtras(
       parts.push(`<existing_entries>`);
       parts.push(entries.join("\n"));
       parts.push(`</existing_entries>`);
+    }
+  }
+
+  if (agentTypes.includes("lorebook-keeper") && Array.isArray(context.memory._writableLorebooks)) {
+    const books = (context.memory._writableLorebooks as Array<{ id?: unknown; name?: unknown }>)
+      .filter((book) => typeof book.id === "string" && typeof book.name === "string")
+      .map((book, index) => `[${index}] "${escapeXml(String(book.name))}" (id: ${escapeXml(String(book.id))})`);
+    if (books.length > 0) {
+      parts.push(`<writable_lorebooks>`);
+      parts.push(books.join("\n"));
+      parts.push(`</writable_lorebooks>`);
     }
   }
 
