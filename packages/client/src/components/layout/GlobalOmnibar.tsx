@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import type { ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
+import { toast } from "sonner";
+import type { Character, ChatMode, ProfessorMariAskContext } from "@marinara-engine/shared";
 import {
   ArrowRight,
   ChevronLeft,
@@ -34,7 +35,7 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAgentConfigs } from "../../hooks/use-agents";
-import { useActivatePersona, useCharacters, usePersonas } from "../../hooks/use-characters";
+import { useActivatePersona, useCharacter, useCharacters, usePersonas } from "../../hooks/use-characters";
 import {
   useChats,
   useChatMessageCount,
@@ -54,11 +55,13 @@ import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-searc
 import { useCreateLorebook, useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { useProfessorMariWorkspaceStatus } from "../../hooks/use-professor-mari-workspace-status";
+import { useMariApprovals } from "../../hooks/use-mari-approvals";
 import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { completeInline } from "../../lib/inline-completion";
 import { parseChatMetadata } from "../../lib/chat-display";
 import { isLanguageGenerationConnection } from "../../lib/connection-filters";
 import { resolveChatResourceDropAction } from "../../lib/chat-resource-drop-capabilities";
+import { chatResourceBlockedKey } from "../chat/ChatResourceDropOverlay";
 import {
   deriveActiveLorebookViews,
   getChatActiveLorebookIds,
@@ -76,7 +79,9 @@ import {
   rankCommandResults,
   readCommandCenterSessionState,
   readCommandRankingState,
+  advanceMariHandoff,
   recordCommandUse,
+  setCommandPinned,
   writeCommandRankingState,
   writeCommandCenterSessionState,
   type CommandCenterCategoryFilter,
@@ -100,7 +105,9 @@ import {
   MIN_MESSAGE_SEARCH_LENGTH,
   buildOmnibarChatControlResults,
   buildOmnibarContextResults,
+  buildOmnibarApprovalResults,
   buildOmnibarContinueResult,
+  buildOmnibarScopeHintResult,
   buildOmnibarControlResults,
   buildOmnibarExtractionResult,
   buildOmnibarGameResult,
@@ -189,16 +196,24 @@ const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
   "agent",
 ]);
 
-/** Categories that can be attached to (or detached from) the open chat. */
-const CHAT_ATTACHABLE_CATEGORIES = new Set<OmnibarCategory>([
-  "character",
-  "persona",
-  "lorebook",
-  "preset",
-  "connection",
-  "agent",
-]);
+/**
+ * Categories that can be attached to (or detached from) the open chat, mapped to
+ * the drag payload kind that carries them. One table: every attach path — a row,
+ * a preview action, a browse batch — has to agree on what is attachable.
+ */
+const CHAT_RESOURCE_KIND: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
+  character: "character",
+  persona: "persona",
+  lorebook: "lorebook",
+  preset: "preset",
+  connection: "connection",
+  agent: "agent",
+};
+/** A drop payload carries one kind, so a batch is limited to the multi-valued ones. */
+const BATCH_ATTACHABLE_CATEGORIES = new Set<OmnibarCategory>(["character", "persona", "lorebook", "preset"]);
 const BROWSE_BATCH_SIZE = 48;
+/** One drop payload, one comparison prompt — five is what stays readable in both. */
+const BROWSE_COMPARE_LIMIT = 5;
 
 // Leading resource-kind words to strip from a "create <kind> <name>" query so the
 // create modal opens with just the typed name pre-filled.
@@ -253,10 +268,13 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
 
   const chatId = category === "chat" && settled ? resourceId : null;
   const lorebookId = category === "lorebook" && settled ? resourceId : null;
+  // Characters are the most-used kind and had no lazy detail at all.
+  const characterId = category === "character" && settled ? resourceId : null;
 
   const peek = useChatMessagePeek(chatId, 3, !!chatId);
   const messageCount = useChatMessageCount(chatId);
   const entries = useLorebookEntries(lorebookId);
+  const character = useCharacter(characterId);
 
   if (chatId) {
     const messages = peek.data ?? [];
@@ -284,6 +302,34 @@ function usePreviewDetail(previewResult: RankedOmnibarResult | null): {
       </div>
     ) : null;
     return { extraFacts, detail, detailLoading: peek.isLoading };
+  }
+
+  if (characterId) {
+    const data = (character.data as Character | undefined)?.data;
+    const greeting = data?.first_mes?.trim();
+    const tags = (data?.tags ?? []).filter(Boolean).slice(0, 6);
+    const extraFacts: CommandCenterPreviewFact[] = [
+      ...(tags.length ? [{ label: t("commandCenter.preview.tags", "Tags"), value: tags.join(", ") }] : []),
+      ...(data?.alternate_greetings?.length
+        ? [
+            {
+              label: t("commandCenter.preview.greetings", "Greetings"),
+              value: data.alternate_greetings.length + 1,
+            },
+          ]
+        : []),
+    ];
+    // The greeting is what the character actually opens with, so it says more
+    // about them than the description does.
+    const detail = greeting ? (
+      <div className="rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-2.5 py-1.5 ring-1 ring-inset ring-[var(--border)]/50">
+        <div className="text-[0.625rem] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
+          {t("commandCenter.preview.greeting", "Greeting")}
+        </div>
+        <p className="mt-0.5 line-clamp-4 break-words text-xs leading-5 text-[var(--foreground)]">{greeting}</p>
+      </div>
+    ) : null;
+    return { extraFacts, detail, detailLoading: character.isLoading };
   }
 
   if (lorebookId) {
@@ -362,7 +408,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     browseLimit,
     detailResultId,
     mariReturnResultId,
+    mariHandoff,
   } = session;
+  const mariFinished = mariHandoff?.status === "finished";
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));
   const setQuery = (value: string) => setSessionValue("query", value);
@@ -387,9 +435,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
-  // Set when a Mari task finishes while the Work pane is open, so the omnibar can
-  // offer the bounded completion actions for that task instead of a dead end.
-  const [mariTaskFinished, setMariTaskFinished] = useState(false);
   // When set, the Work pane shows the creation proposal for review instead of
   // the Mari transcript. Nothing is created until the user accepts.
   const [proposalDraft, setProposalDraft] = useState<CreationProposal | null>(null);
@@ -1117,7 +1162,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const byId = new Map(allLocalResults.map((item) => [item.id, item]));
     return ranking.recent.flatMap((entry) => {
       const item = byId.get(entry.id);
-      return item && CHAT_ATTACHABLE_CATEGORIES.has(item.category) ? [item] : [];
+      return item && CHAT_RESOURCE_KIND[item.category] ? [item] : [];
     });
   }, [allLocalResults, ranking.recent]);
   const addSuggestions = useMemo<OmnibarResult[]>(
@@ -1165,9 +1210,31 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [activeChat?.mode, deferredQuery],
   );
   const gameResult = useMemo<OmnibarResult | null>(() => buildOmnibarGameResult({ gameCommand, t }), [gameCommand, t]);
+  // The same hook the Work pane uses, so an approval decided from a row behaves
+  // and reads exactly as it does there.
+  const { keepApproval, restoreApproval, pendingId: approvalPendingId } = useMariApprovals();
+  const approvalResults = useMemo<OmnibarResult[]>(
+    () =>
+      buildOmnibarApprovalResults({
+        approvals: mariEnabled ? mariWorkspaceStatus.data?.pendingApprovals : undefined,
+        t,
+        pendingId: approvalPendingId,
+        onDecide: (id, decision) => void (decision === "keep" ? keepApproval(id) : restoreApproval(id)),
+        query: deferredQuery,
+      }),
+    [
+      approvalPendingId,
+      deferredQuery,
+      keepApproval,
+      mariEnabled,
+      mariWorkspaceStatus.data?.pendingApprovals,
+      restoreApproval,
+      t,
+    ],
+  );
   const continueResult = useMemo<OmnibarResult | null>(
-    () => buildOmnibarContinueResult({ mariEnabled, t, workspaceStatus: mariWorkspaceStatus.data }),
-    [mariEnabled, mariWorkspaceStatus.data, t],
+    () => buildOmnibarContinueResult({ mariEnabled, t, workspaceStatus: mariWorkspaceStatus.data, mariFinished }),
+    [mariEnabled, mariWorkspaceStatus.data, t, mariFinished],
   );
   const rawResults = useMemo(
     () =>
@@ -1182,6 +1249,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               ...addSuggestions,
               ...removalSuggestions,
               ...(gameResult ? [gameResult] : []),
+              ...approvalResults,
               ...(proposalResult ? [proposalResult] : []),
               ...(extractionResult ? [extractionResult] : []),
               ...messageResults,
@@ -1197,8 +1265,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           : [
               ...contextResults.slice(0, CHAT_CONTEXT_MAX_RESULTS),
               ...slashResults,
+              ...approvalResults,
               ...(continueResult ? [continueResult] : []),
               ...idleResults,
+              buildOmnibarScopeHintResult({ t }),
             ],
     [
       allLocalResults,
@@ -1207,6 +1277,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       addedResultIds,
       removedResultIds,
       contextResults,
+      approvalResults,
       continueResult,
       deferredQuery,
       extractionResult,
@@ -1219,6 +1290,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       searchResults,
       removalSuggestions,
       slashResults,
+      t,
       verbSuggestions,
     ],
   );
@@ -1303,7 +1375,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           : null;
     const candidates = results.flatMap((result) => {
       if (result.id === "ask-professor-mari") return [];
-      if (tail && intent && CHAT_ATTACHABLE_CATEGORIES.has(result.category)) {
+      if (tail && intent && CHAT_RESOURCE_KIND[result.category]) {
         return [`${intent.verb} ${result.title} ${tail}`, result.title];
       }
       return [result.title];
@@ -1397,12 +1469,37 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     requestAnimationFrame(() => backButtonRef.current?.focus());
   }, [detailOrigin, pane]);
 
+  // Returning from Mari puts focus back on the row that opened her, so the
+  // keyboard position survives the round trip; the input is the fallback.
+  const focusMariReturnRow = () => {
+    requestAnimationFrame(() => {
+      const resultId = mariReturnResultIdRef.current;
+      const row = resultId
+        ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
+        : null;
+      (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
+    });
+  };
+  /** Every route into the Work pane goes through here, so none forgets a flag. */
+  const enterMariPane = (context?: ProfessorMariAskContext) => {
+    if (context) {
+      setMariContext(context);
+      // The handoff lives in session state, not component state, so a task that
+      // Mari finishes while the omnibar is shut is still waiting on reopen.
+      setSessionValue("mariHandoff", {
+        status: "pending",
+        context: { capability: context.capability, resource: context.resource, field: context.field },
+      });
+    }
+    setMariChatOpen(true);
+    setMariMounted(true);
+    setPane("mari");
+  };
+  /** Guards every path that leaves an open editor, so no route skips the prompt. */
+  const confirmLeaveEditor = () =>
+    !ui().editorDirty || window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"));
   const navigate = (target: ProfessorMariNavigationTarget) => {
-    if (
-      ui().editorDirty &&
-      !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"))
-    )
-      return false;
+    if (!confirmLeaveEditor()) return false;
     executeStateNavigation(target);
     return true;
   };
@@ -1411,16 +1508,17 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setRanking(next);
     writeCommandRankingState(next);
   };
+  const togglePinned = (id: string) => {
+    const next = setCommandPinned(ranking, id, !ranking.pinnedIds.includes(id));
+    setRanking(next);
+    writeCommandRankingState(next);
+  };
   const runSystemAction = (result: OmnibarResult) => {
     const definition = createSystemCommandDefinitions((key, fallback) =>
       t(`commandCenter.system.${key}`, fallback),
     ).find((item) => item.id === result.id);
     if (!definition) return false;
-    if (
-      ui().editorDirty &&
-      !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"))
-    )
-      return false;
+    if (!confirmLeaveEditor()) return false;
     if (
       definition.availability.status !== "available" &&
       !(
@@ -1445,35 +1543,69 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
    */
   const detachFromChat = (resource: ChatResourceDragKind, resourceId: string, label: string) => {
     if (!activeChat || !resourceId) return false;
-    if (!window.confirm(t("commandCenter.actions.confirmRemove", "Remove {{name}} from this chat?", { name: label })))
-      return false;
     const chatId = activeChat.id;
-    if (resource === "character") {
-      void patchChat({ id: chatId, characterIds: getChatCharacterIds(activeChat).filter((id) => id !== resourceId) });
-    } else if (resource === "persona") {
-      void patchChat({ id: chatId, personaId: null });
-    } else if (resource === "preset") {
-      void patchChat({ id: chatId, promptPresetId: null });
-    } else if (resource === "connection") {
-      void patchChat({ id: chatId, connectionId: null });
-    } else if (resource === "lorebook") {
-      void patchChatMetadata({
-        id: chatId,
-        activeLorebookIds: getChatActiveLorebookIds(activeChat).filter((id) => id !== resourceId),
-        excludedLorebookIds: [...new Set([...getChatExcludedLorebookIds(activeChat), resourceId])],
-      });
-    } else if (resource === "agent") {
-      const metadata = parseChatMetadata(activeChat.metadata);
-      const active = Array.isArray(metadata.activeAgentIds) ? metadata.activeAgentIds : [];
-      // A chat stores either the agent's id or its type, while the row id is
-      // always the type. Comparing the raw values would silently detach nothing.
-      void patchChatMetadata({
-        id: chatId,
-        activeAgentIds: active.filter(
-          (id) => (agents.data?.find((agent) => agent.id === id || agent.type === id)?.type ?? id) !== resourceId,
-        ),
-      });
-    } else return false;
+    // Each patch is paired with the patch that puts the old value back, so the
+    // toast can offer Undo instead of a modal confirm blocking the keyboard flow.
+    const metadata = parseChatMetadata(activeChat.metadata);
+    const activeAgentIds = Array.isArray(metadata.activeAgentIds) ? metadata.activeAgentIds : [];
+    const characterIds = getChatCharacterIds(activeChat);
+    const activeLorebookIds = getChatActiveLorebookIds(activeChat);
+    const excludedLorebookIds = getChatExcludedLorebookIds(activeChat);
+    const chatPatch = (next: Parameters<typeof patchChat>[0], undo: Parameters<typeof patchChat>[0]) => ({
+      apply: () => void patchChat(next),
+      undo: () => void patchChat(undo),
+    });
+    const metadataPatch = (
+      next: Parameters<typeof patchChatMetadata>[0],
+      undo: Parameters<typeof patchChatMetadata>[0],
+    ) => ({ apply: () => void patchChatMetadata(next), undo: () => void patchChatMetadata(undo) });
+    const change =
+      resource === "character"
+        ? chatPatch(
+            { id: chatId, characterIds: characterIds.filter((id) => id !== resourceId) },
+            { id: chatId, characterIds },
+          )
+        : resource === "persona"
+          ? chatPatch({ id: chatId, personaId: null }, { id: chatId, personaId: activeChat.personaId ?? null })
+          : resource === "preset"
+            ? chatPatch(
+                { id: chatId, promptPresetId: null },
+                { id: chatId, promptPresetId: activeChat.promptPresetId ?? null },
+              )
+            : resource === "connection"
+              ? chatPatch(
+                  { id: chatId, connectionId: null },
+                  { id: chatId, connectionId: activeChat.connectionId ?? null },
+                )
+              : resource === "lorebook"
+                ? metadataPatch(
+                    {
+                      id: chatId,
+                      activeLorebookIds: activeLorebookIds.filter((id) => id !== resourceId),
+                      excludedLorebookIds: [...new Set([...excludedLorebookIds, resourceId])],
+                    },
+                    { id: chatId, activeLorebookIds, excludedLorebookIds },
+                  )
+                : resource === "agent"
+                  ? metadataPatch(
+                      {
+                        id: chatId,
+                        // A chat stores either the agent's id or its type, while the row id
+                        // is always the type. Comparing raw values would detach nothing.
+                        activeAgentIds: activeAgentIds.filter(
+                          (id) =>
+                            (agents.data?.find((agent) => agent.id === id || agent.type === id)?.type ?? id) !==
+                            resourceId,
+                        ),
+                      },
+                      { id: chatId, activeAgentIds },
+                    )
+                  : null;
+    if (!change) return false;
+    change.apply();
+    toast.success(t("commandCenter.actions.removedFromChat", "Removed {{name}} from this chat.", { name: label }), {
+      action: { label: t("ui.chat.chatresourcedropoverlay.undo", "Undo"), onClick: change.undo },
+    });
     onClose();
     return true;
   };
@@ -1481,7 +1613,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const attachToChat = (kind: ChatResourceDragKind, id: string, label: string, resultId: string) => {
     if (!activeChat || !id) return false;
     const payload: ChatResourceDragPayload = { version: 1, kind, ids: [id], label };
-    if (resolveChatResourceDropAction(payload, activeChat)?.type === "blocked") return false;
+    const blocked = resolveChatResourceDropAction(payload, activeChat);
+    if (blocked?.type === "blocked") {
+      // Silently returning false left the row looking live but doing nothing.
+      toast.info(t(chatResourceBlockedKey(blocked), { name: label }));
+      return false;
+    }
     requestChatResourceAssignment(payload);
     recordUse(resultId);
     onClose();
@@ -1489,15 +1626,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   };
   const runDirectChatAction = (result: OmnibarResult) => {
     if (!activeChat || !isDirectActiveChatAction(query, result, searchResults)) return false;
-    const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
-      character: "character",
-      persona: "persona",
-      lorebook: "lorebook",
-      preset: "preset",
-      connection: "connection",
-      agent: "agent",
-    };
-    const kind = resourceKinds[result.category];
+    const kind = CHAT_RESOURCE_KIND[result.category];
     if (!kind) return false;
     return attachToChat(kind, getOmnibarResourceId(result), result.title, result.id);
   };
@@ -1595,6 +1724,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       }
       return;
     }
+    // A dependency install or a sensitive file write executes on approval, so the
+    // row opens the card that shows what will run instead of deciding in place.
+    if (result.id.startsWith("mari-approval:")) {
+      openProfessorMari(null, { reviewPending: true });
+      return;
+    }
     if (result.id === "ask-professor-mari") {
       openProfessorMari(null, {
         reviewPending: result.group === "continue" && (mariWorkspaceStatus.data?.pendingApprovals.length ?? 0) > 0,
@@ -1602,11 +1737,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     if (result.category === "connection") {
-      if (
-        ui().editorDirty &&
-        !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"))
-      )
-        return;
+      if (!confirmLeaveEditor()) return;
       ui().openConnectionDetail(result.id.slice("connection:".length));
       recordUse(result.id);
       onClose();
@@ -1653,13 +1784,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else if (pane === "mari") {
       setMariChatOpen(false);
       setPane(mariReturnPane);
-      requestAnimationFrame(() => {
-        const resultId = mariReturnResultIdRef.current;
-        const row = resultId
-          ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
-          : null;
-        (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
-      });
+      focusMariReturnRow();
     } else if (pane === "browse") {
       setPane("results");
       setFilter("all");
@@ -1682,6 +1807,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       // Accept the ghost completion instead of leaving the field.
       event.preventDefault();
       setQuery(query + inlineSuffix);
+      return;
+    }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p" && activeResult) {
+      // A pin only reorders the empty-query deck (search strips pinnedIds), so it
+      // curates what the bar opens on rather than overriding relevance.
+      event.preventDefault();
+      togglePinned(activeResult.id);
       return;
     }
     if (event.key === "Escape") {
@@ -1822,13 +1954,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     if (pane === "mari") {
       setMariChatOpen(false);
       setPane(mariReturnPane);
-      requestAnimationFrame(() => {
-        const resultId = mariReturnResultIdRef.current;
-        const row = resultId
-          ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
-          : null;
-        (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
-      });
+      focusMariReturnRow();
       return;
     }
     const destination = pane === "detail" ? detailOrigin : "results";
@@ -1846,39 +1972,35 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
-    setMariContext(
-      buildProfessorMariCommandCenterContext(draft, focusResult, [], focusResult?.id, {
-        activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
-        settingsLocation:
-          settingsPanelVisible && (settingsTab || settingsTargetControlId)
-            ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
-            : undefined,
-        field: activeEditorField?.label,
-        error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
-      }),
-    );
+    const askContext = buildProfessorMariCommandCenterContext(draft, focusResult, [], focusResult?.id, {
+      activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
+      settingsLocation:
+        settingsPanelVisible && (settingsTab || settingsTargetControlId)
+          ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
+          : undefined,
+      field: activeEditorField?.label,
+      error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
+    });
     setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
     const returnResultId = focusResult?.id ?? activeResultId;
     mariReturnResultIdRef.current = returnResultId;
     setSessionValue("mariReturnResultId", returnResultId);
-    setMariChatOpen(true);
-    setMariMounted(true);
-    setMariTaskFinished(false);
-    setPane("mari");
+    enterMariPane(askContext);
     if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
   };
-  // A task is "finished" when Mari stops working while the Work pane is open.
+  // A handed-off task is "finished" once Mari has been seen working and then
+  // stops. Advancing the persisted status rather than detecting the edge in a ref
+  // means the transition still lands when it happens between two opens.
   const mariActive = mariWorkspaceStatus.data?.active ?? false;
-  const mariActiveRef = useRef(mariActive);
   useEffect(() => {
-    const wasActive = mariActiveRef.current;
-    mariActiveRef.current = mariActive;
-    if (wasActive && !mariActive && pane === "mari") setMariTaskFinished(true);
-  }, [mariActive, pane]);
-
-  const completionActions = mariTaskFinished && pane === "mari" ? omnibarCompletionActions(mariContext) : [];
+    setSession((current) => {
+      const mariHandoff = advanceMariHandoff(current.mariHandoff, mariActive);
+      return mariHandoff === current.mariHandoff ? current : { ...current, mariHandoff };
+    });
+  }, [mariActive]);
+  const completionActions = mariFinished ? omnibarCompletionActions(mariHandoff.context) : [];
   const runCompletionAction = (action: OmnibarCompletionAction) => {
-    setMariTaskFinished(false);
+    setSessionValue("mariHandoff", null);
     if (action.kind === "return") {
       setMariChatOpen(false);
       return;
@@ -1892,11 +2014,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const resource = action.resource;
     if (!resource) return;
     if (resource.kind === "character") {
-      if (
-        ui().editorDirty &&
-        !window.confirm(t("commandCenter.dirtyEditor", "You have unsaved changes. Leave this editor?"))
-      )
-        return;
+      if (!confirmLeaveEditor()) return;
       ui().openCharacterDetail(resource.id, {
         ...(action.kind === "open-field" ? { initialTab: action.field === "Greeting" ? "convo" : "card" } : {}),
       });
@@ -1954,15 +2072,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         })
       : proposal.seed;
     useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
-    setMariContext(
+    enterMariPane(
       buildProfessorMariCommandCenterContext(draft, null, [], undefined, {
         ...(createdChatId ? { activeChat: { id: createdChatId, label: proposal.title } } : {}),
       }),
     );
-    setMariChatOpen(true);
-    setMariMounted(true);
-    setMariTaskFinished(false);
-    setPane("mari");
   };
 
   /**
@@ -1987,7 +2101,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       }
     }
     useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, chatExtraction.seed);
-    setMariContext(
+    setMariReturnPane("results");
+    mariReturnResultIdRef.current = "chat-extraction";
+    enterMariPane(
       buildProfessorMariCommandCenterContext(
         chatExtraction.seed,
         lorebookId ? { id: `lorebook:${lorebookId}`, title: activeChat.name, category: "lorebook" } : null,
@@ -1996,12 +2112,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         { activeChat: { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } },
       ),
     );
-    setMariReturnPane("results");
-    mariReturnResultIdRef.current = "chat-extraction";
-    setMariChatOpen(true);
-    setMariMounted(true);
-    setMariTaskFinished(false);
-    setPane("mari");
   };
 
   /**
@@ -2011,20 +2121,16 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
    */
   const browseBatchAttach = useMemo(() => {
     if (!activeChat || browseCompareIds.length === 0) return null;
-    const kinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
-      character: "character",
-      persona: "persona",
-      lorebook: "lorebook",
-      preset: "preset",
-    };
+    const kindOf = (category: OmnibarCategory) =>
+      BATCH_ATTACHABLE_CATEGORIES.has(category) ? CHAT_RESOURCE_KIND[category] : undefined;
     const resultById = new Map(browseResults.map((item) => [item.id, item]));
     const selected = browseCompareIds.flatMap((id) => {
       const item = resultById.get(id);
       return item ? [item] : [];
     });
     if (selected.length === 0) return null;
-    const kind = kinds[selected[0]!.category];
-    if (!kind || selected.some((item) => kinds[item.category] !== kind)) return null;
+    const kind = kindOf(selected[0]!.category);
+    if (!kind || selected.some((item) => kindOf(item.category) !== kind)) return null;
     return { kind, ids: selected.map((item) => getOmnibarResourceId(item)), label: selected[0]!.title };
   }, [activeChat, browseCompareIds, browseResults]);
 
@@ -2056,26 +2162,28 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         count: selected.length,
       });
     useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
-    setMariContext(
+    setMariReturnPane("browse");
+    mariReturnResultIdRef.current = primary.id;
+    setSessionValue("mariReturnResultId", primary.id);
+    enterMariPane(
       buildProfessorMariCommandCenterContext(draft, primary, selected.slice(1), primary.id, {
         activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
       }),
     );
-    setMariReturnPane("browse");
-    mariReturnResultIdRef.current = primary.id;
-    setSessionValue("mariReturnResultId", primary.id);
-    setMariChatOpen(true);
-    setMariMounted(true);
-    setPane("mari");
   };
   const toggleBrowseCompareResult = (id: string) => {
-    setBrowseCompareIds((current) =>
-      current.includes(id)
-        ? current.filter((currentId) => currentId !== id)
-        : current.length < 5
-          ? [...current, id]
-          : current,
-    );
+    setBrowseCompareIds((current) => {
+      if (current.includes(id)) return current.filter((currentId) => currentId !== id);
+      if (current.length >= BROWSE_COMPARE_LIMIT) {
+        toast.info(
+          t("commandCenter.compareLimit", "You can compare up to {{count}} items at once.", {
+            count: BROWSE_COMPARE_LIMIT,
+          }),
+        );
+        return current;
+      }
+      return [...current, id];
+    });
   };
   // Keyed by row id so the two per-row lookups below stay O(1); a linear scan
   // over every chat, twice per rendered row, showed up on large libraries.
@@ -2109,11 +2217,15 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       : result.category === "docs"
         ? t("commandCenter.read", "Read")
         : t("commandCenter.open", "Open");
-  const resultControlPending = (result: RankedOmnibarResult) =>
-    (result.category === "persona" && activatePersona.isPending) ||
-    (result.category === "lorebook" && updateLorebook.isPending) ||
-    (result.category === "preset" && setDefaultPreset.isPending) ||
-    (result.id.startsWith("control:chat-") && (updateChat.isPending || updateChatMetadata.isPending));
+  // Matched against the in-flight mutation's own id: keying on `isPending` alone
+  // put a spinner on every persona row while one persona was activating.
+  const resultControlPending = (result: RankedOmnibarResult) => {
+    const resourceId = getOmnibarResourceId(result);
+    if (result.category === "persona") return activatePersona.isPending && activatePersona.variables === resourceId;
+    if (result.category === "lorebook") return updateLorebook.isPending && updateLorebook.variables?.id === resourceId;
+    if (result.category === "preset") return setDefaultPreset.isPending && setDefaultPreset.variables === resourceId;
+    return result.id.startsWith("control:chat-") && (updateChat.isPending || updateChatMetadata.isPending);
+  };
   const liveMessage = loading
     ? t("commandCenter.live.loading", "Loading results")
     : failed
@@ -2177,15 +2289,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             ]
           : [];
         if (previewResult.control?.type === "choice") return mariActions;
-        const resourceKinds: Partial<Record<OmnibarCategory, ChatResourceDragKind>> = {
-          character: "character",
-          persona: "persona",
-          lorebook: "lorebook",
-          preset: "preset",
-          connection: "connection",
-          agent: "agent",
-        };
-        const resourceKind = resourceKinds[previewResult.category];
+        const resourceKind = CHAT_RESOURCE_KIND[previewResult.category];
         const resourceId = resourceKind ? getOmnibarResourceId(previewResult) : "";
         const connection =
           resourceKind === "connection"
@@ -2581,13 +2685,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   setPane(mariReturnPane);
                   const returnResultId = mariReturnResultIdRef.current;
                   if (returnResultId) setActiveResultId(returnResultId);
-                  requestAnimationFrame(() => {
-                    const resultId = mariReturnResultIdRef.current;
-                    const row = resultId
-                      ? listRef.current?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(resultId)}"]`)
-                      : null;
-                    (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
-                  });
+                  focusMariReturnRow();
                 }
               }}
               completionActions={completionActions}
@@ -2832,6 +2930,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               mariEnabled={mariEnabled}
               compareMode={browseCompareMode}
               compareIds={browseCompareIds}
+              compareLimit={BROWSE_COMPARE_LIMIT}
               batchAttachCount={browseBatchAttach ? browseBatchAttach.ids.length : null}
               selectedId={browseSelectedId}
               resultVisual={resultVisual}
@@ -2867,6 +2966,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
             ) : mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
               <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
+            ) : null}
+            {pane === "results" && activeResult ? (
+              <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
             ) : null}
             <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
           </footer>

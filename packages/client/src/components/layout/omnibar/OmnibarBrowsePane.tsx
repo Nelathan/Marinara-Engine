@@ -17,6 +17,7 @@ export interface OmnibarBrowsePaneProps {
   mariEnabled: boolean;
   compareMode: boolean;
   compareIds: readonly string[];
+  compareLimit: number;
   /** Number of selected rows that can be attached to the active chat, or null when none can. */
   batchAttachCount: number | null;
   selectedId: string | null;
@@ -41,6 +42,7 @@ export function OmnibarBrowsePane({
   mariEnabled,
   compareMode,
   compareIds,
+  compareLimit,
   batchAttachCount,
   selectedId,
   resultVisual,
@@ -73,8 +75,9 @@ export function OmnibarBrowsePane({
           {!mariEnabled ? null : compareMode ? (
             <>
               <span aria-live="polite" className="text-xs text-[var(--muted-foreground)]">
-                {t("commandCenter.compareSelectionCount", "{{count}}/5 selected", {
+                {t("commandCenter.compareSelectionCount", "{{count}}/{{limit}} selected", {
                   count: compareIds.length,
+                  limit: compareLimit,
                 })}
               </span>
               <button

@@ -1,3 +1,4 @@
+import type { ProfessorMariAskContext } from "@marinara-engine/shared";
 import type { ProfessorMariNavigationTarget } from "./professor-mari-navigation";
 
 export type CommandKind = "navigation" | "chat" | "resource" | "settings" | "action";
@@ -203,6 +204,18 @@ const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 export type CommandCenterPane = "results" | "browse" | "detail" | "mari";
 export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "mari">;
 
+/**
+ * A task handed to Professor Mari, held in session state rather than component
+ * state because the omnibar dialog unmounts on close. `pending` means she has
+ * not started, `working` that she has been seen active, and `finished` that she
+ * stopped after working — the transition the omnibar offers actions for.
+ */
+export interface CommandCenterMariHandoff {
+  status: "pending" | "working" | "finished";
+  /** Only the part `omnibarCompletionActions` reads, so the stored blob stays small. */
+  context: Pick<ProfessorMariAskContext, "capability" | "resource" | "field"> | null;
+}
+
 export interface CommandCenterSessionState {
   query: string;
   filter: CommandCenterCategoryFilter;
@@ -213,6 +226,7 @@ export interface CommandCenterSessionState {
   browseSelectedId: string | null;
   browseLimit: number;
   mariReturnResultId: string | null;
+  mariHandoff: CommandCenterMariHandoff | null;
 }
 
 export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
@@ -225,6 +239,7 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
   browseSelectedId: null,
   browseLimit: 48,
   mariReturnResultId: null,
+  mariHandoff: null,
 };
 
 function getCommandCenterSessionStorage(): CommandStorage | null {
@@ -254,7 +269,37 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
     browseSelectedId: stringOrNull(source.browseSelectedId),
     browseLimit,
     mariReturnResultId: stringOrNull(source.mariReturnResultId),
+    mariHandoff: normalizeMariHandoff(source.mariHandoff),
   };
+}
+
+/**
+ * Moves a handed-off task along as Mari's active flag changes. `pending` only
+ * becomes `finished` by way of `working`, so a handoff she never picked up does
+ * not look finished on the next poll. Idempotent: the same flag twice is a
+ * no-op, which is what makes the persisted status survive the omnibar closing.
+ */
+export function advanceMariHandoff(
+  handoff: CommandCenterMariHandoff | null,
+  mariActive: boolean,
+): CommandCenterMariHandoff | null {
+  if (!handoff) return null;
+  const status = mariActive ? "working" : handoff.status === "working" ? "finished" : handoff.status;
+  return status === handoff.status ? handoff : { ...handoff, status };
+}
+
+function normalizeMariHandoff(value: unknown): CommandCenterMariHandoff | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const status = source.status;
+  if (status !== "pending" && status !== "working" && status !== "finished") return null;
+  // The context only feeds `omnibarCompletionActions`, which already tolerates a
+  // missing capability, resource or field, so a shallow check is enough here.
+  const context =
+    source.context && typeof source.context === "object" && !Array.isArray(source.context)
+      ? (source.context as CommandCenterMariHandoff["context"])
+      : null;
+  return { status, context };
 }
 
 export function readCommandCenterSessionState(

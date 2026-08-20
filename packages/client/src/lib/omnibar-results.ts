@@ -6,7 +6,13 @@
  *
  * `preview` stays a thunk everywhere: it is only invoked for the focused row.
  */
-import { normalizeTextForMatch, type Chat, type Lorebook, type Persona } from "@marinara-engine/shared";
+import {
+  normalizeTextForMatch,
+  type Chat,
+  type Lorebook,
+  type MariWorkspacePendingApproval,
+  type Persona,
+} from "@marinara-engine/shared";
 import type { AgentConfigRow } from "../hooks/use-agents";
 import type { GlobalMessageSearchHit } from "../hooks/use-chats";
 import type { HomeFaqItem } from "../components/chat/HomeFaq";
@@ -277,6 +283,8 @@ export type OmnibarContinueResultInput = {
   mariEnabled: boolean;
   t: OmnibarTranslate;
   workspaceStatus: { active?: boolean; pendingApprovals: readonly unknown[] } | undefined;
+  /** A task the user handed to Mari that she has since finished. */
+  mariFinished?: boolean;
 };
 
 export function buildOmnibarControlResults({
@@ -1244,25 +1252,205 @@ export function buildOmnibarGameResult({ gameCommand, t }: OmnibarGameResultInpu
   };
 }
 
+export type OmnibarApprovalDecision = "keep" | "restore";
+
+export type OmnibarApprovalResultsInput = {
+  approvals: readonly MariWorkspacePendingApproval[] | undefined;
+  t: OmnibarTranslate;
+  pendingId: string | null;
+  onDecide: (id: string, decision: OmnibarApprovalDecision) => void;
+  /** When set, only approvals whose title or aliases contain it are returned. */
+  query?: string;
+};
+
+/**
+ * One row per approval Mari is waiting on.
+ *
+ * A database approval is already applied, so keeping or restoring it are both
+ * reversible and both happen in place, on the ordinary `choice` control every
+ * other in-place row uses. The words match the Work pane's cards on purpose.
+ *
+ * A dependency install or a sensitive file write has *not* run yet: approving
+ * one installs a package or writes the file. Those rows carry no control and
+ * open the Work pane instead, where the card shows the integrity hash or the
+ * file diff before anything executes.
+ */
+export function buildOmnibarApprovalResults({
+  approvals,
+  t,
+  pendingId,
+  onDecide,
+  query,
+}: OmnibarApprovalResultsInput): OmnibarResult[] {
+  if (!approvals?.length) return [];
+  const needle = normalizeTextForMatch(query ?? "");
+  const rows = approvals.map((approval) => {
+    const reason = approval.reason?.trim() || undefined;
+    let title: string;
+    let description: string | undefined;
+    let facts: { label: string; value: string }[];
+    let keepLabel: string;
+    let restoreLabel: string;
+    let terms: string[];
+
+    if (approval.kind === "dependency_install") {
+      const packageLabel = `${approval.packageName}@${approval.version}`;
+      title = t("commandCenter.approval.dependencyTitle", "Mari wants to install {{package}}", {
+        package: packageLabel,
+      });
+      description =
+        reason ??
+        t(
+          "commandCenter.approval.dependencyDescription",
+          "An exact public npm package, installed without lifecycle scripts.",
+        );
+      facts = [
+        { label: t("commandCenter.approval.package", "Package"), value: packageLabel },
+        { label: t("commandCenter.approval.target", "Target"), value: approval.target },
+        { label: t("commandCenter.approval.dependencyType", "Type"), value: approval.dependencyType },
+      ];
+      keepLabel = t("commandCenter.approval.install", "Install");
+      restoreLabel = t("commandCenter.approval.notNow", "Not now");
+      terms = [approval.packageName, packageLabel, approval.target];
+    } else if (approval.kind === "sensitive_file") {
+      title = t("commandCenter.approval.fileTitle", "Mari wants to write {{path}}", { path: approval.path });
+      description = reason ?? approval.preview.slice(0, 160);
+      facts = [
+        { label: t("commandCenter.approval.path", "Path"), value: approval.path },
+        { label: t("commandCenter.approval.changeType", "Change"), value: approval.changeType },
+      ];
+      keepLabel = t("commandCenter.approval.apply", "Apply");
+      restoreLabel = t("commandCenter.approval.discard", "Discard");
+      terms = [approval.path, approval.changeType];
+    } else {
+      const tables = Object.keys(approval.affectedTables).join(", ");
+      title = tables
+        ? t("commandCenter.approval.databaseTitle", "Mari changed {{tables}}", { tables })
+        : t("commandCenter.approval.databaseTitleGeneric", "Mari changed your app data");
+      description =
+        reason ??
+        t(
+          "commandCenter.approval.databaseDescription",
+          "Mari already applied this. Keep it, or restore the previous snapshot.",
+        );
+      facts = [
+        ...(tables ? [{ label: t("commandCenter.approval.tables", "Tables"), value: tables }] : []),
+        { label: t("commandCenter.approval.rows", "Rows"), value: String(approval.affectedRows) },
+        ...(approval.command
+          ? [{ label: t("commandCenter.approval.command", "Command"), value: approval.command }]
+          : []),
+      ];
+      keepLabel = t("commandCenter.approval.keep", "Keep");
+      restoreLabel = t("commandCenter.approval.restore", "Restore");
+      terms = Object.keys(approval.affectedTables);
+    }
+
+    // Approving these two executes; the row is a door to the card, not a switch.
+    const decidesInPane = approval.kind === "dependency_install" || approval.kind === "sensitive_file";
+    return {
+      id: `mari-approval:${approval.id}`,
+      title,
+      description,
+      // So a waiting decision is still reachable once the user has typed.
+      aliases: [
+        t("commandCenter.approval.alias", "pending approval"),
+        t("commandCenter.approval.aliasMari", "mari waiting"),
+        ...terms,
+      ],
+      category: "professor" as const,
+      // Above the "Mari is working" row: a decision she is blocked on outranks a
+      // report of what she is doing.
+      score: 480,
+      group: "continue" as const,
+      kind: "action" as const,
+      icon: "professor" as const,
+      ...(decidesInPane
+        ? {}
+        : {
+            control: {
+              type: "choice" as const,
+              label: t("commandCenter.approval.decide", "Mari is waiting on you"),
+              // No option is selected yet: the row is the question, not a setting.
+              value: pendingId === approval.id ? "pending" : "",
+              options: [
+                { value: "keep", label: keepLabel },
+                { value: "restore", label: restoreLabel },
+              ],
+              onChange: (value: string | boolean) => {
+                if (value === "keep" || value === "restore") onDecide(approval.id, value);
+              },
+            },
+          }),
+      preview: () => ({
+        kind: "docs" as const,
+        title,
+        categoryLabel: t("commandCenter.approval.categoryLabel", "Waiting for you"),
+        description,
+        facts: decidesInPane
+          ? [
+              ...facts,
+              {
+                label: t("commandCenter.approval.decideIn", "Decide in"),
+                value: t("commandCenter.approval.workPane", "Mari's Work pane"),
+              },
+            ]
+          : facts,
+      }),
+    };
+  });
+  if (!needle) return rows;
+  return rows.filter((row) =>
+    [row.title, ...(row.aliases ?? [])].some((value) => normalizeTextForMatch(value).includes(needle)),
+  );
+}
+
+/**
+ * The scope prefixes only ever appeared in the placeholder, where nobody reads
+ * them. One row in the idle deck teaches them; activating it types the first one
+ * into the box so the next keystroke shows what a scope does.
+ */
+export function buildOmnibarScopeHintResult({ t }: { t: OmnibarTranslate }): OmnibarResult {
+  return {
+    id: "scope-hint",
+    title: t("commandCenter.scopeHint.title", "Narrow to one kind"),
+    description: t(
+      "commandCenter.scopeHint.description",
+      "Start with char:, msg:, lore:, faq: or set: to search only that kind.",
+    ),
+    category: "navigation" as const,
+    // Below every real row: it teaches, it is not something the user came for.
+    score: 0,
+    kind: "action" as const,
+    icon: "command" as const,
+    aliases: ["scope", "prefix", "filter", "char:", "msg:", "lore:", "faq:"],
+    action: { kind: "refine-query", query: "char: " } as const,
+  };
+}
+
 export function buildOmnibarContinueResult({
   mariEnabled,
   t,
   workspaceStatus,
+  mariFinished,
 }: OmnibarContinueResultInput): OmnibarResult | null {
   if (!mariEnabled) return null;
   const status = workspaceStatus;
   const hasPendingApprovals = (status?.pendingApprovals.length ?? 0) > 0;
-  if (!hasPendingApprovals && !status?.active) return null;
+  if (!hasPendingApprovals && !status?.active && !mariFinished) return null;
   const title = status?.active
     ? t("commandCenter.continueMariActive", "Mari is working")
-    : hasPendingApprovals
-      ? t("commandCenter.continueMariReview", "Review Mari's pending work")
-      : t("commandCenter.continueMari", "Continue with Professor Mari");
+    : mariFinished
+      ? t("commandCenter.continueMariFinished", "Mari finished your task")
+      : hasPendingApprovals
+        ? t("commandCenter.continueMariReview", "Review Mari's pending work")
+        : t("commandCenter.continueMari", "Continue with Professor Mari");
   const description = status?.active
     ? t("commandCenter.continueMariActiveDescription", "Return to the active Mari workspace.")
-    : hasPendingApprovals
-      ? t("commandCenter.continueMariReviewDescription", "Mari is waiting for your review.")
-      : t("commandCenter.continueMariDescription", "Open Mari with the current work attached.");
+    : mariFinished
+      ? t("commandCenter.continueMariFinishedDescription", "Open the Work pane to see what she did.")
+      : hasPendingApprovals
+        ? t("commandCenter.continueMariReviewDescription", "Mari is waiting for your review.")
+        : t("commandCenter.continueMariDescription", "Open Mari with the current work attached.");
   return {
     id: "ask-professor-mari",
     title,

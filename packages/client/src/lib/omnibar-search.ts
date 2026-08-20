@@ -317,6 +317,26 @@ const RESOURCE_ICONS: Partial<Record<string, CommandIcon>> = {
 /** A query no normalised title can equal, so a bare verb matches nothing by text. */
 const NO_MATCH = "\u0000";
 
+/**
+ * The bottom rung under exact, prefix, whole-word and substring: the query's
+ * letters appear in order but not together. It catches a typo ("elzia" for
+ * "eliza") and initials ("pm" for "professor mari"). Scored below every literal
+ * match so it only decides what would otherwise find nothing, and floored at
+ * three characters because shorter queries match almost any title.
+ */
+export function scoreSubsequence(query: string, value: string) {
+  if (query.length < 3) return -1;
+  let index = 0;
+  for (const character of value) {
+    if (character === query[index] && ++index === query.length) {
+      // Prefer the shortest title that contains the run: "PM" should find
+      // "Professor Mari" before "Preset Manager Settings".
+      return Math.max(1, 60 - value.length);
+    }
+  }
+  return -1;
+}
+
 function scoreText(query: string, values: readonly string[]) {
   return values.reduce((best, value) => {
     const normalized = normalizeProfessorMariNavigationQuery(value);
@@ -327,7 +347,7 @@ function scoreText(query: string, values: readonly string[]) {
       return Math.max(best, 150 + normalized.length);
     }
     if (normalized.includes(query)) return Math.max(best, 100 + query.length);
-    return best;
+    return Math.max(best, scoreSubsequence(query, normalized));
   }, -1);
 }
 

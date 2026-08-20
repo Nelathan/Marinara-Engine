@@ -9,7 +9,8 @@ Scope: `packages/client/src/components/layout/GlobalOmnibar.tsx`, the panes unde
 route that backs cross-chat message search.
 
 Related documents: `omnibar-workflow-slice-plan.md` (why the 11 slices exist),
-`omnibar-completion-recovery-design.md`, `omnibar-command-center-professor-mari-plan.md`.
+`omnibar-completion-recovery-design.md`, `omnibar-command-center-professor-mari-plan.md`,
+`omnibar-improvement-backlog.md` (what to build next, and why).
 
 ## 1. Panes
 

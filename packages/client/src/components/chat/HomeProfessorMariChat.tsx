@@ -55,7 +55,6 @@ import {
   PROFESSOR_MARI_ID,
   type APIConnection,
   type Chat,
-  type MariDbHistoryEntry,
   type MariDbPendingApproval,
   type MariDependencyInstallApproval,
   type MariGuidedPlanStep,
@@ -91,7 +90,8 @@ import { ProfessorMariContextControl } from "./ProfessorMariContextControl";
 import { homeFeedKeys } from "../../hooks/use-home-feed";
 import { filterLanguageGenerationConnections } from "../../lib/connection-filters";
 import { api, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
-import { formatGenerationParameterError } from "../../lib/generation-parameter-errors";
+import { describeProfessorMariError } from "../../lib/professor-mari-errors";
+import { useMariApprovals } from "../../hooks/use-mari-approvals";
 import { showConfirmDialog } from "../../lib/app-dialogs";
 import { useChatStore } from "../../stores/chat.store";
 import { useAgentStore } from "../../stores/agent.store";
@@ -219,15 +219,6 @@ const PROFESSOR_MARI_PANE_TRANSITION = { duration: 0.24, ease: [0.16, 1, 0.3, 1]
 const PROFESSOR_MARI_FLOATING_EDGE_GAP = 12;
 const PROFESSOR_MARI_FLOATING_MOBILE_TOP_GAP = 64;
 
-type WorkspaceApprovalResponse = {
-  ok: boolean;
-  approval?: MariWorkspacePendingApproval;
-  history?: MariDbHistoryEntry | null;
-  completed?: boolean;
-  outcome?: "applied" | "discarded" | "state_changed" | "failed";
-  error?: string | null;
-};
-
 type WorkspaceSkillMutationResponse = {
   ok: boolean;
   skill: MariWorkspaceSkillDetail;
@@ -349,14 +340,6 @@ function readProfessorMariFileAsDataUrl(file: Blob): Promise<string> {
 
 function isProfessorMariImageAttachment(attachment: ProfessorMariAttachment): boolean {
   return attachment.type.startsWith("image/") && attachment.data.startsWith("data:image/");
-}
-
-function describeProfessorMariError(error: unknown) {
-  const message = getPrivilegedActionErrorMessage(error, "").trim();
-  if (message) {
-    return `${formatGenerationParameterError(message)} This message will stay visible long enough to screenshot for troubleshooting.`;
-  }
-  return "The request failed before Professor Mari could answer. This message will stay visible long enough to screenshot for troubleshooting.";
 }
 
 function isProfessorMariAbortError(error: unknown) {
@@ -3850,6 +3833,14 @@ export function HomeProfessorMariChat({
     [effectiveConnectionId],
   );
 
+  const refreshApprovalSurfaces = useCallback(async () => {
+    await refreshWorkspaceStatus().catch(() => undefined);
+    // Refresh the Memories panel after a keep or restore: a kept memory has to show
+    // up, and reverting a memory insert deletes the row, so the panel would keep
+    // rendering a stale client-side entry.
+    await loadMemories().catch(() => undefined);
+  }, [loadMemories, refreshWorkspaceStatus]);
+
   const invalidateWorkspaceData = useCallback(async () => {
     // Invalidation marks every query stale either way; the default 'active'
     // refetch pulls only what is mounted now, and everything else refreshes on
@@ -4384,94 +4375,23 @@ export function HomeProfessorMariChat({
     }
   }, [clearMariPlan, handleRestart, isBusy, localizeUi]);
 
-  const keepWorkspaceChange = useCallback(
-    async (id: string, opts?: { enable?: boolean }) => {
-      if (workspaceReviewActionId) return;
-      setWorkspaceReviewActionId(id);
-      try {
-        // #4851 "Keep & Enable": pass { enable: true } so a kept memory insert is switched on.
-        const result = await api.post<WorkspaceApprovalResponse>(
-          `/professor-mari/workspace/approvals/${id}/approve`,
-          opts?.enable ? { enable: true } : undefined,
-        );
-        await refreshWorkspaceStatus().catch(() => undefined);
-        // Refresh the Memories panel after any keep so a kept memory (enabled or not) shows up.
-        await loadMemories().catch(() => undefined);
-        if (result.outcome === "applied") {
-          await invalidateWorkspaceData();
-          toast.success(
-            result.approval?.kind === "dependency_install"
-              ? localizeUi("ui.chat.homeprofessormarichat.installedValue1Value2", {
-                  value1: result.approval.packageName,
-                  value2: result.approval.version,
-                })
-              : localizeUi("ui.chat.homeprofessormarichat.appliedProfessorMariSSensitiveFileChange"),
-          );
-        } else if (result.history?.status === "kept") {
-          toast.success(localizeUi("ui.chat.homeprofessormarichat.keptMariSWorkspaceChange"));
-        } else {
-          toast.error(
-            result.outcome === "state_changed"
-              ? localizeUi("ui.chat.homeprofessormarichat.theWorkspaceChangedAfterProfessorMariStagedThisProposal")
-              : localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotApplyThatWorkspaceChange"),
-            { description: result.error ?? undefined, duration: 12_000 },
-          );
-        }
-      } catch (error) {
-        console.error("[Professor Mari] Failed to keep workspace change", error);
-        toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotKeepThatWorkspaceChange"), {
-          description: describeProfessorMariError(error),
-          duration: 12_000,
-        });
-      } finally {
-        setWorkspaceReviewActionId((current) => (current === id ? null : current));
-      }
-    },
-    [invalidateWorkspaceData, loadMemories, refreshWorkspaceStatus, workspaceReviewActionId, localizeUi],
-  );
-
-  const restoreWorkspaceChange = useCallback(
-    async (id: string) => {
-      if (workspaceReviewActionId) return;
-      setWorkspaceReviewActionId(id);
-      try {
-        const result = await api.post<WorkspaceApprovalResponse>(`/professor-mari/workspace/approvals/${id}/reject`);
-        await refreshWorkspaceStatus().catch(() => undefined);
-        // Refresh the Memories panel after a restore: reverting a Mari memory insert deletes the
-        // row, so the panel would otherwise keep rendering a stale client-side entry.
-        await loadMemories().catch(() => undefined);
-        if (result.outcome === "discarded") {
-          toast.success(localizeUi("ui.chat.homeprofessormarichat.discardedProfessorMariSProposedChange"));
-        } else if (result.history?.status === "restored") {
-          await invalidateWorkspaceData();
-          toast.success(localizeUi("ui.chat.homeprofessormarichat.restoredThePreviousAppDataSnapshot"));
-        } else {
-          toast.error(
-            result.outcome === "state_changed"
-              ? localizeUi("ui.chat.homeprofessormarichat.theWorkspaceChangedAfterProfessorMariStagedThisProposal")
-              : localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotRestoreThatWorkspaceChange"),
-            { description: result.error ?? undefined, duration: 12_000 },
-          );
-        }
-      } catch (error) {
-        console.error("[Professor Mari] Failed to restore workspace change", error);
-        toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotRestoreThatWorkspaceChange"), {
-          description: describeProfessorMariError(error),
-          duration: 12_000,
-        });
-      } finally {
-        setWorkspaceReviewActionId((current) => (current === id ? null : current));
-      }
-    },
-    [invalidateWorkspaceData, loadMemories, refreshWorkspaceStatus, workspaceReviewActionId, localizeUi],
-  );
+  // Keep and restore live in a shared hook so the omnibar's approval rows do the
+  // same thing, with the same toasts, as this pane.
+  const {
+    keepApproval: keepWorkspaceChange,
+    restoreApproval: restoreWorkspaceChange,
+    pendingId: sharedApprovalPendingId,
+  } = useMariApprovals({ onRefresh: refreshApprovalSurfaces });
+  // Single-row reject still runs from this component, so the busy state is the
+  // union of both in-flight ids.
+  const approvalBusyId = sharedApprovalPendingId ?? workspaceReviewActionId;
 
   // #4931: reject a single reviewed row (revert just that lorebook entry). Mirrors
   // restoreWorkspaceChange but posts the row's diffPreview index + identity tuple; the server reverts
   // only that row and either shrinks the pending card or resolves it.
   const rejectWorkspaceRows = useCallback(
     async (id: string, rows: Array<{ index: number; table: string; id: string; action: string }>): Promise<boolean> => {
-      if (workspaceReviewActionId) return false;
+      if (approvalBusyId) return false;
       setWorkspaceReviewActionId(id);
       try {
         const result = await api.post<{
@@ -4513,7 +4433,7 @@ export function HomeProfessorMariChat({
         setWorkspaceReviewActionId((current) => (current === id ? null : current));
       }
     },
-    [invalidateWorkspaceData, loadMemories, refreshWorkspaceStatus, workspaceReviewActionId, localizeUi],
+    [approvalBusyId, invalidateWorkspaceData, loadMemories, refreshWorkspaceStatus, localizeUi],
   );
 
   // #4931: fetch the synthetic Peek-Prompt render of one reviewed character/preset row. Read-only,
@@ -5628,8 +5548,8 @@ export function HomeProfessorMariChat({
               <WorkspaceApprovalCard
                 key={approval.id}
                 approval={approval}
-                busy={workspaceReviewActionId === approval.id}
-                disabled={workspaceReviewActionId !== null}
+                busy={approvalBusyId === approval.id}
+                disabled={approvalBusyId !== null}
                 onKeep={(id) => void keepWorkspaceChange(id)}
                 onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
                 onRestore={(id) => void restoreWorkspaceChange(id)}
@@ -6425,8 +6345,8 @@ export function HomeProfessorMariChat({
                                 <WorkspaceApprovalCard
                                   key={approval.id}
                                   approval={approval}
-                                  busy={workspaceReviewActionId === approval.id}
-                                  disabled={workspaceReviewActionId !== null}
+                                  busy={approvalBusyId === approval.id}
+                                  disabled={approvalBusyId !== null}
                                   onKeep={(id) => void keepWorkspaceChange(id)}
                                   onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
                                   onRestore={(id) => void restoreWorkspaceChange(id)}
