@@ -499,7 +499,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       "quick-controls": t("commandCenter.groups.quickControls", "Quick controls"),
       "create-navigation": t("commandCenter.groups.suggested", "Suggested"),
       navigation: t("commandCenter.groups.navigation", "Navigation"),
-      messages: t("commandCenter.groups.messages", "In this chat"),
+      messages: t("commandCenter.groups.messages", "Messages"),
       chats: filterLabels.chats,
       characters: filterLabels.characters,
       personas: filterLabels.personas,
@@ -1579,31 +1579,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     if (result.id === "game-command" && gameCommand && activeChatId) {
-      if (gameCommand.kind === "roll") {
-        // Imported on demand: a static import pulls the game surface into the
-        // app shell chunk and breaks the bundle budget.
-        void (async () => {
-          const [{ api }, { useGameModeStore }] = await Promise.all([
-            import("../../lib/api-client"),
-            import("../../stores/game-mode.store"),
-          ]);
-          try {
-            const res = await api.post<{ result: unknown }>("/game/dice/roll", {
-              chatId: activeChatId,
-              notation: gameCommand.notation,
-            });
-            useGameModeStore.getState().setDiceRollResult(res.result as never);
-          } catch (error) {
-            ui().setLastAppError({
-              message: error instanceof Error ? error.message : String(error),
-              action: t("commandCenter.game.rollAction", "Roll dice"),
-            });
-          }
-        })();
-        recordUse(result.id);
-        onClose();
-        return;
-      }
       // Party, quest, scene and encounter changes need the live game state.
       openProfessorMari(null);
       return;

@@ -1,20 +1,18 @@
 /**
- * Recognises game-mode requests typed into the omnibar. Only rolls are executed
- * directly; everything else is routed to Mari with the game chat as context,
- * because party, quest and scene changes need judgement about the live state.
+ * Recognises game-mode requests typed into the omnibar and routes them to Mari
+ * with the game chat as context, because party, quest and scene changes need
+ * judgement about the live state.
  *
- * Pure and deterministic: no store access, no dice are actually rolled here.
+ * Dice are deliberately not here: the game input bar already rolls them, and its
+ * roll attaches the result to your turn so the model sees it. See
+ * `docs/development/omnibar-feature-inventory.md`.
+ *
+ * Pure and deterministic: no store access.
  */
 
-export type GameCommand =
-  | { kind: "roll"; notation: string }
-  | { kind: "assist"; topic: "party" | "quests" | "scene" | "encounter" };
+export type GameCommand = { kind: "assist"; topic: "party" | "quests" | "scene" | "encounter" };
 
-/** Standard dice notation: 2d6, d20, 3d8+2, 1d4-1. */
-const DICE_NOTATION = /\b(\d*)d(\d+)\s*([+-]\s*\d+)?\b/i;
-const ROLL_VERB = /\b(?:roll|throw)\b/i;
-
-const ASSIST_TOPICS: readonly (readonly [Extract<GameCommand, { kind: "assist" }>["topic"], RegExp])[] = [
+const ASSIST_TOPICS: readonly (readonly [GameCommand["topic"], RegExp])[] = [
   ["party", /\b(?:party|healer|tank|rogue|companion|recruit|member)\b/i],
   ["quests", /\b(?:quests?|objectives?|goals?)\b/i],
   ["encounter", /\b(?:encounter|battle|fight|combat|initiative)\b/i],
@@ -28,15 +26,6 @@ const ASSIST_TOPICS: readonly (readonly [Extract<GameCommand, { kind: "assist" }
 export function parseGameCommand(query: string): GameCommand | null {
   const trimmed = query.trim();
   if (!trimmed) return null;
-
-  const dice = trimmed.match(DICE_NOTATION);
-  // "roll 2d6" and a bare "2d6" are both rolls; "d20 lorebook" is not, because
-  // the notation must be the whole request apart from the verb.
-  if (dice && (ROLL_VERB.test(trimmed) || trimmed.replace(DICE_NOTATION, "").trim() === "")) {
-    const count = dice[1] && dice[1] !== "" ? dice[1] : "1";
-    const modifier = dice[3] ? dice[3].replace(/\s+/g, "") : "";
-    return { kind: "roll", notation: `${count}d${dice[2]}${modifier}` };
-  }
 
   const topic = ASSIST_TOPICS.find(([, pattern]) => pattern.test(trimmed))?.[0];
   return topic ? { kind: "assist", topic } : null;

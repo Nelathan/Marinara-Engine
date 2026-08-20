@@ -1235,18 +1235,12 @@ export function buildOmnibarGameResult({ gameCommand, t }: OmnibarGameResultInpu
   if (!gameCommand) return null;
   return {
     id: "game-command",
-    title:
-      gameCommand.kind === "roll"
-        ? t("commandCenter.game.roll", "Roll {{notation}}", { notation: gameCommand.notation })
-        : t(`commandCenter.game.${gameCommand.topic}`, GAME_TOPIC_LABELS[gameCommand.topic]),
-    description:
-      gameCommand.kind === "roll"
-        ? t("commandCenter.game.rollDescription", "Rolls in this game now.")
-        : t("commandCenter.game.assistDescription", "Continues with Mari using the current game state."),
-    category: gameCommand.kind === "roll" ? "chat" : "professor",
+    title: t(`commandCenter.game.${gameCommand.topic}`, GAME_TOPIC_LABELS[gameCommand.topic]),
+    description: t("commandCenter.game.assistDescription", "Continues with Mari using the current game state."),
+    category: "professor",
     score: 420,
     kind: "action",
-    icon: gameCommand.kind === "roll" ? "command" : "professor",
+    icon: "professor",
   };
 }
 
