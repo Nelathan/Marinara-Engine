@@ -1,31 +1,46 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Eye, Loader2, Settings2 } from "lucide-react";
+import { AlertTriangle, Eye, Grip, List, Loader2, Settings2, Table2 } from "lucide-react";
 import { useTranslation as useUiTranslation } from "react-i18next";
 import { api } from "../../lib/api-client";
+import {
+  BEHOLDER_LAYOUTS,
+  buildBeholderRows,
+  slotLabel,
+  withDependentMissing,
+  type BeholderBodyView,
+  type BeholderLayout,
+  type BeholderSlotView,
+} from "./beholder-doll";
 
 type Damage = "pristine" | "damaged" | "cracked" | "broken";
 type WoundSeverity = "minor" | "serious" | "critical";
-
-type BeholderSlotState = {
-  worn?: Array<{ item: string; material?: string; color?: string; damage: Damage }>;
-  holding?: { item: string; damage: Damage };
-  wounds?: Array<{ text: string; severity: WoundSeverity; bleeding: boolean }>;
-  bare?: boolean;
-  missing?: boolean;
-};
 
 type BeholderStateResponse = {
   state: {
     characters: Array<{
       name: string;
       species?: string;
-      body: Record<string, BeholderSlotState>;
+      body: Record<string, BeholderSlotView>;
     }>;
   };
   messageId: string | null;
   createdAt: string | null;
 };
+
+const LAYOUT_STORAGE_KEY = "marinara.beholder.layout";
+
+const LAYOUT_ICON = {
+  paired: Grip,
+  columns: Table2,
+  list: List,
+} as const;
+
+function readStoredLayout(): BeholderLayout {
+  if (typeof window === "undefined") return "paired";
+  const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+  return BEHOLDER_LAYOUTS.includes(stored as BeholderLayout) ? (stored as BeholderLayout) : "paired";
+}
 
 export default function BeholderChatSettingsPanel({
   chatId,
@@ -36,6 +51,7 @@ export default function BeholderChatSettingsPanel({
 }) {
   const { t: localizeUi } = useUiTranslation();
   const queryClient = useQueryClient();
+  const [layout, setLayout] = useState<BeholderLayout>(readStoredLayout);
   const queryKey = useMemo(() => ["beholder-state", chatId] as const, [chatId]);
   const stateQuery = useQuery({
     queryKey,
@@ -52,9 +68,75 @@ export default function BeholderChatSettingsPanel({
     return () => window.removeEventListener("marinara:generation-complete", handleGenerationComplete);
   }, [chatId, queryClient, queryKey]);
 
+  const chooseLayout = useCallback((next: BeholderLayout) => {
+    setLayout(next);
+    try {
+      window.localStorage.setItem(LAYOUT_STORAGE_KEY, next);
+    } catch {
+      // A blocked storage write must not break the panel.
+    }
+  }, []);
+
   const characters = stateQuery.data?.state.characters ?? [];
   const damageLabel = (damage: Damage) => localizeUi(`ui.chat.beholder.damage.${damage}`);
   const severityLabel = (severity: WoundSeverity) => localizeUi(`ui.chat.beholder.severity.${severity}`);
+
+  const renderSlot = (slotName: string, slot: BeholderSlotView | undefined) => {
+    const empty = !slot || (!slot.worn?.length && !slot.wounds?.length && !slot.holding && !slot.bare && !slot.missing);
+    return (
+      <div
+        key={slotName}
+        className={`min-w-0 rounded-md px-1.5 py-1 ring-1 ${
+          empty ? "bg-transparent ring-[var(--border)]/40" : "bg-[var(--background)]/60 ring-[var(--border)]"
+        }`}
+      >
+        <div className="truncate text-[0.5rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+          {slotLabel(slotName)}
+        </div>
+        {empty ? (
+          <div className="text-[0.5625rem] text-[var(--muted-foreground)]/60">—</div>
+        ) : (
+          <div className="space-y-0.5">
+            {slot?.missing ? (
+              <div className="text-[0.5625rem] font-medium text-[var(--destructive)]">
+                {slot.derivedMissing
+                  ? localizeUi("ui.chat.beholder.missingDerived")
+                  : localizeUi("ui.chat.beholder.missing")}
+              </div>
+            ) : null}
+            {slot?.bare ? (
+              <div className="text-[0.5625rem] italic text-[var(--muted-foreground)]">
+                {localizeUi("ui.chat.beholder.bare")}
+              </div>
+            ) : null}
+            {(slot?.worn ?? []).map((item, index) => (
+              <div key={`${item.item}-${index}`} className="truncate text-[0.5625rem] text-[var(--foreground)]/85">
+                {[item.color, item.material, item.item].filter(Boolean).join(" ")}
+                {item.damage !== "pristine" ? (
+                  <span className="text-[var(--destructive)]"> · {damageLabel(item.damage as Damage)}</span>
+                ) : null}
+              </div>
+            ))}
+            {slot?.holding ? (
+              <div className="truncate text-[0.5625rem] text-[var(--primary)]">
+                {localizeUi("ui.chat.beholder.holdingValue", {
+                  value: `${slot.holding.item}${
+                    slot.holding.damage !== "pristine" ? ` (${damageLabel(slot.holding.damage as Damage)})` : ""
+                  }`,
+                })}
+              </div>
+            ) : null}
+            {(slot?.wounds ?? []).map((wound, index) => (
+              <div key={`${wound.text}-${index}`} className="truncate text-[0.5625rem] text-[var(--destructive)]">
+                {wound.text} ({severityLabel(wound.severity as WoundSeverity)}
+                {wound.bleeding ? localizeUi("ui.chat.beholder.bleedingSuffix") : ""})
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="mt-2 space-y-2 border-t border-[var(--border)] pt-2.5">
@@ -84,9 +166,31 @@ export default function BeholderChatSettingsPanel({
       <section className="rounded-lg bg-[var(--background)]/65 p-2.5 ring-1 ring-[var(--border)]">
         <div className="mb-2 flex items-center gap-1.5">
           <Eye size="0.75rem" className="text-[var(--primary)]" />
-          <h4 className="text-[0.625rem] font-semibold text-[var(--foreground)]">
+          <h4 className="flex-1 text-[0.625rem] font-semibold text-[var(--foreground)]">
             {localizeUi("ui.chat.beholder.latestState")}
           </h4>
+          <div className="flex gap-0.5" role="group" aria-label={localizeUi("ui.chat.beholder.layoutGroup")}>
+            {BEHOLDER_LAYOUTS.map((mode) => {
+              const Icon = LAYOUT_ICON[mode];
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => chooseLayout(mode)}
+                  aria-pressed={layout === mode}
+                  title={localizeUi(`ui.chat.beholder.layout.${mode}`)}
+                  aria-label={localizeUi(`ui.chat.beholder.layout.${mode}`)}
+                  className={`rounded p-1 transition-colors ${
+                    layout === mode
+                      ? "bg-[var(--primary)]/15 text-[var(--primary)]"
+                      : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]"
+                  }`}
+                >
+                  <Icon size="0.6875rem" />
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {stateQuery.isLoading ? (
@@ -104,60 +208,44 @@ export default function BeholderChatSettingsPanel({
           </p>
         ) : (
           <div className="space-y-2">
-            {characters.map((character) => (
-              <div key={character.name} className="rounded-md bg-[var(--secondary)]/65 px-2 py-1.5">
-                <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-[0.625rem] font-semibold text-[var(--foreground)]">{character.name}</span>
-                  {character.species ? (
-                    <span className="text-[0.5625rem] text-[var(--muted-foreground)]">{character.species}</span>
-                  ) : null}
+            {characters.map((character) => {
+              const body = withDependentMissing(character.body as BeholderBodyView);
+              const rows = buildBeholderRows(body, layout);
+              return (
+                <div key={character.name} className="rounded-md bg-[var(--secondary)]/65 px-2 py-1.5">
+                  <div className="flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="text-[0.625rem] font-semibold text-[var(--foreground)]">{character.name}</span>
+                    {character.species ? (
+                      <span className="text-[0.5625rem] text-[var(--muted-foreground)]">{character.species}</span>
+                    ) : null}
+                  </div>
+                  {rows.length === 0 ? (
+                    <p className="mt-1 text-[0.5625rem] text-[var(--muted-foreground)]">
+                      {localizeUi("ui.chat.beholder.noSlots")}
+                    </p>
+                  ) : (
+                    <div
+                      className={`mt-1 gap-1 ${
+                        layout === "list" ? "flex flex-col" : "grid grid-cols-1 sm:grid-cols-2"
+                      }`}
+                    >
+                      {rows.map((row) => (
+                        <div
+                          key={row.slots.join("|")}
+                          className={
+                            layout === "paired" && row.slots.length === 2
+                              ? "col-span-full grid grid-cols-2 gap-1"
+                              : "contents sm:block"
+                          }
+                        >
+                          {row.slots.map((slotName) => renderSlot(slotName, body[slotName]))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-1 space-y-1">
-                  {Object.entries(character.body).map(([slotName, slot]) => {
-                    const details = [
-                      ...(slot.missing ? [localizeUi("ui.chat.beholder.missing")] : []),
-                      ...(slot.bare ? [localizeUi("ui.chat.beholder.bare")] : []),
-                      ...(slot.worn ?? []).map((item) =>
-                        localizeUi("ui.chat.beholder.wearingValue", {
-                          value: [
-                            item.color,
-                            item.material,
-                            item.item,
-                            item.damage !== "pristine" ? damageLabel(item.damage) : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" "),
-                        }),
-                      ),
-                      ...(slot.holding
-                        ? [
-                            localizeUi("ui.chat.beholder.holdingValue", {
-                              value: `${slot.holding.item}${
-                                slot.holding.damage !== "pristine" ? ` (${damageLabel(slot.holding.damage)})` : ""
-                              }`,
-                            }),
-                          ]
-                        : []),
-                      ...(slot.wounds ?? []).map((wound) =>
-                        localizeUi("ui.chat.beholder.woundValue", {
-                          value: wound.text,
-                          severity: severityLabel(wound.severity),
-                          bleeding: wound.bleeding ? localizeUi("ui.chat.beholder.bleedingSuffix") : "",
-                        }),
-                      ),
-                    ];
-                    return (
-                      <div key={slotName} className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-1.5 text-[0.5625rem]">
-                        <span className="capitalize text-[var(--muted-foreground)]">
-                          {slotName.replaceAll("_", " ")}
-                        </span>
-                        <span className="min-w-0 text-[var(--foreground)]/85">{details.join(" · ")}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
