@@ -73,6 +73,7 @@ import { CallClipGenerationModal } from "../ui/CallClipGenerationModal";
 import { ImageUploadDropzone } from "../ui/ImageUploadDropzone";
 import { CustomEmojiTagButton } from "../ui/CustomEmojiTagButton";
 import { CharacterRegexSection } from "./CharacterRegexSection";
+import { NameAliasesSection } from "../ui/NameAliasesSection";
 import {
   ArrowDown,
   ArrowLeft,
@@ -1636,35 +1637,18 @@ function MetadataTab({
                 text={localizeUi("ui.characters.metadatatab.versionNumberForTrackingChangesToThisCharacterDefinition")}
               />
             </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={formData.extensions.versioningEnabled !== false}
-              onClick={() => {
-                const enabled = formData.extensions.versioningEnabled !== false;
-                updateExtension("versioningEnabled", !enabled);
-                if (enabled === false && !formData.character_version.trim()) updateField("character_version", "1.0");
+            <SettingsSwitch
+              checked={formData.extensions.versioningEnabled !== false}
+              onChange={(enabled) => {
+                updateExtension("versioningEnabled", enabled);
+                if (enabled && !formData.character_version.trim()) updateField("character_version", "1.0");
               }}
-              className="inline-flex min-h-11 items-center gap-2 rounded-md px-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/40"
+              label={localizeUi("ui.cardversionhistory.automaticVersioning")}
+              labelPosition="end"
               title={localizeUi("ui.cardversionhistory.automaticVersioningDescription")}
-            >
-              <span
-                className={cn(
-                  "relative h-5 w-9 rounded-full border transition-colors",
-                  formData.extensions.versioningEnabled !== false
-                    ? "border-[var(--primary)] bg-[var(--primary)]"
-                    : "border-[var(--border)] bg-[var(--secondary)]",
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[var(--background)] shadow-sm transition-transform",
-                    formData.extensions.versioningEnabled !== false && "translate-x-4",
-                  )}
-                />
-              </span>
-              {localizeUi("ui.cardversionhistory.automaticVersioning")}
-            </button>
+              className="min-h-11 gap-2 rounded-md px-1 py-0"
+              labelClassName="text-xs font-medium text-[var(--muted-foreground)]"
+            />
           </div>
           <input
             value={formData.character_version}
@@ -5136,6 +5120,7 @@ function ColorsTab({
   const nameColor = (formData.extensions.nameColor as string) ?? "";
   const dialogueColor = (formData.extensions.dialogueColor as string) ?? "";
   const boxColor = (formData.extensions.boxColor as string) ?? "";
+  const nameAliases = (formData.extensions.nameAliases as string[] | undefined) ?? [];
   const [extracting, setExtracting] = useState(false);
 
   const handleExtract = async () => {
@@ -5258,6 +5243,12 @@ function ColorsTab({
         onChange={(v) => updateExtension("boxColor", v)}
         label={localizeUi("ui.characters.colorstab.messageBoxColor")}
         helpText="Background color for this character's chat message bubbles. Use a semi-transparent color for best results (e.g. rgba)."
+      />
+      {/* Name Aliases */}
+      <NameAliasesSection
+        aliases={nameAliases}
+        onChange={(next) => updateExtension("nameAliases", next)}
+        nameColor={nameColor}
       />
     </div>
   );
