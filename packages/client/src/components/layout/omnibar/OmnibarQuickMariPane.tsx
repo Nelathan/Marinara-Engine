@@ -14,6 +14,8 @@ import type { CommandCenterQuickTask } from "../../../lib/command-center";
 export function OmnibarQuickMariPane({
   task,
   connectionId,
+  connectionOptions,
+  onConnectionChange,
   context,
   debugMode,
   onTaskChange,
@@ -22,6 +24,8 @@ export function OmnibarQuickMariPane({
 }: {
   task: CommandCenterQuickTask;
   connectionId: string | null;
+  connectionOptions: { id: string; label: string }[];
+  onConnectionChange: (connectionId: string) => void;
   context: ProfessorMariAskContext | null;
   debugMode: boolean;
   onTaskChange: (task: CommandCenterQuickTask) => void;
@@ -144,6 +148,21 @@ export function OmnibarQuickMariPane({
           <span className="ml-auto truncate text-[0.625rem] text-[var(--muted-foreground)]">
             {metadata.connectionName} · {metadata.model}
           </span>
+        ) : null}
+        {connectionOptions.length > 0 ? (
+          <select
+            value={connectionId ?? ""}
+            onChange={(event) => onConnectionChange(event.target.value)}
+            aria-label={t("commandCenter.quick.connection", "Quick Mari connection")}
+            className={`${metadata ? "" : "ml-auto "}h-6 max-w-32 rounded-md border-0 bg-transparent text-[0.625rem] text-[var(--muted-foreground)] outline-none hover:text-[var(--foreground)] focus:text-[var(--foreground)]`}
+          >
+            <option value="">{t("commandCenter.quick.sameAsMari", "Same as Mari")}</option>
+            {connectionOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

@@ -1901,6 +1901,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       // Continue the selected result with Mari without opening the detail pane first.
       event.preventDefault();
       openProfessorMari(resolveCurrentResult(activeResult));
+    } else if (pane === "results" && event.key === "Enter" && !activeResult && mariEnabled && query.trim()) {
+      // Nothing ranked above the Quick row, so Enter asks Mari (matching the selected row).
+      event.preventDefault();
+      startQuickMari();
     } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
       event.preventDefault();
       if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
@@ -2742,38 +2746,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <X size={13} strokeWidth={2.5} />
               </button>
             ) : null}
-            {query.trim() && pane !== "mari" && pane !== "quick" && mariEnabled ? (
-              <div className="flex shrink-0 items-center gap-1">
-                <select
-                  value={quickConnectionId}
-                  onChange={(event) => {
-                    setQuickConnectionId(event.target.value);
-                    rememberQuickConnectionPreference(event.target.value);
-                  }}
-                  aria-label={t("commandCenter.quick.connection", "Quick Mari connection")}
-                  title={t("commandCenter.quick.connection", "Quick Mari connection")}
-                  className="hidden h-8 max-w-28 rounded-md border border-[var(--border)] bg-[var(--card)] px-1.5 text-[0.625rem] text-[var(--muted-foreground)] outline-none focus:border-[var(--primary)] sm:block"
-                >
-                  <option value="">{t("commandCenter.quick.sameAsMari", "Same as Mari")}</option>
-                  {quickConnectionOptions.map((connection) => (
-                    <option key={connection.id} value={connection.id}>
-                      {connection.name || connection.model}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={startQuickMari}
-                  className="mari-workspace-destination shrink-0 border border-[var(--primary)]/20 bg-[var(--primary)]/7 text-[var(--foreground)]"
-                  aria-label={t("commandCenter.quick.start", "Ask Quick Mari with one model call")}
-                  title={t("commandCenter.quick.start", "Ask Quick Mari with one model call")}
-                >
-                  <Sparkles size={13} />
-                  <span className="hidden sm:inline">{t("commandCenter.quick.costLabel", "Quick · 1 model call")}</span>
-                  <span className="sm:hidden">{t("commandCenter.quick.shortLabel", "Quick")}</span>
-                </button>
-              </div>
-            ) : null}
             {pane !== "mari" && mariEnabled ? (
               <button
                 type="button"
@@ -2868,7 +2840,15 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           <Suspense fallback={null}>
             <OmnibarQuickMariPane
               task={quickTask}
-              connectionId={quickConnectionId || mariWorkspaceStatus.data?.connection?.id || null}
+              connectionId={quickConnectionId || null}
+              connectionOptions={quickConnectionOptions.map((connection) => ({
+                id: connection.id,
+                label: connection.name || connection.model,
+              }))}
+              onConnectionChange={(connectionId) => {
+                setQuickConnectionId(connectionId);
+                rememberQuickConnectionPreference(connectionId);
+              }}
               context={quickContext}
               debugMode={useUIStore.getState().debugMode}
               onTaskChange={(task) => setSessionValue("quickTask", task)}
@@ -2956,6 +2936,20 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <div role="status" className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
                   {t("omnibar.error", "Some results could not be loaded")}
                 </div>
+              ) : null}
+              {query.trim() && mariEnabled ? (
+                <ul className="space-y-0.5 px-1 pt-1">
+                  <CommandCenterResultRow
+                    id="omnibar-quick-mari"
+                    dataResultId="quick-mari"
+                    title={t("commandCenter.quick.rowTitle", "Ask Mari: {{query}}", { query: query.trim() })}
+                    metadata={t("commandCenter.quick.costLabel", "Quick · 1 model call")}
+                    icon={Sparkles}
+                    selected={!activeResult}
+                    enterHint={t("commandCenter.quick.enterHint", "Ask")}
+                    onSelect={startQuickMari}
+                  />
+                </ul>
               ) : null}
               {presentation.groups.map((group) => {
                 const GroupIcon =
