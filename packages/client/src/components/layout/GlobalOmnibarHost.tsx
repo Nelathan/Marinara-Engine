@@ -7,6 +7,7 @@ import {
   writeCommandCenterSessionState,
 } from "../../lib/command-center";
 import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
+import { useMariPresence } from "../../hooks/use-mari-presence";
 import { useUIStore } from "../../stores/ui.store";
 
 // The dialog carries the whole Command Center (search, browse, Mari panes), so it
@@ -76,6 +77,11 @@ function OmnibarErrorPanel({ error, onClose }: { error: unknown; onClose: () => 
 export function GlobalOmnibar() {
   const open = useUIStore((state) => state.omnibarOpen);
   const setOpen = useUIStore((state) => state.setOmnibarOpen);
+  // This host is mounted for the whole session while the dialog below it is
+  // not, so the heartbeat lives here. Without it Professor Mari's state dies
+  // with the dialog and a task that finishes after a close is never noticed.
+  // The presence indicator reads the same query.
+  useMariPresence();
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
