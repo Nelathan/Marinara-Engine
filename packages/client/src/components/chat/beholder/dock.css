@@ -1,0 +1,70 @@
+/* Beholder dock.
+ *
+ * Ported from the reference extractor's Marinara host shim, which docks the panel to the
+ * right of the roleplay view rather than floating it. Opening it makes the chat make room
+ * instead of being covered: Marinara already reflows around a right-side panel through
+ * --tracker-chat-avoid-right, so the dock sets that rather than overlapping.
+ */
+
+.beholder-panel {
+  display: flex;
+  position: fixed;
+  top: var(--bh-dock-top, 0px);
+  right: 0;
+  left: auto;
+  bottom: auto;
+  height: calc(100vh - var(--bh-dock-top, 0px));
+  max-height: calc(100vh - var(--bh-dock-top, 0px));
+  width: min(500px, 94vw);
+  min-width: 0;
+  border-radius: 0;
+  z-index: 40;
+  overflow: auto;
+  background: var(--background);
+  color: var(--foreground);
+  border-left: 1px solid var(--border);
+  /* Open state sits clear of any Marinara panel already occupying the right edge. */
+  transform: translateX(calc(-1 * var(--bh-dock-right, 0px)));
+  transition: transform 0.22s ease;
+}
+
+/* Collapsed slides fully off the right edge, independent of the open-state offset, so it
+ * never parks on top of another panel. */
+.beholder-panel.bh-collapsed {
+  transform: translateX(103%);
+}
+
+@media (max-width: 767px) {
+  .beholder-panel {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: 72vh;
+    border-radius: 14px 14px 0 0;
+    border-left: 0;
+    transform: translateY(0);
+  }
+  .beholder-panel.bh-collapsed {
+    transform: translateY(103%);
+  }
+}
+
+body.bh-dock-open .mari-app-background-paint {
+  --tracker-chat-avoid-right: min(500px, 94vw);
+  --tracker-panel-hud-clear-right: min(500px, 94vw);
+}
+
+.bh-dock-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--background);
+  z-index: 1;
+}

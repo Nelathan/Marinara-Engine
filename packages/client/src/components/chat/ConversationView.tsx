@@ -22,6 +22,7 @@ import { SceneBanner, EndSceneBar } from "./SceneBanner";
 import { ChatBranchSelector } from "./ChatBranchSelector";
 import { ChatMessageSearch } from "./ChatMessageSearch";
 import { ActiveLorebookEntriesButton } from "./ActiveLorebookEntriesButton";
+import BeholderToolbarButton from "./beholder/BeholderToolbarButton";
 import { ChatToolbarButton, ChatToolbarMenu, getChatToolbarButtonClass } from "./ChatToolbarControls";
 import { ConversationPresenceCard } from "./ConversationPresenceCard";
 import { PendingTypingDots } from "./PendingTypingDots";
@@ -436,6 +437,11 @@ export function ConversationView({
   );
   const callCapabilityProps = { chatId, metadata: chatMeta, characterMap, chatCharIds, personaInfo };
   const activeAgentIds = chatMeta.activeAgentIds;
+  // Beholder's dock only appears when the agent is actually tracking this chat: the state
+  // it shows is produced by that agent, so otherwise it would open empty and take a
+  // toolbar slot from everyone who does not use it.
+  const beholderActive =
+    chatMeta.enableAgents === true && Array.isArray(activeAgentIds) && activeAgentIds.includes("beholder");
   const enabledConversationCapabilities =
     chatMeta.enableAgents === true
       ? installedCapabilities.filter((item) => {
@@ -462,6 +468,7 @@ export function ConversationView({
         compact={compact}
       />
       <ActiveLorebookEntriesButton chatId={chatId} />
+      <BeholderToolbarButton chatId={chatId} active={beholderActive} />
       <ChatToolbarButton
         icon={<ImageIcon size="0.875rem" />}
         title={t("chat.toolbar.gallery")}

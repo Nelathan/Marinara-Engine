@@ -2441,6 +2441,8 @@
   "ui.chat.beholder.damage.cracked": "cracked",
   "ui.chat.beholder.damage.damaged": "damaged",
   "ui.chat.beholder.damage.pristine": "pristine",
+  "ui.chat.beholder.dockClose": "Close Beholder",
+  "ui.chat.beholder.dockTitle": "Beholder — physical state",
   "ui.chat.beholder.emptyState": "No physical state has been recorded yet. Beholder will populate this after its next successful roleplay turn.",
   "ui.chat.beholder.holdingValue": "holding: {{value}}",
   "ui.chat.beholder.latestState": "Latest physical state",
