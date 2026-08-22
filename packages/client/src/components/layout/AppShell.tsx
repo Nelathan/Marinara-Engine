@@ -8,9 +8,8 @@ import { GlobalOmnibar } from "./GlobalOmnibarHost";
 import { SpotifyMobileWidget } from "../spotify/SpotifyMiniPlayer";
 import { YouTubeMobileWidget } from "../chat/YouTubePlayer";
 import { LocalMusicMobileWidget } from "../chat/LocalMusicPlayer";
-import { ProfessorMariFloatingAssistantHost } from "../chat/ProfessorMariFloatingAssistantHost";
+import { MariPresenceIndicator } from "../chat/MariPresenceIndicator";
 import { ChatResourceMobileDropDock } from "../chat/ChatResourceMobileDropDock";
-import { hasProfessorMariFloatingFollowup } from "../chat/professor-mari-floating-events";
 import {
   getTrackerPanelWidthForProfile,
   MOBILE_SHELL_MEDIA_QUERY,
@@ -867,14 +866,6 @@ export function AppShell() {
     [activeChatId, setTrackerPanelOpen],
   );
 
-  const professorMariFloatingActive =
-    hasProfessorMariFloatingFollowup() &&
-    (Boolean(activeChatId) ||
-      hasDetailView ||
-      botBrowserOpen ||
-      gameAssetsBrowserOpen ||
-      (shellOverlayMode && Boolean(mobileNavigationPanel)));
-
   useEffect(() => {
     restoreTrackerPanelOpenForChat(activeChatId);
   }, [activeChatId, restoreTrackerPanelOpenForChat, trackerPanelEnabled]);
@@ -1544,7 +1535,7 @@ export function AppShell() {
           <OnboardingTutorial />
         </Suspense>
       )}
-      <ProfessorMariFloatingAssistantHost active={professorMariFloatingActive} />
+      <MariPresenceIndicator />
       <GlobalOmnibar />
       <div data-component="MobileMusicWidgetLayer" className="contents">
         {isMobile && musicDjInstalled ? (

@@ -16,6 +16,8 @@ export interface MariPresence {
   /** She is blocked on the user: an approval is waiting. */
   needsAttention: boolean;
   pendingCount: number;
+  /** Newest workspace-history entry id, or null when she has no history. */
+  latestHistoryId: string | null;
 }
 
 export function useMariPresence(): MariPresence {
@@ -25,5 +27,7 @@ export function useMariPresence(): MariPresence {
     working: status.data?.active === true,
     needsAttention: pendingCount > 0,
     pendingCount,
+    // getHistory() reverses after slicing, so the newest entry is first.
+    latestHistoryId: status.data?.history[0]?.id ?? null,
   };
 }
