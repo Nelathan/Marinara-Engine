@@ -3170,8 +3170,17 @@ export class MariDbService {
     const { skills } = await getProfessorMariWorkspaceSkillsService().list();
     switch (sub) {
       case "list": {
-        const items = skills.map(({ content: _content, ...summary }) => summary);
-        return { ok: true, mode: "read", command: context.command, output: { items, total: items.length } };
+        // Paged and description-truncated for the same read-budget reason as instruction.list.
+        const offset = normalizeOffset(firstNumber(args, ["offset"]));
+        const limit = normalizeLimit(firstNumber(args, ["limit"]), 40, 50);
+        const total = skills.length;
+        const items = skills.slice(offset, offset + limit).map(({ content: _content, ...summary }) => ({
+          ...summary,
+          description:
+            typeof summary.description === "string" ? truncateStr(summary.description, 120) : summary.description,
+        }));
+        const nextOffset = offset + items.length < total ? offset + items.length : null;
+        return { ok: true, mode: "read", command: context.command, output: { items, total, offset, nextOffset } };
       }
       case "get": {
         const id = requiredString(args, ["id", "skillId"], "skill id");

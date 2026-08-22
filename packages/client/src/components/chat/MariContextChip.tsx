@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import type {
   ProfessorMariAskContext,
@@ -22,8 +23,6 @@ interface MariContextChipProps {
   className?: string;
 }
 
-const GENERIC_LABEL = "Ask Professor Mari";
-
 /**
  * Context-aware Mari trigger. Runs the local (LLM-free) heuristic over `value`
  * to advertise the most useful action, and hands off to the floating assistant
@@ -38,10 +37,13 @@ export function MariContextChip({
   subject,
   className,
 }: MariContextChipProps) {
+  const { t } = useTranslation();
   const suggestion = useMemo(
     () => suggestMariAction({ surface, field, value, subject }),
     [surface, field, value, subject],
   );
+
+  const genericLabel = t("mari.contextChip.generic", "Ask Professor Mari");
 
   const handleOpen = () => {
     const context: ProfessorMariAskContext = {
@@ -66,10 +68,12 @@ export function MariContextChip({
         className ??
         "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
       }
-      title={GENERIC_LABEL}
+      title={genericLabel}
     >
       <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-      <span className="truncate">{suggestion?.label ?? GENERIC_LABEL}</span>
+      <span className="truncate">
+        {suggestion ? t(suggestion.labelKey, suggestion.label, suggestion.labelValues) : genericLabel}
+      </span>
     </button>
   );
 }

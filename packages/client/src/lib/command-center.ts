@@ -268,7 +268,12 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
 };
 
 function getCommandCenterSessionStorage(): CommandStorage | null {
-  return getBrowserStorage();
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
 export function normalizeCommandCenterSessionState(value: unknown): CommandCenterSessionState {

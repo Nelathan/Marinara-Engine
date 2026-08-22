@@ -9,6 +9,10 @@ export function validateQuickEditProposal(
   currentValue: string,
   now = Date.now(),
 ): "ok" | "expired" | "stale" {
-  if (Date.parse(proposal.expiresAt) <= now) return "expired";
+  const expiresAt = Date.parse(proposal.expiresAt);
+  if (!Number.isFinite(expiresAt) || expiresAt <= now) return "expired";
   return quickEditFingerprint(currentValue) === proposal.fingerprint ? "ok" : "stale";
 }
+
+/** Thrown when a proposal cannot be applied because it is missing, expired, or stale. */
+export class QuickEditConflictError extends Error {}

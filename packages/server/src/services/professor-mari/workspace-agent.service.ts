@@ -100,7 +100,7 @@ import {
   WorkspaceChangeReviewService,
   workspacePathAccessPolicy,
 } from "./workspace-change-review.service.js";
-import { quickEditFingerprint, validateQuickEditProposal } from "./quick-edit-proposal.js";
+import { quickEditFingerprint, validateQuickEditProposal, QuickEditConflictError } from "./quick-edit-proposal.js";
 
 type DbConnectionWithKey = typeof apiConnections.$inferSelect & { apiKey: string };
 type WorkspaceConnection = Pick<
@@ -2229,8 +2229,10 @@ export class ProfessorMariWorkspaceService {
   }
 
   async applyQuickEditProposal(id: string): Promise<ProfessorMariQuickEditApplyResponse> {
+    // Claim before the first await so two concurrent applies cannot both write.
     const proposal = this.quickEditProposals.get(id);
-    if (!proposal) throw new Error("Quick edit proposal was not found or has already been applied.");
+    if (!proposal) throw new QuickEditConflictError("Quick edit proposal was not found or has already been applied.");
+    this.quickEditProposals.delete(id);
     const target = await this.readQuickEditTarget({
       source: "command-center",
       capability: "edit",
@@ -2240,12 +2242,12 @@ export class ProfessorMariWorkspaceService {
     });
     const validation = target ? validateQuickEditProposal(proposal, target.currentValue) : "stale";
     if (validation === "expired") {
-      this.quickEditProposals.delete(id);
-      throw new Error("Quick edit proposal expired. Ask Quick Mari again to refresh it.");
+      throw new QuickEditConflictError("Quick edit proposal expired. Ask Quick Mari again to refresh it.");
     }
     if (!target || validation === "stale") {
-      this.quickEditProposals.delete(id);
-      throw new Error("The field changed after Quick Mari prepared this proposal. Nothing was applied.");
+      throw new QuickEditConflictError(
+        "The field changed after Quick Mari prepared this proposal. Nothing was applied.",
+      );
     }
     const result = await getMariDbService(this.app.db).executeAction({
       action: "character.update",
@@ -2255,11 +2257,17 @@ export class ProfessorMariWorkspaceService {
       reason: `Quick Mari edit proposal for ${proposal.fieldLabel}`,
       sessionId: "professor-mari-quick",
     });
-    if (!result.ok || !result.approval?.id) throw new Error(result.error ?? "Quick edit could not be applied.");
-    const actionResult = buildMariWorkspaceActionResult("character.update", result);
-    if (!actionResult) throw new Error("Quick edit applied without a reviewable result.");
-    this.quickEditProposals.delete(id);
-    return { ok: true, proposalId: id, reviewId: result.approval.id, actionResult };
+    if (!result.ok) {
+      // The write failed, not a conflict, so hand the proposal back for a retry.
+      this.quickEditProposals.set(id, proposal);
+      throw new Error(result.error ?? "Quick edit could not be applied.");
+    }
+    // The write already landed, so never fail the call over missing review metadata.
+    const actionResult = buildMariWorkspaceActionResult("character.update", result) ?? undefined;
+    const response: ProfessorMariQuickEditApplyResponse = { ok: true, proposalId: id };
+    if (result.approval?.id) response.reviewId = result.approval.id;
+    if (actionResult) response.actionResult = actionResult;
+    return response;
   }
 
   async quickPrompt(

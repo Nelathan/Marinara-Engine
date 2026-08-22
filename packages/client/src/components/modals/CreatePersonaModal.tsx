@@ -19,6 +19,11 @@ export function CreatePersonaModal({ open, onClose, defaultName = "" }: Props) {
   const createPersona = useCreatePersona();
   const openPersonaDetail = useUIStore((s) => s.openPersonaDetail);
   const [name, setName] = useState(defaultName);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setName(defaultName);
+  }
 
   const reset = () => {
     setName("");

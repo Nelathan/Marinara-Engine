@@ -32,6 +32,11 @@ export function CreatePresetModal({ open, onClose, defaultName = "" }: Props) {
   const openPresetDetail = useUIStore((s) => s.openPresetDetail);
   const [name, setName] = useState(defaultName);
   const [description, setDescription] = useState("");
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setName(defaultName);
+  }
 
   const createPreset = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.post("/prompts", data),

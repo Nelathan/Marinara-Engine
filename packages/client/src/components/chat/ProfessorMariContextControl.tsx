@@ -44,6 +44,7 @@ export function ProfessorMariContextControl({
   const [open, setOpen] = useState(false);
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 639px)").matches);
   const [position, setPosition] = useState<PanelPosition | null>(null);
+  const panelMounted = mobile || position !== null;
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreTriggerFocusRef = useRef(true);
@@ -90,7 +91,9 @@ export function ProfessorMariContextControl({
   useEffect(() => {
     if (!open) return;
     const trigger = buttonRef.current;
-    panelRef.current?.focus();
+    // The desktop panel only mounts once `position` is measured, so focus after that.
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
     const handlePointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Node)) return;
       if (buttonRef.current?.contains(event.target) || panelRef.current?.contains(event.target)) return;
@@ -101,7 +104,7 @@ export function ProfessorMariContextControl({
         setOpen(false);
         return;
       }
-      if (event.key !== "Tab" || !mobile || !panelRef.current) return;
+      if (event.key !== "Tab" || !panelRef.current) return;
       const focusable = Array.from(
         panelRef.current.querySelectorAll<HTMLElement>(
           'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
@@ -129,7 +132,7 @@ export function ProfessorMariContextControl({
       if (restoreTriggerFocusRef.current) trigger?.focus();
       restoreTriggerFocusRef.current = true;
     };
-  }, [mobile, open]);
+  }, [open, panelMounted]);
 
   const totalCount = attachedContextCount + (context ? 1 : 0);
   const panel = (
@@ -304,7 +307,7 @@ export function ProfessorMariContextControl({
         {totalCount > 0 && <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">{totalCount}</span>}
         {context && <span className="sr-only">{t("ui.chat.homeprofessormarichat.contextControlFocused")}</span>}
       </button>
-      {open && (mobile || position) && createPortal(panel, document.body)}
+      {open && panelMounted && createPortal(panel, document.body)}
     </>
   );
 }

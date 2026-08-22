@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requirePrivilegedAccess } from "../middleware/privileged-gate.js";
 import { getProfessorMariWorkspaceService } from "../services/professor-mari/workspace-agent.service.js";
 import { isSseReplyWritable, sendSseEvent, startSseKeepalive, startSseReply } from "./generate/sse.js";
+import { logger } from "../lib/logger.js";
+import { QuickEditConflictError } from "../services/professor-mari/quick-edit-proposal.js";
 
 const quickContextSchema = z
   .object({
@@ -52,7 +54,9 @@ export async function professorMariQuickRoutes(app: FastifyInstance) {
     try {
       return await getProfessorMariWorkspaceService(app).applyQuickEditProposal(request.params.id);
     } catch (error) {
-      return reply.status(409).send({ error: error instanceof Error ? error.message : String(error) });
+      if (error instanceof QuickEditConflictError) return reply.status(409).send({ error: error.message });
+      logger.error(error, "Quick edit proposal apply failed");
+      return reply.status(500).send({ error: "Quick edit could not be applied." });
     }
   });
 

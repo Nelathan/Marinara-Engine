@@ -25,7 +25,7 @@ const EXTRACTION_PATTERNS: readonly (readonly [ChatExtractionKind, RegExp])[] = 
 ];
 
 /** Phrases that point at the current chat rather than a named resource. */
-const REFERS_TO_CHAT = /\b(?:this\s+(?:chat|story|scene|conversation|rp)|the\s+current\s+chat|here)\b/i;
+const REFERS_TO_CHAT = /\b(?:this\s+(?:chat|story|scene|conversation|rp)|the\s+current\s+chat)\b/i;
 
 /** Verbs that mean "derive something new from what already exists". */
 const EXTRACTION_VERB = /\b(?:turn|convert|extract|pull|make|create|build|generate)\b/i;

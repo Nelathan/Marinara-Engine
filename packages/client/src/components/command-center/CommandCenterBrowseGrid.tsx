@@ -150,6 +150,7 @@ export function CommandCenterBrowseGrid({
     <div className={cn("min-w-0", className)}>
       <ul
         ref={gridRef}
+        role="grid"
         aria-label={ariaLabel}
         className="grid auto-rows-fr grid-cols-2 gap-2 md:grid-cols-[repeat(auto-fill,minmax(132px,1fr))]"
       >
@@ -158,8 +159,9 @@ export function CommandCenterBrowseGrid({
           const selected = selectionMode ? Boolean(selectedIds?.has(result.id)) : result.id === activeId;
 
           return (
-            <li key={result.id} className="min-w-0">
+            <li key={result.id} role="row" className="min-w-0">
               <button
+                role="gridcell"
                 ref={(node) => {
                   if (node) cellRefs.current.set(result.id, node);
                   else cellRefs.current.delete(result.id);

@@ -14,6 +14,11 @@ export function FaqViewerModal({
 }) {
   const { t } = useTranslation();
   const [openItemId, setOpenItemId] = useState<string | null>(initialItemId ?? null);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setOpenItemId(initialItemId ?? null);
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={t("omnibar.faqTitle", "Professor Mari's FAQ")} width="max-w-5xl">

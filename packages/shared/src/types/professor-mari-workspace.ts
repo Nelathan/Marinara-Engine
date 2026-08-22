@@ -152,8 +152,8 @@ export interface ProfessorMariQuickEditProposal {
 export interface ProfessorMariQuickEditApplyResponse {
   ok: true;
   proposalId: string;
-  reviewId: string;
-  actionResult: MariWorkspaceActionResult;
+  reviewId?: string;
+  actionResult?: MariWorkspaceActionResult;
 }
 
 export type ProfessorMariQuickPromptEvent =
@@ -318,9 +318,16 @@ function normalizeMariChipEntity(value: unknown): MariChipEntity | undefined {
  * label, etc). Strict validation would silently discard the whole chip in those cases, so
  * this accepts the common near-miss shapes rather than requiring exact compliance.
  */
+/** Non-finite caps fall back to the default; a cap of 0 means "emit nothing". */
+function normalizeMariCap(value: number | undefined, fallback: number): number {
+  const cap = Math.floor(value ?? fallback);
+  return Number.isFinite(cap) ? Math.max(0, cap) : fallback;
+}
+
 export function sanitizeMariSuggestionChips(raw: unknown, options: { maxChips?: number } = {}): MariSuggestionChip[] {
   if (!Array.isArray(raw)) return [];
-  const maxChips = Math.max(0, Math.floor(options.maxChips ?? 6));
+  const maxChips = normalizeMariCap(options.maxChips, 6);
+  if (maxChips === 0) return [];
   const chips: MariSuggestionChip[] = [];
   const ids = new Set<string>();
   for (const entry of raw) {
@@ -342,7 +349,9 @@ export function sanitizeMariSuggestionChips(raw: unknown, options: { maxChips?: 
         ? truncateMariChipText(record.id, 80)
         : `suggestion-${chips.length + 1}`;
     if (!id || ids.has(id)) id = `suggestion-${chips.length + 1}`;
-    while (ids.has(id)) id = `suggestion-${chips.length + 1}-${ids.size + 1}`;
+    for (let attempt = 1; ids.has(id); attempt += 1) {
+      id = `suggestion-${chips.length + 1}-${attempt}`;
+    }
     ids.add(id);
     const chip: MariSuggestionChip = {
       id,
@@ -384,8 +393,8 @@ export function sanitizeMariGuidedPlan(
   options: { maxSteps?: number; maxChipsPerStep?: number } = {},
 ): MariGuidedPlanStep[] {
   if (!Array.isArray(raw)) return [];
-  const maxSteps = Math.max(0, Math.floor(options.maxSteps ?? 8));
-  const maxChipsPerStep = Math.max(0, Math.floor(options.maxChipsPerStep ?? 5));
+  const maxSteps = normalizeMariCap(options.maxSteps, 8);
+  const maxChipsPerStep = normalizeMariCap(options.maxChipsPerStep, 5);
   const steps: MariGuidedPlanStep[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;

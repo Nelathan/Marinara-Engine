@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import {
   PERSONAL_EXTENSION_CONTRIBUTION_KINDS,
   PERSONAL_EXTENSION_CONTRIBUTION_POSITIONS,
@@ -380,15 +380,22 @@ export function activatePersonalExtensionContribution(key: string) {
 export function resolvePersonalExtensionCommand(key: string): PersonalExtensionHostContribution | null {
   const command = contributions.find((candidate) => candidate.key === key && candidate.kind === "command");
   if (!command || command.kind !== "command" || !command.targetContributionId) return null;
-  return (
+  const target =
     contributions.find(
       (candidate) =>
         candidate.extensionId === command.extensionId &&
         candidate.contentHash === command.contentHash &&
         candidate.id === command.targetContributionId &&
         candidate.kind !== "command",
-    ) ?? null
-  );
+    ) ?? null;
+  // Targets register incrementally, so this cannot be validated at registration time.
+  // Warn instead, otherwise the command just silently never appears.
+  if (!target) {
+    console.warn(
+      `Personal extension "${command.extensionId}": command "${command.id}" targets "${command.targetContributionId}", which is not a registered non-command contribution.`,
+    );
+  }
+  return target;
 }
 
 export function collectPersonalExtensionCommands(): CommandDefinition[] {
@@ -457,6 +464,10 @@ export function usePersonalExtensionContributions() {
 }
 
 export function usePersonalExtensionCommands() {
-  usePersonalExtensionContributions();
-  return collectPersonalExtensionCommands();
+  // collectPersonalExtensionCommands reads module state, so the snapshot is the
+  // cache key rather than an argument. Without it every render returns new
+  // command identities and re-ranks the omnibar.
+  const contributions = usePersonalExtensionContributions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => collectPersonalExtensionCommands(), [contributions]);
 }

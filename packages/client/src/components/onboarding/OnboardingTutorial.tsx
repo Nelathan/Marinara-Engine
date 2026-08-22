@@ -689,7 +689,8 @@ function OnboardingTutorialInner() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !useUIStore.getState().modal) finish();
+      if (event.key !== "Escape" || event.defaultPrevented || useUIStore.getState().modal) return;
+      finish();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -779,7 +780,6 @@ function OnboardingTutorialInner() {
               className={TUTORIAL_CARD_CLASS}
               ref={cardRef}
               role="dialog"
-              aria-modal="true"
               aria-label={dialogLabel}
               data-component="OnboardingTutorial.Card"
               style={{ width: Math.min(380, getViewportWidth() - 32), maxHeight: centeredCardMaxHeight }}
@@ -806,7 +806,6 @@ function OnboardingTutorialInner() {
             className={TUTORIAL_CARD_CLASS}
             ref={cardRef}
             role="dialog"
-            aria-modal="true"
             aria-label={dialogLabel}
             data-component="OnboardingTutorial.Card"
             style={computeTooltipStyle(targetRect!, currentStep)}

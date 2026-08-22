@@ -5586,13 +5586,11 @@ export function HomeProfessorMariChat({
 
   const openPendingApprovals = useCallback(() => {
     void refreshWorkspaceStatus().then(() => {
-      document
-        .querySelector('[data-component="HomeProfessorMariChat.Recovery"]')
+      const transcript = scrollRef.current;
+      transcript
+        ?.querySelector('[data-component="HomeProfessorMariChat.Recovery"]')
         ?.scrollIntoView({ behavior: "smooth" });
-      document.querySelector('[data-component="HomeProfessorMariChat.Transcript"]')?.scrollTo({
-        top: document.querySelector('[data-component="HomeProfessorMariChat.Transcript"]')?.scrollHeight,
-        behavior: "smooth",
-      });
+      transcript?.scrollTo({ top: transcript.scrollHeight, behavior: "smooth" });
     });
   }, [refreshWorkspaceStatus]);
 
@@ -5676,7 +5674,7 @@ export function HomeProfessorMariChat({
     async (reviewId: string) => {
       await refreshWorkspaceStatus().catch(() => undefined);
       window.requestAnimationFrame(() => {
-        const review = document.getElementById(`mari-workspace-review-${reviewId}`);
+        const review = scrollRef.current?.querySelector<HTMLElement>(`#mari-workspace-review-${CSS.escape(reviewId)}`);
         review?.scrollIntoView({ behavior: "smooth", block: "center" });
         review?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
       });

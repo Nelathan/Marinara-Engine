@@ -8,7 +8,7 @@ import type {
   ProfessorMariQuickEditApplyResponse,
   ProfessorMariQuickEditProposal,
 } from "@marinara-engine/shared";
-import { api } from "../../../lib/api-client";
+import { api, ApiError } from "../../../lib/api-client";
 import type { CommandCenterQuickTask } from "../../../lib/command-center";
 
 export function OmnibarQuickMariPane({
@@ -37,8 +37,10 @@ export function OmnibarQuickMariPane({
   const startedTaskRef = useRef<string | null>(null);
   const taskRef = useRef(task);
   const onTaskChangeRef = useRef(onTaskChange);
+  const requestRef = useRef({ connectionId, context, debugMode });
   taskRef.current = task;
   onTaskChangeRef.current = onTaskChange;
+  requestRef.current = { connectionId, context, debugMode };
   const [attempt, setAttempt] = useState(0);
   const [metadata, setMetadata] = useState<ProfessorMariQuickMetadata | null>(null);
   const [proposal, setProposal] = useState<ProfessorMariQuickEditProposal | null>(null);
@@ -62,9 +64,11 @@ export function OmnibarQuickMariPane({
     abortRef.current = controller;
     let answer = "";
     onTaskChangeRef.current({ ...initialTask, status: "streaming", answer: "" });
+    const request = requestRef.current;
+    const context = request.context;
     const body: ProfessorMariQuickPromptRequest = {
       message: initialTask.message,
-      connectionId,
+      connectionId: request.connectionId,
       context: context
         ? {
             source: context.source,
@@ -76,7 +80,7 @@ export function OmnibarQuickMariPane({
             action: context.action,
           }
         : undefined,
-      debugMode,
+      debugMode: request.debugMode,
     };
 
     void (async () => {
@@ -108,7 +112,7 @@ export function OmnibarQuickMariPane({
     })();
 
     return () => controller.abort();
-  }, [attempt, connectionId, context, debugMode, task.id]);
+  }, [attempt, task.id]);
 
   const retry = () => {
     startedTaskRef.current = null;
@@ -128,13 +132,14 @@ export function OmnibarQuickMariPane({
       await api.post<ProfessorMariQuickEditApplyResponse>(`/professor-mari/quick/proposals/${proposal.id}/apply`, {});
       setApplyState("applied");
     } catch (error) {
-      setApplyState("stale");
+      // Only a server-side conflict burns the proposal; anything else stays retryable.
+      setApplyState(error instanceof ApiError && error.status === 409 ? "stale" : "idle");
       setApplyError(error instanceof Error ? error.message : String(error));
     }
   };
 
   return (
-    <section className="mari-workspace-canvas flex min-h-0 flex-1 flex-col" aria-live="polite">
+    <section className="mari-workspace-canvas flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-[var(--border)]/50 px-3 py-2">
         <Sparkles size="0.85rem" className="text-[var(--primary)]" />
         <span className="text-xs font-semibold text-[var(--foreground)]">
@@ -175,7 +180,11 @@ export function OmnibarQuickMariPane({
             >
               <img src="/sprites/mari/generated/professor-mari-assistant-idle.png" alt="" aria-hidden="true" />
             </span>
-            <div className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--foreground)]">
+            <div
+              className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--foreground)]"
+              aria-live="polite"
+              aria-busy={task.status === "streaming"}
+            >
               {task.status === "error" ? (
                 <span className="text-[var(--destructive)]">{task.answer}</span>
               ) : task.answer || task.status === "streaming" ? (
