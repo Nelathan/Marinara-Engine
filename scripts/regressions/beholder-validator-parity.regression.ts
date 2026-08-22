@@ -76,3 +76,20 @@ if (failures.length) {
 
 assert.equal(checked, cases.length, "every fixture case must be checked");
 console.log(`beholder validator parity: ${checked}/${cases.length} cases match the datagen oracle`);
+
+// A character name is free text and may contain the characters the finding path uses.
+// The offending field must still be stripped, not merely reported.
+for (const name of ["Dr. Vance", "A[B]", "St. John-Smith"]) {
+  const { findings, stripped } = applyBeholderValidator(
+    { changed: true, delta: { [name]: { body: { back: { wounds: [{ text: "concussion", severity: "minor" }] } } } } },
+    { persona: null, prevState: {}, prose: null },
+  );
+  assert.ok(
+    findings.some((entry) => entry.rule_id === "WOUND-WRONG-SLOT"),
+    `${name}: the impossible wound is reported`,
+  );
+  assert.ok(
+    !JSON.stringify(stripped).includes("concussion"),
+    `${name}: a name containing path syntax must not stop the strip`,
+  );
+}

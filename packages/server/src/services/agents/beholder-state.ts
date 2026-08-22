@@ -121,18 +121,27 @@ function normalizeDamage(value: unknown): BeholderDamage {
     : "pristine";
 }
 
-function normalizeWornItem(value: unknown): BeholderWornItem | null {
+/**
+ * `applyDefaults` is what separates a snapshot from a delta. Stored state must always
+ * carry a damage value, but a delta that says only "the blazer is torn" never mentioned
+ * colour or condition of anything else — defaulting there would spread `pristine` over a
+ * garment already known to be broken, which is the very overwrite the merge exists to
+ * prevent. So on the delta path a field the model omitted stays absent, and the merge
+ * keeps whatever was stored.
+ */
+function normalizeWornItem(value: unknown, applyDefaults = true): BeholderWornItem | null {
   if (!isRecord(value)) return null;
   const item = cleanText(value.item);
   if (!item) return null;
   const material = cleanText(value.material, 160);
   const color = cleanText(value.color, 160);
+  const hasDamage = typeof value.damage === "string" && value.damage.trim().length > 0;
   return {
     item,
     ...(material ? { material } : {}),
     ...(color ? { color } : {}),
-    damage: normalizeDamage(value.damage),
-  };
+    ...(hasDamage || applyDefaults ? { damage: normalizeDamage(value.damage) } : {}),
+  } as BeholderWornItem;
 }
 
 function normalizeHeldItem(value: unknown): BeholderHeldItem | null {
@@ -141,15 +150,22 @@ function normalizeHeldItem(value: unknown): BeholderHeldItem | null {
   return item ? { item, damage: normalizeDamage(value.damage) } : null;
 }
 
-function normalizeWound(value: unknown): BeholderWound | null {
+function normalizeWound(value: unknown, applyDefaults = true): BeholderWound | null {
   if (!isRecord(value)) return null;
   const text = cleanText(value.text);
   if (!text) return null;
-  const severity =
-    typeof value.severity === "string" && WOUND_SEVERITY_VALUES.has(value.severity as BeholderWoundSeverity)
-      ? (value.severity as BeholderWoundSeverity)
-      : "minor";
-  return { text, severity, bleeding: value.bleeding === true };
+  const hasSeverity =
+    typeof value.severity === "string" && WOUND_SEVERITY_VALUES.has(value.severity as BeholderWoundSeverity);
+  const hasBleeding = typeof value.bleeding === "boolean";
+  return {
+    text,
+    ...(hasSeverity
+      ? { severity: value.severity as BeholderWoundSeverity }
+      : applyDefaults
+        ? { severity: "minor" as BeholderWoundSeverity }
+        : {}),
+    ...(hasBleeding ? { bleeding: value.bleeding === true } : applyDefaults ? { bleeding: false } : {}),
+  } as BeholderWound;
 }
 
 function normalizeSlotState(value: unknown): BeholderSlotState | null {
@@ -157,14 +173,14 @@ function normalizeSlotState(value: unknown): BeholderSlotState | null {
   const worn = Array.isArray(value.worn)
     ? value.worn
         .slice(0, MAX_WORN_ITEMS_PER_SLOT)
-        .map(normalizeWornItem)
+        .map((entry) => normalizeWornItem(entry))
         .filter((item) => item !== null)
     : [];
   const holding = normalizeHeldItem(value.holding);
   const wounds = Array.isArray(value.wounds)
     ? value.wounds
         .slice(0, MAX_WOUNDS_PER_SLOT)
-        .map(normalizeWound)
+        .map((entry) => normalizeWound(entry))
         .filter((wound) => wound !== null)
     : [];
   const missing = value.missing === true;
@@ -213,8 +229,10 @@ function mergeWornItems(current: BeholderWornItem[] | undefined, updates: Behold
     const identity = wornItemIdentity(item);
     const existingIndex = indexes.get(identity);
     if (existingIndex === undefined) {
+      // A garment appearing for the first time becomes stored state, so it takes the
+      // default condition the schema requires.
       indexes.set(identity, merged.length);
-      merged.push(item);
+      merged.push(item.damage ? item : { ...item, damage: "pristine" as BeholderDamage });
       continue;
     }
     const existing = merged[existingIndex];
@@ -409,7 +427,7 @@ function mergeSlotDelta(
     } else {
       const wornUpdates = rawDelta.worn
         .slice(0, MAX_WORN_ITEMS_PER_SLOT)
-        .map(normalizeWornItem)
+        .map((entry) => normalizeWornItem(entry, false))
         .filter((item) => item !== null);
       if (wornUpdates.length > 0) {
         next.worn = mergeWornItems(next.worn, wornUpdates);
@@ -462,7 +480,7 @@ function mergeSlotDelta(
     } else {
       const wounds = rawDelta.wounds
         .slice(0, MAX_WOUNDS_PER_SLOT)
-        .map(normalizeWound)
+        .map((entry) => normalizeWound(entry, false))
         .filter((wound) => wound !== null);
       if (wounds.length > 0) {
         // Merge wounds by identity (the injury text), mirroring worn. The delta

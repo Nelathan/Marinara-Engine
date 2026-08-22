@@ -635,10 +635,23 @@ function tokenizePath(path: string): PathToken[] {
 
 function removePath(root: Dict, path: string): void {
   if (!path.startsWith("delta")) return;
-  const tokens = tokenizePath(path);
-  if (!tokens.length) return;
   const delta = root.delta;
   if (!isObj(delta)) return;
+
+  // A character name is free text and may contain the very characters the path
+  // grammar uses — "Dr. Vance", "A[B]". Tokenizing blindly would split inside the
+  // name, the lookup would miss, and the offending field would be reported but never
+  // stripped. Match the longest actual key first, then parse only what follows it.
+  let rest = path.slice("delta".length);
+  if (rest.startsWith(".")) rest = rest.slice(1);
+  const charKey = Object.keys(delta)
+    .filter((key) => rest === key || rest.startsWith(`${key}.`) || rest.startsWith(`${key}[`))
+    .sort((left, right) => right.length - left.length)[0];
+
+  const tokens: PathToken[] = charKey
+    ? [["key", charKey], ...tokenizePath(`delta${rest.slice(charKey.length)}`)]
+    : tokenizePath(path);
+  if (!tokens.length) return;
 
   let parent: unknown = delta;
   for (const [kind, value] of tokens.slice(0, -1)) {

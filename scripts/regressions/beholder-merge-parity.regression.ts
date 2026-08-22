@@ -155,3 +155,39 @@ assert.deepEqual(
   Object.keys(dropHallucinatedCharacters({ "A.B": {} }, "A.B nods once.", null).delta as Record<string, unknown>),
   ["A.B"],
 );
+
+// A delta that omits a field must not reset it to the schema default. "The blazer is
+// torn" says nothing about condition elsewhere, so a stored `broken` survives an update
+// that never mentions damage — the same rule that protects colour.
+const stillBroken = resolveBeholderStateResponse(
+  { changed: true, delta: { self: { body: { chest: { worn: [{ item: "blazer", color: "navy" }] } } } } },
+  wearing({ item: "blazer", color: "black", damage: "broken" }),
+  persona,
+);
+assert.deepEqual(
+  chestWorn(stillBroken.state),
+  [{ item: "blazer", color: "navy", damage: "broken" }],
+  "an omitted damage keeps the stored value instead of resetting to pristine",
+);
+
+// The same for a wound: re-describing it without a severity keeps the severity it had.
+const stillCritical = resolveBeholderStateResponse(
+  { changed: true, delta: { Tim: { body: { head: { wounds: [{ text: "skull fracture" }] } } } } },
+  {
+    characters: [
+      { name: "Tim", body: { head: { wounds: [{ text: "skull fracture", severity: "critical", bleeding: true }] } } },
+    ],
+  },
+  persona,
+);
+const headWounds = stillCritical.state.characters.find((c) => c.name === "Tim")?.body.head?.wounds ?? [];
+assert.equal(headWounds[0]?.severity, "critical", "an omitted severity does not downgrade a wound");
+assert.equal(headWounds[0]?.bleeding, true, "an omitted bleeding flag is not cleared");
+
+// A garment appearing for the first time is new state, so it does take the default.
+const fresh = resolveBeholderStateResponse(
+  { changed: true, delta: { self: { body: { chest: { worn: [{ item: "scarf" }] } } } } },
+  { characters: [] },
+  persona,
+);
+assert.equal(chestWorn(fresh.state)[0]?.damage, "pristine", "a newly seen garment gets the default condition");
