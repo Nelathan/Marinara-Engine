@@ -7056,7 +7056,3 @@ export function HomeProfessorMariChat({
     </>
   );
 }
-
-export function ProfessorMariFloatingAssistant({ onDismiss }: { onDismiss: () => void }) {
-  return <HomeProfessorMariChat pageActive floatingMode onFloatingDismiss={onDismiss} />;
-}
