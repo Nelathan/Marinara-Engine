@@ -1406,12 +1406,15 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     (item) => item === "all" || item === filter || tabAvailability[item] > 0,
   );
   const results = presentation.results;
+  // Quick and Mari both own the whole dialog. Leaving the search input mounted
+  // under them let one keystroke re-enter `results` and abort a running answer.
+  const mariSurface = pane === "mari" || pane === "quick";
   // Ghost text: continue the query with the best-ranked result title. Uses the
   // ranked list already on screen, so the guess never disagrees with row 1.
   // With a chat open, an action verb completes to the whole sentence the omnibar
   // can execute ("add el" -> "add Eliza to this chat"), not just the name.
   const inlineSuffix = useMemo(() => {
-    if (pane === "mari") return "";
+    if (mariSurface) return "";
     const intent = parseOmnibarIntent(query);
     const tail = !activeChat
       ? null
@@ -1428,7 +1431,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return [result.title];
     });
     return completeInline(query, candidates);
-  }, [activeChat, pane, query, results, t]);
+  }, [activeChat, mariSurface, query, results, t]);
   const resultIdsKey = results.map((result) => result.id).join("\u0000");
   const reconciledResultIdsKeyRef = useRef<string | null>(null);
   const reconciledQueryRef = useRef(deferredQuery);
@@ -1526,6 +1529,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         : null;
       (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
     });
+  };
+  /** Quick leaves the same way Mari does, so Escape and the back arrow agree. */
+  const leaveQuick = () => {
+    setPane(mariReturnPane);
+    focusMariReturnRow();
   };
   /** Every route into the Work pane goes through here, so none forgets a flag. */
   const enterMariPane = (context?: ProfessorMariAskContext) => {
@@ -1790,9 +1798,15 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     if (result.id === "ask-professor-mari") {
-      openProfessorMari(null, {
-        reviewPending: result.group === "continue" && (mariWorkspaceStatus.data?.pendingApprovals.length ?? 0) > 0,
-      });
+      if (result.group === "continue") {
+        openProfessorMari(null, {
+          reviewPending: (mariWorkspaceStatus.data?.pendingApprovals.length ?? 0) > 0,
+        });
+      } else if (query.trim()) {
+        startQuickMari();
+      } else {
+        openProfessorMari(null);
+      }
       return;
     }
     if (result.category === "connection") {
@@ -1835,7 +1849,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setActiveResultId(result.id);
   };
   const handleEscape = () => {
-    if (pane === "detail") {
+    if (pane === "quick") {
+      leaveQuick();
+    } else if (pane === "detail") {
       setDetailResult(null);
       setSessionValue("detailResultId", null);
       setPane(detailOrigin);
@@ -1902,7 +1918,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       event.preventDefault();
       openProfessorMari(resolveCurrentResult(activeResult));
     } else if (pane === "results" && event.key === "Enter" && !activeResult && mariEnabled && query.trim()) {
-      // Nothing ranked above the Quick row, so Enter asks Mari (matching the selected row).
+      // Nothing ranked at all, so Enter still reaches Mari by the one door.
       event.preventDefault();
       startQuickMari();
     } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
@@ -2021,8 +2037,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     if (pane === "quick") {
-      setPane("results");
-      requestAnimationFrame(() => inputRef.current?.focus());
+      leaveQuick();
       return;
     }
     const destination = pane === "detail" ? detailOrigin : "results";
@@ -2032,6 +2047,27 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setPane(destination);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
+  /** Ranked rows and plain context rows both feed the Mari handoff. */
+  type OmnibarAskFocus = Pick<OmnibarResult, "id" | "title" | "category"> | null;
+  /** Quick and full Mari hand over the same context, so they read the same surroundings. */
+  const buildAskContext = (message: string, focusResult: OmnibarAskFocus) =>
+    buildProfessorMariCommandCenterContext(message, focusResult, [], focusResult?.id, {
+      activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
+      settingsLocation:
+        settingsPanelVisible && (settingsTab || settingsTargetControlId)
+          ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
+          : undefined,
+      field: activeEditorField?.label,
+      fieldId: activeEditorField?.id,
+      error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
+    });
+  /** Both Mari routes remember the row they left, so returning restores focus. */
+  const rememberMariReturn = (focusResult: OmnibarAskFocus) => {
+    setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
+    const returnResultId = focusResult?.id ?? activeResultId;
+    mariReturnResultIdRef.current = returnResultId;
+    setSessionValue("mariReturnResultId", returnResultId);
+  };
   const openProfessorMari = (
     selectedResult: RankedOmnibarResult | null = null,
     options: { reviewPending?: boolean } = {},
@@ -2040,38 +2076,16 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
-    const askContext = buildProfessorMariCommandCenterContext(draft, focusResult, [], focusResult?.id, {
-      activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
-      settingsLocation:
-        settingsPanelVisible && (settingsTab || settingsTargetControlId)
-          ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
-          : undefined,
-      field: activeEditorField?.label,
-      fieldId: activeEditorField?.id,
-      error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
-    });
-    setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
-    const returnResultId = focusResult?.id ?? activeResultId;
-    mariReturnResultIdRef.current = returnResultId;
-    setSessionValue("mariReturnResultId", returnResultId);
-    enterMariPane(askContext);
+    rememberMariReturn(focusResult);
+    enterMariPane(buildAskContext(draft, focusResult));
     if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
   };
   const startQuickMari = () => {
     const message = query.trim();
     if (!message) return;
     const focusResult = contextResults[0] ?? null;
-    const context = buildProfessorMariCommandCenterContext(message, focusResult, [], focusResult?.id, {
-      activeChat: activeChat ? { id: activeChat.id, label: activeChat.name, mode: activeChat.mode } : undefined,
-      settingsLocation:
-        settingsPanelVisible && (settingsTab || settingsTargetControlId)
-          ? { tab: settingsTab ?? undefined, controlId: settingsTargetControlId ?? undefined }
-          : undefined,
-      field: activeEditorField?.label,
-      fieldId: activeEditorField?.id,
-      error: lastAppError ? { message: lastAppError.message, code: lastAppError.code } : undefined,
-    });
-    setQuickContext(context);
+    rememberMariReturn(focusResult);
+    setQuickContext(buildAskContext(message, focusResult));
     setSessionValue("quickTask", {
       id: crypto.randomUUID(),
       status: "ready",
@@ -2626,13 +2640,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-44 bg-[radial-gradient(120%_100%_at_12%_0%,oklch(0.72_0.16_255/0.12),transparent_60%),radial-gradient(120%_100%_at_88%_0%,oklch(0.73_0.21_345/0.11),transparent_60%)]"
         />
         <h2 id="global-omnibar-title" className="sr-only">
-          {pane === "mari" ? t("commandCenter.workTitle", "Professor Mari") : t("omnibar.title", "Search Marinara")}
+          {mariSurface ? t("commandCenter.workTitle", "Professor Mari") : t("omnibar.title", "Search Marinara")}
         </h2>
         <header className="shrink-0 pt-[env(safe-area-inset-top)]">
           <div
             className={cn(
               "flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4",
-              pane === "mari" && "mari-workspace-header",
+              mariSurface && "mari-workspace-header",
             )}
           >
             {pane !== "results" ? (
@@ -2641,7 +2655,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={leaveDetail}
                 aria-label={
-                  pane === "mari"
+                  mariSurface
                     ? t("commandCenter.backToFind", "Back to search")
                     : pane === "detail" && detailOrigin === "browse"
                       ? t("commandCenter.backToBrowse", "Back to browse")
@@ -2655,7 +2669,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
             )}
             <AnimatePresence initial={false} mode="wait">
-              {pane === "mari" ? (
+              {mariSurface ? (
                 <motion.div
                   key="omnibar-mari-header"
                   initial={reduceMotion ? false : { opacity: 0, x: 10 }}
@@ -2683,7 +2697,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       {t("omnibar.categories.professor", "Professor Mari")}
                     </span>
                     <span className="block truncate text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
-                      {t("commandCenter.mode.work", "Ask Mari")}
+                      {pane === "quick"
+                        ? t("commandCenter.quick.costLabel", "Quick · 1 model call")
+                        : t("commandCenter.mode.work", "Ask Mari")}
                     </span>
                   </span>
                 </motion.div>
@@ -2729,7 +2745,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </motion.div>
               )}
             </AnimatePresence>
-            {query && pane !== "mari" ? (
+            {query && !mariSurface ? (
               <button
                 type="button"
                 onClick={() => {
@@ -2746,7 +2762,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <X size={13} strokeWidth={2.5} />
               </button>
             ) : null}
-            {pane !== "mari" && mariEnabled ? (
+            {!mariSurface && mariEnabled ? (
               <button
                 type="button"
                 onClick={() => openProfessorMari()}
@@ -2773,7 +2789,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <X size={18} />
             </button>
           </div>
-          {(query.trim() || pane === "browse") && pane !== "mari" && pane !== "quick" ? (
+          {(query.trim() || pane === "browse") && !mariSurface ? (
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -2886,7 +2902,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               id="global-omnibar-results"
               aria-label={t("omnibar.results", "Search results")}
               data-component="GlobalOmnibar.Results"
-              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-[85rem]:hidden") : ""}`}
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-[88rem]:hidden") : ""}`}
             >
               {!query.trim() ? (
                 <div className="border-b border-[var(--border)] px-3 pb-2.5 pt-2.5 motion-safe:animate-fade-in-up">
@@ -2936,20 +2952,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <div role="status" className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
                   {t("omnibar.error", "Some results could not be loaded")}
                 </div>
-              ) : null}
-              {query.trim() && mariEnabled ? (
-                <ul className="space-y-0.5 px-1 pt-1">
-                  <CommandCenterResultRow
-                    id="omnibar-quick-mari"
-                    dataResultId="quick-mari"
-                    title={t("commandCenter.quick.rowTitle", "Ask Mari: {{query}}", { query: query.trim() })}
-                    metadata={t("commandCenter.quick.costLabel", "Quick · 1 model call")}
-                    icon={Sparkles}
-                    selected={!activeResult}
-                    enterHint={t("commandCenter.quick.enterHint", "Ask")}
-                    onSelect={startQuickMari}
-                  />
-                </ul>
               ) : null}
               {presentation.groups.map((group) => {
                 const GroupIcon =
@@ -3103,7 +3105,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             {pane === "detail" && previewResult ? (
               <aside
                 data-component="GlobalOmnibar.Detail"
-                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[85rem]:hidden"
+                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[88rem]:hidden"
               >
                 <AnimatePresence initial={false} mode="wait">
                   <motion.div
@@ -3153,23 +3155,27 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         {pane === "detail" && detailOrigin === "browse" && previewResult ? (
           <aside
             data-component="GlobalOmnibar.Detail"
-            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[85rem]:hidden"
+            className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[88rem]:hidden"
           >
             {renderResultPreview()}
           </aside>
         ) : null}
 
-        {pane !== "mari" ? (
+        {!mariSurface ? (
           <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
-            <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
-            {inlineSuffix ? (
-              <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
-            ) : mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
-              <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
-            ) : null}
-            {pane === "results" && activeResult ? (
-              <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
-            ) : null}
+            {/* The conditional hints group to the left so the two permanent
+                hints keep their positions as rows gain and lose shortcuts. */}
+            <span className="flex items-center gap-4">
+              <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
+              {inlineSuffix ? (
+                <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
+              ) : mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
+                <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
+              ) : null}
+              {pane === "results" && activeResult ? (
+                <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
+              ) : null}
+            </span>
             <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
           </footer>
         ) : null}
@@ -3182,7 +3188,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           animate={{ opacity: 1, x: 0 }}
           exit={reduceMotion ? undefined : { opacity: 0, x: -18 }}
           transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
-          className="fixed left-[calc(50%+22.5rem)] top-[10vh] hidden h-[min(36rem,68dvh)] w-[20rem] overflow-hidden rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 min-[85rem]:block"
+          className="fixed left-[calc(50%+23rem)] top-[10vh] hidden h-[min(36rem,68dvh)] w-[20rem] overflow-hidden rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 min-[88rem]:block"
         >
           <AnimatePresence initial={false} mode="wait">
             <motion.div

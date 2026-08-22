@@ -60,7 +60,7 @@ export function OmnibarBrowsePane({
   return (
     <div
       data-component="GlobalOmnibar.Browse"
-      className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${detailOpen ? "max-[85rem]:hidden" : ""}`}
+      className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] motion-safe:animate-fade-in-up ${detailOpen ? "max-[88rem]:hidden" : ""}`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>

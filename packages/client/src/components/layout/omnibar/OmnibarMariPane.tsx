@@ -89,22 +89,18 @@ export function OmnibarMariPane({
               type="button"
               onClick={() => onAcceptProposal(proposalDraft)}
               disabled={acceptPending}
-              className="rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-[var(--primary-foreground)] disabled:opacity-50"
+              className="mari-chrome-control mari-chrome-control--primary mari-chrome-control--small"
             >
               {t("commandCenter.proposal.accept", "Create it")}
             </button>
             <button
               type="button"
               onClick={() => onAcceptProposal(proposalDraft, { assistedOnly: true })}
-              className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--foreground)]"
+              className="mari-chrome-control mari-chrome-control--small"
             >
               {t("commandCenter.proposal.withMari", "Build with Mari")}
             </button>
-            <button
-              type="button"
-              onClick={onCancelProposal}
-              className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted-foreground)]"
-            >
+            <button type="button" onClick={onCancelProposal} className="mari-chrome-control mari-chrome-control--small">
               {t("commandCenter.proposal.cancel", "Cancel")}
             </button>
           </div>
@@ -142,7 +138,7 @@ export function OmnibarMariPane({
               key={action.kind}
               type="button"
               onClick={() => onCompletionAction(action)}
-              className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--foreground)] transition-colors hover:bg-[var(--accent)]"
+              className="mari-chrome-control mari-chrome-control--small"
             >
               {action.kind === "open-resource"
                 ? t("commandCenter.completion.openResource", "Open {{label}}", {

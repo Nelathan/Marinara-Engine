@@ -14,24 +14,29 @@ Related documents: `omnibar-workflow-slice-plan.md` (why the 11 slices exist),
 
 ## 1. Panes
 
-The dialog has four panes, held in the persisted session state (`pane`).
+The dialog has five panes, held in the persisted session state (`pane`).
 
 | Pane | Purpose | Entered by |
 | --- | --- | --- |
 | `results` | The ranked result list. The default. | Open, or Escape from any other pane |
 | `browse` | Grid of one category, with compare and batch attach. | A category chip with an empty query, or the Browse button |
 | `detail` | The preview panel for one result. | `→`, a rich row on a touch device, or a browse row |
-| `mari` | Professor Mari's work surface. | The Mari button, `⌘↵`, a row's Sparkles button, or a Mari-owned row |
+| `mari` | Professor Mari's work surface. | The Mari button, `⌘↵`, a row's Sparkles button, a Mari-owned row, or "Continue in Full Mari" from `quick` |
+| `quick` | One cheap answer for a typed question, with a reversible edit proposal. | Choosing "Ask Professor Mari" with a query typed |
 
 Rules that must survive:
 
 - A persisted `mari` pane is reset to `results` on open. The omnibar always
   reopens on search; a Mari conversation resumes only on explicit re-entry.
-- Escape steps back one pane at a time and only closes from `results`.
+- Escape steps back one pane at a time and only closes from `results`. `quick`
+  leaves through the same path as `mari`, so Escape and the back arrow agree and
+  a streaming answer is never discarded by a stray keystroke.
+- `quick` and `mari` both replace the search header. Leaving the input mounted
+  under `quick` let one keystroke re-enter `results` and abort the stream.
 - Leaving `detail` or `mari` restores focus to the row it came from
   (`mariReturnResultId`), falling back to the input.
 - The detail panel renders in three places (mobile inline, browse inline, and
-  the external panel above 85rem) from one `renderResultPreview` body.
+  the external panel above 88rem) from one `renderResultPreview` body.
 - The external panel only appears when the result is "rich": media, prose,
   facts, a control, or lazily fetched detail.
 
@@ -77,7 +82,7 @@ Every builder is pure and lives in `lib/omnibar-results.ts` unless noted.
 | Creation proposal | `lib/omnibar-creation-proposal.ts` | Nothing is created until accepted |
 | Chat-to-world extraction | `lib/omnibar-chat-extraction.ts` | Lorebook, characters, locations or campaign |
 | Game commands | `lib/omnibar-game-commands.ts` | Party, quest, scene and encounter topics go to Mari with the live game state. Dice are deliberately absent — see section 11 |
-| "Ask Professor Mari" fallback | `buildOmnibarSearchResults` | Always last unless promoted |
+| "Ask Professor Mari" fallback | `buildOmnibarSearchResults` | Always last unless promoted. With a query typed it opens the Quick pane, not the Work pane: one Mari door, cheap answer first, escalated by "Continue in Full Mari". Cost is stated in the Quick header, never on the row |
 | "Continue with Mari" | `buildOmnibarContinueResult` | Only when Mari is active or has pending approvals |
 
 De-duplication is by result id, first source wins. Message rows from the open
