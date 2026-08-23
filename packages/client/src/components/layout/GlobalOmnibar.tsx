@@ -446,6 +446,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
   // Transient on purpose: reopening the omnibar always starts from a bare list.
   const [expandedChoiceId, setExpandedChoiceId] = useState<string | null>(null);
+  // Which row has its preview open. Replaces the detail pane on narrow screens:
+  // the row grows, so nothing above it moves and the list never goes away.
+  const [expandedPreviewId, setExpandedPreviewId] = useState<string | null>(null);
   const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
   const [mariHasConversation, setMariHasConversation] = useState(false);
   // When set, the Work pane shows the creation proposal for review instead of
@@ -1404,6 +1407,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // second heuristic to keep in step.
   useEffect(() => {
     setExpandedChoiceId(null);
+    setExpandedPreviewId(null);
   }, [deferredQuery, filter]);
   const asideDeadEnd = results.some(
     (result) => result.id === "ask-professor-mari" && result.group === "professor-suggested",
@@ -1829,7 +1833,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setDetailResult(result);
     setSessionValue("detailResultId", result.id);
     setDetailOrigin(origin);
-    setPane("detail");
+    if (origin === "results") setExpandedPreviewId(result.id);
+    else setPane("detail");
   };
   const chooseChoiceOption = (result: RankedOmnibarResult) => {
     const option = readChoiceOptionId(result.id);
@@ -1864,7 +1869,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setActiveResultId(result.id);
   };
   const handleEscape = () => {
-    if (pane === "detail") {
+    if (expandedPreviewId || expandedChoiceId) {
+      // One expansion, one press. Collapsing does not close the omnibar.
+      setExpandedPreviewId(null);
+      setExpandedChoiceId(null);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else if (pane === "detail") {
       setDetailResult(null);
       setSessionValue("detailResultId", null);
       setPane(detailOrigin);
@@ -1941,6 +1951,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       else if (activeResult.control?.type === "choice")
         setExpandedChoiceId((current) => (current === activeResult.id ? null : activeResult.id));
       else choose(activeResult);
+    } else if (pane === "results" && event.key === "ArrowLeft" && activeResult && expandedPreviewId) {
+      event.preventDefault();
+      setExpandedPreviewId(null);
     } else if (
       pane === "results" &&
       event.key === "ArrowLeft" &&
@@ -1963,7 +1976,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       setExpandedChoiceId(activeResult.id);
     } else if (pane === "results" && event.key === "ArrowRight" && activeResult && isRichResult(activeResult)) {
       event.preventDefault();
-      showResultDetail(activeResult);
+      setExpandedPreviewId((current) => (current === activeResult.id ? null : activeResult.id));
     } else if (pane === "browse" && event.key === "ArrowDown") {
       event.preventDefault();
       panelRef.current?.querySelector<HTMLElement>('[data-command-center-browse-result][tabindex="0"]')?.focus();
@@ -2010,9 +2023,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       }
       if (event.key === "ArrowRight") {
         const focusedResult = results[rowIndex];
-        if (focusedResult && (focusedResult.control?.type === "choice" || isRichResult(focusedResult))) {
+        if (focusedResult?.control?.type === "choice") {
           event.preventDefault();
-          showResultDetail(focusedResult);
+          setExpandedChoiceId(focusedResult.id);
+          return;
+        }
+        if (focusedResult && isRichResult(focusedResult)) {
+          event.preventDefault();
+          setExpandedPreviewId((current) => (current === focusedResult.id ? null : focusedResult.id));
           return;
         }
       }
@@ -2867,7 +2885,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               id="global-omnibar-results"
               aria-label={t("omnibar.results", "Search results")}
               data-component="GlobalOmnibar.Results"
-              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" ? (detailOrigin === "browse" ? "hidden" : "max-[88rem]:hidden") : ""}`}
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" && detailOrigin === "browse" ? "hidden" : ""}`}
             >
               {!query.trim() ? (
                 <div className="border-b border-[var(--border)] px-3 pb-2.5 pt-2.5 motion-safe:animate-fade-in-up">
@@ -2978,6 +2996,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             selected={selected}
                             onSelect={() => selectResult(result)}
                             onMouseMove={(event) => handleResultMouseMove(result, event)}
+                            expanded={
+                              result.id === expandedPreviewId ? (
+                                <div className="rounded-lg border border-[var(--border)] bg-[var(--background)]/60">
+                                  {renderResultPreview()}
+                                </div>
+                              ) : undefined
+                            }
                             mariAffordance={
                               mariEnabled && result.command.availability?.status !== "requires-admin" ? (
                                 <button
@@ -3067,24 +3092,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 </div>
               ) : null}
             </div>
-            {pane === "detail" && previewResult ? (
-              <aside
-                data-component="GlobalOmnibar.Detail"
-                className="min-h-0 w-full overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[88rem]:hidden"
-              >
-                <AnimatePresence initial={false} mode="wait">
-                  <motion.div
-                    key={previewResult.id}
-                    initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
-                    transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
-                  >
-                    {renderResultPreview()}
-                  </motion.div>
-                </AnimatePresence>
-              </aside>
-            ) : null}
           </div>
         ) : (
           <Suspense fallback={null}>

@@ -21,6 +21,12 @@ export interface CommandCenterResultRowProps {
   groupClassName?: string;
   accent?: string | null;
   control?: ReactNode;
+  /**
+   * Content revealed beneath the row itself. The row grows to fit it, so nothing
+   * above it moves - which is what lets a preview expand in place instead of
+   * taking over the panel.
+   */
+  expanded?: ReactNode;
   mariAffordance?: ReactNode;
   currentChoice?: string;
   enterHint?: string;
@@ -48,6 +54,7 @@ export function CommandCenterResultRow({
   groupClassName,
   accent,
   control,
+  expanded,
   mariAffordance,
   currentChoice,
   enterHint,
@@ -68,7 +75,7 @@ export function CommandCenterResultRow({
       style={style}
       className={cn(
         "group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center rounded-xl transition-colors",
-        "min-h-14 sm:h-[3.25rem]",
+        expanded ? "min-h-14 py-1" : "min-h-14 sm:h-[3.25rem]",
         selected ? "bg-[var(--primary)]/12 ring-1 ring-inset ring-[var(--primary)]/20" : "hover:bg-[var(--accent)]/60",
         groupClassName,
         className,
@@ -118,6 +125,7 @@ export function CommandCenterResultRow({
           {control}
         </div>
       ) : null}
+      {expanded ? <div className="col-span-2 min-w-0 px-1 pb-1">{expanded}</div> : null}
     </li>
   );
 }
