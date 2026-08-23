@@ -201,24 +201,14 @@ const MAX_COMMAND_ID_LENGTH = 256;
 const MAX_USE_COUNT = 10_000;
 const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type CommandCenterPane = "results" | "browse" | "detail" | "quick" | "mari";
-export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "quick" | "mari">;
+export type CommandCenterPane = "results" | "browse" | "detail" | "mari";
+export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "mari">;
 export type CommandCenterMariDestination = "chat" | "chats" | "memories" | "skills" | "context";
-
-export interface CommandCenterQuickTask {
-  id: string;
-  status: "ready" | "streaming" | "complete" | "error";
-  message: string;
-  answer: string;
-  resultId: string | null;
-  createdAt: number;
-}
 
 export type CommandCenterReturnTarget =
   | { pane: "results"; resultId: string | null }
   | { pane: "browse"; resultId: string | null }
   | { pane: "detail"; resultId: string | null; origin: CommandCenterDetailOrigin }
-  | { pane: "quick"; taskId: string | null }
   | { pane: "mari"; destination: CommandCenterMariDestination; detailId: string | null };
 
 /**
@@ -246,7 +236,6 @@ export interface CommandCenterSessionState {
   mariHandoff: CommandCenterMariHandoff | null;
   mariDestination: CommandCenterMariDestination;
   mariDetailId: string | null;
-  quickTask: CommandCenterQuickTask | null;
   returnStack: CommandCenterReturnTarget[];
 }
 
@@ -263,7 +252,6 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
   mariHandoff: null,
   mariDestination: "chat",
   mariDetailId: null,
-  quickTask: null,
   returnStack: [],
 };
 
@@ -281,10 +269,7 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
   const filter = COMMAND_CENTER_CATEGORY_FILTERS.includes(source.filter as CommandCenterCategoryFilter)
     ? (source.filter as CommandCenterCategoryFilter)
     : "all";
-  const pane =
-    source.pane === "browse" || source.pane === "detail" || source.pane === "quick" || source.pane === "mari"
-      ? source.pane
-      : "results";
+  const pane = source.pane === "browse" || source.pane === "detail" || source.pane === "mari" ? source.pane : "results";
   const detailOrigin = source.detailOrigin === "browse" ? "browse" : "results";
   const stringOrNull = (next: unknown) => (typeof next === "string" && next.trim() ? next.trim() : null);
   const browseLimit =
@@ -305,30 +290,12 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
     mariHandoff: normalizeMariHandoff(source.mariHandoff),
     mariDestination: normalizeMariDestination(source.mariDestination),
     mariDetailId: stringOrNull(source.mariDetailId),
-    quickTask: normalizeQuickTask(source.quickTask),
     returnStack: normalizeReturnStack(source.returnStack),
   };
 }
 
 function normalizeMariDestination(value: unknown): CommandCenterMariDestination {
   return value === "chats" || value === "memories" || value === "skills" || value === "context" ? value : "chat";
-}
-
-function normalizeQuickTask(value: unknown): CommandCenterQuickTask | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const source = value as Record<string, unknown>;
-  const status = source.status;
-  if (status !== "ready" && status !== "streaming" && status !== "complete" && status !== "error") return null;
-  if (typeof source.id !== "string" || typeof source.message !== "string") return null;
-  return {
-    id: source.id.slice(0, 128),
-    status,
-    message: source.message.slice(0, 4_000),
-    answer: typeof source.answer === "string" ? source.answer.slice(0, 20_000) : "",
-    resultId: typeof source.resultId === "string" ? source.resultId.slice(0, 256) : null,
-    createdAt:
-      typeof source.createdAt === "number" && Number.isFinite(source.createdAt) ? source.createdAt : Date.now(),
-  };
 }
 
 function normalizeReturnStack(value: unknown): CommandCenterReturnTarget[] {
@@ -342,7 +309,8 @@ function normalizeReturnStack(value: unknown): CommandCenterReturnTarget[] {
     else if (source.pane === "detail") {
       targets.push({ pane: "detail", resultId, origin: source.origin === "browse" ? "browse" : "results" });
     } else if (source.pane === "quick") {
-      targets.push({ pane: "quick", taskId: typeof source.taskId === "string" ? source.taskId.slice(0, 128) : null });
+      // A session persisted before the Quick pane was removed. Drop it.
+      continue;
     } else if (source.pane === "mari") {
       targets.push({
         pane: "mari",

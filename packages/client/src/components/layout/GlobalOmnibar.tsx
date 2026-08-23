@@ -189,31 +189,11 @@ const OmnibarDetailPane = lazy(() =>
   import("./omnibar/OmnibarDetailPane").then((m) => ({ default: m.OmnibarDetailPane })),
 );
 const OmnibarMariPane = lazy(() => import("./omnibar/OmnibarMariPane").then((m) => ({ default: m.OmnibarMariPane })));
-const OmnibarQuickMariPane = lazy(() =>
-  import("./omnibar/OmnibarQuickMariPane").then((m) => ({ default: m.OmnibarQuickMariPane })),
-);
 const OmnibarAside = lazy(() => import("./omnibar/OmnibarAside").then((m) => ({ default: m.OmnibarAside })));
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
-const PROFESSOR_MARI_QUICK_CONNECTION_KEY = "marinara.professorMari.quickConnection";
 
-function readQuickConnectionPreference() {
-  try {
-    return window.localStorage.getItem(PROFESSOR_MARI_QUICK_CONNECTION_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function rememberQuickConnectionPreference(connectionId: string) {
-  try {
-    if (connectionId) window.localStorage.setItem(PROFESSOR_MARI_QUICK_CONNECTION_KEY, connectionId);
-    else window.localStorage.removeItem(PROFESSOR_MARI_QUICK_CONNECTION_KEY);
-  } catch {
-    /* Preference storage is optional; Same as Mari remains the safe default. */
-  }
-}
 /** Categories whose result rows open an editor rather than the thing itself. */
 const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
   "character",
@@ -438,7 +418,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     detailResultId,
     mariReturnResultId,
     mariHandoff,
-    quickTask,
   } = session;
   const mariFinished = mariHandoff?.status === "finished";
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
@@ -464,11 +443,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
-  const [quickContext, setQuickContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
   // Transient on purpose: reopening the omnibar always starts from a bare list.
   const [expandedChoiceId, setExpandedChoiceId] = useState<string | null>(null);
-  const [quickConnectionId, setQuickConnectionId] = useState(readQuickConnectionPreference);
   const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
   const [mariHasConversation, setMariHasConversation] = useState(false);
   // When set, the Work pane shows the creation proposal for review instead of
@@ -485,7 +462,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const lorebooks = useLorebooks(undefined, { includeHidden: true });
   const presets = usePresets();
   const connections = useConnections();
-  const quickConnectionOptions = useMemo(
+  const languageConnections = useMemo(
     () =>
       (connections.data ?? []).flatMap((value) => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -519,6 +496,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const omnibarSuggestionsEnabled = useUIStore((state) => state.omnibarSuggestionsEnabled);
   const mariWorkspaceStatus = useProfessorMariWorkspaceStatus();
   const asideDisclosed = useUIStore((state) => state.omnibarAsideDisclosed);
+  const asideConnectionId = useUIStore((state) => state.omnibarAsideConnectionId);
   const setAsideDisclosed = useUIStore((state) => state.setOmnibarAsideDisclosed);
   const setAsideEnabled = useUIStore((state) => state.setOmnibarAsideEnabled);
   const speechToTextEnabled = useUIStore((state) => state.speechToTextEnabled);
@@ -1430,6 +1408,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const asideDeadEnd = results.some(
     (result) => result.id === "ask-professor-mari" && result.group === "professor-suggested",
   );
+  const asideConnectionName =
+    languageConnections.find((connection) => connection.id === asideConnectionId)?.name ?? null;
   const asideState = useOmnibarAside({
     query: deferredQuery,
     deadEnd: asideDeadEnd && pane === "results",
@@ -1438,7 +1418,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   });
   // Quick and Mari both own the whole dialog. Leaving the search input mounted
   // under them let one keystroke re-enter `results` and abort a running answer.
-  const mariSurface = pane === "mari" || pane === "quick";
+  const mariSurface = pane === "mari";
   // Ghost text: continue the query with the best-ranked result title. Uses the
   // ranked list already on screen, so the guess never disagrees with row 1.
   // With a chat open, an action verb completes to the whole sentence the omnibar
@@ -1559,11 +1539,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         : null;
       (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
     });
-  };
-  /** Quick leaves the same way Mari does, so Escape and the back arrow agree. */
-  const leaveQuick = () => {
-    setPane(mariReturnPane);
-    focusMariReturnRow();
   };
   /** Every route into the Work pane goes through here, so none forgets a flag. */
   const enterMariPane = (context?: ProfessorMariAskContext) => {
@@ -1832,8 +1807,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         openProfessorMari(null, {
           reviewPending: (mariWorkspaceStatus.data?.pendingApprovals.length ?? 0) > 0,
         });
-      } else if (query.trim()) {
-        startQuickMari();
       } else {
         openProfessorMari(null);
       }
@@ -1891,9 +1864,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setActiveResultId(result.id);
   };
   const handleEscape = () => {
-    if (pane === "quick") {
-      leaveQuick();
-    } else if (pane === "detail") {
+    if (pane === "detail") {
       setDetailResult(null);
       setSessionValue("detailResultId", null);
       setPane(detailOrigin);
@@ -1962,7 +1933,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     } else if (pane === "results" && event.key === "Enter" && !activeResult && mariEnabled && query.trim()) {
       // Nothing ranked at all, so Enter still reaches Mari by the one door.
       event.preventDefault();
-      startQuickMari();
+      openProfessorMari(null);
     } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
       event.preventDefault();
       if (chooseChoiceOption(activeResult)) return;
@@ -2095,10 +2066,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       focusMariReturnRow();
       return;
     }
-    if (pane === "quick") {
-      leaveQuick();
-      return;
-    }
     const destination = pane === "detail" ? detailOrigin : "results";
     setDetailResult(null);
     setSessionValue("detailResultId", null);
@@ -2138,22 +2105,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     rememberMariReturn(focusResult);
     enterMariPane(buildAskContext(draft, focusResult));
     if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
-  };
-  const startQuickMari = () => {
-    const message = query.trim();
-    if (!message) return;
-    const focusResult = contextResults[0] ?? null;
-    rememberMariReturn(focusResult);
-    setQuickContext(buildAskContext(message, focusResult));
-    setSessionValue("quickTask", {
-      id: crypto.randomUUID(),
-      status: "ready",
-      message,
-      answer: "",
-      resultId: focusResult?.id ?? null,
-      createdAt: Date.now(),
-    });
-    setPane("quick");
   };
   // A handed-off task is "finished" once Mari has been seen working and then
   // stops. Advancing the persisted status rather than detecting the edge in a ref
@@ -2756,9 +2707,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       {t("omnibar.categories.professor", "Professor Mari")}
                     </span>
                     <span className="block truncate text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
-                      {pane === "quick"
-                        ? t("commandCenter.quick.costLabel", "Quick · 1 model call")
-                        : t("commandCenter.mode.work", "Ask Mari")}
+                      {t("commandCenter.mode.work", "Ask Mari")}
                     </span>
                   </span>
                 </motion.div>
@@ -2911,50 +2860,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             />
           </Suspense>
         ) : null}
-        {pane === "quick" && quickTask ? (
-          <Suspense fallback={null}>
-            <OmnibarQuickMariPane
-              task={quickTask}
-              connectionId={quickConnectionId || null}
-              connectionOptions={quickConnectionOptions.map((connection) => ({
-                id: connection.id,
-                label: connection.name || connection.model,
-              }))}
-              onConnectionChange={(connectionId) => {
-                setQuickConnectionId(connectionId);
-                rememberQuickConnectionPreference(connectionId);
-              }}
-              context={quickContext}
-              debugMode={useUIStore.getState().debugMode}
-              onTaskChange={(task) => setSessionValue("quickTask", task)}
-              onPromote={() => {
-                useChatStore
-                  .getState()
-                  .setInputDraft(
-                    PROFESSOR_MARI_DRAFT_KEY,
-                    t(
-                      "commandCenter.quick.promotionDraft",
-                      "{{message}}\n\nContinue from the Quick Mari answer below. Review the request with me before taking action:\n\n{{answer}}",
-                      { message: quickTask.message, answer: quickTask.answer },
-                    ),
-                  );
-                setMariReturnPane("results");
-                setMariContext(quickContext);
-                setMariMounted(true);
-                setMariChatOpen(true);
-                setPane("mari");
-              }}
-              onReviewChanges={() => {
-                setMariReturnPane("results");
-                setMariContext(quickContext);
-                setMariMounted(true);
-                setMariChatOpen(true);
-                setMariPendingReviewRequest((current) => current + 1);
-                setPane("mari");
-              }}
-            />
-          </Suspense>
-        ) : pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
+        {pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
           <div className="flex min-h-0 flex-1">
             <div
               ref={listRef}
@@ -3224,7 +3130,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           <Suspense fallback={null}>
             <OmnibarAside
               state={asideState}
-              connectionName={null}
+              connectionName={asideConnectionName}
               disclosed={asideDisclosed}
               onDisclose={() => setAsideDisclosed(true)}
               onDisable={() => {
