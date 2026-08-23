@@ -54,7 +54,7 @@ export function MariContextChip({
       field,
     };
     requestProfessorMariOpen({
-      destination: "floating-assistant",
+      destination: "omnibar",
       draft: suggestion?.draft,
       context,
     });

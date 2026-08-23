@@ -148,7 +148,7 @@ function BrowserPackageTabIcon({
   version: string;
   iconPaths: readonly string[] | undefined;
 }) {
-  if (!iconPaths?.length) return <Bot size="0.8rem" className="text-[oklch(0.73_0.21_345)]" />;
+  if (!iconPaths?.length) return <Bot size="0.8rem" className="mari-chrome-accent-icon mari-accent-animated" />;
   if (iconPaths.length === 1) {
     return (
       <img
@@ -1340,7 +1340,7 @@ export function HomeBrowserHub({
                 src="/logo-splash.gif"
                 alt=""
                 data-component="HomeBrowserHub.AnimatedLogo"
-                className="h-8 w-8 shrink-0 object-contain drop-shadow-[0_0_10px_oklch(0.73_0.21_345/0.28)]"
+                className="h-8 w-8 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--marinara-app-accent-solid)_28%,transparent)]"
               />
               <div className="hidden min-w-0 sm:block">
                 <MarinaraWordmark className="block text-xs leading-none" />
@@ -1380,7 +1380,7 @@ export function HomeBrowserHub({
                 aria-selected={activeTab === "professor"}
                 onClick={openProfessor}
                 className={cn(
-                  "flex min-h-9 min-w-0 flex-[1.1] items-center justify-center gap-1 rounded-t-lg border border-b-0 px-1 text-[0.65rem] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[oklch(0.73_0.21_345)] sm:min-w-[6.5rem] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-xs",
+                  "flex min-h-9 min-w-0 flex-[1.1] items-center justify-center gap-1 rounded-t-lg border border-b-0 px-1 text-[0.65rem] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--marinara-chat-chrome-focus-ring)] sm:min-w-[6.5rem] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-xs",
                   activeTab === "professor"
                     ? "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)]"
                     : "border-transparent text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
@@ -1405,7 +1405,7 @@ export function HomeBrowserHub({
                     aria-selected={activeTab === item.id}
                     onClick={() => selectTab(item.id)}
                     className={cn(
-                      "relative flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-t-lg border border-b-0 px-1 text-[0.65rem] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[oklch(0.73_0.21_345)] sm:min-w-[6.5rem] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-xs",
+                      "relative flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-t-lg border border-b-0 px-1 text-[0.65rem] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--marinara-chat-chrome-focus-ring)] sm:min-w-[6.5rem] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-xs",
                       activeTab === item.id
                         ? "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)]"
                         : "border-transparent text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
@@ -1418,7 +1418,7 @@ export function HomeBrowserHub({
                         id={activityDescriptionId}
                         aria-label={t("home.browser.newTimelineRefresh")}
                         data-component="HomeBrowserHub.NoodleRefreshBadge"
-                        className="absolute right-1 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF7EC1] px-1 text-[0.58rem] font-black leading-none text-[#1a1025] ring-1 ring-[#7EA7FF]"
+                        className="mari-chrome-accent-tile mari-accent-animated absolute right-1 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.58rem] font-black leading-none ring-1 ring-[var(--marinara-chat-chrome-button-border-active)]"
                       >
                         <span aria-hidden="true">1</span>
                       </span>
@@ -1807,14 +1807,14 @@ export function HomeBrowserHub({
                   >
                     <HomeWidgetFrame {...widgetFrameProps("professor")}>
                       <section
-                        className="mari-home-professor-widget relative grid h-full min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(5.5rem,40%)] overflow-hidden rounded-2xl border border-[color-mix(in_srgb,oklch(0.73_0.21_345)_40%,var(--border))] bg-[color-mix(in_srgb,oklch(0.73_0.21_345)_8%,var(--card))] p-3 shadow-[0_18px_42px_-32px_oklch(0.73_0.21_345/0.7)] sm:p-[clamp(0.85rem,1vw,1.2rem)]"
+                        className="mari-chrome-accent-frame mari-chrome-accent-panel mari-accent-animated mari-home-professor-widget relative grid h-full min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(5.5rem,40%)] overflow-hidden rounded-2xl border p-3 sm:p-[clamp(0.85rem,1vw,1.2rem)]"
                         data-component="HomeBrowserHub.ProfessorWidget"
                       >
                         <div
                           className="relative z-[2] flex min-h-0 min-w-0 flex-col items-start justify-center"
                           data-home-professor-content
                         >
-                          <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-[oklch(0.73_0.21_345)]">
+                          <p className="mari-chrome-accent-icon mari-accent-animated text-[0.625rem] font-extrabold uppercase tracking-[0.16em]">
                             {t("home.professorMari.eyebrow")}
                           </p>
                           <h2 className="mt-0.5 text-sm font-bold text-[var(--foreground)] sm:text-base">
@@ -1829,7 +1829,7 @@ export function HomeBrowserHub({
                           <button
                             type="button"
                             onClick={openProfessor}
-                            className="mt-2 inline-flex min-h-8 max-w-full shrink-0 items-center justify-center gap-1 rounded-lg bg-[oklch(0.73_0.21_345)] px-2 text-center text-[clamp(0.56rem,2.2cqw,0.75rem)] font-bold leading-tight text-[oklch(0.98_0.01_345)] shadow-[0_10px_24px_-14px_oklch(0.73_0.21_345)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.79_0.16_205)] motion-reduce:transform-none sm:gap-1.5 sm:px-2.5"
+                            className="mari-chrome-control mari-chrome-control--compact mari-chrome-control--selected mari-accent-animated mt-2 h-8 max-w-full px-2 text-center text-[clamp(0.56rem,2.2cqw,0.75rem)] font-bold leading-tight sm:gap-1.5 sm:px-2.5"
                             data-home-professor-action
                           >
                             <MessageCircle size="0.8rem" className="mari-rgb-static-icon text-current" />{" "}

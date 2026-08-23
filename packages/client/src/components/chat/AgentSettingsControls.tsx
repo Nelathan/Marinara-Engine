@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Settings2, Trash2 } from "lucide-react";
 import { useTranslation as useUiTranslation } from "react-i18next";
 import type { AgentPromptTemplateOption } from "@marinara-engine/shared";
@@ -7,6 +7,31 @@ import { useUIStore } from "../../stores/ui.store";
 import { SettingsSwitch } from "../panels/settings/SettingControls";
 
 export const AGENT_SETTINGS_SURFACE_CLASS = "border border-[var(--border)] bg-[var(--secondary)]/70";
+
+export function AgentSettingsActionButton({
+  variant = "default",
+  iconOnly = false,
+  className,
+  type = "button",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "primary" | "danger";
+  iconOnly?: boolean;
+}) {
+  return (
+    <button
+      {...props}
+      type={type}
+      className={cn(
+        "mari-agent-settings-action",
+        variant === "primary" && "mari-agent-settings-action--primary",
+        variant === "danger" && "mari-agent-settings-action--danger",
+        iconOnly && "mari-agent-settings-action--icon",
+        className,
+      )}
+    />
+  );
+}
 
 export function AgentCategorySection({
   label,
@@ -158,6 +183,7 @@ export function AgentSettingsCard({
   icon,
   title,
   description,
+  initialOpen = true,
   badge,
   order,
   onRemove,
@@ -167,6 +193,7 @@ export function AgentSettingsCard({
   icon: ReactNode;
   title: string;
   description: string;
+  initialOpen?: boolean;
   badge?: ReactNode;
   order?: number;
   onRemove?: () => void;
@@ -175,8 +202,8 @@ export function AgentSettingsCard({
   const { t: localizeUi } = useUiTranslation();
   const rememberedOpen = useUIStore((state) => (id ? state.chatSettingsExpandedSections[id] : undefined));
   const setSectionExpanded = useUIStore((state) => state.setChatSettingsSectionExpanded);
-  const [localOpen, setLocalOpen] = useState(true);
-  const open = id ? (rememberedOpen ?? true) : localOpen;
+  const [localOpen, setLocalOpen] = useState(initialOpen);
+  const open = id ? (rememberedOpen ?? initialOpen) : localOpen;
   const contentId = useId();
   const toggleLabel = localizeUi(
     open ? "ui.chat.agentsettingscard.collapseValue1" : "ui.chat.agentsettingscard.expandValue1",
@@ -300,7 +327,7 @@ export function AgentSettingsToggle({
         onChange={() => onToggle()}
         labelPosition="start"
         className={cn(
-          "justify-between rounded-lg px-3 py-2.5 text-left",
+          "justify-between rounded-md px-3 py-2.5 text-left",
           enabled
             ? "bg-[var(--primary)]/10 ring-1 ring-[var(--primary)]/30"
             : surface === "secondary"
