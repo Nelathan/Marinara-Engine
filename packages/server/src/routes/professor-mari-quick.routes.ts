@@ -45,6 +45,8 @@ export const professorMariQuickPromptSchema = z
     connectionId: z.string().min(1).max(256).optional().nullable(),
     context: quickContextSchema.optional(),
     debugMode: z.boolean().optional().default(false),
+    unasked: z.boolean().optional().default(false),
+    resourceLabel: z.string().trim().max(200).optional(),
   })
   .strict();
 

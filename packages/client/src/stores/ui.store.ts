@@ -6,6 +6,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { generateClientId } from "../lib/utils";
 import {
   IMAGE_STYLE_PROFILES_STORAGE_KEY,
+  LOCAL_SIDECAR_CONNECTION_ID,
   normalizeImageStyleProfileSettings,
   normalizeQuoteFormat,
   type ImageStyleProfileSettings,
@@ -569,6 +570,12 @@ interface UIState {
   customCursorEnabled: boolean;
   reduceAmbientEffects: boolean;
   mariPanelSortMode: MariPanelSortMode;
+  /** The omnibar aside may answer a dead-end query without being asked (R3/R10). */
+  omnibarAsideEnabled: boolean;
+  /** Connection the aside answers with. Defaults to the local sidecar, so nothing is spent unasked. */
+  omnibarAsideConnectionId: string;
+  /** False until the aside has answered once and explained itself in place (R19). */
+  omnibarAsideDisclosed: boolean;
   mariEditViewMode: MariEditViewMode;
   chatBackground: string | null;
   /** Default background applied when a Roleplay chat has no saved background yet. */
@@ -1000,6 +1007,9 @@ interface UIState {
   setCustomCursorEnabled: (enabled: boolean) => void;
   setReduceAmbientEffects: (enabled: boolean) => void;
   setMariPanelSortMode: (mode: MariPanelSortMode) => void;
+  setOmnibarAsideEnabled: (enabled: boolean) => void;
+  setOmnibarAsideConnectionId: (id: string) => void;
+  setOmnibarAsideDisclosed: (disclosed: boolean) => void;
   setMariEditViewMode: (mode: MariEditViewMode) => void;
   setChatBackground: (url: string | null) => void;
   setDefaultRoleplayBackground: (url: string) => void;
@@ -1449,6 +1459,9 @@ export const useUIStore = create<UIState>()(
       customCursorEnabled: true,
       reduceAmbientEffects: false,
       mariPanelSortMode: "az",
+      omnibarAsideEnabled: true,
+      omnibarAsideConnectionId: LOCAL_SIDECAR_CONNECTION_ID,
+      omnibarAsideDisclosed: false,
       mariEditViewMode: "easy",
       chatBackground: null,
       defaultRoleplayBackground: DEFAULT_ROLEPLAY_BACKGROUND_URL,
@@ -1765,6 +1778,9 @@ export const useUIStore = create<UIState>()(
       setCustomCursorEnabled: (enabled) => set({ customCursorEnabled: enabled }),
       setReduceAmbientEffects: (enabled) => set({ reduceAmbientEffects: enabled }),
       setMariPanelSortMode: (mode) => set({ mariPanelSortMode: mode }),
+      setOmnibarAsideEnabled: (enabled) => set({ omnibarAsideEnabled: enabled }),
+      setOmnibarAsideConnectionId: (id) => set({ omnibarAsideConnectionId: id }),
+      setOmnibarAsideDisclosed: (disclosed) => set({ omnibarAsideDisclosed: disclosed }),
       setMariEditViewMode: (mode) => set({ mariEditViewMode: mode }),
       setChatBackground: (url) => set({ chatBackground: url }),
       setDefaultRoleplayBackground: (url) =>

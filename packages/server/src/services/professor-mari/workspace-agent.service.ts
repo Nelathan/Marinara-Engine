@@ -655,6 +655,36 @@ function windowsShellCompatibilityIssue(command: string): string | null {
   ].join(" ");
 }
 
+/**
+ * The workspace context sent with a Quick call.
+ *
+ * The unasked form is built from scratch, not trimmed: an aside that fires on a
+ * typing pause must never carry the focused field, its id, the resource id, or
+ * the capability. It sends the surface, the typed query, and the resource's
+ * human label - enough to say "that lives in Settings", and nothing a user would
+ * be surprised to have sent.
+ */
+export function buildQuickContextPayload(
+  context: ProfessorMariQuickPromptRequest["context"] | undefined,
+  unasked: boolean,
+  resourceLabel?: string,
+): string | null {
+  if (!context) return null;
+  if (unasked) {
+    const label = resourceLabel?.trim() || context.resource?.label?.trim();
+    return JSON.stringify({ source: context.source, query: context.query, resourceLabel: label || undefined });
+  }
+  return JSON.stringify({
+    source: context.source,
+    capability: context.capability,
+    query: context.query,
+    resource: context.resource,
+    field: context.field,
+    fieldId: context.fieldId,
+    action: context.action,
+  });
+}
+
 const MARI_SYSTEM_PROMPT = `You are Professor Mari, Marinara Engine's Home-screen local workspace helper.
 
 Voice:
@@ -2322,36 +2352,42 @@ export class ProfessorMariWorkspaceService {
     const connection = await this.resolveConnection(args.connectionId);
     if (!connection) throw new Error("Set up a language connection before using Quick Mari.");
 
-    const persistentRows = (await createMariInstructionsStorage(this.app.db).list()).filter(
-      (row) => row.enabled && row.persistent && row.content.trim(),
-    );
+    // The omnibar aside fires without being asked, so its payload is built from
+    // scratch rather than trimmed: no persistent memories, no field contents, no
+    // resource ids. Skipping is not the same as truncating - these must never be
+    // assembled at all on a call the user did not make.
+    const unasked = args.unasked === true;
+
     const memorySections: string[] = [];
     let memoryChars = 0;
-    for (const row of persistentRows) {
-      const section = `${row.name.trim()}:\n${row.content.trim()}`;
-      if (memorySections.length >= 8 || memoryChars + section.length > 4_000) break;
-      memorySections.push(section);
-      memoryChars += section.length;
+    if (!unasked) {
+      const persistentRows = (await createMariInstructionsStorage(this.app.db).list()).filter(
+        (row) => row.enabled && row.persistent && row.content.trim(),
+      );
+      for (const row of persistentRows) {
+        const section = `${row.name.trim()}:\n${row.content.trim()}`;
+        if (memorySections.length >= 8 || memoryChars + section.length > 4_000) break;
+        memorySections.push(section);
+        memoryChars += section.length;
+      }
     }
 
-    const context = args.context
-      ? JSON.stringify({
-          source: args.context.source,
-          capability: args.context.capability,
-          query: args.context.query,
-          resource: args.context.resource,
-          field: args.context.field,
-          fieldId: args.context.fieldId,
-          action: args.context.action,
-        })
-      : null;
-    const quickEditTarget = await this.readQuickEditTarget(args.context);
-    const systemParts = [
-      "You are Professor Mari inside Marinara Engine's Quick mode.",
-      "Answer the user's focused question directly and concisely. Prefer a useful recommendation or explanation over broad background.",
-      "You have no tools, attachments, chat history, or ability to change data in this mode. Never claim that you opened, created, edited, repaired, or applied anything.",
-      "Keep the answer under 300 words. If the request needs creation, execution, attachments, or multiple steps, explain that Full Mari is the right next step and prepare a short follow-up the user can review.",
-    ];
+    const context = buildQuickContextPayload(args.context, unasked, args.resourceLabel);
+    const quickEditTarget = unasked ? null : await this.readQuickEditTarget(args.context);
+    const systemParts = unasked
+      ? [
+          "You are Professor Mari answering beside Marinara Engine's search box.",
+          "The user typed something and nothing in the app matched it. Say whether Marinara can do what they described and where it lives, or answer the question outright if it is small.",
+          "Answer in at most three sentences. No preamble, no restating the question, no offer to help further.",
+          "You have no tools, no history, and cannot change anything. Never claim you opened, created, edited, or applied anything.",
+          "If the request needs several steps, say so in one sentence and stop. The user can escalate to Full Mari themselves.",
+        ]
+      : [
+          "You are Professor Mari inside Marinara Engine's Quick mode.",
+          "Answer the user's focused question directly and concisely. Prefer a useful recommendation or explanation over broad background.",
+          "You have no tools, attachments, chat history, or ability to change data in this mode. Never claim that you opened, created, edited, repaired, or applied anything.",
+          "Keep the answer under 300 words. If the request needs creation, execution, attachments, or multiple steps, explain that Full Mari is the right next step and prepare a short follow-up the user can review.",
+        ];
     if (context) systemParts.push(`Selected workspace context (bounded):\n${context}`);
     if (memorySections.length > 0) {
       systemParts.push(`Persistent user memories (bounded):\n${memorySections.join("\n\n")}`);
@@ -2368,7 +2404,7 @@ export class ProfessorMariWorkspaceService {
     let streamed = false;
     const options: ChatOptions = {
       ...baseOptions,
-      maxTokens: Math.min(baseOptions.maxTokens ?? 700, 700),
+      maxTokens: Math.min(baseOptions.maxTokens ?? 700, unasked ? 220 : 700),
       responseFormat: undefined,
       onToken: quickEditTarget
         ? undefined

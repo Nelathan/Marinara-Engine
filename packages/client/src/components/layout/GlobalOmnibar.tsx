@@ -56,6 +56,7 @@ import { useDocsCommandSearchProvider } from "../../hooks/use-docs-command-searc
 import { useCreateLorebook, useLorebooks, useLorebookEntries, useUpdateLorebook } from "../../hooks/use-lorebooks";
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { useProfessorMariWorkspaceStatus } from "../../hooks/use-professor-mari-workspace-status";
+import { useOmnibarAside } from "../../hooks/use-omnibar-aside";
 import { useMariApprovals } from "../../hooks/use-mari-approvals";
 import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { completeInline } from "../../lib/inline-completion";
@@ -190,6 +191,7 @@ const OmnibarMariPane = lazy(() => import("./omnibar/OmnibarMariPane").then((m) 
 const OmnibarQuickMariPane = lazy(() =>
   import("./omnibar/OmnibarQuickMariPane").then((m) => ({ default: m.OmnibarQuickMariPane })),
 );
+const OmnibarAside = lazy(() => import("./omnibar/OmnibarAside").then((m) => ({ default: m.OmnibarAside })));
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
@@ -513,6 +515,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const mariEnabled = useUIStore((state) => state.commandCenterMariEnabled);
   const omnibarSuggestionsEnabled = useUIStore((state) => state.omnibarSuggestionsEnabled);
   const mariWorkspaceStatus = useProfessorMariWorkspaceStatus();
+  const asideDisclosed = useUIStore((state) => state.omnibarAsideDisclosed);
+  const setAsideDisclosed = useUIStore((state) => state.setOmnibarAsideDisclosed);
+  const setAsideEnabled = useUIStore((state) => state.setOmnibarAsideEnabled);
   const speechToTextEnabled = useUIStore((state) => state.speechToTextEnabled);
   const notificationSoundsOnlyWhenUnfocused = useUIStore((state) => state.notificationSoundsOnlyWhenUnfocused);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
@@ -1406,6 +1411,19 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     (item) => item === "all" || item === filter || tabAvailability[item] > 0,
   );
   const results = presentation.results;
+  // R10: the aside fires on exactly the queries the Ask-Mari row is promoted
+  // for. That predicate is already tuned, and its outcome is visible here - the
+  // row lands in "professor-suggested" only when it fires - so there is no
+  // second heuristic to keep in step.
+  const asideDeadEnd = results.some(
+    (result) => result.id === "ask-professor-mari" && result.group === "professor-suggested",
+  );
+  const asideState = useOmnibarAside({
+    query: deferredQuery,
+    deadEnd: asideDeadEnd && pane === "results",
+    source: "command-center",
+    resourceLabel: contextResults[0]?.title ?? null,
+  });
   // Quick and Mari both own the whole dialog. Leaving the search input mounted
   // under them let one keystroke re-enter `results` and abort a running answer.
   const mariSurface = pane === "mari" || pane === "quick";
@@ -3159,6 +3177,22 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           >
             {renderResultPreview()}
           </aside>
+        ) : null}
+
+        {!mariSurface ? (
+          <Suspense fallback={null}>
+            <OmnibarAside
+              state={asideState}
+              connectionName={null}
+              disclosed={asideDisclosed}
+              onDisclose={() => setAsideDisclosed(true)}
+              onDisable={() => {
+                setAsideEnabled(false);
+                setAsideDisclosed(true);
+              }}
+              onEscalate={() => openProfessorMari()}
+            />
+          </Suspense>
         ) : null}
 
         {!mariSurface ? (

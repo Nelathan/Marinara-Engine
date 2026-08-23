@@ -124,11 +124,22 @@ export interface ProfessorMariHandoff {
 export interface ProfessorMariQuickPromptRequest {
   message: string;
   connectionId?: string | null;
-  context?: Pick<
-    ProfessorMariAskContext,
-    "source" | "capability" | "query" | "resource" | "field" | "fieldId" | "action"
-  >;
+  context?: Pick<ProfessorMariAskContext, "source"> &
+    Partial<Pick<ProfessorMariAskContext, "capability" | "query" | "resource" | "field" | "fieldId" | "action">>;
   debugMode?: boolean;
+  /**
+   * The omnibar aside fires this without being asked, on a typing pause. That
+   * call must never carry persistent memories or the contents of the focused
+   * field: it sends the query, the surface, and the focused resource's label,
+   * and nothing else.
+   */
+  unasked?: boolean;
+  /**
+   * Human label of whatever the user is looking at, for an unasked call. It is a
+   * separate field rather than `context.resource` on purpose: the unasked
+   * payload carries a label, never a kind or an id.
+   */
+  resourceLabel?: string;
 }
 
 export interface ProfessorMariQuickMetadata {
