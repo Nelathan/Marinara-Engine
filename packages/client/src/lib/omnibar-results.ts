@@ -16,6 +16,7 @@ import {
 import type { AgentConfigRow } from "../hooks/use-agents";
 import type { GlobalMessageSearchHit } from "../hooks/use-chats";
 import type { HomeFaqItem } from "../components/chat/HomeFaq";
+import { buildChoiceOptionResults } from "./omnibar-choice-rows";
 import { readNamedRow } from "./omnibar-row-readers";
 import { parseChatMetadata } from "./chat-display";
 import { deriveActiveLorebookViews, getChatActiveLorebookIds, getChatExcludedLorebookIds } from "./chat-lorebooks";
@@ -575,9 +576,16 @@ export function buildOmnibarSearchResults({
   const askTitle = askTitles[capability] ?? t("omnibar.askProfessorMari", "Ask Professor Mari");
   const askPeek =
     askPeeks[capability] ?? t("omnibar.askMari.peek.explain", "Mari will explain this and guide your next step.");
+  // R40: with a query typed, a choice control's options join the searchable set,
+  // so "gpt" reaches "Use GPT-4 for this chat" without finding the Model row and
+  // drilling into it. They stay out of the idle deck, which would otherwise gain
+  // six rows per control before the user has asked for anything.
+  const controlChoices = trimmedQuery
+    ? [...controls, ...chatControls].flatMap((control) => buildChoiceOptionResults(control))
+    : [];
   const baseResults = searchOmnibar(query, {
     ...data,
-    controls: [...controls, ...chatControls],
+    controls: [...controls, ...chatControls, ...controlChoices],
     context: omnibarContext,
     contextLabels,
   }).filter((result) => mariEnabled || result.id !== "ask-professor-mari");

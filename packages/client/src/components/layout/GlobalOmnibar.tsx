@@ -1833,13 +1833,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setExpandedPreviewId(result.id);
   };
   const chooseChoiceOption = (result: RankedOmnibarResult) => {
-    const option = readChoiceOptionId(result.id);
-    if (!option) return false;
-    const parent = presentation.results.find((row) => row.id === option.parentId);
-    if (parent?.control?.type !== "choice") return false;
-    parent.control.onChange(option.value);
+    if (!result.chooseValue) return false;
+    result.chooseValue();
+    // Keep the parent selected when the row came from an expansion, so the list
+    // does not jump; a row found by typing has no parent on screen.
+    const parentId = readChoiceOptionId(result.id)?.parentId;
     setExpandedChoiceId(null);
-    setActiveResultId(parent.id);
+    if (parentId && presentation.results.some((row) => row.id === parentId)) setActiveResultId(parentId);
     return true;
   };
   const selectResult = (result: RankedOmnibarResult) => {

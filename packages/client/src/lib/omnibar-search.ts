@@ -68,6 +68,12 @@ export type OmnibarResult = {
     options?: readonly { value: string; label: string }[];
     onChange: (value: string | boolean) => void;
   };
+  /**
+   * Set on rows produced by expanding a choice control: picking the row applies
+   * that value. It lives on the row so a row found by typing works even when its
+   * parent control is not in the ranked list.
+   */
+  chooseValue?: () => void;
   kind?: CommandKind;
   icon?: CommandIcon;
   availability?:

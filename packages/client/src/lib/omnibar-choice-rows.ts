@@ -1,3 +1,4 @@
+import type { OmnibarResult } from "./omnibar-search";
 import type { RankedOmnibarResult } from "../components/layout/omnibar/omnibar-result-view";
 
 const CHOICE_SEPARATOR = "::choice:";
@@ -13,7 +14,7 @@ const CHOICE_SEPARATOR = "::choice:";
  * Rows are cloned from the parent so they carry a valid `command`, and the id
  * encodes the value, so choosing one needs no extra bookkeeping.
  */
-export function buildChoiceOptionRows(parent: RankedOmnibarResult): RankedOmnibarResult[] {
+export function buildChoiceOptionResults<T extends OmnibarResult>(parent: T): T[] {
   const control = parent.control;
   if (control?.type !== "choice") return [];
   const current = String(control.value);
@@ -28,7 +29,14 @@ export function buildChoiceOptionRows(parent: RankedOmnibarResult): RankedOmniba
     preview: undefined,
     target: undefined,
     action: undefined,
-    command: { ...parent.command, id: `${parent.id}${CHOICE_SEPARATOR}${option.value}`, title: option.label },
+    chooseValue: () => control.onChange(option.value),
+  }));
+}
+
+export function buildChoiceOptionRows(parent: RankedOmnibarResult): RankedOmnibarResult[] {
+  return buildChoiceOptionResults(parent).map((option) => ({
+    ...option,
+    command: { ...parent.command, id: option.id, title: option.title },
   }));
 }
 
