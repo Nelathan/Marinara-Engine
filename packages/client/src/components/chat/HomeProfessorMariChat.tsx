@@ -4276,6 +4276,28 @@ export function HomeProfessorMariChat({
     openPendingApprovals();
   }, [chatWindowOpen, openPendingApprovals, pendingReviewRequest]);
 
+  // R35: a pending change is answered where the hands already are. Rendered at
+  // the end of the transcript it scrolls out of view the moment she keeps
+  // talking, which is exactly when the user stops noticing it.
+  const pendingChangeDock =
+    visiblePendingChangeReviews.length > 0 ? (
+      <div className="mari-pending-change-dock">
+        {visiblePendingChangeReviews.map((approval) => (
+          <WorkspaceApprovalCard
+            key={approval.id}
+            approval={approval}
+            busy={approvalBusyId === approval.id}
+            disabled={approvalBusyId !== null}
+            onKeep={(id) => void keepWorkspaceChange(id)}
+            onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
+            onRestore={(id) => void restoreWorkspaceChange(id)}
+            onRejectRows={(id, rows) => rejectWorkspaceRows(id, rows)}
+            onRenderPrompt={renderWorkspacePrompt}
+          />
+        ))}
+      </div>
+    ) : null;
+
   const trustStrip = (
     <ProfessorMariTrustStrip
       connectionName={workspaceStatus?.connection?.name ?? effectiveConnection?.name ?? null}
@@ -4430,19 +4452,6 @@ export function HomeProfessorMariChat({
             )}
             <WorkspaceTimelineList items={workspaceTimeline} active={workspaceTimelineActive} openReasoning />
             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-            {visiblePendingChangeReviews.map((approval) => (
-              <WorkspaceApprovalCard
-                key={approval.id}
-                approval={approval}
-                busy={approvalBusyId === approval.id}
-                disabled={approvalBusyId !== null}
-                onKeep={(id) => void keepWorkspaceChange(id)}
-                onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
-                onRestore={(id) => void restoreWorkspaceChange(id)}
-                onRejectRows={(id, rows) => rejectWorkspaceRows(id, rows)}
-                onRenderPrompt={renderWorkspacePrompt}
-              />
-            ))}
           </>
         )}
       </div>
@@ -4454,6 +4463,7 @@ export function HomeProfessorMariChat({
           void handleSubmit();
         }}
       >
+        {pendingChangeDock}
         {trustStrip}
         {showTokenUsage && contextBudget && <ProfessorMariContextBudgetIndicator budget={contextBudget} />}
         {recoveryNotice}
@@ -5512,19 +5522,6 @@ export function HomeProfessorMariChat({
                                   openReasoning
                                 />
                                 {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-                                {visiblePendingChangeReviews.map((approval) => (
-                                  <WorkspaceApprovalCard
-                                    key={approval.id}
-                                    approval={approval}
-                                    busy={approvalBusyId === approval.id}
-                                    disabled={approvalBusyId !== null}
-                                    onKeep={(id) => void keepWorkspaceChange(id)}
-                                    onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
-                                    onRestore={(id) => void restoreWorkspaceChange(id)}
-                                    onRejectRows={(id, rows) => rejectWorkspaceRows(id, rows)}
-                                    onRenderPrompt={renderWorkspacePrompt}
-                                  />
-                                ))}
                               </>
                             )}
                           </div>
@@ -5539,6 +5536,7 @@ export function HomeProfessorMariChat({
                               void handleSubmit();
                             }}
                           >
+                            {pendingChangeDock}
                             {showTokenUsage && contextBudget && (
                               <ProfessorMariContextBudgetIndicator budget={contextBudget} />
                             )}
