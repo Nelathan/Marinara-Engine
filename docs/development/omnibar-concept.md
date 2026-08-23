@@ -112,6 +112,26 @@ mid-run is a defect.
 stop. The omnibar is her home, so it does not hand deep inspection to somewhere
 else.
 
+**R40 — A choice is rows, not a picker.** `OmnibarDetailPane` does two unrelated
+jobs: it previews a resource, and it edits a `control`. Only the first is a
+preview.
+
+A toggle row already flips on Enter. A choice row is the same thing with more
+than two values, so its options become ordinary results whose action calls the
+control's existing `onChange`. They are reachable by typing — "gpt" surfaces
+*Use GPT-4 for this chat* directly, which is impossible today — and by pressing
+`→` on the parent row, which inserts them as indented rows beneath it.
+
+**Rows are only ever inserted below the focused row, never above.** The focused
+row does not move, so `reconcileActiveResultId` stays valid and the hover and
+arrow-key anchoring rules in inventory section 7 cannot be violated. This is the
+same constraint that pins the aside to the bottom (R9), for the same reason.
+
+The rich preview expands inline under the focused row. The wide-screen external
+panel survives as a *layout* of that same body: it never takes focus and is not
+part of the keyboard model, so it was never a pane. What disappears is `detail`
+as a pane and as a return target.
+
 ## 4. The shape
 
 One dialog. Four regions, only two of them always present.
