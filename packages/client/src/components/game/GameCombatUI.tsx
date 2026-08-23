@@ -401,7 +401,8 @@ type CombatPhase =
   | "animating"
   | "round-end"
   | "victory"
-  | "defeat";
+  | "defeat"
+  | "flee";
 
 interface DamagePopup {
   id: string;
@@ -772,10 +773,9 @@ export function GameCombatUI({
         inventory: session.canonicalState.inventory?.map((item) => ({ ...item })) ?? [],
       };
       terminalSummaryRef.current = summary;
-      if (outcome === "flee") onCombatEnd("flee", summary);
-      else setPhase(outcome);
+      setPhase(outcome);
     }
-  }, [activeSessionQuery.data?.session, onCombatEnd, onCombatantsChange, onInventoryChange]);
+  }, [activeSessionQuery.data?.session, onCombatantsChange, onInventoryChange]);
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
@@ -807,6 +807,7 @@ export function GameCombatUI({
   const combatLogCounter = useRef(0);
   const combatLogEndRef = useRef<HTMLDivElement | null>(null);
   const introTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const animationTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const combatVoiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const combatVoiceCacheRef = useRef<Map<string, CombatVoiceEntry>>(new Map());
   const combatVoicePendingRef = useRef<Map<string, AbortController>>(new Map());
@@ -817,6 +818,22 @@ export function GameCombatUI({
   // (Mechanics / Cues / Log / Party) replace inline panels that don't fit on small screens.
   const isMobile = useIsCombatMobile();
   const [openDrawer, setOpenDrawer] = useState<MobileDrawerKind>(null);
+
+  const scheduleAnimation = useCallback((callback: () => void, delay: number) => {
+    const timer = setTimeout(() => {
+      animationTimersRef.current = animationTimersRef.current.filter((entry) => entry !== timer);
+      callback();
+    }, delay);
+    animationTimersRef.current.push(timer);
+  }, []);
+
+  useEffect(
+    () => () => {
+      for (const timer of animationTimersRef.current) clearTimeout(timer);
+      animationTimersRef.current = [];
+    },
+    [],
+  );
 
   const appendCombatLog = useCallback((text: string, tone: CombatLogEntry["tone"] = "action") => {
     const trimmed = text.trim();
@@ -1288,11 +1305,12 @@ export function GameCombatUI({
 
   // ── Intro phase ──
   useEffect(() => {
+    if (phase !== "intro") return;
     introTimer.current = setTimeout(() => {
       setPhase("player-turn");
     }, INTRO_DURATION_MS / animationSpeed);
     return () => clearTimeout(introTimer.current);
-  }, [animationSpeed]);
+  }, [animationSpeed, phase]);
 
   // ── All combatants merged for server requests ──
   const allCombatants = useMemo(
@@ -1334,12 +1352,14 @@ export function GameCombatUI({
     [combatSessionId, enemies, inventoryItems, objectives, party, round],
   );
   const handoffCombatEnd = useCallback(
-    (outcome: "victory" | "defeat") => {
+    (outcome: "victory" | "defeat" | "flee", summary?: CombatSummary) => {
       if (aftermathPending) return;
       setAftermathPending(true);
-      void Promise.resolve(onCombatEnd(outcome, terminalSummaryRef.current ?? buildSummary(outcome))).finally(() => {
-        setAftermathPending(false);
-      });
+      void Promise.resolve(onCombatEnd(outcome, summary ?? terminalSummaryRef.current ?? buildSummary(outcome)))
+        .catch(() => {})
+        .finally(() => {
+          setAftermathPending(false);
+        });
     },
     [aftermathPending, buildSummary, onCombatEnd],
   );
@@ -1453,11 +1473,11 @@ export function GameCombatUI({
       const id = `dmg-${++popupCounter.current}`;
       const popup: DamagePopup = { id, targetId, amount, isCritical, isMiss, reactionLabel, isHeal };
       setDamagePopups((prev) => [...prev, popup]);
-      setTimeout(() => {
+      scheduleAnimation(() => {
         setDamagePopups((prev) => prev.filter((p) => p.id !== id));
       }, DAMAGE_DISPLAY_MS);
     },
-    [],
+    [scheduleAnimation],
   );
 
   // ── Update a combatant's HP during animation ──
@@ -1574,15 +1594,24 @@ export function GameCombatUI({
         if (!action.isMiss) updateCombatantHp(action.defenderId, action.remainingHp);
 
         actionIdx++;
-        setTimeout(
+        scheduleAnimation(
           playNextAction,
           (action.reaction ? COMBAT_REACTION_DELAY_MS : COMBAT_ACTION_DELAY_MS) / animationSpeed,
         );
       };
 
-      setTimeout(playNextAction, COMBAT_ACTION_START_DELAY_MS / animationSpeed);
+      scheduleAnimation(playNextAction, COMBAT_ACTION_START_DELAY_MS / animationSpeed);
     },
-    [allCombatants, appendCombatLog, playSfx, spawnDamage, applyRoundEnd, updateCombatantHp, animationSpeed],
+    [
+      allCombatants,
+      appendCombatLog,
+      playSfx,
+      spawnDamage,
+      applyRoundEnd,
+      updateCombatantHp,
+      animationSpeed,
+      scheduleAnimation,
+    ],
   );
 
   // ── Resolve a combat round on the server ──
@@ -1621,7 +1650,10 @@ export function GameCombatUI({
               void onInventoryItemUsed?.(usedItemName);
             }
             if (playerAction.type === "flee") {
-              onCombatEnd("flee", data.summary ?? buildSummary("flee"));
+              const summary = data.summary ?? buildSummary("flee");
+              terminalSummaryRef.current = summary;
+              setPhase("flee");
+              handoffCombatEnd("flee", summary);
               return;
             }
             if (playerAction.type === "maneuver" && !data.outcome) {
@@ -1643,31 +1675,45 @@ export function GameCombatUI({
             animateRoundResults(result, updatedCombatants, data.outcome);
           },
           onError: (error) => {
+            let recoveredTerminal = false;
             if (error instanceof ApiError && error.payload && typeof error.payload === "object") {
               const payload = error.payload as {
                 code?: string;
                 currentRevision?: number;
                 state?: {
+                  sessionId?: string;
                   revision?: number;
-                  canonicalState?: { party?: Combatant[]; enemies?: Combatant[]; round?: number };
+                  canonicalState?: {
+                    party?: Combatant[];
+                    enemies?: Combatant[];
+                    round?: number;
+                    outcome?: "victory" | "defeat" | "flee";
+                  };
                   objectives?: CombatObjectiveState[];
+                  result?: CombatSummary;
                 };
               };
               if (payload.code === "STALE_REVISION" && payload.state?.canonicalState) {
                 const canonical = payload.state.canonicalState;
+                if (payload.state.sessionId) setCombatSessionId(payload.state.sessionId);
                 setCombatRevision(payload.currentRevision ?? payload.state.revision ?? combatRevision);
                 setParty(canonical.party ?? []);
                 setEnemies(canonical.enemies ?? []);
                 setObjectives(payload.state.objectives ?? []);
                 setRound(canonical.round ?? round);
                 onCombatantsChange?.(canonical.party ?? [], canonical.enemies ?? []);
+                if (canonical.outcome) {
+                  if (payload.state.result) terminalSummaryRef.current = payload.state.result;
+                  setPhase(canonical.outcome);
+                  recoveredTerminal = true;
+                }
               }
             }
             if (playerAction.type === "maneuver") {
               setCustomInstructionPending(false);
               setCustomInstructionSawStreaming(false);
             }
-            setPhase("player-turn");
+            if (!recoveredTerminal) setPhase("player-turn");
           },
         },
       );
@@ -1682,7 +1728,7 @@ export function GameCombatUI({
       combatMechanics,
       onInventoryItemUsed,
       onInventoryChange,
-      onCombatEnd,
+      handoffCombatEnd,
       buildSummary,
       onCustomInstruction,
       inventoryItems,
@@ -1967,48 +2013,66 @@ export function GameCombatUI({
               </button>
             </div>
           )}
+          {phase === "flee" && (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 px-6 text-center animate-in fade-in duration-500">
+              <Wind className="h-12 w-12 text-sky-300" />
+              <h2 className="text-2xl font-bold text-sky-100">{localizeUi("ui.game.tacticalcombatui.retreated")}</h2>
+              <button
+                type="button"
+                onClick={() => handoffCombatEnd("flee")}
+                disabled={aftermathPending}
+                className="rounded-lg bg-sky-500/20 px-6 py-2.5 text-sm font-semibold text-sky-100 ring-1 ring-sky-400/30 transition-colors hover:bg-sky-500/30 disabled:opacity-50"
+              >
+                {localizeUi("ui.noodle.wizardfooter.continue")}
+              </button>
+            </div>
+          )}
         </div>
 
-        {activeMobileCombatDialogue && phase !== "intro" && phase !== "victory" && phase !== "defeat" && (
-          <div className="relative z-30 shrink-0 px-2 pb-2">
-            <button
-              type="button"
-              onClick={showNextMobileCombatDialogue}
-              className={cn(
-                "game-combat-action-bark mx-auto block max-h-[18svh] w-full overflow-y-auto rounded-xl border px-3 py-2 text-left shadow-lg backdrop-blur-md animate-party-slide-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                activeMobileCombatDialogueIsEnemy
-                  ? "border-red-300/25 bg-red-950/70 text-red-50/90"
-                  : "border-sky-300/25 bg-sky-950/70 text-sky-50/90",
-                isShoutedCombatDialogue(activeMobileCombatDialogue) && "game-combat-action-bark--shout",
-              )}
-            >
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <span
-                  className={cn(
-                    "truncate text-[0.68rem] font-bold",
-                    activeMobileCombatDialogueIsEnemy ? "text-red-200" : "text-sky-200",
-                  )}
-                >
-                  {activeMobileCombatDialogue.character}
-                </span>
-                {activeMobileCombatDialogue.expression && (
-                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wide text-white/55">
-                    {activeMobileCombatDialogue.expression}
-                  </span>
-                )}
-              </div>
-              <p
+        {activeMobileCombatDialogue &&
+          phase !== "intro" &&
+          phase !== "victory" &&
+          phase !== "defeat" &&
+          phase !== "flee" && (
+            <div className="relative z-30 shrink-0 px-2 pb-2">
+              <button
+                type="button"
+                onClick={showNextMobileCombatDialogue}
                 className={cn(
-                  "mt-0.5 break-words text-xs leading-relaxed [overflow-wrap:anywhere]",
-                  activeMobileCombatDialogue.type === "thought" && "italic opacity-80",
-                  activeMobileCombatDialogue.type === "whisper" && "italic",
+                  "game-combat-action-bark mx-auto block max-h-[18svh] w-full overflow-y-auto rounded-xl border px-3 py-2 text-left shadow-lg backdrop-blur-md animate-party-slide-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                  activeMobileCombatDialogueIsEnemy
+                    ? "border-red-300/25 bg-red-950/70 text-red-50/90"
+                    : "border-sky-300/25 bg-sky-950/70 text-sky-50/90",
+                  isShoutedCombatDialogue(activeMobileCombatDialogue) && "game-combat-action-bark--shout",
                 )}
               >
-                {activeMobileCombatDialogue.content}
-              </p>
-            </button>
-          </div>
-        )}
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "truncate text-[0.68rem] font-bold",
+                      activeMobileCombatDialogueIsEnemy ? "text-red-200" : "text-sky-200",
+                    )}
+                  >
+                    {activeMobileCombatDialogue.character}
+                  </span>
+                  {activeMobileCombatDialogue.expression && (
+                    <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wide text-white/55">
+                      {activeMobileCombatDialogue.expression}
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={cn(
+                    "mt-0.5 break-words text-xs leading-relaxed [overflow-wrap:anywhere]",
+                    activeMobileCombatDialogue.type === "thought" && "italic opacity-80",
+                    activeMobileCombatDialogue.type === "whisper" && "italic",
+                  )}
+                >
+                  {activeMobileCombatDialogue.content}
+                </p>
+              </button>
+            </div>
+          )}
 
         {/* Bottom action sheet — sticky, always shows current player + active phase content */}
         <div className="relative z-30 shrink-0 border-t border-white/10 bg-gradient-to-t from-black/95 to-black/85 backdrop-blur-md">
@@ -2181,7 +2245,10 @@ export function GameCombatUI({
                               ? "cursor-not-allowed border-white/10 bg-white/5 text-white/30"
                               : "border-blue-400/20 bg-blue-500/10 text-white/85 hover:border-blue-400/40 hover:bg-blue-500/15",
                           )}
-                          title={`${localizeUi(combatSkillTypeLabelKey(skill.type))}: ${skill.description || localizeUi(combatSkillDescriptionKey(skill.type))}`}
+                          title={localizeUi("ui.game.gamecombatui.skillTooltip", {
+                            type: localizeUi(combatSkillTypeLabelKey(skill.type)),
+                            description: skill.description || localizeUi(combatSkillDescriptionKey(skill.type)),
+                          })}
                         >
                           <span className="min-w-0 truncate font-semibold text-white/90">{skill.name}</span>
                           <span className="shrink-0 text-[0.6rem] tabular-nums text-white/45">
@@ -3046,8 +3113,24 @@ export function GameCombatUI({
           </div>
         )}
 
+        {/* Retreat overlay */}
+        {phase === "flee" && (
+          <div className="flex flex-col items-center gap-3 px-3 py-4 animate-in fade-in slide-in-from-bottom-4 duration-500 sm:px-4 sm:py-6">
+            <Wind className="h-8 w-8 text-sky-300" />
+            <h2 className="text-lg font-bold text-sky-100">{localizeUi("ui.game.tacticalcombatui.retreated")}</h2>
+            <button
+              type="button"
+              onClick={() => handoffCombatEnd("flee")}
+              disabled={aftermathPending}
+              className="mt-2 rounded-lg bg-sky-500/20 px-6 py-2 text-sm font-semibold text-sky-100 ring-1 ring-sky-400/30 transition-colors hover:bg-sky-500/30 disabled:opacity-50"
+            >
+              {localizeUi("ui.noodle.wizardfooter.continue")}
+            </button>
+          </div>
+        )}
+
         {/* Live combat log */}
-        {combatLogEntries.length > 0 && phase !== "victory" && phase !== "defeat" && (
+        {combatLogEntries.length > 0 && phase !== "victory" && phase !== "defeat" && phase !== "flee" && (
           <div className="border-t border-white/5 px-3 py-2 sm:px-4">
             <div className="mb-1 flex items-center gap-1.5 text-[0.6rem] font-semibold uppercase tracking-wide text-white/40">
               <ScrollText size={11} />

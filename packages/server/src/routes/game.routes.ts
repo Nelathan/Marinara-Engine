@@ -20,7 +20,6 @@ import { createGalleryStorage } from "../services/storage/gallery.storage.js";
 import { createGameSceneVideosStorage } from "../services/storage/game-scene-videos.storage.js";
 import { createGameStoryboardsStorage } from "../services/storage/game-storyboards.storage.js";
 import { createGameStateStorage } from "../services/storage/game-state.storage.js";
-import { createGameEngineStateStorage } from "../services/storage/game-engine-state.storage.js";
 import {
   createGameEngineStateStorage,
   EXPERIENCE_GAME_TYPE_PREFIX,
@@ -9766,10 +9765,18 @@ export async function gameRoutes(app: FastifyInstance) {
     }
     const sessions = createGameCombatSessionStorage(app.db);
     let session = sessionId ? await sessions.get(sessionId) : await sessions.getActiveForChat(chatId);
+    if (sessionId && !session) {
+      return reply.status(404).send({ error: "Combat session not found", code: "COMBAT_NOT_FOUND" });
+    }
     if (session && session.style !== "classic") {
       return reply
         .status(409)
         .send({ error: "A Tactical combat session is already active", code: "COMBAT_WRONG_STYLE" });
+    }
+    if (session && session.chatId !== chatId) {
+      return reply
+        .status(403)
+        .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
     }
     if (!session) {
       session = await sessions.create({
@@ -9803,7 +9810,11 @@ export async function gameRoutes(app: FastifyInstance) {
       // A null proposal means adjudication failed; the engine then resolves the
       // maneuver with its deterministic keyword rules instead of failing the turn.
       const maneuverProposal =
-        maneuverInput && !session.actionHistory?.some((record) => record.actionId === request.actionId)
+        session.status === "active" &&
+        session.revision === request.expectedRevision &&
+        !session.canonicalState.outcome &&
+        maneuverInput &&
+        !session.actionHistory?.some((record) => record.actionId === request.actionId)
           ? ((await adjudicateCombatManeuver(chatId, session, maneuverInput, reply)) ?? undefined)
           : undefined;
       const applied = await sessions.applyAction(chatId, request, (current) =>
@@ -10294,6 +10305,7 @@ export async function gameRoutes(app: FastifyInstance) {
       objectives: z.array(combatObjectiveSchema).max(20).optional(),
       bossPhases: z.array(combatBossPhaseSchema).max(20).optional(),
       seed: z.number().int().optional(),
+      replaceSessionId: z.string().min(1).optional(),
     });
     const input = schema.parse(req.body);
     const chat = await createChatsStorage(app.db).getById(input.chatId);
@@ -10304,21 +10316,26 @@ export async function gameRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "Invalid tactical combat state", code: "COMBAT_SNAPSHOT_INVALID" });
       }
       try {
-        const session = await combatSessionStorage.create({
-          chatId: input.chatId,
-          style: "tactical",
-          state: validated.data as unknown as TacticalCombatState,
-          objectives: input.objectives as CombatSessionStartInput["objectives"],
-          bossPhases: input.bossPhases as CombatSessionStartInput["bossPhases"],
-          seed: input.seed,
-        });
+        const session = await combatSessionStorage.create(
+          {
+            chatId: input.chatId,
+            style: "tactical",
+            state: validated.data as unknown as TacticalCombatState,
+            objectives: input.objectives as CombatSessionStartInput["objectives"],
+            bossPhases: input.bossPhases as CombatSessionStartInput["bossPhases"],
+            seed: input.seed,
+          },
+          { replaceActiveSessionId: input.replaceSessionId },
+        );
         return { session: combatSessionView(session), sessionId: session.sessionId, revision: session.revision };
       } catch (error) {
         return sendCombatSessionError(reply, error);
       }
     }
     try {
-      const session = await combatSessionStorage.create(input as unknown as CombatSessionStartInput);
+      const session = await combatSessionStorage.create(input as unknown as CombatSessionStartInput, {
+        replaceActiveSessionId: input.replaceSessionId,
+      });
       return { session: combatSessionView(session), sessionId: session.sessionId, revision: session.revision };
     } catch (error) {
       return sendCombatSessionError(reply, error);
@@ -10399,6 +10416,7 @@ export async function gameRoutes(app: FastifyInstance) {
         existing.chatId === body.chatId &&
         existing.status === "active" &&
         existing.revision === body.expectedRevision &&
+        !existing.canonicalState.outcome &&
         maneuverInput &&
         !existing.actionHistory?.some((record) => record.actionId === request.actionId)
           ? ((await adjudicateCombatManeuver(body.chatId, existing, maneuverInput, reply)) ?? undefined)
@@ -10415,15 +10433,8 @@ export async function gameRoutes(app: FastifyInstance) {
   app.post<{ Params: { sessionId: string } }>("/combat/session/:sessionId/complete", async (req, reply) => {
     const schema = z.object({ chatId: z.string().min(1) });
     const { chatId } = schema.parse(req.body);
-    const session = await combatSessionStorage.get(req.params.sessionId);
-    if (!session) return reply.status(404).send({ error: "Combat session not found", code: "COMBAT_NOT_FOUND" });
-    if (session.chatId !== chatId) {
-      return reply
-        .status(403)
-        .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
-    }
     try {
-      const completed = await combatSessionStorage.complete(session.sessionId);
+      const completed = await combatSessionStorage.completeAndTransition(req.params.sessionId, chatId);
       return { session: completed ? combatSessionView(completed) : null };
     } catch (error) {
       return sendCombatSessionError(reply, error);
@@ -10458,9 +10469,21 @@ export async function gameRoutes(app: FastifyInstance) {
       itemEffects: z.array(z.record(z.unknown())).max(200).optional(),
       objectives: z.array(combatObjectiveSchema).max(20).optional(),
       mechanics: z.array(combatMechanicDefinitionSchema).max(20).optional(),
+      replaceSessionId: z.string().min(1).optional(),
     });
-    const { chatId, party, enemies, seed, environment, formation, inventory, itemEffects, objectives, mechanics } =
-      schema.parse(req.body);
+    const {
+      chatId,
+      party,
+      enemies,
+      seed,
+      environment,
+      formation,
+      inventory,
+      itemEffects,
+      objectives,
+      mechanics,
+      replaceSessionId,
+    } = schema.parse(req.body);
 
     const chats = createChatsStorage(app.db);
     const chat = await chats.getById(chatId);
@@ -10490,14 +10513,17 @@ export async function gameRoutes(app: FastifyInstance) {
     );
 
     try {
-      const session = await combatSessionStorage.create({
-        chatId,
-        style: "tactical",
-        state,
-        seed: resolvedSeed,
-        objectives,
-        bossPhases: combatBossPhasesFromMechanics(mechanics ?? []),
-      });
+      const session = await combatSessionStorage.create(
+        {
+          chatId,
+          style: "tactical",
+          state,
+          seed: resolvedSeed,
+          objectives,
+          bossPhases: combatBossPhasesFromMechanics(mechanics ?? []),
+        },
+        { replaceActiveSessionId: replaceSessionId },
+      );
       return {
         state,
         sessionId: session.sessionId,
@@ -10530,10 +10556,18 @@ export async function gameRoutes(app: FastifyInstance) {
       let session = sessionId
         ? await combatSessionStorage.get(sessionId)
         : await combatSessionStorage.getActiveForChat(chatId);
+      if (sessionId && !session) {
+        return reply.status(404).send({ error: "Combat session not found", code: "COMBAT_NOT_FOUND" });
+      }
       if (session && session.style !== "tactical") {
         return reply
           .status(409)
           .send({ error: "A Classic combat session is already active", code: "COMBAT_WRONG_STYLE" });
+      }
+      if (session && session.chatId !== chatId) {
+        return reply
+          .status(403)
+          .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
       }
       if (!session) {
         if (!state) {
@@ -10558,6 +10592,7 @@ export async function gameRoutes(app: FastifyInstance) {
       const maneuverProposal =
         session.status === "active" &&
         session.revision === request.expectedRevision &&
+        !session.canonicalState.outcome &&
         maneuverInput &&
         !session.actionHistory?.some((record) => record.actionId === request.actionId)
           ? ((await adjudicateCombatManeuver(chatId, session, maneuverInput, reply)) ?? undefined)

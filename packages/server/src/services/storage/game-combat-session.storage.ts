@@ -18,7 +18,7 @@ import type {
 import { randomInt } from "crypto";
 import { and, desc, eq } from "../../db/file-query.js";
 import type { DB } from "../../db/connection.js";
-import { gameCombatSessions } from "../../db/schema/index.js";
+import { chats, gameCombatSessions } from "../../db/schema/index.js";
 import { newId, now } from "../../utils/id-generator.js";
 
 const MAX_ACTION_HISTORY = 200;
@@ -149,7 +149,7 @@ async function selectById(db: DB, sessionId: string) {
 
 export function createGameCombatSessionStorage(db: DB) {
   return {
-    async create(input: CombatSessionStartInput) {
+    async create(input: CombatSessionStartInput, options?: { replaceActiveSessionId?: string }) {
       const unitIds = new Set(
         ("units" in input.state ? input.state.units : [...input.state.party, ...input.state.enemies]).map(
           (unit) => unit.id,
@@ -171,6 +171,22 @@ export function createGameCombatSessionStorage(db: DB) {
       const seed = (input.seed ?? randomInt(0, 0x1_0000_0000)) >>> 0;
       const objectives = initialObjectives(input);
       await db.transaction(async (tx) => {
+        const activeRows = await tx
+          .select()
+          .from(gameCombatSessions)
+          .where(and(eq(gameCombatSessions.chatId, input.chatId), eq(gameCombatSessions.status, "active")))
+          .orderBy(desc(gameCombatSessions.updatedAt))
+          .limit(1);
+        const activeSession = activeRows[0] ? rowToSession(activeRows[0]) : null;
+        if (activeSession && options?.replaceActiveSessionId !== activeSession.sessionId) {
+          throw new CombatSessionStorageError(
+            "An active combat session must be completed or explicitly restarted before starting another battle",
+            "INVALID_ACTION",
+            409,
+            activeSession.revision,
+            stateView(activeSession),
+          );
+        }
         await tx
           .update(gameCombatSessions)
           .set({ status: "abandoned", updatedAt: abandonedTimestamp })
@@ -226,6 +242,16 @@ export function createGameCombatSessionStorage(db: DB) {
     async importLegacySnapshot(input: CombatSessionStartInput) {
       const existing = await this.getActiveForChat(input.chatId);
       if (existing) return existing;
+      const latest = await this.getLatestForChat(input.chatId);
+      if (latest) {
+        throw new CombatSessionStorageError(
+          "The previous combat session is no longer active; start a new battle before acting",
+          "COMBAT_COMPLETED",
+          409,
+          latest.revision,
+          stateView(latest),
+        );
+      }
       return this.create(input);
     },
 
@@ -324,7 +350,16 @@ export function createGameCombatSessionStorage(db: DB) {
         const row = rows[0];
         if (!row) return null;
         const session = rowToSession(row);
-        if (session.status !== "active") return session;
+        if (session.status === "completed") return session;
+        if (session.status !== "active") {
+          throw new CombatSessionStorageError(
+            "Combat session was replaced by a newer battle",
+            "COMBAT_COMPLETED",
+            409,
+            session.revision,
+            stateView(session),
+          );
+        }
         if (!session.canonicalState.outcome) {
           throw new CombatSessionStorageError(
             "Combat session cannot be completed before it reaches an outcome",
@@ -339,6 +374,83 @@ export function createGameCombatSessionStorage(db: DB) {
           .update(gameCombatSessions)
           .set({ status: "completed", updatedAt: now() })
           .where(and(eq(gameCombatSessions.sessionId, sessionId), eq(gameCombatSessions.status, "active")));
+        const completedRows = await tx
+          .select()
+          .from(gameCombatSessions)
+          .where(eq(gameCombatSessions.sessionId, sessionId))
+          .limit(1);
+        return completedRows[0] ? rowToSession(completedRows[0]) : null;
+      });
+    },
+
+    /** Atomically claim a terminal session and leave combat mode. */
+    async completeAndTransition(sessionId: string, chatId: string) {
+      return db.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(gameCombatSessions)
+          .where(eq(gameCombatSessions.sessionId, sessionId))
+          .limit(1);
+        const row = rows[0];
+        if (!row) throw new CombatSessionStorageError("Combat session not found", "COMBAT_NOT_FOUND", 404);
+        const session = rowToSession(row);
+        if (session.chatId !== chatId) {
+          throw new CombatSessionStorageError("Combat session does not belong to this chat", "COMBAT_WRONG_CHAT", 403);
+        }
+        const activeRows = await tx
+          .select()
+          .from(gameCombatSessions)
+          .where(and(eq(gameCombatSessions.chatId, chatId), eq(gameCombatSessions.status, "active")))
+          .limit(2);
+        const newerActive = activeRows.find((active) => active.sessionId !== sessionId);
+        if (newerActive) {
+          throw new CombatSessionStorageError(
+            "Combat session was replaced by a newer battle",
+            "COMBAT_COMPLETED",
+            409,
+            session.revision,
+            stateView(session),
+          );
+        }
+        if (session.status === "abandoned") {
+          throw new CombatSessionStorageError(
+            "Combat session was replaced by a newer battle",
+            "COMBAT_COMPLETED",
+            409,
+            session.revision,
+            stateView(session),
+          );
+        }
+        if (!session.canonicalState.outcome) {
+          throw new CombatSessionStorageError(
+            "Combat session cannot be completed before it reaches an outcome",
+            "INVALID_ACTION",
+            409,
+            session.revision,
+            stateView(session),
+          );
+        }
+
+        if (session.status === "active") {
+          await tx
+            .update(gameCombatSessions)
+            .set({ status: "completed", updatedAt: now() })
+            .where(and(eq(gameCombatSessions.sessionId, sessionId), eq(gameCombatSessions.status, "active")));
+        }
+        const chatRows = await tx.select().from(chats).where(eq(chats.id, chatId)).limit(1);
+        const chat = chatRows[0];
+        if (!chat) throw new CombatSessionStorageError("Chat not found", "COMBAT_NOT_FOUND", 404);
+        let metadata: Record<string, unknown> = {};
+        try {
+          const parsed = JSON.parse(chat.metadata ?? "{}");
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) metadata = parsed;
+        } catch {
+          metadata = {};
+        }
+        await tx
+          .update(chats)
+          .set({ metadata: JSON.stringify({ ...metadata, gameActiveState: "exploration" }), updatedAt: now() })
+          .where(eq(chats.id, chatId));
         const completedRows = await tx
           .select()
           .from(gameCombatSessions)

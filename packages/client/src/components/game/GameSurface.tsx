@@ -2982,6 +2982,7 @@ function GameSurfaceComponent({
   );
   const [combatParty, setCombatParty] = useState<Combatant[] | null>(null);
   const [combatEnemies, setCombatEnemies] = useState<Combatant[] | null>(null);
+  const [activeCombatStyle, setActiveCombatStyle] = useState<GameCombatStyle | null>(null);
   const [pendingEncounter, setPendingEncounter] = useState<CombatEncounterTag | null>(null);
   const [queuedEncounter, setQueuedEncounter] = useState<{ encounter: CombatEncounterTag; messageId: string } | null>(
     null,
@@ -3406,6 +3407,7 @@ function GameSurfaceComponent({
     setPendingEncounter(null);
     setCombatParty(null);
     setCombatEnemies(null);
+    setActiveCombatStyle(null);
     setCombatSceneMeta(null);
     setCombatMusicTier(null);
     contextMusicRequestRef.current.clear();
@@ -4743,6 +4745,7 @@ function GameSurfaceComponent({
     }
     setCombatParty(rawParty);
     setCombatEnemies(rawEnemies);
+    setActiveCombatStyle(snapshot.style === "classic" || snapshot.style === "tactical" ? snapshot.style : null);
     if (Array.isArray(snapshot.inventory)) setInventoryItems(snapshot.inventory);
     setCombatItemEffects(Array.isArray(snapshot.itemEffects) ? snapshot.itemEffects : []);
     setCombatObjectives(Array.isArray(snapshot.objectives) ? snapshot.objectives : []);
@@ -4763,7 +4766,15 @@ function GameSurfaceComponent({
         "common",
     );
     useGameModeStore.getState().setGameState("combat");
-  }, [activeChatId, chatMeta.gameCombatState, chatMeta.gameActiveState, chatMeta.gameSceneMusic, isMessagesLoading]);
+  }, [
+    activeChatId,
+    chatMeta.gameActiveState,
+    chatMeta.gameCombatState,
+    chatMeta.gameCombatStyle,
+    chatMeta.gameSceneMusic,
+    chatMeta.gameSetupConfig,
+    isMessagesLoading,
+  ]);
 
   // ── Persist live combat snapshot to chat metadata (debounced) ──
   // Mirrors the scene-asset persistence above but only fires while combat is active.
@@ -4794,6 +4805,13 @@ function GameSurfaceComponent({
     if (!combatParty || !combatEnemies || gameState !== "combat") return;
     if (combatPersistTimer.current) clearTimeout(combatPersistTimer.current);
     const snapshot: GameCombatStateSnapshot = {
+      style:
+        activeCombatStyle ??
+        (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
+        ((chatMeta.gameSetupConfig as Record<string, unknown> | undefined)?.combatStyle as
+          | GameCombatStyle
+          | undefined) ??
+        "classic",
       party: combatParty,
       enemies: combatEnemies,
       inventory: inventoryItems,
@@ -4836,6 +4854,9 @@ function GameSurfaceComponent({
     };
   }, [
     activeChatId,
+    activeCombatStyle,
+    chatMeta.gameCombatStyle,
+    chatMeta.gameSetupConfig,
     combatMusicTier,
     combatParty,
     combatEnemies,
@@ -8392,14 +8413,51 @@ function GameSurfaceComponent({
     [activeChatId, removePartyMember, localizeUi],
   );
 
-  const combatUiActive = gameState === "combat" && !!combatParty && !!combatEnemies;
   // Effective combat style: runtime metadata override (settings drawer) ??
   // wizard setup choice ?? legacy default "classic".
   const combatSetupConfig = chatMeta.gameSetupConfig as Record<string, unknown> | undefined;
   const effectiveCombatStyle: GameCombatStyle =
+    activeCombatStyle ??
     (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
     (combatSetupConfig?.combatStyle as GameCombatStyle | undefined) ??
     "classic";
+  const combatEncounterPreparing =
+    !!pendingEncounter ||
+    !!queuedEncounter ||
+    !!queuedCombatGeneration ||
+    combatGenerationPending ||
+    !!preparedCombatState;
+  const combatDeclarationPending = (() => {
+    if (isStreaming) return true;
+    if (!latestAssistantMsg?.content) return false;
+    const tags = parseGmTags(latestAssistantMsg.content);
+    if (!tags.combatEncounter && tags.stateChange !== "combat") return false;
+    return !hasCombatResultAfterMessage(latestAssistantMsg.id);
+  })();
+  const surfaceCombatSessionQuery = useActiveCombatSession(
+    activeChatId,
+    undefined,
+    chatMeta.gameActiveState === "combat",
+  );
+  const surfaceCombatSession = surfaceCombatSessionQuery.data?.session;
+  const surfaceClassicStartMessageId =
+    surfaceCombatSession?.style === "classic" ? surfaceCombatSession.canonicalState.startMessageId : null;
+  const surfaceSessionMatchesCurrentCombat =
+    !surfaceClassicStartMessageId || !combatStartMessageId || surfaceClassicStartMessageId === combatStartMessageId;
+  const combatAuthoritySettled = surfaceCombatSessionQuery.isFetched && !surfaceCombatSessionQuery.isFetching;
+  const completedAuthorityBlocksCombat =
+    surfaceCombatSession?.status !== undefined &&
+    surfaceCombatSession.status !== "active" &&
+    surfaceSessionMatchesCurrentCombat &&
+    !combatEncounterPreparing &&
+    !combatDeclarationPending;
+  const combatUiActive =
+    gameState === "combat" &&
+    !!combatParty &&
+    !!combatEnemies &&
+    activeCombatStyle !== null &&
+    combatAuthoritySettled &&
+    !completedAuthorityBlocksCombat;
   // Keep package callbacks tied to the current surface state. Experiences may
   // retain a requestCombat callback across renders, so reading this ref avoids
   // stale combat/replay/concluded flags during sequential battles.
@@ -8409,14 +8467,20 @@ function GameSurfaceComponent({
     combatSeamRef.current.concluded = (chatMeta.gameSessionStatus as string) === "concluded";
     combatSeamRef.current.replayActive = replayActive;
   });
-  const surfaceCombatSessionQuery = useActiveCombatSession(
-    activeChatId,
-    effectiveCombatStyle,
-    chatMeta.gameActiveState === "combat" && (!combatParty || !combatEnemies),
-  );
   useEffect(() => {
-    const session = surfaceCombatSessionQuery.data?.session;
-    if (!session || combatParty || combatEnemies || chatMeta.gameActiveState !== "combat") return;
+    const session = surfaceCombatSession;
+    if (chatMeta.gameActiveState !== "combat") return;
+    const recoveringLegacySnapshot = !!combatParty && !!combatEnemies && activeCombatStyle === null;
+    const configuredStyle =
+      (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
+      ((chatMeta.gameSetupConfig as Record<string, unknown> | undefined)?.combatStyle as GameCombatStyle | undefined) ??
+      "classic";
+    if (!session) {
+      if (surfaceCombatSessionQuery.isFetched && !surfaceCombatSessionQuery.isFetching && recoveringLegacySnapshot) {
+        setActiveCombatStyle(configuredStyle);
+      }
+      return;
+    }
     if (session.status !== "active") {
       // The active-session endpoint falls back to the latest COMPLETED session so a
       // refresh interrupted mid-aftermath can still recover. Hydrating that corpse
@@ -8424,30 +8488,16 @@ function GameSurfaceComponent({
       // mount it. If nothing is preparing a new encounter, the "combat" flag is
       // stale — unwind it; otherwise the in-flight encounter owns the state and
       // will start its own session.
-      const encounterPreparing =
-        !!pendingEncounter ||
-        !!queuedEncounter ||
-        !!queuedCombatGeneration ||
-        combatGenerationPending ||
-        !!preparedCombatState;
-      // The server flips the chat to "combat" when the GM's [state: combat] turn
-      // lands, which can be a beat BEFORE the scene processor sets any of the
-      // queue flags above. An unconsumed combat declaration on the latest GM
-      // message means a battle is on its way, so leave the state alone.
-      const combatDeclarationPending = (() => {
-        if (isStreaming) return true;
-        if (!latestAssistantMsg?.content) return false;
-        const tags = parseGmTags(latestAssistantMsg.content);
-        if (!tags.combatEncounter && tags.stateChange !== "combat") return false;
-        return !hasCombatResultAfterMessage(latestAssistantMsg.id);
-      })();
-      if (!encounterPreparing && !combatDeclarationPending && activeChatId && !transitionGameState.isPending) {
+      if (!surfaceSessionMatchesCurrentCombat || combatEncounterPreparing || combatDeclarationPending) return;
+      if (activeChatId && !transitionGameState.isPending) {
         useGameModeStore.getState().setGameState("exploration");
         transitionGameState.mutate({ chatId: activeChatId, newState: "exploration" });
       }
       return;
     }
+    if ((combatParty || combatEnemies) && !recoveringLegacySnapshot) return;
     if (session.style === "classic") {
+      setActiveCombatStyle("classic");
       setCombatParty(session.canonicalState.party);
       setCombatEnemies(session.canonicalState.enemies);
       setInventoryItems(session.canonicalState.inventory ?? []);
@@ -8456,6 +8506,7 @@ function GameSurfaceComponent({
       setCombatDialogueCues(session.canonicalState.dialogueCues ?? []);
       setCombatStartMessageId(session.canonicalState.startMessageId ?? null);
     } else {
+      setActiveCombatStyle("tactical");
       setCombatParty(
         session.canonicalState.units
           .filter((unit) => unit.side === "party")
@@ -8473,19 +8524,19 @@ function GameSurfaceComponent({
     useGameModeStore.getState().setGameState("combat");
   }, [
     activeChatId,
+    activeCombatStyle,
     chatMeta.gameActiveState,
+    chatMeta.gameCombatStyle,
+    chatMeta.gameSetupConfig,
+    combatDeclarationPending,
     combatEnemies,
+    combatEncounterPreparing,
     combatGenerationPending,
     combatParty,
-    hasCombatResultAfterMessage,
-    isStreaming,
-    latestAssistantMsg?.content,
-    latestAssistantMsg?.id,
-    pendingEncounter,
-    preparedCombatState,
-    queuedCombatGeneration,
-    queuedEncounter,
-    surfaceCombatSessionQuery.data?.session,
+    surfaceCombatSession,
+    surfaceCombatSessionQuery.isFetched,
+    surfaceCombatSessionQuery.isFetching,
+    surfaceSessionMatchesCurrentCombat,
     transitionGameState,
   ]);
   const tacticalCombatActive = combatUiActive && effectiveCombatStyle === "tactical";
@@ -8583,6 +8634,7 @@ function GameSurfaceComponent({
     if (latestNarrationText && !narrationDone) return;
 
     combatAftermathPendingRef.current = false;
+    setActiveCombatStyle(effectiveCombatStyle);
     useGameModeStore.getState().setGameState("combat");
     transitionGameState.mutate({ chatId: activeChatId, newState: "combat" });
     setCombatStartMessageId(queuedEncounter.messageId);
@@ -8598,6 +8650,7 @@ function GameSurfaceComponent({
     scenePreparing,
     assetGenerationBlocksScene,
     directionsPlaying,
+    effectiveCombatStyle,
     latestNarrationText,
     narrationDone,
     transitionGameState,
@@ -8850,6 +8903,13 @@ function GameSurfaceComponent({
 
     setCombatParty(preparedCombatState.party);
     setCombatEnemies(preparedCombatState.enemies);
+    setActiveCombatStyle(
+      (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
+        ((chatMeta.gameSetupConfig as Record<string, unknown> | undefined)?.combatStyle as
+          | GameCombatStyle
+          | undefined) ??
+        "classic",
+    );
     setCombatItemEffects(preparedCombatState.itemEffects);
     setCombatObjectives(preparedCombatState.objectives);
     setCombatMechanics(preparedCombatState.mechanics);
@@ -8870,6 +8930,8 @@ function GameSurfaceComponent({
   }, [
     activeChatId,
     assetGenerationBlocksScene,
+    chatMeta.gameCombatStyle,
+    chatMeta.gameSetupConfig,
     combatUiActive,
     directionsPlaying,
     isStreaming,
@@ -8891,10 +8953,6 @@ function GameSurfaceComponent({
     if (!combatUiActive || !activeChatId || !combatStartMessageId) return;
 
     const combatSetupConfig = chatMeta.gameSetupConfig as Record<string, unknown> | undefined;
-    const effectiveCombatStyle: GameCombatStyle =
-      (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
-      (combatSetupConfig?.combatStyle as GameCombatStyle | undefined) ??
-      "classic";
     if (effectiveCombatStyle !== "tactical") return;
 
     // Only for a FRESH battle — a restored in-progress snapshot keeps its background.
@@ -8956,13 +9014,13 @@ function GameSurfaceComponent({
     activeChatId,
     combatStartMessageId,
     combatSceneMeta,
-    chatMeta.gameCombatStyle,
     chatMeta.gameSetupConfig,
     chatMeta.gameTacticalCombatSnapshot,
     chatMeta.gameWorldOverview,
     chat.name,
     gameBackgroundGenerationEnabled,
     gameStoryboardBackgroundVisualEnabled,
+    effectiveCombatStyle,
     gameSnapshot?.location,
     gameSnapshot?.time,
     gameSnapshot?.weather,
@@ -10259,6 +10317,7 @@ function GameSurfaceComponent({
     if (activeChatIdRef.current === combatChatId) {
       setCombatParty(null);
       setCombatEnemies(null);
+      setActiveCombatStyle(null);
       setCombatSceneMeta(null);
       setCombatMusicTier(null);
       setCombatSpriteSuggestion(null);
@@ -10292,207 +10351,211 @@ function GameSurfaceComponent({
       combatAftermathPendingRef.current = true;
       const combatChatId = activeChatId;
       const aftermathWrites: Promise<unknown>[] = [];
-      const playerCombatantId = combatParty?.find((member) => member.isPlayer)?.id ?? combatParty?.[0]?.id;
-      const playerResult =
-        (playerCombatantId ? summary.party.find((result) => result.id === playerCombatantId) : undefined) ??
-        summary.party[0];
-      const currentGameState = useGameStateStore.getState().current;
-      const currentPlayerStats = currentGameState?.playerStats;
-      const mergeCanonicalInventory = (
-        current: NonNullable<typeof currentPlayerStats>["inventory"],
-        canonical: NonNullable<CombatSummary["inventory"]>,
-      ) => {
-        const quantities = new Map(canonical.map((item) => [normalizeInventoryName(item.name), item.quantity]));
-        const seen = new Set<string>();
-        const merged = current.map((item) => {
-          const key = normalizeInventoryName(item.name);
-          const quantity = quantities.get(key);
-          if (quantity === undefined) return item;
-          seen.add(key);
-          return { ...item, quantity };
-        });
-        for (const item of canonical) {
-          const key = normalizeInventoryName(item.name);
-          if (!key || seen.has(key)) continue;
-          merged.push({ name: item.name, description: "", quantity: item.quantity, location: "on_person" });
+      try {
+        // Claim the terminal session and leave combat atomically before writing any
+        // derived aftermath state. A stale tab must fail here rather than overwrite
+        // a newer battle's HP, inventory, or character cards.
+        if (combatChatId && summary.sessionId) {
+          await api.post(`/game/combat/session/${summary.sessionId}/complete`, { chatId: combatChatId });
         }
-        return merged;
-      };
-      const combatResultById = new Map(summary.party.map((result) => [result.id, result] as const));
-      const combatResultsByName = new Map<string, CombatSummary["party"]>();
-      for (const result of summary.party) {
-        const key = normalizeTextForMatch(result.name);
-        if (key) combatResultsByName.set(key, [...(combatResultsByName.get(key) ?? []), result]);
-      }
-      const createPartyResultResolver = () => {
-        const usedIds = new Set<string>();
-        return (id: string | undefined, name: string | undefined) => {
-          const byId = id ? combatResultById.get(id) : undefined;
-          if (byId && !usedIds.has(byId.id)) {
-            usedIds.add(byId.id);
-            return byId;
-          }
-          const key = normalizeTextForMatch(name ?? "");
-          const namedResults = key ? combatResultsByName.get(key) : undefined;
-          const byName = namedResults?.length === 1 && !usedIds.has(namedResults[0].id) ? namedResults[0] : undefined;
-          if (byName) usedIds.add(byName.id);
-          return byName;
-        };
-      };
-      const updateStats = (
-        stats: Array<{ name: string; value: number; max: number; color: string }>,
-        result: CombatSummary["party"][number],
-      ) => {
-        const seen = new Set<string>();
-        const updated = stats.map((stat) => {
-          const key = normalizeTextForMatch(stat.name);
-          if (key === "hp" || key === "health" || key === "hit points") {
-            seen.add("hp");
-            return { ...stat, value: result.hp, max: result.maxHp };
-          }
-          if ((key === "mp" || key === "mana" || key === "magic points" || key === "energy") && result.mp != null) {
-            seen.add("mp");
-            return { ...stat, value: result.mp, max: result.maxMp ?? Math.max(stat.max, result.mp) };
-          }
-          return stat;
-        });
-        if (!seen.has("hp")) {
-          updated.push({ name: "HP", value: result.hp, max: result.maxHp, color: "#ef4444" });
-        }
-        if (!seen.has("mp") && result.mp != null) {
-          updated.push({
-            name: "MP",
-            value: result.mp,
-            max: result.maxMp ?? result.mp,
-            color: "#3b82f6",
+        const playerCombatantId = combatParty?.find((member) => member.isPlayer)?.id ?? combatParty?.[0]?.id;
+        const playerResult =
+          (playerCombatantId ? summary.party.find((result) => result.id === playerCombatantId) : undefined) ??
+          summary.party[0];
+        const currentGameState = useGameStateStore.getState().current;
+        const currentPlayerStats = currentGameState?.playerStats;
+        const mergeCanonicalInventory = (
+          current: NonNullable<typeof currentPlayerStats>["inventory"],
+          canonical: NonNullable<CombatSummary["inventory"]>,
+        ) => {
+          const quantities = new Map(canonical.map((item) => [normalizeInventoryName(item.name), item.quantity]));
+          const seen = new Set<string>();
+          const merged = current.map((item) => {
+            const key = normalizeInventoryName(item.name);
+            const quantity = quantities.get(key);
+            if (quantity === undefined) return item;
+            seen.add(key);
+            return { ...item, quantity };
           });
+          for (const item of canonical) {
+            const key = normalizeInventoryName(item.name);
+            if (!key || seen.has(key)) continue;
+            merged.push({ name: item.name, description: "", quantity: item.quantity, location: "on_person" });
+          }
+          return merged;
+        };
+        const combatResultById = new Map(summary.party.map((result) => [result.id, result] as const));
+        const combatResultsByName = new Map<string, CombatSummary["party"]>();
+        for (const result of summary.party) {
+          const key = normalizeTextForMatch(result.name);
+          if (key) combatResultsByName.set(key, [...(combatResultsByName.get(key) ?? []), result]);
         }
-        return updated;
-      };
-      const combatStatus = (result: CombatSummary["party"][number]) => {
-        const statuses = [...result.statusEffects];
-        if (result.ko && !statuses.some((status) => /^(?:ko|knocked out)$/i.test(status.trim()))) {
-          statuses.push("KO");
-        }
-        return statuses.join(", ");
-      };
-
-      if (combatChatId && currentGameState?.chatId === combatChatId) {
-        let nextPlayerStats =
-          currentPlayerStats && summary.inventory
-            ? {
-                ...currentPlayerStats,
-                inventory: mergeCanonicalInventory(currentPlayerStats.inventory, summary.inventory),
-              }
-            : currentPlayerStats;
-        if (playerResult && nextPlayerStats) {
-          const status = combatStatus(playerResult);
-          nextPlayerStats = {
-            ...nextPlayerStats,
-            stats: updateStats(nextPlayerStats.stats, playerResult),
-            status: status || nextPlayerStats.status,
+        const createPartyResultResolver = () => {
+          const usedIds = new Set<string>();
+          return (id: string | undefined, name: string | undefined) => {
+            const byId = id ? combatResultById.get(id) : undefined;
+            if (byId && !usedIds.has(byId.id)) {
+              usedIds.add(byId.id);
+              return byId;
+            }
+            const key = normalizeTextForMatch(name ?? "");
+            const namedResults = key ? combatResultsByName.get(key) : undefined;
+            const byName = namedResults?.length === 1 && !usedIds.has(namedResults[0].id) ? namedResults[0] : undefined;
+            if (byName) usedIds.add(byName.id);
+            return byName;
           };
-        }
-
-        let presentCharactersChanged = false;
-        const resolvePresentCharacterResult = createPartyResultResolver();
-        const nextPresentCharacters = currentGameState.presentCharacters.map((character) => {
-          const result = resolvePresentCharacterResult(character.characterId, character.name);
-          if (!result) return character;
-          presentCharactersChanged = true;
-          const status = combatStatus(result);
-          const customFields = { ...(character.customFields ?? {}) };
-          if (status) customFields["Combat Status"] = status;
-          else delete customFields["Combat Status"];
-          return {
-            ...character,
-            stats: updateStats(character.stats ?? [], result),
-            customFields,
-          };
-        });
-
-        if (nextPlayerStats !== currentPlayerStats || presentCharactersChanged) {
-          const gameStatePatch = {
-            ...(nextPlayerStats !== currentPlayerStats ? { playerStats: nextPlayerStats } : {}),
-            ...(presentCharactersChanged ? { presentCharacters: nextPresentCharacters } : {}),
-          };
-          useGameStateStore.getState().setGameState({ ...currentGameState, ...gameStatePatch });
-          aftermathWrites.push(api.patch(`/chats/${combatChatId}/game-state`, gameStatePatch));
-        }
-      }
-
-      if (combatChatId && Array.isArray(chatMeta.gameCharacterCards)) {
-        let cardsChanged = false;
-        const resolveCardResult = createPartyResultResolver();
-        const updatedCards = (chatMeta.gameCharacterCards as Array<Record<string, unknown>>).map((card) => {
-          const name = typeof card.name === "string" ? normalizeTextForMatch(card.name) : "";
-          const characterId = typeof card.characterId === "string" ? card.characterId : undefined;
-          const result = resolveCardResult(characterId, name);
-          if (!result) return card;
-          cardsChanged = true;
-
-          const currentRpgStats =
-            card.rpgStats && typeof card.rpgStats === "object" && !Array.isArray(card.rpgStats)
-              ? (card.rpgStats as Record<string, unknown>)
-              : {};
-          const currentPools = Array.isArray(currentRpgStats.pools)
-            ? (currentRpgStats.pools as Array<Record<string, unknown>>)
-            : [];
-          const seenPools = new Set<string>();
-          const pools = currentPools.map((pool) => {
-            const key = typeof pool.name === "string" ? normalizeTextForMatch(pool.name) : "";
+        };
+        const updateStats = (
+          stats: Array<{ name: string; value: number; max: number; color: string }>,
+          result: CombatSummary["party"][number],
+        ) => {
+          const seen = new Set<string>();
+          const updated = stats.map((stat) => {
+            const key = normalizeTextForMatch(stat.name);
             if (key === "hp" || key === "health" || key === "hit points") {
-              seenPools.add("hp");
-              return { ...pool, value: result.hp, max: result.maxHp };
+              seen.add("hp");
+              return { ...stat, value: result.hp, max: result.maxHp };
             }
             if ((key === "mp" || key === "mana" || key === "magic points" || key === "energy") && result.mp != null) {
-              seenPools.add("mp");
-              return { ...pool, value: result.mp, max: result.maxMp ?? Math.max(Number(pool.max) || 0, result.mp) };
+              seen.add("mp");
+              return { ...stat, value: result.mp, max: result.maxMp ?? Math.max(stat.max, result.mp) };
             }
-            return pool;
+            return stat;
           });
-          if (!seenPools.has("hp")) {
-            pools.push({ name: "HP", value: result.hp, max: result.maxHp, color: "#ef4444" });
+          if (!seen.has("hp")) {
+            updated.push({ name: "HP", value: result.hp, max: result.maxHp, color: "#ef4444" });
           }
-          if (!seenPools.has("mp") && result.mp != null) {
-            pools.push({
+          if (!seen.has("mp") && result.mp != null) {
+            updated.push({
               name: "MP",
               value: result.mp,
-              max: Math.max(1, result.maxMp ?? result.mp),
+              max: result.maxMp ?? result.mp,
               color: "#3b82f6",
             });
           }
+          return updated;
+        };
+        const combatStatus = (result: CombatSummary["party"][number]) => {
+          const statuses = [...result.statusEffects];
+          if (result.ko && !statuses.some((status) => /^(?:ko|knocked out)$/i.test(status.trim()))) {
+            statuses.push("KO");
+          }
+          return statuses.join(", ");
+        };
 
-          const extra =
-            card.extra && typeof card.extra === "object" && !Array.isArray(card.extra)
-              ? { ...(card.extra as Record<string, unknown>) }
-              : {};
-          const status = combatStatus(result);
-          if (status) extra["Combat Status"] = status;
-          else delete extra["Combat Status"];
+        if (combatChatId && currentGameState?.chatId === combatChatId) {
+          let nextPlayerStats =
+            currentPlayerStats && summary.inventory
+              ? {
+                  ...currentPlayerStats,
+                  inventory: mergeCanonicalInventory(currentPlayerStats.inventory, summary.inventory),
+                }
+              : currentPlayerStats;
+          if (playerResult && nextPlayerStats) {
+            const status = combatStatus(playerResult);
+            nextPlayerStats = {
+              ...nextPlayerStats,
+              stats: updateStats(nextPlayerStats.stats, playerResult),
+              status: status || nextPlayerStats.status,
+            };
+          }
 
-          return {
-            ...card,
-            extra,
-            rpgStats: {
-              ...currentRpgStats,
-              attributes: Array.isArray(currentRpgStats.attributes) ? currentRpgStats.attributes : [],
-              hp: { value: result.hp, max: result.maxHp },
-              pools,
-            },
-          };
-        });
-        if (cardsChanged) {
-          aftermathWrites.push(updateChatMetadata.mutateAsync({ id: combatChatId, gameCharacterCards: updatedCards }));
+          let presentCharactersChanged = false;
+          const resolvePresentCharacterResult = createPartyResultResolver();
+          const nextPresentCharacters = currentGameState.presentCharacters.map((character) => {
+            const result = resolvePresentCharacterResult(character.characterId, character.name);
+            if (!result) return character;
+            presentCharactersChanged = true;
+            const status = combatStatus(result);
+            const customFields = { ...(character.customFields ?? {}) };
+            if (status) customFields["Combat Status"] = status;
+            else delete customFields["Combat Status"];
+            return {
+              ...character,
+              stats: updateStats(character.stats ?? [], result),
+              customFields,
+            };
+          });
+
+          if (nextPlayerStats !== currentPlayerStats || presentCharactersChanged) {
+            const gameStatePatch = {
+              ...(nextPlayerStats !== currentPlayerStats ? { playerStats: nextPlayerStats } : {}),
+              ...(presentCharactersChanged ? { presentCharacters: nextPresentCharacters } : {}),
+            };
+            useGameStateStore.getState().setGameState({ ...currentGameState, ...gameStatePatch });
+            aftermathWrites.push(api.patch(`/chats/${combatChatId}/game-state`, gameStatePatch));
+          }
         }
-      }
-      try {
+
+        if (combatChatId && Array.isArray(chatMeta.gameCharacterCards)) {
+          let cardsChanged = false;
+          const resolveCardResult = createPartyResultResolver();
+          const updatedCards = (chatMeta.gameCharacterCards as Array<Record<string, unknown>>).map((card) => {
+            const name = typeof card.name === "string" ? normalizeTextForMatch(card.name) : "";
+            const characterId = typeof card.characterId === "string" ? card.characterId : undefined;
+            const result = resolveCardResult(characterId, name);
+            if (!result) return card;
+            cardsChanged = true;
+
+            const currentRpgStats =
+              card.rpgStats && typeof card.rpgStats === "object" && !Array.isArray(card.rpgStats)
+                ? (card.rpgStats as Record<string, unknown>)
+                : {};
+            const currentPools = Array.isArray(currentRpgStats.pools)
+              ? (currentRpgStats.pools as Array<Record<string, unknown>>)
+              : [];
+            const seenPools = new Set<string>();
+            const pools = currentPools.map((pool) => {
+              const key = typeof pool.name === "string" ? normalizeTextForMatch(pool.name) : "";
+              if (key === "hp" || key === "health" || key === "hit points") {
+                seenPools.add("hp");
+                return { ...pool, value: result.hp, max: result.maxHp };
+              }
+              if ((key === "mp" || key === "mana" || key === "magic points" || key === "energy") && result.mp != null) {
+                seenPools.add("mp");
+                return { ...pool, value: result.mp, max: result.maxMp ?? Math.max(Number(pool.max) || 0, result.mp) };
+              }
+              return pool;
+            });
+            if (!seenPools.has("hp")) {
+              pools.push({ name: "HP", value: result.hp, max: result.maxHp, color: "#ef4444" });
+            }
+            if (!seenPools.has("mp") && result.mp != null) {
+              pools.push({
+                name: "MP",
+                value: result.mp,
+                max: Math.max(1, result.maxMp ?? result.mp),
+                color: "#3b82f6",
+              });
+            }
+
+            const extra =
+              card.extra && typeof card.extra === "object" && !Array.isArray(card.extra)
+                ? { ...(card.extra as Record<string, unknown>) }
+                : {};
+            const status = combatStatus(result);
+            if (status) extra["Combat Status"] = status;
+            else delete extra["Combat Status"];
+
+            return {
+              ...card,
+              extra,
+              rpgStats: {
+                ...currentRpgStats,
+                attributes: Array.isArray(currentRpgStats.attributes) ? currentRpgStats.attributes : [],
+                hp: { value: result.hp, max: result.maxHp },
+                pools,
+              },
+            };
+          });
+          if (cardsChanged) {
+            aftermathWrites.push(
+              updateChatMetadata.mutateAsync({ id: combatChatId, gameCharacterCards: updatedCards }),
+            );
+          }
+        }
         await Promise.all(aftermathWrites);
         if (combatChatId) {
-          if (summary.sessionId) {
-            await api.post(`/game/combat/session/${summary.sessionId}/complete`, { chatId: combatChatId });
-          }
-          await api.post("/game/state/transition", { chatId: combatChatId, newState: "exploration" });
           await queryClient.invalidateQueries({ queryKey: chatKeys.detail(combatChatId) });
         }
       } catch (error) {
@@ -10502,7 +10565,7 @@ function GameSurfaceComponent({
             ? error.message
             : localizeUi("ui.game.gamesurfacecomponent.combatAftermathCouldNotBeSavedTryAgain"),
         );
-        return;
+        throw error;
       }
       if (combatChatId) {
         try {
@@ -10515,6 +10578,7 @@ function GameSurfaceComponent({
         useGameModeStore.getState().setGameState("exploration");
         setCombatParty(null);
         setCombatEnemies(null);
+        setActiveCombatStyle(null);
         setCombatSceneMeta(null);
         setCombatMusicTier(null);
         setCombatSpriteSuggestion(null);

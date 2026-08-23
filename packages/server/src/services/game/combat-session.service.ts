@@ -58,7 +58,12 @@ function eventEffects(event: TacticalEvent): CombatEvent["effects"] {
   if (event.kind === "move" && event.actorId && event.to) {
     return [{ type: "move", sourceId: event.actorId, targetId: event.targetId ?? event.actorId, to: event.to }];
   }
-  if (event.kind === "damage" && event.actorId && event.targetId && event.amount !== undefined) {
+  if (
+    (event.kind === "damage" || event.kind === "crit" || event.kind === "counter") &&
+    event.actorId &&
+    event.targetId &&
+    event.amount !== undefined
+  ) {
     return [
       {
         type: "damage",
@@ -291,9 +296,7 @@ function applyClassicManeuver(
     const dropped: string[] = [];
     for (const effect of proposal.effects.slice(0, 6)) {
       if (scale <= 0) continue;
-      const named = effect.targetId
-        ? allTargets.find((combatant) => combatant.id === effect.targetId)
-        : undefined;
+      const named = effect.targetId ? allTargets.find((combatant) => combatant.id === effect.targetId) : undefined;
       if (effect.targetId && !named) {
         dropped.push("one target was no longer in the fight");
         continue;

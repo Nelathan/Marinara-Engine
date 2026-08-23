@@ -517,6 +517,8 @@ export type CombatPlayerAction =
  * those resume from the start of the round on restore.
  */
 export interface GameCombatStateSnapshot {
+  /** Style pinned when this encounter started; later settings changes apply to the next battle. */
+  style?: GameCombatStyle;
   party: Combatant[];
   enemies: Combatant[];
   inventory?: Array<{ name: string; quantity: number }>;

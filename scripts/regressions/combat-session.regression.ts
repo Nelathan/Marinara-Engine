@@ -216,6 +216,11 @@ assert.equal(
   3,
   "Classic, Tactical, and generic action routes must preserve an active opposite-style session",
 );
+assert.equal(
+  (routesSource.match(/sessionId && !session[\s\S]{0,160}code: "COMBAT_NOT_FOUND"/g) ?? []).length,
+  2,
+  "Classic and Tactical compatibility routes must reject a missing explicit session instead of importing stale client state",
+);
 assert.doesNotMatch(
   routesSource,
   /if \(session && session\.style !== "tactical"\)[\s\S]{0,400}abandonForChat/,
@@ -236,6 +241,16 @@ assert.match(
   /if \(!session\.canonicalState\.outcome\) \{[\s\S]{0,300}"INVALID_ACTION"/,
   "completion acknowledgements must reject active sessions that have not reached an outcome",
 );
+assert.match(
+  sessionStorageSource,
+  /options\?\.replaceActiveSessionId !== activeSession\.sessionId[\s\S]{0,300}"INVALID_ACTION"/,
+  "starting another battle must not implicitly abandon an active terminal session",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /launchBattle\(undefined, resetObjectives, sessionId \?\? undefined\)/,
+  "Tactical restart must explicitly identify the active session it intends to replace",
+);
 assert.ok(
   routesSource.indexOf("if (existing && existing.chatId !== body.chatId)") <
     routesSource.indexOf("if (!actionMatchesStyle)"),
@@ -245,6 +260,26 @@ assert.ok(
   routesSource.indexOf("if (!actionMatchesStyle)") <
     routesSource.indexOf("await adjudicateCombatManeuver", routesSource.indexOf("if (!actionMatchesStyle)")),
   "generic wrong-style actions must be rejected before maneuver adjudication invokes the GM",
+);
+assert.equal(
+  (routesSource.match(/!\w+\.canonicalState\.outcome &&\s*maneuverInput/g) ?? []).length,
+  3,
+  "Classic, Tactical, and generic maneuver routes must reject terminal sessions before invoking the GM",
+);
+assert.ok(
+  gameSurfaceSource.indexOf("/game/combat/session/${summary.sessionId}/complete") <
+    gameSurfaceSource.indexOf("await Promise.all(aftermathWrites)"),
+  "combat aftermath must claim the terminal session before writing derived state",
+);
+assert.match(
+  sessionStorageSource,
+  /async completeAndTransition\(sessionId: string, chatId: string\)[\s\S]{0,5000}newerActive[\s\S]{0,1800}gameActiveState: "exploration"/,
+  "combat completion must atomically reject replaced sessions and transition the chat",
+);
+assert.match(
+  sessionStorageSource,
+  /async importLegacySnapshot\(input: CombatSessionStartInput\)[\s\S]{0,600}COMBAT_COMPLETED/,
+  "legacy tactical snapshots must not resurrect a completed session",
 );
 assert.match(
   routesSource,
@@ -303,6 +338,66 @@ assert.match(
   gameSurfaceSource,
   /key=\{`\$\{activeChatId\}:tactical:\$\{combatStartMessageId \?\? "pending"\}`\}/,
   "Tactical combat UI must remount for each combat declaration so terminal summaries cannot bleed across battles",
+);
+assert.match(
+  gameSurfaceSource,
+  /const \[activeCombatStyle, setActiveCombatStyle\] = useState<GameCombatStyle \| null>\(null\)/,
+  "a live battle must pin its combat style independently of mutable chat settings",
+);
+assert.match(
+  gameSurfaceSource,
+  /useActiveCombatSession\(\s*activeChatId,\s*undefined,/,
+  "combat restoration must discover the canonical active session before choosing a style-specific UI",
+);
+assert.match(
+  gameSurfaceSource,
+  /useActiveCombatSession\(\s*activeChatId,\s*undefined,\s*chatMeta\.gameActiveState === "combat"/,
+  "every restored combat snapshot must check the authoritative session before mounting a battle UI",
+);
+assert.match(
+  gameSurfaceSource,
+  /surfaceCombatSessionQuery\.isFetched && !surfaceCombatSessionQuery\.isFetching && recoveringLegacySnapshot/,
+  "legacy snapshot style fallback must wait for the authoritative active-session refetch to settle",
+);
+assert.ok(
+  gameSurfaceSource.indexOf('if (session.status !== "active")') <
+    gameSurfaceSource.indexOf("if ((combatParty || combatEnemies) && !recoveringLegacySnapshot) return"),
+  "a completed authoritative session must win over an already styled local snapshot",
+);
+assert.match(
+  gameCombatUiSource,
+  /terminalSummaryRef\.current = summary;\s*setPhase\(outcome\)/,
+  "restored Classic terminal sessions must reopen their retryable outcome overlay",
+);
+assert.match(
+  gameCombatUiSource,
+  /if \(phase !== "intro"\) return;[\s\S]{0,220}\[animationSpeed, phase\]/,
+  "the Classic intro timer must not overwrite a restored terminal phase",
+);
+assert.match(
+  gameCombatUiSource,
+  /if \(canonical\.outcome\) \{[\s\S]{0,500}setPhase\(canonical\.outcome\)[\s\S]{0,500}if \(!recoveredTerminal\) setPhase\("player-turn"\)/,
+  "Classic stale-revision recovery must preserve a terminal action that committed on the server",
+);
+assert.match(
+  gameSurfaceSource,
+  /setActiveCombatStyle\(effectiveCombatStyle\);\s*useGameModeStore\.getState\(\)\.setGameState\("combat"\)/,
+  "explicit combat tags must pin the configured style before their combatants mount",
+);
+assert.match(
+  gameSurfaceSource,
+  /const snapshot: GameCombatStateSnapshot = \{\s*style:/,
+  "persisted Classic snapshots must retain the style that owns the active battle",
+);
+assert.match(
+  gameCombatUiSource,
+  /for \(const timer of animationTimersRef\.current\) clearTimeout\(timer\)/,
+  "Classic combat must cancel delayed animation writes when its battle component unmounts",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /aftermathFailed \? \([\s\S]{0,900}void handoffCombatEnd\(summary\)/,
+  "Tactical victory and retreat must expose a retry after aftermath persistence fails",
 );
 assert.match(
   gameSurfaceSource,
@@ -440,6 +535,56 @@ assert.equal(
   phaseResult.events.filter((event) => event.eventId.startsWith("phase:") && event.kind === "damage").length,
   1,
   "phase-owned Classic mechanics must resolve on the following action",
+);
+
+function tacticalOnHitPhase(id: string): CombatBossPhase {
+  return {
+    id,
+    trigger: "on_hit",
+    mechanics: [],
+    once: true,
+  };
+}
+
+let criticalPhaseResult: ReturnType<typeof resolveCombatSessionAction> | undefined;
+for (let seed = 1; seed <= 500 && !criticalPhaseResult; seed++) {
+  const hero = { ...tacticalUnit("hero", "party", 1_000), speed: 100, attackRange: { min: 1, max: 2 } };
+  const boss = { ...tacticalUnit("boss", "enemy", 1_000), speed: 0, isBoss: true };
+  const session = tactical({ seed, actionCounter: 0, units: [hero, boss] });
+  session.bossPhases = [tacticalOnHitPhase("critical-hit-phase")];
+  const result = resolveCombatSessionAction(session, `critical-hit-${seed}`, {
+    style: "tactical",
+    type: "attack",
+    unitId: "hero",
+    targetId: "boss",
+  });
+  if (result.events.some((event) => event.kind === "crit" && event.targetId === "boss")) criticalPhaseResult = result;
+}
+assert.ok(criticalPhaseResult, "the deterministic fixture search must find a Tactical critical hit");
+assert.equal(
+  criticalPhaseResult.events.some((event) => event.kind === "phase" && event.eventId.includes("critical-hit-phase")),
+  true,
+  "critical damage must trigger Tactical on-hit boss phases",
+);
+
+let counterPhaseResult: ReturnType<typeof resolveCombatSessionAction> | undefined;
+for (let seed = 1; seed <= 500 && !counterPhaseResult; seed++) {
+  const hero = { ...tacticalUnit("hero", "party", 1_000), speed: 100 };
+  const boss = { ...tacticalUnit("boss", "enemy", 1_000), x: 1, speed: 1, isBoss: true };
+  const session = tactical({ seed, actionCounter: 0, units: [hero, boss] });
+  session.bossPhases = [tacticalOnHitPhase("counter-hit-phase")];
+  const result = resolveCombatSessionAction(session, `counter-hit-${seed}`, {
+    style: "tactical",
+    type: "wait",
+    unitId: "hero",
+  });
+  if (result.events.some((event) => event.kind === "counter" && event.targetId === "boss")) counterPhaseResult = result;
+}
+assert.ok(counterPhaseResult, "the deterministic fixture search must find a Tactical counterattack against the boss");
+assert.equal(
+  counterPhaseResult.events.some((event) => event.kind === "phase" && event.eventId.includes("counter-hit-phase")),
+  true,
+  "counter damage must trigger Tactical on-hit boss phases",
 );
 
 const ownedPhase = {

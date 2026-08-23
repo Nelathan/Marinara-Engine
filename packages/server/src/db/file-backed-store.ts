@@ -372,6 +372,7 @@ const SHARD_KEY_COLUMNS: Record<string, string> = {
   agent_runs: "chatId",
   agent_memory: "chatId",
   game_state_snapshots: "chatId",
+  game_combat_sessions: "chatId",
   spatial_context_snapshots: "chatId",
   game_engine_state: "chatId",
   game_checkpoints: "chatId",

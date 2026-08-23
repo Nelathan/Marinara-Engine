@@ -10,6 +10,7 @@ import {
   type TacticalCombatState,
   type TacticalUnit,
 } from "../../packages/shared/src/index.js";
+import { getTurnSkipReason } from "../../packages/shared/src/features/tactical-combat/engine.js";
 
 function unit(
   id: string,
@@ -167,5 +168,59 @@ if (armedPlayer.ok) {
   );
   assert.equal(playerCoverage.state.units.find((entry) => entry.id === "enemy")?.hp < 100, true);
 }
+
+let partialStun: Extract<ReturnType<typeof applyAction>, { ok: true }> | undefined;
+for (let seed = 1; seed <= 500 && !partialStun; seed++) {
+  const fixture = state(
+    [unit("party", "party", 0, 0, { min: 1, max: 1 }), unit("enemy", "enemy", 1, 0, { min: 1, max: 1 })],
+    [["plains", "plains"]],
+  );
+  fixture.seed = seed;
+  const result = applyAction(fixture, {
+    type: "maneuver",
+    unitId: "party",
+    targetId: "enemy",
+    instruction: "Stun the enemy with a sweeping trip",
+  });
+  if (result.ok && result.events.some((event) => event.kind === "maneuver" && /partially succeeds/.test(event.text))) {
+    partialStun = result;
+  }
+}
+assert.ok(partialStun, "the deterministic fixture search must find a partial maneuver result");
+const hinderedEnemy = partialStun.state.units.find((entry) => entry.id === "enemy");
+assert.equal(
+  hinderedEnemy?.statusEffects.some((effect) => effect.name === "Hindered"),
+  true,
+);
+const hinderedModifier = hinderedEnemy?.statusEffects.find((effect) => effect.name === "Hindered")?.modifier;
+assert.equal(typeof hinderedModifier, "number");
+assert.equal(hinderedModifier! < 0, true, "a partial stun must apply a real speed penalty");
+assert.equal(hinderedEnemy!.speed + hinderedModifier! > 0, true, "a partial stun must leave positive effective speed");
+assert.equal(getTurnSkipReason(hinderedEnemy!), null, "a partial stun must slow the target without deleting its turn");
+
+function overwatchEntry(originX: number, seed: number) {
+  const mover = unit("party", "party", originX, 0, { min: 1, max: 1 });
+  const watcher = unit("enemy", "enemy", 4, 0, { min: 2, max: 2 });
+  watcher.statusEffects.push({ name: "Overwatch", modifier: 0, stat: "speed", turnsLeft: 1 });
+  const fixture = state([mover, watcher], [["ruin", "plains", "plains", "plains", "plains"]]);
+  fixture.seed = seed;
+  return applyAction(fixture, { type: "move", unitId: "party", to: { x: 2, y: 0 } });
+}
+
+let overwatchDamagePair: [number, number] | undefined;
+for (let seed = 1; seed <= 500 && !overwatchDamagePair; seed++) {
+  const fromRuin = overwatchEntry(0, seed);
+  const fromPlains = overwatchEntry(1, seed);
+  if (!fromRuin.ok || !fromPlains.ok) continue;
+  const ruinDamage = fromRuin.events.find((event) => event.kind === "counter")?.amount;
+  const plainsDamage = fromPlains.events.find((event) => event.kind === "counter")?.amount;
+  if (ruinDamage !== undefined && plainsDamage !== undefined) overwatchDamagePair = [ruinDamage, plainsDamage];
+}
+assert.ok(overwatchDamagePair, "the deterministic fixture search must find two landed Overwatch shots");
+assert.equal(
+  overwatchDamagePair[0],
+  overwatchDamagePair[1],
+  "Overwatch damage must use the shared destination terrain instead of the mover's origin",
+);
 
 process.stdout.write("Tactical combat regression passed.\n");

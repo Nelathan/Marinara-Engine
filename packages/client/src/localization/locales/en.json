@@ -4915,6 +4915,7 @@
   "ui.game.gamecombatui.resumeCombatVoiceOver": "Resume combat voice-over",
   "ui.game.gamecombatui.round": "Round",
   "ui.game.gamecombatui.sItems": "'s Items",
+  "ui.game.gamecombatui.skillTooltip": "{{type}}: {{description}}",
   "ui.game.gamecombatui.specialAttack": "Special attack",
   "ui.game.gamecombatui.sSkills": "'s Skills",
   "ui.game.gamecombatui.sSpecialManeuver": "'s Special Maneuver",

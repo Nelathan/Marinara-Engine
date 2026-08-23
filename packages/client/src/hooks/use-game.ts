@@ -847,12 +847,13 @@ export function useCombatRound() {
   });
 }
 
-export function useActiveCombatSession(chatId: string, style: "classic" | "tactical", enabled: boolean) {
+export function useActiveCombatSession(chatId: string, style: "classic" | "tactical" | undefined, enabled: boolean) {
+  const styleQuery = style ? `&style=${style}` : "";
   return useQuery({
-    queryKey: [...gameKeys.all, "combat-session", "active", chatId, style],
+    queryKey: [...gameKeys.all, "combat-session", "active", chatId, style ?? "any"],
     queryFn: () =>
       api.get<{ session: CombatStateView | null }>(
-        `/game/combat/session/active?chatId=${encodeURIComponent(chatId)}&style=${style}`,
+        `/game/combat/session/active?chatId=${encodeURIComponent(chatId)}${styleQuery}`,
       ),
     enabled: enabled && Boolean(chatId),
     staleTime: 0,
@@ -896,6 +897,7 @@ export function useTacticalCombatStart() {
       itemEffects?: CombatItemEffect[];
       mechanics?: import("@marinara-engine/shared").CombatMechanic[];
       objectives?: CombatObjectiveState[];
+      replaceSessionId?: string;
     }) =>
       api.post<{
         state: TacticalCombatState;

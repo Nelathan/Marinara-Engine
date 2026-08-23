@@ -111,7 +111,7 @@ interface TacticalCombatUIProps {
   /** The party combatant that is the player's own persona (gets the crown marker). */
   playerCombatantId?: string | null;
   /** Called when combat ends. Same contract as classic GameCombatUI → drives GM narration. */
-  onCombatEnd: (outcome: "victory" | "defeat" | "flee", summary: CombatSummary) => void;
+  onCombatEnd: (outcome: "victory" | "defeat" | "flee", summary: CombatSummary) => void | Promise<void>;
   /** Lets the GM adjudicate a freeform maneuver (parity with classic, currently unused UI-side). */
   onCustomInstruction?: (instruction: string) => void;
 }
@@ -542,6 +542,8 @@ export function TacticalCombatUI({
   const popupIdRef = useRef(0);
   const endedRef = useRef(false);
   const terminalSummaryRef = useRef<CombatSummary | null>(null);
+  const [aftermathPending, setAftermathPending] = useState(false);
+  const [aftermathFailed, setAftermathFailed] = useState(false);
 
   const playSfx = useCallback((tag: string) => audioManager.playSfx(tag, assets), [assets]);
 
@@ -553,6 +555,24 @@ export function TacticalCombatUI({
   useEffect(() => {
     return () => clearTimers();
   }, [clearTimers]);
+
+  const handoffCombatEnd = useCallback(
+    async (summary: CombatSummary) => {
+      if (aftermathPending) return;
+      endedRef.current = true;
+      setAftermathPending(true);
+      setAftermathFailed(false);
+      try {
+        await onCombatEnd(summary.outcome, summary);
+      } catch {
+        endedRef.current = false;
+        setAftermathFailed(true);
+      } finally {
+        setAftermathPending(false);
+      }
+    },
+    [aftermathPending, onCombatEnd],
+  );
 
   // ── Persist snapshot to chat metadata after every authoritative state change ──
   const persistSnapshot = useCallback(
@@ -590,7 +610,11 @@ export function TacticalCombatUI({
   // Shared by the mount effect and the restart flow. `isCancelled` lets the mount
   // effect drop a stale response after unmount; restart passes nothing.
   const launchBattle = useCallback(
-    (isCancelled?: () => boolean, objectiveOverride: CombatObjectiveState[] = objectives) => {
+    (
+      isCancelled?: () => boolean,
+      objectiveOverride: CombatObjectiveState[] = objectives,
+      replaceSessionId?: string,
+    ) => {
       setStarting(true);
       setStartError(null);
       // Typed intermediate (not a fresh literal) so environment/formation reach the
@@ -605,6 +629,7 @@ export function TacticalCombatUI({
         itemEffects?: CombatItemEffect[];
         mechanics?: import("@marinara-engine/shared").CombatMechanic[];
         objectives?: CombatObjectiveState[];
+        replaceSessionId?: string;
       } = {
         chatId,
         party,
@@ -616,6 +641,7 @@ export function TacticalCombatUI({
       if (combatMechanics.length > 0) startPayload.mechanics = combatMechanics;
       if (environment) startPayload.environment = environment;
       if (formation) startPayload.formation = formation;
+      if (replaceSessionId) startPayload.replaceSessionId = replaceSessionId;
       startMut
         .mutateAsync(startPayload)
         .then((res) => {
@@ -928,7 +954,14 @@ export function TacticalCombatUI({
   // ── End-of-battle handoff ──
   const maybeEnd = useCallback(
     (s: TacticalCombatState) => {
-      if (!s.outcome || endedRef.current || (!sessionId && !activeSessionQuery.isFetched)) return;
+      if (
+        !s.outcome ||
+        endedRef.current ||
+        aftermathPending ||
+        aftermathFailed ||
+        (!sessionId && !activeSessionQuery.isFetched)
+      )
+        return;
       endedRef.current = true;
       // Terminal snapshots stay persisted (not cleared here) so a refresh mid-flight
       // restores the outcome screen instead of soft-locking or re-launching a fresh
@@ -945,11 +978,11 @@ export function TacticalCombatUI({
       };
       // buildTacticalSummary already maps to classic outcome values ("victory"|"defeat"|"flee").
       const t = setTimeout(() => {
-        onCombatEnd(summary.outcome, summary);
+        void handoffCombatEnd(summary);
       }, 1400);
       timersRef.current.push(t);
     },
-    [activeSessionQuery.isFetched, objectives, onCombatEnd, sessionId],
+    [activeSessionQuery.isFetched, aftermathFailed, aftermathPending, handoffCombatEnd, objectives, sessionId],
   );
 
   // ── Restored-terminal-mount handoff ──
@@ -1066,12 +1099,13 @@ export function TacticalCombatUI({
     actionMenuY.set(0);
     endedRef.current = false;
     terminalSummaryRef.current = null;
-    setSessionId(null);
+    setAftermathPending(false);
+    setAftermathFailed(false);
     setRevision(0);
     setObjectives(resetObjectives);
     setState(null);
-    launchBattle(undefined, resetObjectives);
-  }, [clearTimers, resetSelection, initialObjectives, launchBattle, actionMenuX, actionMenuY]);
+    launchBattle(undefined, resetObjectives, sessionId ?? undefined);
+  }, [clearTimers, resetSelection, initialObjectives, launchBattle, actionMenuX, actionMenuY, sessionId]);
 
   // ── Send one action to the server ──
   const sendAction = useCallback(
@@ -1617,8 +1651,15 @@ export function TacticalCombatUI({
           onClick={() => {
             // Clear any stale snapshot (e.g. the old terminal state after a failed
             // restart) so the next battle can't restore — and auto-hand-off — it.
-            onCombatEnd("flee", { outcome: "flee", rounds: 0, party: [], enemies: [] });
+            void handoffCombatEnd({
+              outcome: "flee",
+              rounds: 0,
+              party: [],
+              enemies: [],
+              ...(sessionId ? { sessionId } : {}),
+            });
           }}
+          disabled={aftermathPending}
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
         >
           {localizeUi("ui.game.tacticalcombatui.retreatToStory")}
@@ -2422,6 +2463,7 @@ export function TacticalCombatUI({
               <button
                 type="button"
                 onClick={restartBattle}
+                disabled={aftermathPending}
                 className="rounded-lg border border-[var(--primary)]/40 bg-[var(--primary)]/20 px-4 py-2 text-sm font-bold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/30"
               >
                 {localizeUi("ui.game.tacticalcombatui.retryBattle")}
@@ -2435,13 +2477,31 @@ export function TacticalCombatUI({
                     objectives,
                     inventory: (liveState.inventory ?? []).map((item) => ({ ...item })),
                   };
-                  onCombatEnd(summary.outcome, summary);
+                  void handoffCombatEnd(summary);
                 }}
+                disabled={aftermathPending}
                 className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10"
               >
                 {localizeUi("ui.noodle.wizardfooter.continue")}
               </button>
             </div>
+          ) : aftermathFailed ? (
+            <button
+              type="button"
+              onClick={() => {
+                const summary = terminalSummaryRef.current ?? {
+                  ...buildTacticalSummary(liveState),
+                  ...(sessionId ? { sessionId } : {}),
+                  objectives,
+                  inventory: (liveState.inventory ?? []).map((item) => ({ ...item })),
+                };
+                void handoffCombatEnd(summary);
+              }}
+              disabled={aftermathPending}
+              className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
+            >
+              {localizeUi("ui.noodle.wizardfooter.continue")}
+            </button>
           ) : (
             <p className="text-sm text-white/60">{localizeUi("ui.game.tacticalcombatui.returningToTheStory")}</p>
           )}

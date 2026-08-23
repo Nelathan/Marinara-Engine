@@ -731,10 +731,10 @@ export function resolveCombatRound(
             playerAction.itemEffect?.target === "self"
               ? [attacker]
               : playerAction.itemEffect?.target === "enemy"
-              ? opposingSide
-              : playerAction.itemEffect?.target === "any"
-                ? [...allies, ...opposingSide]
-                : allies;
+                ? opposingSide
+                : playerAction.itemEffect?.target === "any"
+                  ? [...allies, ...opposingSide]
+                  : allies;
           const target = playerAction.targetId ? itemTargetPool.find((c) => c.id === playerAction.targetId) : undefined;
           if (!target) throw new CombatResolutionError("Invalid item target.");
           const result = resolveItemAction(

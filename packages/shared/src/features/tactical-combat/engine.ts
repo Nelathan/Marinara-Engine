@@ -395,6 +395,7 @@ interface HitOptions {
   isCounter?: boolean;
   statusEffect?: string;
   cooldownForStatus?: number;
+  defenderPosition?: TacticalCoord;
 }
 
 interface HitOutcome {
@@ -427,7 +428,8 @@ function resolveHit(
   const label = opts.skillName ? `${attacker.name}'s ${opts.skillName}` : `${attacker.name}`;
   const verb = opts.isCounter ? "counters" : opts.skillName ? "strikes" : "attacks";
 
-  const hc = Math.max(0, hitChance(state.grid, attacker, defender) - (opts.hitPenalty ?? 0));
+  const defenderForMath = opts.defenderPosition ? { ...defender, ...opts.defenderPosition } : defender;
+  const hc = Math.max(0, hitChance(state.grid, attacker, defenderForMath) - (opts.hitPenalty ?? 0));
   if (rng() * 100 >= hc) {
     events.push({
       kind: "miss",
@@ -440,14 +442,14 @@ function resolveHit(
     return { hit: false, crit: false, damage: 0, defeated: false };
   }
 
-  const cc = critChance(attacker, defender);
+  const cc = critChance(attacker, defenderForMath);
   const crit = rng() * 100 < cc;
   const roll = 0.9 + rng() * 0.2;
   const element = opts.element ?? attacker.element;
   const damage = computeDamage({
     grid: state.grid,
     attacker,
-    defender,
+    defender: defenderForMath,
     roll,
     crit,
     difficulty: state.difficulty,
@@ -553,7 +555,7 @@ function resolveMovementReactions(
       distance <= opponent.attackRange.max &&
       hasLineOfSight(state.grid, opponent, destination)
     ) {
-      resolveHit(state, opponent, mover, { isCounter: true, hitPenalty: 5 }, events);
+      resolveHit(state, opponent, mover, { isCounter: true, hitPenalty: 5, defenderPosition: destination }, events);
       opponent.statusEffects = opponent.statusEffects.filter((effect) => effect !== overwatch);
     }
   }
@@ -698,9 +700,9 @@ function resolveManeuver(
   } else if (scale > 0 && foe && /stun|freeze|bind|trip|root|immobil/.test(lower)) {
     const status: CombatStatusEffect = {
       name: success ? "Stunned" : "Hindered",
-      modifier: -999,
+      modifier: success ? -999 : -foe.speed / 2,
       stat: "speed",
-      turnsLeft: success ? 1 : 1,
+      turnsLeft: 1,
     };
     applyStatus(foe, status);
     events.push({

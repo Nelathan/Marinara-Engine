@@ -186,7 +186,10 @@ function normalizeStat(value: unknown): StatusStat | undefined {
 
 function normalizeEffectType(value: unknown): EffectType | undefined {
   if (typeof value !== "string") return undefined;
-  const key = value.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  const key = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
   if ((EFFECT_TYPES as readonly string[]).includes(key)) return key as EffectType;
   return EFFECT_TYPE_SYNONYMS[key];
 }
@@ -320,7 +323,8 @@ export function normalizeManeuverProposal(
     if (amount !== undefined) effect.amount = Math.round(amount);
 
     if (type === "status") {
-      const statusName = firstString(source, ["statusName", "name", "label"]) ?? (coverAsStatus ? "Shielded" : undefined);
+      const statusName =
+        firstString(source, ["statusName", "name", "label"]) ?? (coverAsStatus ? "Shielded" : undefined);
       effect.status = buildManeuverStatus(asRecord(source.status), statusName, (target ?? actor)?.side !== "enemy");
     }
     if (type === "terrain") {
@@ -349,7 +353,8 @@ export function normalizeManeuverProposal(
   });
 
   if (effects.length === 0) {
-    report.fatal = rawEffects.length > 0 ? "no proposed effect survived normalization" : "proposal contained no effects";
+    report.fatal =
+      rawEffects.length > 0 ? "no proposed effect survived normalization" : "proposal contained no effects";
     return { proposal: null, report };
   }
 
