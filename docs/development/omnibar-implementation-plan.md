@@ -9,36 +9,47 @@ gets its own commit. Later slices depend on earlier ones only where stated.
 
 ## Status
 
-Updated 2026-08-23, after the first implementation run on
-`feat/omnibar-professor-mari`. Every commit below passed `pnpm check` (exit 0).
+Updated 2026-08-23, second implementation run on `feat/omnibar-professor-mari`,
+merged with `origin/staging`. Every commit passed `pnpm check` (exit 0).
 
 | Slice | State |
 | --- | --- |
 | A — persona split (R17) | **Done.** |
-| B — state survives close (R6) | **Done.** `mariTaskFinished` was already gone; only the subscription lifetime remained. |
-| C — indicator in, floating window out | **Done**, in two commits. The `floatingMode` internals remain (see below). |
-| D — takeover surface | **Partly done.** Extractions, R35 and R36 landed. R34, R37 open; R38 and R39 were already satisfied. |
-| E — pane collapse | Not started. |
-| F — the aside | Not started. |
+| B — state survives close (R6) | **Done.** |
+| C — indicator in, floating window out | **Done**, including the dead `floatingMode` branch. |
+| D — takeover surface | **Partly done.** Extractions, R35, R36 landed. R34 and R37 open; R38, R39 already satisfied. |
+| E — pane collapse | **2 of 3.** E1 choice expansion, E2 Quick pane removed. E3 open. |
+| F — the aside | **Done.** |
 | G — touch and composer transition | Not started. |
 | H — Home's professor tab | Not started. |
 
+### E3, the remaining piece
+
+Replace the narrow-screen `detail` pane with inline preview expansion, collapse
+`pane` into `takeover`, and reduce Escape to one level.
+
+On wide screens the preview already renders beside the list without entering the
+pane, so this is a narrow-screen change. The blocker is that the preview has to
+render *inside* the focused row, and `CommandCenterResultRow` has no slot for
+expanded content — so E3 starts by adding one to a shared row component, and
+that wants a careful pass rather than a tired one.
+
 ### Carried forward
 
-- **`floatingMode` internals in `HomeProfessorMariChat`.** The entry points are
-  deleted and nothing reaches the branch, but ~50 references remain: drag
-  positioning, viewport gaps, and a mobile render branch. Several conditions read
-  `floatingMode || omnibarMode`, so stripping them is a careful pass rather than a
-  mechanical deletion.
-- **R34 — one sprite in the header, no per-message avatars.** Not attempted. It is
-  a visible change to every message row and wants a human eye.
+- **R34 — one sprite, no per-message avatars.** Not attempted; it changes every
+  message row.
 - **R37 — a prose rewrite is not a code diff.** Deliberately not applied to
-  `MariEditEasyViewer`. That component renders `MariDbRowChange` — database rows,
-  where added-green and removed-red are correct. R37 is about the *field card* for
-  a prose rewrite, which is part of R21 and does not exist yet. Applying it here
-  would be a misreading of the rule.
-- **R38 and R39 need no work.** Starter chips already render in the empty state,
-  and the easy viewer's before/after blocks already cap at `max-h-40` with scroll.
+  `MariEditEasyViewer`, which renders database rows where added-green and
+  removed-red are correct. Decided: a **new neutral card for character, persona
+  and lorebook prose fields**, with per-field accept and reject. That is R21, and
+  it does not exist yet.
+- **Choice rows already had a pointer picker.** `CommandCenterResultRow` renders
+  an inline segmented control. E1 added the keyboard path and removed the
+  detail-pane dependency; it did not introduce the inline picker.
+- **The searchable half of R40 is not built.** Typing "gpt" does not yet surface
+  *Use GPT-4 for this chat* as a row. That needs option rows to enter the ranked
+  set inside `buildOmnibarResults`, before scoring.
+- **No draft PR**, by decision.
 
 ## Ground rules for every slice
 
