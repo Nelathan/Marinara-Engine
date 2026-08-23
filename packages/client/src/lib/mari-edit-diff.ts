@@ -14,6 +14,42 @@ export interface FieldChange {
   kind: "added" | "removed" | "changed";
 }
 
+/**
+ * Fields whose value is prose a person wrote, rather than structure.
+ *
+ * A rewrite of a character's description is not an error being corrected, so it
+ * must not be painted red and green - that reads as wrong-and-right. Structural
+ * changes (keys, flags, ids, counts) keep true diff colouring, because there the
+ * red really does mean "this is gone".
+ *
+ * ponytail: a name list, so an unusual custom field falls back to diff colours.
+ * Widen it when a real field is missing, not preemptively.
+ */
+const PROSE_FIELD_NAMES = new Set([
+  "abouttme",
+  "aboutme",
+  "appearance",
+  "backstory",
+  "content",
+  "creatornotes",
+  "depthprompt",
+  "description",
+  "firstmes",
+  "greeting",
+  "mesexample",
+  "personality",
+  "posthistoryinstructions",
+  "scenario",
+  "summary",
+  "systemprompt",
+]);
+
+/** True when a changed field holds prose rather than structure. See PROSE_FIELD_NAMES. */
+export function isProseField(path: string): boolean {
+  const leaf = path.split(".").at(-1) ?? path;
+  return PROSE_FIELD_NAMES.has(leaf.replace(/[_\-\s]/g, "").toLowerCase());
+}
+
 export type LorebookVectorStatus = "excluded" | "vectorized" | "notVectorized";
 
 /** Resolve the vector state shown in Professor Mari's lorebook-entry review. */

@@ -1,16 +1,17 @@
 // #4919 Easy Viewer: a human-readable rendering of Professor Mari's edits for the Keep/Restore
 // review card. Instead of the raw `app_data … {JSON}` command, it shows each affected row as a
-// before/after diff (removed text red, added text green), with a lorebook-entry layout that
+// before/after view, with a lorebook-entry layout that
 // resembles the editor users know. All data comes from approval.diffPreview (full before/after row
 // snapshots) — no server call. Per-row Dismiss hides a reviewed change to reduce clutter; the
 // card's Keep/Restore still governs the whole batch.
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation as useUiTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import {
   computeFieldChanges,
   resolveLorebookVectorStatus,
+  isProseField,
   type FieldChange,
   type LorebookVectorStatus,
 } from "../../lib/mari-edit-diff";
@@ -79,13 +80,48 @@ function EmptyValue() {
 
 // A single changed field: unified inline diff when both sides exist, otherwise a single
 // green (added) or red (removed) block.
+//
+// R37: a prose rewrite is not a code diff. Red and green on a character
+// description reads as wrong-and-right, when it is just a rewrite - so prose
+// fields show a neutral before and after, with the true diff behind a toggle.
+function ProseChangeView({ change }: { change: FieldChange }) {
+  const { t: localizeUi } = useUiTranslation();
+  const [showDiff, setShowDiff] = useState(false);
+  if (showDiff) {
+    return (
+      <p className="max-h-40 overflow-auto rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
+        <InlineTextDiff before={change.before} after={change.after} />
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--background)]/40 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--muted-foreground)]">
+        {change.before || <EmptyValue />}
+      </p>
+      <p className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
+        {change.after || <EmptyValue />}
+      </p>
+      <button
+        type="button"
+        onClick={() => setShowDiff(true)}
+        className="mt-0.5 text-[0.625rem] text-[var(--muted-foreground)] underline-offset-2 hover:underline"
+      >
+        {localizeUi("ui.chat.mariediteasyviewer.showExactChanges")}
+      </button>
+    </>
+  );
+}
+
 function FieldChangeView({ change }: { change: FieldChange }) {
   return (
     <div className="min-w-0">
       <div className="mb-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
         {change.label}
       </div>
-      {change.kind === "changed" ? (
+      {change.kind === "changed" && isProseField(change.path) ? (
+        <ProseChangeView change={change} />
+      ) : change.kind === "changed" ? (
         <p className="max-h-40 overflow-auto rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
           <InlineTextDiff before={change.before} after={change.after} />
         </p>

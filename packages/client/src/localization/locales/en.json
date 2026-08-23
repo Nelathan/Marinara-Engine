@@ -4222,6 +4222,7 @@
   "ui.chat.mariediteasyviewer.reject": "Reject",
   "ui.chat.mariediteasyviewer.rejectHint": "Revert just this entry. The rest of the change stays applied.",
   "ui.chat.mariediteasyviewer.secondaryKeys": "Secondary keys",
+  "ui.chat.mariediteasyviewer.showExactChanges": "Show exact changes",
   "ui.chat.mariediteasyviewer.toggleCaseSensitive": "Case sensitive",
   "ui.chat.mariediteasyviewer.toggleConstant": "Constant",
   "ui.chat.mariediteasyviewer.toggleEnabled": "Enabled",
