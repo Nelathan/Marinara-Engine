@@ -1,8 +1,6 @@
 import {
   type ChangeEvent,
   type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   lazy,
   memo,
@@ -133,12 +131,6 @@ import { cn } from "../../lib/utils";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { ProfessorMariWorkingWindow } from "../ui/ProfessorMariWorkingWindow";
 import { MacroTextarea } from "../ui/MacroTextarea";
-import {
-  PROFESSOR_MARI_FLOATING_HIDE_EVENT,
-  PROFESSOR_MARI_FLOATING_SHOW_EVENT,
-  dispatchProfessorMariFloatingEvent,
-  rememberProfessorMariFloatingEnabled,
-} from "./professor-mari-floating-events";
 import { MariSuggestionChips } from "./MariSuggestionChips";
 import { useTranslation, useTranslation as useUiTranslation } from "react-i18next";
 import {
@@ -233,8 +225,6 @@ const PROFESSOR_MARI_TEXT_ATTACHMENT_EXTENSIONS = new Set([
 ]);
 const PROFESSOR_MARI_PDF_ATTACHMENT_MIME_TYPE = "application/pdf";
 const PROFESSOR_MARI_PANE_TRANSITION = { duration: 0.24, ease: [0.16, 1, 0.3, 1] } as const;
-const PROFESSOR_MARI_FLOATING_EDGE_GAP = 12;
-const PROFESSOR_MARI_FLOATING_MOBILE_TOP_GAP = 64;
 
 type WorkspaceSkillMutationResponse = {
   ok: boolean;
@@ -251,16 +241,6 @@ type ProfessorMariConnectionOption = {
 
 type ProfessorMariChatSummary = Chat & {
   messageCount?: number;
-};
-
-type FloatingDragState = {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  offsetX: number;
-  offsetY: number;
-  width: number;
-  height: number;
 };
 
 function readStoredConnectionId() {
@@ -2180,7 +2160,6 @@ type HomeProfessorMariChatProps = {
   chatWindowOpen?: boolean;
   embeddedTab?: boolean;
   omnibarMode?: boolean;
-  floatingMode?: boolean;
   launchHidden?: boolean;
   initialAskContext?: ProfessorMariAskContext | null;
   /** A past Mari conversation to open, handed in from the omnibar. */
@@ -2188,7 +2167,6 @@ type HomeProfessorMariChatProps = {
   pendingReviewRequest?: number;
   onChatWindowOpenChange?: (open: boolean) => void;
   onChatWindowExitComplete?: () => void;
-  onFloatingDismiss?: () => void;
   onVisualStateChange?: (state: ProfessorMariVisualState, hasConversation: boolean) => void;
 };
 
@@ -2198,14 +2176,12 @@ export function HomeProfessorMariChat({
   chatWindowOpen: controlledChatWindowOpen,
   embeddedTab = false,
   omnibarMode = false,
-  floatingMode = false,
   launchHidden = false,
   initialAskContext = null,
   openChatId = null,
   pendingReviewRequest = 0,
   onChatWindowOpenChange,
   onChatWindowExitComplete,
-  onFloatingDismiss,
   onVisualStateChange,
 }: HomeProfessorMariChatProps) {
   const { t: localizeUi } = useUiTranslation();
@@ -2318,12 +2294,8 @@ export function HomeProfessorMariChat({
   const [historyPickerOpen, setHistoryPickerOpen] = useState(false);
   const [contextViewerOpen, setContextViewerOpen] = useState(false);
   const [selectedContextId, setSelectedContextId] = useState<string | null>(null);
-  const [internalChatWindowOpen, setInternalChatWindowOpen] = useState(
-    () => floatingMode && isProfessorMariDesktopViewport(),
-  );
+  const [internalChatWindowOpen, setInternalChatWindowOpen] = useState(false);
   const [mobileFocusMode, setMobileFocusMode] = useState(false);
-  const [floatingSmallViewport, setFloatingSmallViewport] = useState(() => !isProfessorMariDesktopViewport());
-  const [floatingPosition, setFloatingPosition] = useState<{ x: number; y: number } | null>(null);
   const hasLoadedRef = useRef(false);
   const notifiedApprovalIdsRef = useRef<Set<string>>(new Set());
   const activeChatIdRef = useRef<string | null>(null);
@@ -2333,11 +2305,6 @@ export function HomeProfessorMariChat({
   const transcriptScrollFrameRef = useRef<number | null>(null);
   const suggestionFocusFrameRef = useRef<number | null>(null);
   const transcriptFollowOutputRef = useRef(true);
-  const floatingSurfaceRef = useRef<HTMLDivElement>(null);
-  const floatingButtonRef = useRef<HTMLDivElement>(null);
-  const floatingDragRef = useRef<FloatingDragState | null>(null);
-  const floatingDragMovedRef = useRef(false);
-  const floatingFollowupEligibleRef = useRef(false);
   const connectionButtonRef = useRef<HTMLButtonElement>(null);
   const connectionMenuRef = useRef<HTMLDivElement>(null);
   const skillFileInputRef = useRef<HTMLInputElement>(null);
@@ -2541,14 +2508,13 @@ export function HomeProfessorMariChat({
         setRecovery(null);
       }
       setChatWindowOpen(true);
-      if (floatingMode && floatingSmallViewport) setMobileFocusMode(true);
       focusComposer();
     },
-    [floatingMode, floatingSmallViewport, focusComposer, setChatWindowOpen, setDraft],
+    [focusComposer, setChatWindowOpen, setDraft],
   );
 
   useEffect(() => {
-    const destination = floatingMode ? "floating-assistant" : omnibarMode ? "omnibar" : "home";
+    const destination = omnibarMode ? "omnibar" : "home";
     const pending = consumeProfessorMariOpenRequest(destination);
     if (pending) applyHandoff(pending);
     const handleOpen = (event: Event) => {
@@ -2558,7 +2524,7 @@ export function HomeProfessorMariChat({
     };
     window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
     return () => window.removeEventListener(PROFESSOR_MARI_OPEN_EVENT, handleOpen);
-  }, [applyHandoff, floatingMode, omnibarMode]);
+  }, [applyHandoff, omnibarMode]);
 
   // Direct prop channel (e.g. the omnibar Mari pane) — avoids the global open
   // event so a co-mounted Home instance never steals the handoff context.
@@ -2571,37 +2537,6 @@ export function HomeProfessorMariChat({
     clearMariChips();
     clearMariPlan();
   }, [clearMariChips, clearMariPlan, professorMariSuggestionsEnabled]);
-
-  useEffect(() => {
-    if (!floatingMode) return;
-    const mediaQuery = window.matchMedia("(max-width: 639px)");
-    const syncFloatingViewport = () => {
-      setFloatingSmallViewport(mediaQuery.matches);
-      setChatWindowOpen(!mediaQuery.matches);
-      if (!mediaQuery.matches) setMobileFocusMode(false);
-    };
-    syncFloatingViewport();
-    mediaQuery.addEventListener("change", syncFloatingViewport);
-    return () => mediaQuery.removeEventListener("change", syncFloatingViewport);
-  }, [floatingMode, setChatWindowOpen]);
-
-  useLayoutEffect(() => {
-    if (floatingMode) return;
-    rememberProfessorMariFloatingEnabled(false);
-    dispatchProfessorMariFloatingEvent(PROFESSOR_MARI_FLOATING_HIDE_EVENT);
-    return () => {
-      if (floatingFollowupEligibleRef.current) {
-        rememberProfessorMariFloatingEnabled(true);
-        dispatchProfessorMariFloatingEvent(PROFESSOR_MARI_FLOATING_SHOW_EVENT);
-      }
-    };
-  }, [floatingMode]);
-
-  useLayoutEffect(() => {
-    if (floatingMode || controlledChatWindowOpen === undefined) return;
-    floatingFollowupEligibleRef.current = controlledChatWindowOpen;
-    rememberProfessorMariFloatingEnabled(controlledChatWindowOpen);
-  }, [controlledChatWindowOpen, floatingMode]);
 
   const loadMessages = useCallback(
     async (
@@ -3088,22 +3023,14 @@ export function HomeProfessorMariChat({
   };
 
   const closeChatWindow = useCallback(() => {
-    if (!floatingMode && !omnibarMode) {
-      floatingFollowupEligibleRef.current = false;
-      rememberProfessorMariFloatingEnabled(false);
-    }
     setConnectionMenuOpen(false);
     setWorkspaceDestination("chat");
     setMobileFocusMode(false);
     setChatWindowOpen(false);
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  }, [floatingMode, omnibarMode, setChatWindowOpen]);
+  }, [omnibarMode, setChatWindowOpen]);
 
   const openChatWindow = useCallback(() => {
-    if (!floatingMode) {
-      floatingFollowupEligibleRef.current = true;
-      rememberProfessorMariFloatingEnabled(true);
-    }
     setWorkspaceDestination("chat");
     setConnectionMenuOpen(false);
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -3112,7 +3039,7 @@ export function HomeProfessorMariChat({
       return;
     }
     setChatWindowOpen(true);
-  }, [floatingMode, setChatWindowOpen]);
+  }, [setChatWindowOpen]);
 
   const toggleSkillsMenu = useCallback(() => {
     const next = !skillsMenuOpen;
@@ -3150,88 +3077,9 @@ export function HomeProfessorMariChat({
     return () => window.removeEventListener("marinara:home-professor-mari-close", closeChatWindow);
   }, [closeChatWindow]);
 
-  const clampFloatingPosition = useCallback(
-    (x: number, y: number, width: number, height: number) => {
-      if (typeof window === "undefined") return { x, y };
-      const minX = PROFESSOR_MARI_FLOATING_EDGE_GAP;
-      const minY = floatingSmallViewport ? PROFESSOR_MARI_FLOATING_MOBILE_TOP_GAP : PROFESSOR_MARI_FLOATING_EDGE_GAP;
-      const maxX = Math.max(minX, window.innerWidth - width - PROFESSOR_MARI_FLOATING_EDGE_GAP);
-      const maxY = Math.max(minY, window.innerHeight - height - PROFESSOR_MARI_FLOATING_EDGE_GAP);
-      return {
-        x: Math.min(Math.max(x, minX), maxX),
-        y: Math.min(Math.max(y, minY), maxY),
-      };
-    },
-    [floatingSmallViewport],
-  );
-
-  const beginFloatingDrag = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => {
-      if (event.button !== 0) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("[data-professor-mari-floating-action]")) return;
-      const surface = floatingSurfaceRef.current ?? floatingButtonRef.current ?? event.currentTarget;
-      const rect = surface.getBoundingClientRect();
-      floatingDragRef.current = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        offsetX: event.clientX - rect.left,
-        offsetY: event.clientY - rect.top,
-        width: rect.width,
-        height: rect.height,
-      };
-      floatingDragMovedRef.current = false;
-      setFloatingPosition(clampFloatingPosition(rect.left, rect.top, rect.width, rect.height));
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    [clampFloatingPosition],
-  );
-
-  const moveFloatingDrag = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => {
-      const drag = floatingDragRef.current;
-      if (!drag || drag.pointerId !== event.pointerId) return;
-      if (Math.abs(event.clientX - drag.startX) > 4 || Math.abs(event.clientY - drag.startY) > 4) {
-        floatingDragMovedRef.current = true;
-      }
-      setFloatingPosition(
-        clampFloatingPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY, drag.width, drag.height),
-      );
-    },
-    [clampFloatingPosition],
-  );
-
-  const endFloatingDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    const drag = floatingDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    floatingDragRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  }, []);
-
   // The omnibar can hand us a past conversation to open. The effect lives after
   // handleSelectProfessorChat so it can call it directly.
   const requestedChatIdRef = useRef<string | null>(null);
-
-  const floatingPositionStyle = useMemo<CSSProperties | undefined>(() => {
-    if (!floatingPosition) return undefined;
-    return { left: floatingPosition.x, top: floatingPosition.y };
-  }, [floatingPosition]);
-
-  const handleFloatingButtonClick = useCallback(
-    (event: ReactMouseEvent<HTMLButtonElement>) => {
-      if (floatingDragMovedRef.current) {
-        floatingDragMovedRef.current = false;
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-      openChatWindow();
-    },
-    [openChatWindow],
-  );
 
   const handleRestart = useCallback(async () => {
     const params = new URLSearchParams();
@@ -4445,9 +4293,9 @@ export function HomeProfessorMariChat({
         resource: result.resource.kind,
         id: result.resource.id,
       });
-      if (floatingMode || omnibarMode) closeChatWindow();
+      if (omnibarMode) closeChatWindow();
     },
-    [closeChatWindow, floatingMode, invalidateActionResult, localizeUi, omnibarMode],
+    [closeChatWindow, invalidateActionResult, localizeUi, omnibarMode],
   );
 
   const reviewActionResult = useCallback(
@@ -4507,320 +4355,6 @@ export function HomeProfessorMariChat({
       />
     </>
   ) : null;
-
-  const renderFloatingChatBody = () => (
-    <>
-      {attachModals}
-      <div
-        ref={setTranscriptScrollNode}
-        onScroll={handleTranscriptScroll}
-        data-component="HomeProfessorMariChat.Transcript"
-        className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-3.5 py-3.5 pb-5 text-left"
-      >
-        {loadingHistory ? (
-          <LoadingHistoryState />
-        ) : (
-          <>
-            {displayMessages.map(renderDisplayMessage)}
-            {showConnectionFirstHint && (
-              <p className="px-3 py-1 text-center text-xs text-[var(--muted-foreground)]">
-                {localizeUi("ui.chat.homeprofessormarichat.selectAConnectionFirst")}
-              </p>
-            )}
-            {workspaceTimelineActive ? (
-              <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
-            ) : null}
-            {workspaceTimeline.length === 0 && workspaceTimelineActive && !showDottoreSupport && (
-              <WorkspaceStatusEvent content={workspaceActivity ?? "Thinking..."} />
-            )}
-            {showDottoreSupport && (
-              <TranscriptRow marker={<MariAvatar active />}>
-                <ProfessorMariWorkingWindow visible className="max-w-[18rem]" />
-              </TranscriptRow>
-            )}
-            <WorkspaceTimelineList items={workspaceTimeline} active={workspaceTimelineActive} openReasoning />
-            {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-          </>
-        )}
-      </div>
-
-      <form
-        className="border-t border-[var(--border)]/60 px-2.5 py-2.5"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit();
-        }}
-      >
-        {pendingChangeDock}
-        {trustStrip}
-        {showTokenUsage && contextBudget && <ProfessorMariContextBudgetIndicator budget={contextBudget} />}
-        {recoveryNotice}
-        <input
-          ref={attachmentInputRef}
-          type="file"
-          accept={PROFESSOR_MARI_ATTACHMENT_ACCEPT}
-          multiple
-          className="hidden"
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            void handleAttachmentUpload(event.target.files);
-            event.target.value = "";
-          }}
-        />
-        <ProfessorMariAttachmentPreviews
-          attachments={attachments}
-          isReading={isReadingAttachments}
-          onRemove={(index) => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-        />
-        {chipRowHint && (
-          <p className="mb-1 flex items-center gap-1.5 px-0.5 text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
-            <Sparkles size="0.75rem" className="shrink-0 text-[var(--primary)]" />
-            <span>{chipRowHint}</span>
-          </p>
-        )}
-        {showSuggestionLoading && (
-          <div className="mb-1 flex items-center gap-1.5 px-0.5 text-xs text-[var(--muted-foreground)]">
-            <Sparkles size="0.75rem" className="shrink-0 animate-pulse text-[var(--primary)]" />
-            {localizeUi("ui.chat.homeprofessormarichat.thinkingUpSuggestions")}
-          </div>
-        )}
-        <MariSuggestionChips chips={chipRowChips} onSelect={handleSuggestionSelect} disabled={isBusy} />
-        <div className="mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50">
-          <MariAttachButton
-            onAttachFiles={() => attachmentInputRef.current?.click()}
-            onAddChatHistory={() => void handleOpenHistoryPicker()}
-            onViewContext={() => void handleOpenContextViewer()}
-            attachedFileCount={attachments.length}
-            attachedContextCount={attachedContext?.length ?? 0}
-            disabled={isBusy || isReadingAttachments}
-            isReading={isReadingAttachments}
-          />
-
-          <button
-            ref={connectionButtonRef}
-            type="button"
-            onClick={() => setConnectionMenuOpen((current) => !current)}
-            className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all",
-              connectionMenuOpen
-                ? "bg-foreground/10 text-foreground/75"
-                : "text-foreground/40 hover:bg-foreground/10 hover:text-foreground/70",
-            )}
-            title={
-              effectiveConnection?.name
-                ? localizeUi("ui.chat.homeprofessormarichat.connectionValue1", { value1: effectiveConnection.name })
-                : localizeUi("ui.chat.homeprofessormarichat.selectConnection")
-            }
-          >
-            <Link size="1rem" />
-          </button>
-
-          {connectionMenuOpen && (
-            <div
-              ref={connectionMenuRef}
-              className="absolute bottom-full left-12 z-20 mb-2 flex max-h-72 min-w-[15rem] max-w-[20rem] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] text-left shadow-2xl"
-            >
-              <div className="border-b border-[var(--border)] px-3 py-2 text-[0.6875rem] font-semibold text-[var(--foreground)]">
-                {localizeUi("navigation.topbar.connections")}
-              </div>
-              <div className="overflow-y-auto p-1">
-                {connectionOptions.length > 0 ? (
-                  connectionOptions.map((connection) => {
-                    const isActive = effectiveConnectionId === connection.id;
-                    return (
-                      <button
-                        key={connection.id}
-                        type="button"
-                        onClick={() => handleConnectionChange(connection.id)}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--accent)]",
-                          isActive && "font-semibold text-[var(--foreground)]",
-                        )}
-                      >
-                        <span className="min-w-0 flex-1 truncate">
-                          {connection.name || connection.id}
-                          {connection.id === LOCAL_SIDECAR_CONNECTION_ID && (
-                            <span className="ml-1 text-[0.625rem] font-normal text-[var(--muted-foreground)]">
-                              {sidecarNativeToolCalls
-                                ? localizeUi("ui.chat.homeprofessormarichat.nativeTools")
-                                : localizeUi("ui.chat.homeprofessormarichat.toolsOff")}
-                            </span>
-                          )}
-                        </span>
-                        {isActive && <Check size="0.75rem" className="shrink-0 text-[var(--primary)]" />}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConnectionMenuOpen(false);
-                      useUIStore.getState().openRightPanel("connections");
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-                  >
-                    <Link size="0.875rem" />
-                    {localizeUi("ui.chat.homeprofessormarichat.addAConnection")}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="relative flex min-w-0 flex-1">
-            <InlineGhostText
-              value={draft}
-              suffix={draftSuffix}
-              multiline
-              className="px-1 py-1.5 text-sm leading-normal"
-            />
-            <textarea
-              ref={embeddedTextareaRef}
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                if (mobileFocusMode) event.currentTarget.scrollIntoView({ block: "end" });
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Tab" && !event.shiftKey && draftSuffix) {
-                  event.preventDefault();
-                  acceptDraftCompletion();
-                  return;
-                }
-                const shouldSend =
-                  event.key === "Enter" && !event.shiftKey && (enterToSend || event.metaKey || event.ctrlKey);
-                if (shouldSend) {
-                  event.preventDefault();
-                  void handleSubmit();
-                }
-              }}
-              rows={1}
-              placeholder={t("home.professorMari.placeholder")}
-              className="mari-chat-input-textarea min-h-8 max-h-32 w-full resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-sm leading-normal text-foreground/90 outline-hidden placeholder:text-foreground/30 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={isBusy}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!canSubmitMessage || isBusy}
-            className={cn(
-              "mari-chat-send-btn inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white transition-all duration-200",
-              canSubmitMessage && !isBusy ? "hover:text-white active:scale-90" : "cursor-not-allowed opacity-40",
-            )}
-            aria-label={t("home.professorMari.send")}
-            title={t("home.professorMari.send")}
-          >
-            <Send size="0.9375rem" className={cn(canSubmitMessage && "translate-x-[1px]")} />
-          </button>
-        </div>
-      </form>
-    </>
-  );
-
-  if (floatingMode) {
-    if (!chatWindowOpen) {
-      if (!floatingSmallViewport) return null;
-      return (
-        <div
-          ref={floatingButtonRef}
-          className={cn(
-            "mari-chrome-token-scope fixed z-[95] touch-none sm:hidden",
-            floatingPosition ? "" : "bottom-4 left-4",
-          )}
-          style={floatingPositionStyle}
-          onPointerDown={beginFloatingDrag}
-          onPointerMove={moveFloatingDrag}
-          onPointerUp={endFloatingDrag}
-          onPointerCancel={endFloatingDrag}
-        >
-          <button
-            type="button"
-            onClick={handleFloatingButtonClick}
-            className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[var(--primary)]/40 bg-[var(--background)] shadow-lg shadow-black/35 ring-1 ring-black/20"
-            aria-label={t("home.professorMari.open")}
-          >
-            <img
-              src={MARI_AVATAR_URL}
-              alt=""
-              className="h-full w-full object-cover"
-              draggable={false}
-              aria-hidden="true"
-            />
-          </button>
-          <button
-            data-professor-mari-floating-action
-            type="button"
-            onClick={onFloatingDismiss}
-            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-lg"
-            aria-label={t("home.professorMari.dismiss")}
-            title={t("home.professorMari.dismiss")}
-          >
-            <X size="0.65rem" />
-          </button>
-        </div>
-      );
-    }
-
-    if (floatingSmallViewport) {
-      return (
-        <motion.div
-          key="professor-mari-floating-mobile"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={PROFESSOR_MARI_PANE_TRANSITION}
-          className="mari-chrome-token-scope fixed inset-x-0 top-[calc(3rem_+_env(safe-area-inset-top))] z-[95] flex h-[calc(100vh_-_3rem_-_env(safe-area-inset-top))] max-h-[calc(100vh_-_3rem_-_env(safe-area-inset-top))] flex-col bg-[var(--background)] supports-[height:100dvh]:h-[calc(100dvh_-_3rem_-_env(safe-area-inset-top))] supports-[height:100dvh]:max-h-[calc(100dvh_-_3rem_-_env(safe-area-inset-top))] sm:hidden"
-        >
-          <div className="flex h-12 shrink-0 items-center justify-end border-b border-[var(--border)]/60 bg-[var(--card)]/80 px-2">
-            <button
-              type="button"
-              onClick={closeChatWindow}
-              className="mari-chrome-control mari-chrome-control--small mari-accent-animated inline-flex h-8 w-8 items-center justify-center rounded-md p-0"
-              aria-label={t("home.professorMari.close")}
-              title={t("home.professorMari.close")}
-            >
-              <X size="0.9rem" />
-            </button>
-          </div>
-          {renderFloatingChatBody()}
-        </motion.div>
-      );
-    }
-
-    return (
-      <div
-        ref={floatingSurfaceRef}
-        className={cn(
-          "mari-chrome-token-scope fixed z-[95] flex h-[min(32rem,calc(100vh-5rem))] w-[min(25rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-[var(--marinara-chat-chrome-accent)] bg-[var(--background)] shadow-2xl shadow-black/40 ring-1 ring-black/15",
-          floatingPosition ? "" : "bottom-3 left-3",
-        )}
-        style={floatingPositionStyle}
-      >
-        <div
-          className="flex h-9 shrink-0 touch-none cursor-move items-center justify-between border-b border-[var(--border)]/60 bg-[var(--card)]/85 px-2"
-          onPointerDown={beginFloatingDrag}
-          onPointerMove={moveFloatingDrag}
-          onPointerUp={endFloatingDrag}
-          onPointerCancel={endFloatingDrag}
-        >
-          <div className="min-w-0 truncate text-xs font-semibold text-[var(--marinara-chat-chrome-accent)]">
-            {t("home.professorMari.ask")}
-          </div>
-          <button
-            data-professor-mari-floating-action
-            type="button"
-            onClick={onFloatingDismiss}
-            className="mari-chrome-control mari-chrome-control--small mari-accent-animated h-7 w-7 shrink-0 p-0"
-            aria-label={t("home.professorMari.dismiss")}
-            title={t("home.professorMari.dismiss")}
-          >
-            <X size="0.875rem" />
-          </button>
-        </div>
-        {renderFloatingChatBody()}
-      </div>
-    );
-  }
 
   return (
     <>
@@ -5596,6 +5130,11 @@ export function HomeProfessorMariChat({
                                   </div>
                                 ) : null}
                                 {displayMessages.map(renderDisplayMessage)}
+                                {showConnectionFirstHint && (
+                                  <p className="px-3 py-1 text-center text-xs text-[var(--muted-foreground)]">
+                                    {localizeUi("ui.chat.homeprofessormarichat.selectAConnectionFirst")}
+                                  </p>
+                                )}
                                 {workspaceTimelineActive ? (
                                   <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
                                 ) : null}

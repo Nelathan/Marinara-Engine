@@ -103,7 +103,10 @@ export interface ProfessorMariAskContext {
   settingsLocation?: { tab?: string; controlId?: string };
 }
 
-export type ProfessorMariHandoffDestination = "omnibar" | "home" | "floating-assistant" | "character-chat";
+// "floating-assistant" is gone: the floating window was replaced by a presence
+// indicator that opens the omnibar. The surface enum above keeps the value,
+// because it records where a request came FROM, not where it goes.
+export type ProfessorMariHandoffDestination = "omnibar" | "home" | "character-chat";
 
 export type ProfessorMariCompletion =
   | { kind: "open-resource"; resource: ProfessorMariContextResource }
