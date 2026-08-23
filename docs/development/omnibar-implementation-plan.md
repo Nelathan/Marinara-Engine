@@ -9,46 +9,52 @@ gets its own commit. Later slices depend on earlier ones only where stated.
 
 ## Status
 
-Updated 2026-08-23, second implementation run on `feat/omnibar-professor-mari`,
-merged with `origin/staging`. Every commit passed `pnpm check` (exit 0).
+Updated 2026-08-23, third run on `feat/omnibar-professor-mari`, merged with
+`origin/staging`. Every commit passed `pnpm check` (exit 0).
 
 | Slice | State |
 | --- | --- |
 | A — persona split (R17) | **Done.** |
 | B — state survives close (R6) | **Done.** |
 | C — indicator in, floating window out | **Done**, including the dead `floatingMode` branch. |
-| D — takeover surface | **Partly done.** Extractions, R35, R36 landed. R34 and R37 open; R38, R39 already satisfied. |
-| E — pane collapse | **2 of 3.** E1 choice expansion, E2 Quick pane removed. E3 open. |
+| D — takeover surface | **Done.** R34, R35, R36, R37 landed; R38 and R39 needed no work. |
+| E — pane collapse | **Done.** Five panes are three. |
 | F — the aside | **Done.** |
-| G — touch and composer transition | Not started. |
-| H — Home's professor tab | Not started. |
+| G — touch and composer transition | **Half done**, see below. |
+| H — Home's professor tab | **Done, no code needed**, see below. |
 
-### E3, the remaining piece
+### H needed no code
 
-Replace the narrow-screen `detail` pane with inline preview expansion, collapse
-`pane` into `takeover`, and reduce Escape to one level.
+`HomeBrowserHub`'s professor tab and the omnibar takeover render the same
+component, and both resolve their chat through `GET
+/chats/internal/professor-mari`, which is a server-side singleton. They are
+already one Mari on one thread. What R28 forbids — a *different* Mari on Home —
+does not exist. The remaining prop-level difference is framing, like the
+wide-screen preview panel.
 
-On wide screens the preview already renders beside the list without entering the
-pane, so this is a narrow-screen change. The blocker is that the preview has to
-render *inside* the focused row, and `CommandCenterResultRow` has no slot for
-expanded content — so E3 starts by adding one to a shared row component, and
-that wants a careful pass rather than a tired one.
+Caveat worth knowing: both can be mounted at once if the omnibar is opened while
+the professor tab is showing. That is pre-existing and handled — see the comment
+about a co-mounted Home instance not stealing the handoff context.
+
+### G is half done
+
+R26's layout half is already satisfied: the dialog is `h-[100dvh] w-full` on
+small viewports, so it is full screen, and the aside sits at the bottom of that
+panel where `dvh` accounts for the on-screen keyboard. The indicator was pinned
+inside the safe area in slice C.
+
+**R33 is not built.** The search input still cuts to Mari's composer rather than
+animating into it. Doing it properly means a shared layout animation between two
+elements that live in different components, and it is polish rather than
+behaviour — which is why it is last.
 
 ### Carried forward
 
-- **R34 — one sprite, no per-message avatars.** Not attempted; it changes every
-  message row.
-- **R37 — a prose rewrite is not a code diff.** Deliberately not applied to
-  `MariEditEasyViewer`, which renders database rows where added-green and
-  removed-red are correct. Decided: a **new neutral card for character, persona
-  and lorebook prose fields**, with per-field accept and reject. That is R21, and
-  it does not exist yet.
-- **Choice rows already had a pointer picker.** `CommandCenterResultRow` renders
-  an inline segmented control. E1 added the keyboard path and removed the
-  detail-pane dependency; it did not introduce the inline picker.
-- **The searchable half of R40 is not built.** Typing "gpt" does not yet surface
-  *Use GPT-4 for this chat* as a row. That needs option rows to enter the ranked
-  set inside `buildOmnibarResults`, before scoring.
+- **R33**, above.
+- **Ranking of searchable choice values needs a look in the browser.** Those rows
+  enter a scored set that was tuned without them.
+- **`isProseField` is a name list.** An unusual custom field falls back to diff
+  colours. Widen it when a real field is missing, not preemptively.
 - **No draft PR**, by decision.
 
 ## Ground rules for every slice
