@@ -7,6 +7,39 @@ that document; the behaviour contract that must not be broken silently is
 Eight slices. Each one is independently useful, independently revertible, and
 gets its own commit. Later slices depend on earlier ones only where stated.
 
+## Status
+
+Updated 2026-08-23, after the first implementation run on
+`feat/omnibar-professor-mari`. Every commit below passed `pnpm check` (exit 0).
+
+| Slice | State |
+| --- | --- |
+| A — persona split (R17) | **Done.** |
+| B — state survives close (R6) | **Done.** `mariTaskFinished` was already gone; only the subscription lifetime remained. |
+| C — indicator in, floating window out | **Done**, in two commits. The `floatingMode` internals remain (see below). |
+| D — takeover surface | **Partly done.** Extractions, R35 and R36 landed. R34, R37 open; R38 and R39 were already satisfied. |
+| E — pane collapse | Not started. |
+| F — the aside | Not started. |
+| G — touch and composer transition | Not started. |
+| H — Home's professor tab | Not started. |
+
+### Carried forward
+
+- **`floatingMode` internals in `HomeProfessorMariChat`.** The entry points are
+  deleted and nothing reaches the branch, but ~50 references remain: drag
+  positioning, viewport gaps, and a mobile render branch. Several conditions read
+  `floatingMode || omnibarMode`, so stripping them is a careful pass rather than a
+  mechanical deletion.
+- **R34 — one sprite in the header, no per-message avatars.** Not attempted. It is
+  a visible change to every message row and wants a human eye.
+- **R37 — a prose rewrite is not a code diff.** Deliberately not applied to
+  `MariEditEasyViewer`. That component renders `MariDbRowChange` — database rows,
+  where added-green and removed-red are correct. R37 is about the *field card* for
+  a prose rewrite, which is part of R21 and does not exist yet. Applying it here
+  would be a misreading of the rule.
+- **R38 and R39 need no work.** Starter chips already render in the empty state,
+  and the easy viewer's before/after blocks already cap at `max-h-40` with scroll.
+
 ## Ground rules for every slice
 
 - Validate with `pnpm check`. Capture the real exit code — piping through
