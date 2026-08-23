@@ -176,7 +176,7 @@ import {
   readNamedRow,
   resultMetadata,
   type BrowseFilter,
-  type DetailOrigin,
+  type OmnibarReturnPane,
   type OmnibarPane,
   type RankedOmnibarResult,
 } from "./omnibar/omnibar-result-view";
@@ -412,7 +412,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     filter,
     pane,
     activeResultId,
-    detailOrigin,
     browseSelectedId,
     browseLimit,
     detailResultId,
@@ -436,7 +435,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setFilter = (value: CommandCenterCategoryFilter) => setSessionValue("filter", value);
   const setPane = (value: OmnibarPane) => setSessionValue("pane", value);
   const setActiveResultId = (value: string | null) => setSessionValue("activeResultId", value);
-  const setDetailOrigin = (value: DetailOrigin) => setSessionValue("detailOrigin", value);
   const setBrowseSelectedId = (value: string | null) => setSessionValue("browseSelectedId", value);
   const setBrowseLimit = (value: number) => setSessionValue("browseLimit", value);
   const [detailResult, setDetailResult] = useState<RankedOmnibarResult | null>(null);
@@ -454,7 +452,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // When set, the Work pane shows the creation proposal for review instead of
   // the Mari transcript. Nothing is created until the user accepts.
   const [proposalDraft, setProposalDraft] = useState<CreationProposal | null>(null);
-  const [mariReturnPane, setMariReturnPane] = useState<DetailOrigin>("results");
+  const [mariReturnPane, setMariReturnPane] = useState<OmnibarReturnPane>("results");
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [browseCompareMode, setBrowseCompareMode] = useState(false);
   const [browseCompareIds, setBrowseCompareIds] = useState<string[]>([]);
@@ -1529,9 +1527,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   }, [activeResultId, pane]);
 
   useEffect(() => {
-    if (pane !== "detail" || (detailOrigin !== "browse" && !window.matchMedia("(max-width: 639px)").matches)) return;
+    if (pane !== "browse" || !expandedPreviewId) return;
     requestAnimationFrame(() => backButtonRef.current?.focus());
-  }, [detailOrigin, pane]);
+  }, [expandedPreviewId, pane]);
 
   // Returning from Mari puts focus back on the row that opened her, so the
   // keyboard position survives the round trip; the input is the fallback.
@@ -1828,13 +1826,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       onClose();
     }
   };
-  const showResultDetail = (result: RankedOmnibarResult, origin: DetailOrigin = "results") => {
+  const showResultDetail = (result: RankedOmnibarResult) => {
     setActiveResultId(result.id);
     setDetailResult(result);
     setSessionValue("detailResultId", result.id);
-    setDetailOrigin(origin);
-    if (origin === "results") setExpandedPreviewId(result.id);
-    else setPane("detail");
+    setExpandedPreviewId(result.id);
   };
   const chooseChoiceOption = (result: RankedOmnibarResult) => {
     const option = readChoiceOptionId(result.id);
@@ -1874,11 +1870,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       setExpandedPreviewId(null);
       setExpandedChoiceId(null);
       requestAnimationFrame(() => inputRef.current?.focus());
-    } else if (pane === "detail") {
-      setDetailResult(null);
-      setSessionValue("detailResultId", null);
-      setPane(detailOrigin);
-      requestAnimationFrame(() => inputRef.current?.focus());
     } else if (pane === "mari") {
       setMariChatOpen(false);
       setPane(mariReturnPane);
@@ -1895,9 +1886,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const moveSelection = (index: number) => {
     const next = results[index];
     setActiveResultId(next?.id ?? null);
-    if (pane === "detail") {
+    if (expandedPreviewId) {
       setDetailResult(next ?? null);
       setSessionValue("detailResultId", next?.id ?? null);
+      setExpandedPreviewId(next?.id ?? null);
     }
   };
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -1931,7 +1923,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       moveSelection(results.length - 1);
     } else if (
       mariEnabled &&
-      (pane === "results" || pane === "detail") &&
+      pane === "results" &&
       event.key === "Enter" &&
       (event.metaKey || event.ctrlKey) &&
       activeResult &&
@@ -1944,7 +1936,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       // Nothing ranked at all, so Enter still reaches Mari by the one door.
       event.preventDefault();
       openProfessorMari(null);
-    } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
+    } else if (pane === "results" && event.key === "Enter" && activeResult) {
       event.preventDefault();
       if (chooseChoiceOption(activeResult)) return;
       if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
@@ -2066,7 +2058,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setBrowseCompareMode(false);
     setBrowseCompareIds([]);
     if (!query.trim() && BROWSE_FILTERS.includes(nextFilter as BrowseFilter)) setPane("browse");
-    else if (pane === "detail") setPane("results");
     if (pane === "browse" && !BROWSE_FILTERS.includes(nextFilter as BrowseFilter)) setPane("results");
     requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -2084,7 +2075,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       focusMariReturnRow();
       return;
     }
-    const destination = pane === "detail" ? detailOrigin : "results";
+    const destination = "results";
     setDetailResult(null);
     setSessionValue("detailResultId", null);
     if (pane === "browse") setFilter("all");
@@ -2107,7 +2098,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     });
   /** Both Mari routes remember the row they left, so returning restores focus. */
   const rememberMariReturn = (focusResult: OmnibarAskFocus) => {
-    setMariReturnPane(pane === "browse" ? "browse" : pane === "detail" ? detailOrigin : "results");
+    setMariReturnPane(pane === "browse" ? "browse" : "results");
     const returnResultId = focusResult?.id ?? activeResultId;
     mariReturnResultIdRef.current = returnResultId;
     setSessionValue("mariReturnResultId", returnResultId);
@@ -2391,7 +2382,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     result ? (currentResultById.get(result.id) ?? null) : null;
   // Always show the detail panel for whatever result is currently selected.
   const previewResult =
-    pane === "detail" && detailOrigin === "browse"
+    pane === "browse"
       ? (resolveCurrentResult(detailResult) ?? resolveCurrentResult(activeResult ?? null))
       : resolveCurrentResult(activeResult ?? null);
   const previewDetail = usePreviewDetail(previewResult);
@@ -2406,11 +2397,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   }, [currentResultById, detailResultId]);
 
   useEffect(() => {
-    if (pane !== "detail" || detailOrigin === "browse" || !activeResultId) return;
+    if (pane === "browse" || !expandedPreviewId || !activeResultId) return;
     const next = currentResultById.get(activeResultId) ?? null;
     setDetailResult((previous) => (previous?.id === next?.id ? previous : next));
     setSessionValue("detailResultId", activeResultId);
-  }, [activeResultId, currentResultById, detailOrigin, pane]);
+  }, [activeResultId, currentResultById, expandedPreviewId, pane]);
 
   const previewActions = previewResult
     ? (() => {
@@ -2685,7 +2676,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 aria-label={
                   mariSurface
                     ? t("commandCenter.backToFind", "Back to search")
-                    : pane === "detail" && detailOrigin === "browse"
+                    : pane === "browse"
                       ? t("commandCenter.backToBrowse", "Back to browse")
                       : t("commandCenter.backToResults", "Back to results")
                 }
@@ -2878,14 +2869,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             />
           </Suspense>
         ) : null}
-        {pane === "mari" ? null : pane !== "browse" && !(pane === "detail" && detailOrigin === "browse") ? (
+        {pane === "mari" ? null : pane !== "browse" ? (
           <div className="flex min-h-0 flex-1">
             <div
               ref={listRef}
               id="global-omnibar-results"
               aria-label={t("omnibar.results", "Search results")}
               data-component="GlobalOmnibar.Results"
-              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 ${pane === "detail" && detailOrigin === "browse" ? "hidden" : ""}`}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2"
             >
               {!query.trim() ? (
                 <div className="border-b border-[var(--border)] px-3 pb-2.5 pt-2.5 motion-safe:animate-fade-in-up">
@@ -3096,7 +3087,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <Suspense fallback={null}>
             <OmnibarBrowsePane
-              detailOpen={pane === "detail"}
+              detailOpen={expandedPreviewId !== null}
               filterLabel={filterLabels[browseFilter]}
               totalCount={browseResults.length}
               results={visibleBrowseResults}
@@ -3118,13 +3109,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               onCompareWithMari={compareWithProfessorMari}
               onSelectedIdChange={setBrowseSelectedId}
               onToggleCompareResult={toggleBrowseCompareResult}
-              onShowDetail={(result) => showResultDetail(result, "browse")}
+              onShowDetail={(result) => showResultDetail(result)}
               onLoadMore={() => setBrowseLimit(browseLimit + BROWSE_BATCH_SIZE)}
             />
           </Suspense>
         )}
 
-        {pane === "detail" && detailOrigin === "browse" && previewResult ? (
+        {pane === "browse" && expandedPreviewId && previewResult ? (
           <aside
             data-component="GlobalOmnibar.Detail"
             className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain border-[var(--border)] pb-[env(safe-area-inset-bottom)] min-[88rem]:hidden"
@@ -3157,7 +3148,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
               {inlineSuffix ? (
                 <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
-              ) : mariEnabled && (pane === "results" || pane === "detail") && activeResult ? (
+              ) : mariEnabled && pane === "results" && activeResult ? (
                 <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
               ) : null}
               {pane === "results" && activeResult ? (
@@ -3169,7 +3160,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : null}
       </div>
 
-      {(pane === "detail" || pane === "results") && previewResult && previewIsRich ? (
+      {pane === "results" && previewResult && previewIsRich ? (
         <motion.aside
           data-component="GlobalOmnibar.ExternalDetail"
           initial={reduceMotion ? false : { opacity: 0, x: -18 }}

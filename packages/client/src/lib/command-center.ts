@@ -201,14 +201,15 @@ const MAX_COMMAND_ID_LENGTH = 256;
 const MAX_USE_COUNT = 10_000;
 const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type CommandCenterPane = "results" | "browse" | "detail" | "mari";
-export type CommandCenterDetailOrigin = Exclude<CommandCenterPane, "detail" | "mari">;
+/** The list, or the one surface that has taken it over. */
+export type CommandCenterPane = "results" | "browse" | "mari";
+/** Where a takeover returns to when it closes. */
+export type CommandCenterReturnPane = Exclude<CommandCenterPane, "mari">;
 export type CommandCenterMariDestination = "chat" | "chats" | "memories" | "skills" | "context";
 
 export type CommandCenterReturnTarget =
   | { pane: "results"; resultId: string | null }
   | { pane: "browse"; resultId: string | null }
-  | { pane: "detail"; resultId: string | null; origin: CommandCenterDetailOrigin }
   | { pane: "mari"; destination: CommandCenterMariDestination; detailId: string | null };
 
 /**
@@ -229,7 +230,6 @@ export interface CommandCenterSessionState {
   pane: CommandCenterPane;
   activeResultId: string | null;
   detailResultId: string | null;
-  detailOrigin: CommandCenterDetailOrigin;
   browseSelectedId: string | null;
   browseLimit: number;
   mariReturnResultId: string | null;
@@ -245,7 +245,6 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
   pane: "results",
   activeResultId: null,
   detailResultId: null,
-  detailOrigin: "results",
   browseSelectedId: null,
   browseLimit: 48,
   mariReturnResultId: null,
@@ -269,8 +268,9 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
   const filter = COMMAND_CENTER_CATEGORY_FILTERS.includes(source.filter as CommandCenterCategoryFilter)
     ? (source.filter as CommandCenterCategoryFilter)
     : "all";
-  const pane = source.pane === "browse" || source.pane === "detail" || source.pane === "mari" ? source.pane : "results";
-  const detailOrigin = source.detailOrigin === "browse" ? "browse" : "results";
+  // A session persisted before the detail and quick panes were removed falls
+  // back to the list, which is where every open starts anyway.
+  const pane = source.pane === "browse" || source.pane === "mari" ? source.pane : "results";
   const stringOrNull = (next: unknown) => (typeof next === "string" && next.trim() ? next.trim() : null);
   const browseLimit =
     typeof source.browseLimit === "number" && Number.isFinite(source.browseLimit)
@@ -283,7 +283,6 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
     pane,
     activeResultId: stringOrNull(source.activeResultId),
     detailResultId: stringOrNull(source.detailResultId),
-    detailOrigin,
     browseSelectedId: stringOrNull(source.browseSelectedId),
     browseLimit,
     mariReturnResultId: stringOrNull(source.mariReturnResultId),
@@ -306,9 +305,7 @@ function normalizeReturnStack(value: unknown): CommandCenterReturnTarget[] {
     const source = item as Record<string, unknown>;
     const resultId = typeof source.resultId === "string" ? source.resultId.slice(0, 256) : null;
     if (source.pane === "results" || source.pane === "browse") targets.push({ pane: source.pane, resultId });
-    else if (source.pane === "detail") {
-      targets.push({ pane: "detail", resultId, origin: source.origin === "browse" ? "browse" : "results" });
-    } else if (source.pane === "quick") {
+    else if (source.pane === "detail" || source.pane === "quick") {
       // A session persisted before the Quick pane was removed. Drop it.
       continue;
     } else if (source.pane === "mari") {

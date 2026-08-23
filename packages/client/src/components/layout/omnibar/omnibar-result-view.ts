@@ -3,8 +3,9 @@ import type { OmnibarCategory, OmnibarResult } from "../../../lib/omnibar-search
 import type { RichCommandResult } from "../../command-center/command-result-preview.types";
 export { formatDate, readNamedRow, readString } from "../../../lib/omnibar-row-readers";
 
-export type OmnibarPane = "results" | "browse" | "detail" | "mari";
-export type DetailOrigin = Exclude<OmnibarPane, "detail" | "mari">;
+export type OmnibarPane = "results" | "browse" | "mari";
+/** Where a takeover returns to when it closes. */
+export type OmnibarReturnPane = Exclude<OmnibarPane, "mari">;
 export type BrowseFilter = Exclude<CommandCenterCategoryFilter, "all" | "settings" | "docs">;
 export type RankedOmnibarResult = OmnibarResult & {
   command: RichCommandResult["command"];
