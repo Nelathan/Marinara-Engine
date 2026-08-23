@@ -1608,6 +1608,68 @@ function getActiveTimelineIndex(items: WorkspaceTimelineItem[], active: boolean)
   return -1;
 }
 
+type WorkspaceTimelineChunk =
+  | { kind: "item"; item: WorkspaceTimelineItem; index: number }
+  | { kind: "finished-tools"; id: string; items: WorkspaceTimelineItem[] };
+
+/**
+ * R36: the tool she is running now stays visible in full; a run of finished
+ * tool calls folds into one summary line. Everything she said stays readable —
+ * only the machinery collapses, and only once there is more than one of it.
+ */
+function chunkWorkspaceTimeline(items: WorkspaceTimelineItem[], activeIndex: number): WorkspaceTimelineChunk[] {
+  const chunks: WorkspaceTimelineChunk[] = [];
+  let run: WorkspaceTimelineItem[] = [];
+  let runStart = 0;
+
+  const flushRun = () => {
+    if (run.length === 0) return;
+    if (run.length === 1) chunks.push({ kind: "item", item: run[0], index: runStart });
+    else chunks.push({ kind: "finished-tools", id: run[0].id, items: run });
+    run = [];
+  };
+
+  items.forEach((item, index) => {
+    const finishedTool = item.type === "tool" && item.tool.status !== "running" && index !== activeIndex;
+    if (finishedTool) {
+      if (run.length === 0) runStart = index;
+      run.push(item);
+      return;
+    }
+    flushRun();
+    chunks.push({ kind: "item", item, index });
+  });
+  flushRun();
+  return chunks;
+}
+
+function CollapsedToolRun({ items }: { items: WorkspaceTimelineItem[] }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <TranscriptRow marker={<Terminal size="0.8rem" className="mt-1 text-[var(--muted-foreground)]" />}>
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          className="inline-flex min-w-0 items-center gap-1 py-0.5 text-xs text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+        >
+          <span className="truncate">
+            {t("mari.timeline.finishedTools", "ran {{count}} commands", { count: items.length })}
+          </span>
+          <ChevronRight
+            size="0.7rem"
+            className={cn("shrink-0 transition-transform", open && "rotate-90")}
+            aria-hidden="true"
+          />
+        </button>
+      </TranscriptRow>
+      {open ? items.map((item) => <WorkspaceTimelineEvent key={item.id} item={item} active={false} />) : null}
+    </>
+  );
+}
+
 function WorkspaceTimelineList({
   items,
   active,
@@ -1618,16 +1680,21 @@ function WorkspaceTimelineList({
   openReasoning?: boolean;
 }) {
   const activeIndex = getActiveTimelineIndex(items, active);
+  const chunks = chunkWorkspaceTimeline(items, activeIndex);
   return (
     <>
-      {items.map((item, index) => (
-        <WorkspaceTimelineEvent
-          key={item.id}
-          item={item}
-          active={index === activeIndex}
-          forceOpenThinking={item.type === "thinking" && openReasoning}
-        />
-      ))}
+      {chunks.map((chunk) =>
+        chunk.kind === "item" ? (
+          <WorkspaceTimelineEvent
+            key={chunk.item.id}
+            item={chunk.item}
+            active={chunk.index === activeIndex}
+            forceOpenThinking={chunk.item.type === "thinking" && openReasoning}
+          />
+        ) : (
+          <CollapsedToolRun key={chunk.id} items={chunk.items} />
+        ),
+      )}
     </>
   );
 }
