@@ -57,6 +57,7 @@ import { useCreateLorebook, useLorebooks, useLorebookEntries, useUpdateLorebook 
 import { usePresets, useSetDefaultPreset } from "../../hooks/use-presets";
 import { useProfessorMariWorkspaceStatus } from "../../hooks/use-professor-mari-workspace-status";
 import { useOmnibarAside } from "../../hooks/use-omnibar-aside";
+import { expandChoiceRows, readChoiceOptionId } from "../../lib/omnibar-choice-rows";
 import { useMariApprovals } from "../../hooks/use-mari-approvals";
 import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { completeInline } from "../../lib/inline-completion";
@@ -465,6 +466,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
   const [quickContext, setQuickContext] = useState<ProfessorMariAskContext | null>(null);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
+  // Transient on purpose: reopening the omnibar always starts from a bare list.
+  const [expandedChoiceId, setExpandedChoiceId] = useState<string | null>(null);
   const [quickConnectionId, setQuickConnectionId] = useState(readQuickConnectionPreference);
   const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
   const [mariHasConversation, setMariHasConversation] = useState(false);
@@ -1410,11 +1413,20 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const availableFilters = COMMAND_CENTER_CATEGORY_FILTERS.filter(
     (item) => item === "all" || item === filter || tabAvailability[item] > 0,
   );
-  const results = presentation.results;
+  // R40: a choice row's options are rows, inserted below it. The detail pane was
+  // doing two unrelated jobs - previewing a resource and editing a control - and
+  // only the first is a preview.
+  const results = useMemo(
+    () => expandChoiceRows(presentation.results, expandedChoiceId),
+    [expandedChoiceId, presentation.results],
+  );
   // R10: the aside fires on exactly the queries the Ask-Mari row is promoted
   // for. That predicate is already tuned, and its outcome is visible here - the
   // row lands in "professor-suggested" only when it fires - so there is no
   // second heuristic to keep in step.
+  useEffect(() => {
+    setExpandedChoiceId(null);
+  }, [deferredQuery, filter]);
   const asideDeadEnd = results.some(
     (result) => result.id === "ask-professor-mari" && result.group === "professor-suggested",
   );
@@ -1846,14 +1858,26 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     setDetailOrigin(origin);
     setPane("detail");
   };
+  const chooseChoiceOption = (result: RankedOmnibarResult) => {
+    const option = readChoiceOptionId(result.id);
+    if (!option) return false;
+    const parent = presentation.results.find((row) => row.id === option.parentId);
+    if (parent?.control?.type !== "choice") return false;
+    parent.control.onChange(option.value);
+    setExpandedChoiceId(null);
+    setActiveResultId(parent.id);
+    return true;
+  };
   const selectResult = (result: RankedOmnibarResult) => {
+    if (chooseChoiceOption(result)) return;
     if (!result.control && isRichResult(result) && window.matchMedia("(pointer: coarse)").matches) {
       showResultDetail(result);
       return;
     }
     setActiveResultId(result.id);
     if (result.control?.type === "toggle") result.control.onChange(result.control.value !== true);
-    else if (result.control?.type === "choice") showResultDetail(result);
+    else if (result.control?.type === "choice")
+      setExpandedChoiceId((current) => (current === result.id ? null : result.id));
     else choose(result);
   };
   // Keyboard navigation scrolls the list under a resting cursor, and the browser
@@ -1941,15 +1965,32 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       startQuickMari();
     } else if ((pane === "results" || pane === "detail") && event.key === "Enter" && activeResult) {
       event.preventDefault();
+      if (chooseChoiceOption(activeResult)) return;
       if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
-      else if (activeResult.control?.type === "choice") showResultDetail(activeResult);
+      else if (activeResult.control?.type === "choice")
+        setExpandedChoiceId((current) => (current === activeResult.id ? null : activeResult.id));
       else choose(activeResult);
+    } else if (
+      pane === "results" &&
+      event.key === "ArrowLeft" &&
+      activeResult &&
+      expandedChoiceId &&
+      (activeResult.id === expandedChoiceId || readChoiceOptionId(activeResult.id)?.parentId === expandedChoiceId)
+    ) {
+      // Collapse before the generic ArrowLeft below returns focus to the input,
+      // so one press does one thing.
+      event.preventDefault();
+      setExpandedChoiceId(null);
+      setActiveResultId(expandedChoiceId);
     } else if (
       pane === "results" &&
       event.key === "ArrowRight" &&
       activeResult &&
-      (activeResult.control?.type === "choice" || isRichResult(activeResult))
+      activeResult.control?.type === "choice"
     ) {
+      event.preventDefault();
+      setExpandedChoiceId(activeResult.id);
+    } else if (pane === "results" && event.key === "ArrowRight" && activeResult && isRichResult(activeResult)) {
       event.preventDefault();
       showResultDetail(activeResult);
     } else if (pane === "browse" && event.key === "ArrowDown") {
