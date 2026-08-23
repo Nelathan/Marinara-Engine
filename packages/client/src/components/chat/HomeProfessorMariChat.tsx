@@ -1414,15 +1414,22 @@ function ProfessorMariAttachmentPreviews({
   );
 }
 
+/**
+ * R34: her transcript rows are labelled, not portraited. Repeating her face down
+ * the left edge is what turns a mascot into a toy, and it competes with the one
+ * sprite in the header that actually carries her state. The label mirrors the
+ * "You" marker on user rows, so the two sides stay symmetric.
+ */
 function MariAvatar({ active }: { active?: boolean }) {
+  const { t: localizeUi } = useUiTranslation();
   return (
     <span
       className={cn(
-        "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-[var(--secondary)] shadow-sm",
-        active ? "mari-chrome-accent-soft-tile mari-accent-animated" : "border-[var(--border)]/70",
+        "pt-0.5 text-[0.6875rem] font-semibold",
+        active ? "text-[var(--primary)]" : "text-[var(--marinara-chat-chrome-panel-muted)]",
       )}
     >
-      <img src={MARI_AVATAR_URL} alt="" className="h-full w-full object-cover" draggable={false} />
+      {localizeUi("ui.chat.compactmarimessage.mari")}
     </span>
   );
 }
