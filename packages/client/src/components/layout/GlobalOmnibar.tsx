@@ -447,6 +447,19 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // Which row has its preview open. Replaces the detail pane on narrow screens:
   // the row grows, so nothing above it moves and the list never goes away.
   const [expandedPreviewId, setExpandedPreviewId] = useState<string | null>(null);
+  /**
+   * R33: the search field flies down to become Mari's composer, so the surface
+   * visibly turns into a conversation instead of being replaced by a different
+   * screen.
+   *
+   * A one-shot ghost rather than a shared `layoutId`: pairing the real elements
+   * would leave a layout animation attached to the composer for the rest of the
+   * session, and it would then re-animate every time the textarea grew.
+   */
+  const [fieldFlight, setFieldFlight] = useState<{
+    from: { top: number; left: number; width: number; height: number };
+    to: { top: number; left: number; width: number; height: number };
+  } | null>(null);
   const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
   const [mariHasConversation, setMariHasConversation] = useState(false);
   // When set, the Work pane shows the creation proposal for review instead of
@@ -1542,8 +1555,26 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       (row?.querySelector<HTMLElement>("button") ?? inputRef.current)?.focus();
     });
   };
+  /** Measures the search field's flight to the composer dock. See fieldFlight. */
+  const startFieldFlight = () => {
+    if (reduceMotion || pane === "mari") return;
+    const field = inputRef.current?.getBoundingClientRect();
+    const panel = panelRef.current?.getBoundingClientRect();
+    if (!field || !panel) return;
+    const inset = 10;
+    setFieldFlight({
+      from: { top: field.top, left: field.left, width: field.width, height: field.height },
+      to: {
+        top: panel.bottom - field.height - inset * 2,
+        left: panel.left + inset,
+        width: Math.max(panel.width - inset * 2, 0),
+        height: field.height,
+      },
+    });
+  };
   /** Every route into the Work pane goes through here, so none forgets a flag. */
   const enterMariPane = (context?: ProfessorMariAskContext) => {
+    startFieldFlight();
     if (context) {
       setMariContext(context);
       // The handoff lives in session state, not component state, so a task that
@@ -3159,6 +3190,21 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           </footer>
         ) : null}
       </div>
+
+      <AnimatePresence>
+        {fieldFlight ? (
+          <motion.div
+            key="omnibar-field-flight"
+            aria-hidden="true"
+            className="pointer-events-none fixed z-[110] rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-lg"
+            initial={{ ...fieldFlight.from, opacity: 0.9 }}
+            animate={{ ...fieldFlight.to, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
+            onAnimationComplete={() => setFieldFlight(null)}
+          />
+        ) : null}
+      </AnimatePresence>
 
       {pane === "results" && previewResult && previewIsRich ? (
         <motion.aside
