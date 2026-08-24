@@ -488,6 +488,58 @@ room is a quiet tool. This supersedes the background washes on the canvas, the
 header, her message bubbles and the artifact cards: the theme is an accent on
 borders, focus rings, active states and her name, never a wash.
 
+## 11c. Stream, slot, chrome
+
+Her window grew twenty-two elements because it has nowhere to put anything. Six
+information types share one scrolling column: the conversation, the work log,
+pending decisions, navigation, system status, suggestions. When a capability
+ships there is no slot to register into, so it becomes another band. Skills
+brought a tab and a status chip. Memories brought a tab and a status chip.
+Context brought a tab and a status chip. Left alone this reaches thirty.
+
+The serious agent products do not share a shape, but they share a property: the
+agent's output sits next to the thing it changes. Marinara puts Mari in a modal
+that covers the character she is editing. You approve a rewrite of Eliza's
+description while Eliza is hidden behind the dialog.
+
+**R49 - One stream, one panel slot, one chrome row.** The stream is permanent and
+gets the height: turns, tool log, notes. Everything else renders into a single
+slot. The chrome is her sprite carrying live state, the panel switcher, stop and
+close. Both bands disappear, because both were only ever ways to open a panel.
+
+**R50 - The slot is beside on desktop and over on mobile.** The same panel
+component in both. One breakpoint, no second layout, no duplicated markup.
+
+**R51 - A panel is registered, never hard-coded.** A capability supplies an id,
+an icon, a label, a component and an optional badge, and appears in the switcher.
+It never adds a band. This is the rule that stops the window growing: features
+have somewhere to go.
+
+**R52 - The slot is empty by default.** A user who never opens a panel sees a
+stream and a composer, and nothing else exists for them. A user who pins one gets
+the diff beside her reasoning. That is the whole difference between a simple and
+a power user here, and it needs no mode, no setting and no preference.
+
+**R53 - The takeover grows when a panel opens.** Roughly 44rem alone, roughly
+68rem with a panel. The dialog already animates its height on takeover; this is
+the same motion on the other axis. A split at 44rem gives each side 20rem, which
+is too narrow for a diff.
+
+**R54 - The resource she is editing can take the slot.** Editing Eliza puts Eliza
+in the panel, so you see the card while she changes it. This is the co-location
+property, and once the slot exists it costs a registration.
+
+**R55 - Status has no band.** Connection, budget and sandbox live in the Context
+panel, which already exists. A fault surfaces as a Note in the stream, carrying
+its fix where the failure names one - an endpoint that rejects images should
+offer the model picker, not print advice.
+
+**R56 - This supersedes R35.** Approvals move from the composer dock to the
+panel: full width beside her reasoning on desktop, a sheet over the stream on
+mobile. The dock keeps the Strip and the composer, so R46 becomes two rows. R35
+was right that a decision must never scroll away; a panel satisfies that better
+than a dock did.
+
 ## 12. Build order
 
 Each step is useful alone and does not depend on the next.
