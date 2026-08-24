@@ -3502,7 +3502,7 @@ export function HomeProfessorMariChat({
     async (id: string) => {
       if (isBusy) {
         toast.info(localizeUi("ui.chat.homeprofessormarichat.waitForProfessorMariToFinishBeforeSwitchingChats"));
-        return;
+        return false;
       }
       try {
         const chat = await api.post<Chat>(`/chats/internal/professor-mari/chats/${id}/activate`);
@@ -3514,22 +3514,26 @@ export function HomeProfessorMariChat({
         useChatStore.getState().clearThinkingBuffer(chat.id);
         await loadMessages(chat.id);
         await loadChatHistory();
+        return true;
       } catch (error) {
         console.error("[Professor Mari] Failed to open previous chat", error);
         toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariCouldNotOpenThatChat"), {
           description: describeProfessorMariError(error),
           duration: 12_000,
         });
+        return false;
       }
     },
     [isBusy, loadChatHistory, loadMessages, qc, setActiveChatId, localizeUi],
   );
 
   useEffect(() => {
-    if (!openChatId || openChatId === chatId || requestedChatIdRef.current === openChatId) return;
+    if (isBusy || !openChatId || openChatId === chatId || requestedChatIdRef.current === openChatId) return;
     requestedChatIdRef.current = openChatId;
-    void handleSelectProfessorChat(openChatId);
-  }, [chatId, handleSelectProfessorChat, openChatId]);
+    void handleSelectProfessorChat(openChatId).then((selected) => {
+      if (!selected && requestedChatIdRef.current === openChatId) requestedChatIdRef.current = null;
+    });
+  }, [chatId, handleSelectProfessorChat, isBusy, openChatId]);
 
   const handleRenameProfessorChat = useCallback(
     async (id: string) => {

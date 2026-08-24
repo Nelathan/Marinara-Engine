@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ export function useMariApprovals(options: { onRefresh?: () => Promise<void> | vo
   const { t: localizeUi } = useTranslation();
   const qc = useQueryClient();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const pendingIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     await qc.invalidateQueries({ queryKey: professorMariWorkspaceStatusKeys.all }).catch(() => undefined);
@@ -51,7 +52,8 @@ export function useMariApprovals(options: { onRefresh?: () => Promise<void> | vo
 
   const keepApproval = useCallback(
     async (id: string, opts?: { enable?: boolean }) => {
-      if (pendingId) return;
+      if (pendingIdRef.current) return;
+      pendingIdRef.current = id;
       setPendingId(id);
       try {
         // #4851 "Keep & Enable": pass { enable: true } so a kept memory insert is switched on.
@@ -89,15 +91,17 @@ export function useMariApprovals(options: { onRefresh?: () => Promise<void> | vo
         });
         return null;
       } finally {
+        if (pendingIdRef.current === id) pendingIdRef.current = null;
         setPendingId((current) => (current === id ? null : current));
       }
     },
-    [invalidateWorkspaceData, localizeUi, pendingId, refresh],
+    [invalidateWorkspaceData, localizeUi, refresh],
   );
 
   const restoreApproval = useCallback(
     async (id: string) => {
-      if (pendingId) return;
+      if (pendingIdRef.current) return;
+      pendingIdRef.current = id;
       setPendingId(id);
       try {
         const result = await api.post<WorkspaceApprovalResponse>(`/professor-mari/workspace/approvals/${id}/reject`);
@@ -124,10 +128,11 @@ export function useMariApprovals(options: { onRefresh?: () => Promise<void> | vo
         });
         return null;
       } finally {
+        if (pendingIdRef.current === id) pendingIdRef.current = null;
         setPendingId((current) => (current === id ? null : current));
       }
     },
-    [invalidateWorkspaceData, localizeUi, pendingId, refresh],
+    [invalidateWorkspaceData, localizeUi, refresh],
   );
 
   return { keepApproval, restoreApproval, pendingId };

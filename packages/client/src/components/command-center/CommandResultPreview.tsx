@@ -81,7 +81,8 @@ export function CommandResultPreview({
         />
       </header>
 
-      {((preview && (preview.description || tags?.length || preview.status || preview.supportingInfo || hasFacts)) ||
+      {((preview && (preview.description || tags?.length || preview.status || preview.supportingInfo)) ||
+        hasFacts ||
         statusLabel ||
         detail ||
         detailLoading) && (
