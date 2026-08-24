@@ -100,6 +100,7 @@ import { useAgentStore } from "../../stores/agent.store";
 import { useSidecarStore } from "../../stores/sidecar.store";
 import { useUIStore } from "../../stores/ui.store";
 import { WorkspaceApprovalCard, WorkspaceErrorEvent } from "./MariApprovalCards";
+import { ResourceIdentityHeader } from "../command-center/ResourceIdentityHeader";
 import {
   MariPanelSortSelect,
   compareMariPanelItems,
@@ -1804,10 +1805,14 @@ function MariWorkspaceActionResultRow({
   result,
   onOpen,
   onReview,
+  character,
+  lorebook,
 }: {
   result: MariWorkspaceActionResult;
   onOpen: (result: MariWorkspaceActionResult) => void;
   onReview: (reviewId: string) => void;
+  character?: CharacterPreviewModel | null;
+  lorebook?: LorebookPreviewModel | null;
 }) {
   const { t: localizeUi } = useUiTranslation();
   const ResourceIcon =
@@ -1818,48 +1823,56 @@ function MariWorkspaceActionResultRow({
         : result.resource.kind === "persona"
           ? Contact
           : SlidersHorizontal;
+  const characterPreview =
+    result.resource.kind === "character" && character?.id === result.resource.id ? character : null;
+  const lorebookPreview = result.resource.kind === "lorebook" && lorebook?.id === result.resource.id ? lorebook : null;
+  const description = characterPreview?.description ?? lorebookPreview?.description;
+  const statusLabel =
+    result.status === "created"
+      ? localizeUi("ui.chat.homeprofessormarichat.createdResource")
+      : localizeUi("ui.chat.homeprofessormarichat.updatedResource");
   return (
     <article className="mari-workspace-artifact mari-workspace-artifact--complete mt-3 min-w-0 text-xs">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)]/10 text-[var(--primary)]">
-          <ResourceIcon size="1rem" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[0.6875rem] font-medium text-[var(--muted-foreground)]">
-            {result.status === "created"
-              ? localizeUi("ui.chat.homeprofessormarichat.createdResource")
-              : localizeUi("ui.chat.homeprofessormarichat.updatedResource")}
-          </p>
-          <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-            {result.resource.label || result.summary}
-          </p>
-          {result.changedFields.length > 0 && (
-            <p className="mt-0.5 truncate text-[0.6875rem] text-[var(--muted-foreground)]">
-              {localizeUi("ui.chat.homeprofessormarichat.changedFields", {
+      <ResourceIdentityHeader
+        icon={ResourceIcon}
+        title={result.resource.label || result.summary}
+        eyebrow={statusLabel}
+        subtitle={
+          result.changedFields.length > 0
+            ? localizeUi("ui.chat.homeprofessormarichat.changedFields", {
                 fields: result.changedFields.join(", "),
-              })}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {result.reviewId && (
-            <button
-              type="button"
-              onClick={() => onReview(result.reviewId!)}
-              className="min-h-9 shrink-0 rounded-md px-2.5 font-medium text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-            >
-              {localizeUi("ui.chat.homeprofessormarichat.reviewResult")}
-            </button>
-          )}
+              })
+            : undefined
+        }
+        mediaSrc={characterPreview?.avatarSrc ?? lorebookPreview?.imageSrc}
+        mediaAlt={characterPreview?.name ?? lorebookPreview?.name ?? result.resource.label}
+        mediaKind={characterPreview ? "avatar" : "image"}
+        avatarCropStyle={characterPreview?.avatarCropStyle}
+        variant="row"
+      />
+      {description ? (
+        <p className="mt-2 line-clamp-3 max-w-[70ch] text-[0.75rem] leading-5 text-[var(--muted-foreground)]">
+          {description}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-col-reverse gap-1.5 sm:flex-row sm:justify-end">
+        {result.reviewId && (
           <button
             type="button"
-            onClick={() => onOpen(result)}
-            className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 font-medium text-[var(--primary-foreground)] transition-transform active:scale-[0.98] motion-reduce:transition-none"
+            onClick={() => onReview(result.reviewId!)}
+            className="min-h-9 shrink-0 rounded-md px-2.5 font-medium text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
           >
-            <ExternalLink size="0.7rem" />
-            {localizeUi("ui.chat.homeprofessormarichat.openResult")}
+            {localizeUi("ui.chat.homeprofessormarichat.reviewResult")}
           </button>
-        </div>
+        )}
+        <button
+          type="button"
+          onClick={() => onOpen(result)}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 font-medium text-[var(--primary-foreground)] transition-transform active:scale-[0.98] motion-reduce:transition-none"
+        >
+          <ExternalLink size="0.7rem" />
+          {localizeUi("ui.chat.homeprofessormarichat.openResult")}
+        </button>
       </div>
     </article>
   );
@@ -2025,6 +2038,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
             result={result}
             onOpen={onOpenActionResult}
             onReview={onReviewActionResult}
+            character={characterSubject}
+            lorebook={lorebookSubject}
           />
         ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
@@ -2068,6 +2083,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
             result={result}
             onOpen={onOpenActionResult}
             onReview={onReviewActionResult}
+            character={characterSubject}
+            lorebook={lorebookSubject}
           />
         ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
@@ -4293,9 +4310,9 @@ export function HomeProfessorMariChat({
     void handleSubmit(recovery.text, recovery);
   };
 
-  const requestedReviewIdRef = useRef<string | null>(null);
+  const [requestedReviewId, setRequestedReviewId] = useState<string | null>(null);
   const openPendingApprovals = useCallback(() => {
-    requestedReviewIdRef.current = visiblePendingChangeReviews[0]?.id ?? null;
+    setRequestedReviewId(visiblePendingChangeReviews[0]?.id ?? null);
     setWorkspaceDestination("chat");
     void refreshWorkspaceStatus();
   }, [refreshWorkspaceStatus, visiblePendingChangeReviews]);
@@ -4324,7 +4341,7 @@ export function HomeProfessorMariChat({
   useEffect(() => {
     if (visiblePendingChangeReviewKey && visiblePendingChangeReviewKey !== lastAutoOpenedApprovalKeyRef.current) {
       lastAutoOpenedApprovalKeyRef.current = visiblePendingChangeReviewKey;
-      requestedReviewIdRef.current = visiblePendingChangeReviews[0]?.id ?? null;
+      setRequestedReviewId(visiblePendingChangeReviews[0]?.id ?? null);
       setWorkspaceDestination("chat");
     }
   }, [visiblePendingChangeReviewKey, visiblePendingChangeReviews]);
@@ -4334,7 +4351,7 @@ export function HomeProfessorMariChat({
       connectionName={workspaceStatus?.connection?.name ?? effectiveConnection?.name ?? null}
       contextBudget={showTokenUsage ? contextBudget : null}
       sandboxAvailable={workspaceStatus?.shellSandbox.available ?? null}
-      pendingApprovalCount={pendingChangeReviews.length}
+      pendingApprovalCount={visiblePendingChangeReviews.length}
       onConnectionClick={() => setConnectionMenuOpen(true)}
       onContextClick={() => {
         if (omnibarMode) setWorkspaceDestination("context");
@@ -4388,23 +4405,22 @@ export function HomeProfessorMariChat({
   const reviewActionResult = useCallback(
     async (reviewId: string) => {
       await refreshWorkspaceStatus().catch(() => undefined);
-      requestedReviewIdRef.current = reviewId;
+      setRequestedReviewId(reviewId);
       setWorkspaceDestination("chat");
     },
     [refreshWorkspaceStatus],
   );
 
   useEffect(() => {
-    const reviewId = requestedReviewIdRef.current;
-    if (workspaceDestination !== "chat" || !reviewId) return;
+    if (workspaceDestination !== "chat" || !requestedReviewId) return;
     window.requestAnimationFrame(() => {
-      const review = document.getElementById(`mari-workspace-review-${reviewId}`);
+      const review = document.getElementById(`mari-workspace-review-${requestedReviewId}`);
       if (!review) return;
-      requestedReviewIdRef.current = null;
+      setRequestedReviewId(null);
       review.scrollIntoView({ block: "start" });
       review.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
     });
-  }, [visiblePendingChangeReviewKey, workspaceDestination]);
+  }, [requestedReviewId, visiblePendingChangeReviewKey, workspaceDestination]);
 
   const renderDisplayMessage = (message: Message) => {
     const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;
