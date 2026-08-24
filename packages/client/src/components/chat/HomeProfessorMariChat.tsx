@@ -21,6 +21,7 @@ import {
   Brain,
   Check,
   ChevronRight,
+  Contact,
   Database,
   FileText,
   ImageIcon,
@@ -35,9 +36,11 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
+  SlidersHorizontal,
   Square,
   Terminal,
   Trash2,
+  UserRound,
   Wrench,
   X,
 } from "lucide-react";
@@ -1732,36 +1735,58 @@ function MariWorkspaceActionResultRow({
   onReview: (reviewId: string) => void;
 }) {
   const { t: localizeUi } = useUiTranslation();
+  const ResourceIcon =
+    result.resource.kind === "character"
+      ? UserRound
+      : result.resource.kind === "lorebook"
+        ? BookOpen
+        : result.resource.kind === "persona"
+          ? Contact
+          : SlidersHorizontal;
   return (
-    <div className="mari-workspace-artifact mt-2 flex min-w-0 items-center gap-2 text-xs">
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-[var(--foreground)]">{result.summary}</p>
-        {result.changedFields.length > 0 && (
-          <p className="truncate text-[0.6875rem] text-[var(--muted-foreground)]">
-            {localizeUi("ui.chat.homeprofessormarichat.changedFields", {
-              fields: result.changedFields.join(", "),
-            })}
+    <article className="mari-workspace-artifact mari-workspace-artifact--complete mt-3 min-w-0 text-xs">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)]/10 text-[var(--primary)]">
+          <ResourceIcon size="1rem" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[0.6875rem] font-medium text-[var(--muted-foreground)]">
+            {result.status === "created"
+              ? localizeUi("ui.chat.homeprofessormarichat.createdResource")
+              : localizeUi("ui.chat.homeprofessormarichat.updatedResource")}
           </p>
-        )}
+          <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+            {result.resource.label || result.summary}
+          </p>
+          {result.changedFields.length > 0 && (
+            <p className="mt-0.5 truncate text-[0.6875rem] text-[var(--muted-foreground)]">
+              {localizeUi("ui.chat.homeprofessormarichat.changedFields", {
+                fields: result.changedFields.join(", "),
+              })}
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {result.reviewId && (
+            <button
+              type="button"
+              onClick={() => onReview(result.reviewId!)}
+              className="min-h-9 shrink-0 rounded-md px-2.5 font-medium text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+            >
+              {localizeUi("ui.chat.homeprofessormarichat.reviewResult")}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onOpen(result)}
+            className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 font-medium text-[var(--primary-foreground)] transition-transform active:scale-[0.98] motion-reduce:transition-none"
+          >
+            <ExternalLink size="0.7rem" />
+            {localizeUi("ui.chat.homeprofessormarichat.openResult")}
+          </button>
+        </div>
       </div>
-      {result.reviewId && (
-        <button
-          type="button"
-          onClick={() => onReview(result.reviewId!)}
-          className="shrink-0 rounded-md px-2 py-1 font-medium text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-        >
-          {localizeUi("ui.chat.homeprofessormarichat.reviewResult")}
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={() => onOpen(result)}
-        className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2 py-1 font-medium text-[var(--primary-foreground)]"
-      >
-        <ExternalLink size="0.7rem" />
-        {localizeUi("ui.chat.homeprofessormarichat.openResult")}
-      </button>
-    </div>
+    </article>
   );
 }
 
@@ -4280,17 +4305,26 @@ export function HomeProfessorMariChat({
     [closeChatWindow, invalidateActionResult, localizeUi, omnibarMode],
   );
 
+  const requestedReviewIdRef = useRef<string | null>(null);
   const reviewActionResult = useCallback(
     async (reviewId: string) => {
       await refreshWorkspaceStatus().catch(() => undefined);
-      window.requestAnimationFrame(() => {
-        const review = scrollRef.current?.querySelector<HTMLElement>(`#mari-workspace-review-${CSS.escape(reviewId)}`);
-        review?.scrollIntoView({ behavior: "smooth", block: "center" });
-        review?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
-      });
+      requestedReviewIdRef.current = reviewId;
+      setWorkspaceDestination("approvals");
     },
     [refreshWorkspaceStatus],
   );
+
+  useEffect(() => {
+    const reviewId = requestedReviewIdRef.current;
+    if (workspaceDestination !== "approvals" || !reviewId) return;
+    requestedReviewIdRef.current = null;
+    window.requestAnimationFrame(() => {
+      const review = document.getElementById(`mari-workspace-review-${reviewId}`);
+      review?.scrollIntoView({ block: "start" });
+      review?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+    });
+  }, [visiblePendingChangeReviewKey, workspaceDestination]);
 
   const renderDisplayMessage = (message: Message) => {
     const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;

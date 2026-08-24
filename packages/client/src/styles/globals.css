@@ -1100,6 +1100,23 @@
   padding: 0.625rem;
 }
 
+.mari-workspace-artifact--complete {
+  animation: mari-artifact-arrive 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes mari-artifact-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mari-workspace-artifact--complete {
+    animation: none;
+  }
+}
+
 .mari-workspace-composer-dock {
   background: color-mix(in srgb, var(--card) 76%, transparent);
 }
