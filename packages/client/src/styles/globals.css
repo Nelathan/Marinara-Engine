@@ -1617,13 +1617,58 @@
 }
 
 .mari-workspace-composer {
+  min-height: 3rem;
+  gap: 0.35rem;
   border-color: color-mix(in srgb, var(--mari-workspace-blush) 28%, var(--border));
-  background: var(--card);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--card) 96%, var(--mari-workspace-hoodie));
 }
 
 .mari-workspace-composer:focus-within {
   border-color: color-mix(in srgb, var(--mari-workspace-blush) 58%, var(--border));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--mari-workspace-blush) 10%, transparent);
+}
+
+.mari-workspace-composer__attach {
+  display: flex;
+  align-items: center;
+  padding-right: 0.35rem;
+  border-right: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+}
+
+.mari-workspace-composer__connection {
+  position: relative;
+}
+
+.mari-workspace-composer__connection--active::after {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.1rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border: 1px solid var(--card);
+  border-radius: 999px;
+  content: "";
+  background: oklch(0.74 0.16 151);
+}
+
+.mari-workspace-composer__send {
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, var(--border));
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.mari-workspace-composer__send:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 18%, var(--card));
+}
+
+@media (max-width: 30rem) {
+  .mari-workspace-composer-dock {
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
+  }
+
+  .mari-workspace-composer {
+    min-height: 2.75rem;
+  }
 }
 
 [data-theme="light"] .mari-workspace-shell {

@@ -5140,22 +5140,25 @@ export function HomeProfessorMariChat({
                             omnibarMode && "mari-workspace-composer rounded-xl shadow-none",
                           )}
                         >
-                          <MariAttachButton
-                            onAttachFiles={() => attachmentInputRef.current?.click()}
-                            onAddChatHistory={() => void handleOpenHistoryPicker()}
-                            onViewContext={() => void handleOpenContextViewer()}
-                            attachedFileCount={attachments.length}
-                            attachedContextCount={attachedContext?.length ?? 0}
-                            disabled={isBusy || isReadingAttachments}
-                            isReading={isReadingAttachments}
-                          />
+                          <div className="mari-workspace-composer__attach">
+                            <MariAttachButton
+                              onAttachFiles={() => attachmentInputRef.current?.click()}
+                              onAddChatHistory={() => void handleOpenHistoryPicker()}
+                              onViewContext={() => void handleOpenContextViewer()}
+                              attachedFileCount={attachments.length}
+                              attachedContextCount={attachedContext?.length ?? 0}
+                              disabled={isBusy || isReadingAttachments}
+                              isReading={isReadingAttachments}
+                            />
+                          </div>
 
                           <button
                             ref={connectionButtonRef}
                             type="button"
                             onClick={() => setConnectionMenuOpen((current) => !current)}
                             className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all",
+                              "mari-workspace-composer__connection flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all",
+                              effectiveConnection && "mari-workspace-composer__connection--active",
                               connectionMenuOpen
                                 ? "bg-foreground/10 text-foreground/75"
                                 : "text-foreground/40 hover:bg-foreground/10 hover:text-foreground/70",
@@ -5265,7 +5268,7 @@ export function HomeProfessorMariChat({
                             type="submit"
                             disabled={!canSubmitMessage || isBusy}
                             className={cn(
-                              "mari-chat-send-btn inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white transition-all duration-200",
+                              "mari-chat-send-btn mari-workspace-composer__send inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-lg text-white transition-all duration-200",
                               canSubmitMessage && !isBusy
                                 ? "hover:text-white active:scale-90"
                                 : "cursor-not-allowed opacity-40",
