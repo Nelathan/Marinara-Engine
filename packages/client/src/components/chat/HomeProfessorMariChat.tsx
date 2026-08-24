@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type ChangeEvent,
   type ReactNode,
   lazy,
@@ -144,6 +145,7 @@ import {
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
+const MARI_WORK_SPRITE_URL = "/sprites/mari/generated/professor-mari-assistant-sheet.png";
 const PROFESSOR_MARI_WELCOME_MESSAGE_ID = "__professor_mari_home_welcome__";
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const MARI_CONNECTION_STORAGE_KEY = "marinara:home-professor-mari-connection-id";
@@ -1550,26 +1552,116 @@ function WorkspaceStatusEvent({ content, active }: { content: string; active?: b
   );
 }
 
-/**
- * One transient row owns the gap between a request and Mari's first real output.
- * Her portrait already carries global state in the header, so this row names the
- * current phase without introducing another mascot, card, or transcript event.
- */
-function WorkspaceLiveActivity({ content }: { content: string }) {
-  const { t: localizeUi } = useUiTranslation();
+function useWorkspaceElapsedSeconds(active: boolean) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setElapsedSeconds(0);
+    const interval = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1_000);
+    return () => window.clearInterval(interval);
+  }, [active]);
+
+  return elapsedSeconds;
+}
+
+function WorkspaceLiveWorkCard({
+  activity,
+  items,
+  character,
+  lorebook,
+  onStop,
+}: {
+  activity: string;
+  items: WorkspaceTimelineItem[];
+  character?: CharacterPreviewModel | null;
+  lorebook?: LorebookPreviewModel | null;
+  onStop: () => void;
+}) {
+  const { t } = useUiTranslation();
+  const elapsedSeconds = useWorkspaceElapsedSeconds(true);
+  const toolItems = items.filter(
+    (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
+  );
+  const visibleSteps = toolItems.slice(-4);
+  const subjectName = character?.name ?? lorebook?.name ?? null;
+
   return (
-    <TranscriptRow marker={<MariAvatar active />} className="mari-live-activity">
-      <span className="min-w-0 truncate text-[0.75rem] font-medium text-[var(--muted-foreground)]">{content}</span>
-      <span
-        className="mari-live-activity__dots"
-        role="status"
-        aria-live="polite"
-        aria-label={localizeUi("ui.chat.homeprofessormarichat.workingOnIt")}
-      >
-        <i />
-        <i />
-        <i />
-      </span>
+    <TranscriptRow marker={<MariAvatar active />}>
+      <section className="mari-live-work" aria-label={t("mari.workCard.label")}>
+        <div className="mari-live-work__intro">
+          <div className="min-w-0 pr-14 sm:pr-20">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="truncate text-[0.8125rem] font-semibold text-[var(--foreground)]">
+                {subjectName ? t("mari.workCard.workingWith", { name: subjectName }) : t("mari.workCard.working")}
+              </h3>
+              <span className="mari-live-work__elapsed" role="status" aria-live="polite">
+                <i aria-hidden="true" />
+                {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
+              </span>
+            </div>
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted-foreground)]">{activity}</p>
+          </div>
+          <span
+            className="mari-live-work__sprite"
+            style={{ "--mari-work-sprite": `url(${MARI_WORK_SPRITE_URL})` } as CSSProperties}
+            aria-hidden="true"
+          />
+        </div>
+
+        {visibleSteps.length > 0 ? (
+          <ol className="mari-live-work__steps" aria-label={t("mari.workCard.progress")}>
+            {visibleSteps.map(({ id, tool }) => {
+              const presentation = inferToolPresentation(tool);
+              const running = tool.status === "running";
+              const failed = tool.status === "error";
+              const Icon = failed ? AlertTriangle : running ? Loader2 : Check;
+              return (
+                <li key={id} data-status={tool.status}>
+                  <Icon
+                    size="0.75rem"
+                    className={cn("shrink-0", running && "animate-spin motion-reduce:animate-none")}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                  {presentation.detail ? (
+                    <code className="hidden max-w-[45%] truncate font-mono text-[0.65rem] text-[var(--muted-foreground)] sm:block">
+                      {presentation.detail}
+                    </code>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+
+        <MariResourceSubject character={character} lorebook={lorebook} className="mt-3" />
+
+        {toolItems.length > 0 ? (
+          <details className="mari-live-work__technical group mt-3">
+            <summary>
+              <Terminal size="0.75rem" aria-hidden="true" />
+              <span>{t("mari.workCard.technicalActions", { count: toolItems.length })}</span>
+              <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="space-y-1 border-t border-[var(--border)]/60 px-2 py-2">
+              {toolItems.map((item) => (
+                <WorkspaceToolEvent key={item.id} tool={item.tool} />
+              ))}
+            </div>
+          </details>
+        ) : null}
+
+        <button type="button" className="mari-live-work__stop" onClick={onStop}>
+          <Square size="0.65rem" aria-hidden="true" />
+          {t("ui.chat.summarypopover.stop")}
+        </button>
+      </section>
     </TranscriptRow>
   );
 }
@@ -4770,18 +4862,14 @@ export function HomeProfessorMariChat({
                               </TranscriptRow>
                             ) : null}
                             {workspaceTimelineActive ? (
-                              <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
-                            ) : null}
-                            {workspaceTimeline.length === 0 && workspaceTimelineActive ? (
-                              <WorkspaceLiveActivity
-                                content={workspaceActivity ?? localizeUi("ui.chat.homeprofessormarichat.workingOnIt")}
+                              <WorkspaceLiveWorkCard
+                                activity={workspaceActivity ?? localizeUi("ui.chat.homeprofessormarichat.workingOnIt")}
+                                items={workspaceTimeline}
+                                character={focusedCharacter}
+                                lorebook={focusedLorebook}
+                                onStop={() => void stopWorkspace()}
                               />
                             ) : null}
-                            <WorkspaceTimelineList
-                              items={workspaceTimeline}
-                              active={workspaceTimelineActive}
-                              openReasoning
-                            />
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
                           </>

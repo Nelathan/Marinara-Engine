@@ -4,6 +4,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+- Redesigned Professor Mari's live activity as one focused work card with elapsed time, progress, resource context, collapsible tool details, and an animated in-card mascot on desktop and mobile.
+
 ### Added
 
 - Professor Mari now keeps one integrated animated presence in the workspace header while a single live transcript row reports her current work, replacing repeated mascot artwork and the separate working card; the header foregrounds her current subject and moves Chats, Skills, Memories, Context, and Restart into one panel menu; tool activity reads as a compact running log with completed runs folded away; decisions use the companion work panel beside her explanation on desktop and as a focused sheet on mobile, show the edited character or resource directly, and keep actions reachable while reviewing; suggestions now follow a question from Mari instead of appearing as detached chrome.
