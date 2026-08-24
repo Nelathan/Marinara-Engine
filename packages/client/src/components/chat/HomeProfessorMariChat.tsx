@@ -1,6 +1,5 @@
 import {
   type ChangeEvent,
-  type CSSProperties,
   type ReactNode,
   lazy,
   memo,
@@ -132,6 +131,7 @@ import { executeStateNavigation } from "../../lib/state-navigation";
 import { ProfessorMariWorkingWindow } from "../ui/ProfessorMariWorkingWindow";
 import { MacroTextarea } from "../ui/MacroTextarea";
 import { MariSuggestionChips } from "./MariSuggestionChips";
+import { MariNote, MariStrip } from "./mari-primitives";
 import { useTranslation, useTranslation as useUiTranslation } from "react-i18next";
 import {
   consumeProfessorMariOpenRequest,
@@ -1989,41 +1989,6 @@ function LoadingHistoryState() {
   );
 }
 
-function ProfessorMariContextBudgetIndicator({ budget }: { budget: ProfessorMariContextBudget }) {
-  const { t: localizeUi } = useUiTranslation();
-  const used = formatCompactTokenCount(budget.usedTokens);
-  const maximum = formatCompactTokenCount(budget.maxTokens);
-  const ariaLabel = localizeUi("ui.chat.homeprofessormarichat.contextBudgetAria", { used, maximum });
-  const progressStyle = { "--mari-context-budget": `${budget.percentage}%` } as CSSProperties;
-
-  return (
-    <div
-      data-component="HomeProfessorMariChat.ContextBudget"
-      className="mb-2 space-y-1 px-0.5 text-[0.6875rem] text-[var(--marinara-chat-chrome-panel-muted)]"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span>{localizeUi("ui.chat.homeprofessormarichat.contextBudget")}</span>
-        <span className="tabular-nums text-[var(--marinara-chat-chrome-panel-text)]">
-          {localizeUi("ui.chat.homeprofessormarichat.contextBudgetValue", { used, maximum })}
-        </span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label={ariaLabel}
-        aria-valuemin={0}
-        aria-valuemax={budget.maxTokens}
-        aria-valuenow={Math.min(budget.usedTokens, budget.maxTokens)}
-        className="h-1 overflow-hidden rounded-full bg-[var(--muted)]/55"
-      >
-        <div
-          className="h-full w-[var(--mari-context-budget)] rounded-full bg-[var(--primary)] transition-[width] duration-200"
-          style={progressStyle}
-        />
-      </div>
-    </div>
-  );
-}
-
 type ProfessorMariRecovery = {
   text: string;
   attachments: ProfessorMariAttachment[];
@@ -3124,11 +3089,10 @@ export function HomeProfessorMariChat({
   const guidedPlan = professorMariSuggestionsEnabled && mariPlanChatId === chatId ? mariPlan : null;
   const guidedPlanStep = guidedPlan ? (guidedPlan[mariPlanCursor] ?? null) : null;
   const chipRowChips = guidedPlanStep ? guidedPlanStep.chips : visibleSuggestionChips;
-  const chipRowHint = guidedPlanStep
-    ? `${guidedPlanStep.question} Suggestions only; you can type your own answer.`
-    : chipRowChips.length > 0
-      ? "Suggestions only. Pick one, or type your own."
-      : null;
+  // R47: when a plan is running the text above the chips is not a caption, it is
+  // her question. It belongs in the transcript where she asked it. What is left
+  // here is the caption, and R46 folds that into the Strip itself.
+  const chipRowHint = chipRowChips.length > 0 ? "Suggestions only. Pick one, or type your own." : null;
   const showSuggestionLoading =
     professorMariSuggestionsEnabled &&
     chipRowChips.length === 0 &&
@@ -4239,7 +4203,7 @@ export function HomeProfessorMariChat({
   const trustStrip = (
     <ProfessorMariTrustStrip
       connectionName={workspaceStatus?.connection?.name ?? effectiveConnection?.name ?? null}
-      contextBudget={contextBudget}
+      contextBudget={showTokenUsage ? contextBudget : null}
       sandboxAvailable={workspaceStatus?.shellSandbox.available ?? null}
       pendingApprovalCount={pendingChangeReviews.length}
       activeSkillCount={activeSkillCount}
@@ -4259,31 +4223,26 @@ export function HomeProfessorMariChat({
     />
   );
 
+  // R43: nothing touched your data, so this is a Note, not a bordered panel - and
+  // Notes belong in the transcript, in order, rather than stacked over the composer.
   const recoveryNotice = recovery ? (
-    <div
-      data-component="HomeProfessorMariChat.Recovery"
-      className="mb-2 flex items-start gap-2 rounded-lg border border-[var(--destructive)]/35 bg-[var(--destructive)]/8 px-2.5 py-2 text-xs"
-      role="alert"
-    >
-      <AlertTriangle size="0.8rem" className="mt-0.5 shrink-0 text-[var(--destructive)]" />
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-[var(--foreground)]">
-          {localizeUi(`ui.chat.homeprofessormarichat.recovery.${recovery.kind}`)}
-        </p>
-        <p className="mt-0.5 text-[var(--muted-foreground)]">
+    <TranscriptRow marker={<MariAvatar />}>
+      <MariNote tone="danger" role="alert">
+        {localizeUi(`ui.chat.homeprofessormarichat.recovery.${recovery.kind}`)}{" "}
+        <span className="text-[var(--muted-foreground)]">
           {localizeUi("ui.chat.homeprofessormarichat.recoveryDescription")}
-        </p>
-      </div>
+        </span>
+      </MariNote>
       <button
         type="button"
         onClick={retryRecovery}
         disabled={isBusy}
-        className="mari-chrome-control mari-chrome-control--small shrink-0 px-2 text-[0.625rem]"
+        className="mari-chrome-control mari-chrome-control--compact mt-1.5"
       >
         <RefreshCw size="0.7rem" />
         {localizeUi("ui.chat.homeprofessormarichat.retry")}
       </button>
-    </div>
+    </TranscriptRow>
   ) : null;
 
   const openActionResult = useCallback(
@@ -5142,6 +5101,11 @@ export function HomeProfessorMariChat({
                                     {localizeUi("ui.chat.homeprofessormarichat.selectAConnectionFirst")}
                                   </p>
                                 )}
+                                {guidedPlanStep ? (
+                                  <TranscriptRow marker={<MariAvatar active />}>
+                                    <CompactMarkdown content={guidedPlanStep.question} />
+                                  </TranscriptRow>
+                                ) : null}
                                 {workspaceTimelineActive ? (
                                   <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
                                 ) : null}
@@ -5158,6 +5122,7 @@ export function HomeProfessorMariChat({
                                   active={workspaceTimelineActive}
                                   openReasoning
                                 />
+                                {recoveryNotice}
                                 {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
                               </>
                             )}
@@ -5174,10 +5139,6 @@ export function HomeProfessorMariChat({
                             }}
                           >
                             {pendingChangeDock}
-                            {showTokenUsage && contextBudget && (
-                              <ProfessorMariContextBudgetIndicator budget={contextBudget} />
-                            )}
-                            {recoveryNotice}
                             <input
                               ref={attachmentInputRef}
                               type="file"
@@ -5196,24 +5157,29 @@ export function HomeProfessorMariChat({
                                 setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))
                               }
                             />
-                            {chipRowHint && (
-                              <p className="mb-1 flex items-center gap-1.5 px-0.5 text-[0.6875rem] text-[var(--marinara-chat-chrome-panel-muted)]">
-                                <Sparkles size="0.6875rem" className="shrink-0 text-[var(--primary)]" />
-                                <span>{chipRowHint}</span>
-                              </p>
-                            )}
-                            {showSuggestionLoading && (
-                              <div className="mb-1 flex items-center gap-1.5 px-0.5 text-[0.6875rem] text-[var(--muted-foreground)]">
-                                <Sparkles size="0.6875rem" className="shrink-0 animate-pulse text-[var(--primary)]" />
-                                {localizeUi("ui.chat.homeprofessormarichat.thinkingUpSuggestions")}
-                              </div>
-                            )}
-                            <MariSuggestionChips
-                              chips={chipRowChips}
-                              onSelect={handleSuggestionSelect}
-                              disabled={isBusy}
-                              compact
-                            />
+                            {chipRowHint || showSuggestionLoading || chipRowChips.length > 0 ? (
+                              <MariStrip className="mb-1 px-0.5">
+                                <Sparkles
+                                  size="0.6875rem"
+                                  aria-hidden="true"
+                                  className={cn(
+                                    "shrink-0 text-[var(--primary)]",
+                                    showSuggestionLoading && "animate-pulse",
+                                  )}
+                                />
+                                <MariNote>
+                                  {showSuggestionLoading
+                                    ? localizeUi("ui.chat.homeprofessormarichat.thinkingUpSuggestions")
+                                    : chipRowHint}
+                                </MariNote>
+                                <MariSuggestionChips
+                                  chips={chipRowChips}
+                                  onSelect={handleSuggestionSelect}
+                                  disabled={isBusy}
+                                  compact
+                                />
+                              </MariStrip>
+                            ) : null}
                             <div
                               className={cn(
                                 "mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50",
