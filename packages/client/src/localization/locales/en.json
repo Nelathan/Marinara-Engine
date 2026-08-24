@@ -5540,6 +5540,7 @@
   "ui.game.storyboardbackgroundcontrols.replayBackgroundAnimation": "Replay background animation",
   "ui.game.storyboardbackgroundcontrols.storyboardBackgroundAnimation": "Storyboard background animation",
   "ui.game.storyboardbackgroundcontrols.unmuteBackgroundAnimation": "Unmute background animation",
+  "ui.game.tacticalcombatui.alreadyActedThisTurn": "Already acted this turn.",
   "ui.game.tacticalcombatui.alreadyMovedChooseAnAction": "Already moved — choose an action.",
   "ui.game.tacticalcombatui.animationSpeed": "Animation speed",
   "ui.game.tacticalcombatui.attack": "Attack",

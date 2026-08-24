@@ -716,6 +716,37 @@ export function TacticalCombatUI({
   ]);
 
   // ── Derived: units currently rendered (anim positions during playback) ──
+  // A persisted snapshot without a live session is stale legacy state. The
+  // regular start effect intentionally preserves snapshot restoration, so handle
+  // this resolved-no-session case separately and deploy a fresh battle.
+  useEffect(() => {
+    if (
+      !initialState ||
+      !activeSessionQuery.isFetched ||
+      activeSessionQuery.isFetching ||
+      activeSessionQuery.data?.session?.status === "active" ||
+      sessionId ||
+      launchRequestedForChatRef.current === chatId
+    ) {
+      return;
+    }
+    launchRequestedForChatRef.current = chatId;
+    setState(null);
+    let cancelled = false;
+    launchBattle(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSessionQuery.data?.session,
+    activeSessionQuery.isFetched,
+    activeSessionQuery.isFetching,
+    chatId,
+    initialState,
+    launchBattle,
+    sessionId,
+  ]);
+
   const liveState = state;
   const availableItems = useMemo(
     () => (liveState?.inventory ?? inventoryItems).filter((item) => item.quantity > 0),
@@ -1238,8 +1269,9 @@ export function TacticalCombatUI({
         return;
       }
 
-      // Select a controllable party unit (alive, un-acted).
-      if (unit.side === "party" && unit.hp > 0 && !unit.hasActed && liveState.phase === "player") {
+      // Select any living party unit during the player phase. Acted units remain
+      // inspectable, while their action controls are disabled below.
+      if (unit.side === "party" && unit.hp > 0 && liveState.phase === "player") {
         playSfx(SFX.select);
         setStagedMove(null);
         setForecastTargetId(null);
@@ -2036,6 +2068,11 @@ export function TacticalCombatUI({
                 <X size={16} />
               </button>
             </div>
+            {selectedUnit.hasActed && (
+              <p className="mb-2 rounded-lg bg-white/5 px-2 py-1.5 text-[0.7rem] italic text-white/60">
+                {localizeUi("ui.game.tacticalcombatui.alreadyActedThisTurn")}
+              </p>
+            )}
 
             {/* Action menu */}
             {ui.kind === "unit" && (
@@ -2053,7 +2090,7 @@ export function TacticalCombatUI({
                       label={localizeUi("ui.game.tacticalcombatui.confirmMove")}
                       color="text-[var(--primary)]"
                       onClick={commitMove}
-                      disabled={animating}
+                      disabled={animating || selectedUnit.hasActed}
                     />
                   )}
                   {getTargetsInRange(stagedState ?? liveState, selectedUnit.id, stagedMove ?? undefined).length > 0 && (
@@ -2062,7 +2099,7 @@ export function TacticalCombatUI({
                       label={localizeUi("ui.game.tacticalcombatui.attack")}
                       color="text-[var(--destructive)]"
                       onClick={() => chooseAction("attack")}
-                      disabled={animating}
+                      disabled={animating || selectedUnit.hasActed}
                     />
                   )}
                   {selectedUnit.skills.length > 0 && (
@@ -2071,7 +2108,7 @@ export function TacticalCombatUI({
                       label={localizeUi("ui.game.gamecharactersheet.skills")}
                       color="text-[var(--primary)]"
                       onClick={() => chooseAction("skills")}
-                      disabled={animating}
+                      disabled={animating || selectedUnit.hasActed}
                     />
                   )}
                   {availableItems.length > 0 && (
@@ -2080,7 +2117,7 @@ export function TacticalCombatUI({
                       label={localizeUi("ui.game.tacticalcombatui.item")}
                       color="text-emerald-300"
                       onClick={() => chooseAction("item")}
-                      disabled={animating}
+                      disabled={animating || selectedUnit.hasActed}
                     />
                   )}
                   <ActionButton
@@ -2088,14 +2125,14 @@ export function TacticalCombatUI({
                     label={localizeUi("ui.game.tacticalcombatui.maneuver")}
                     color="text-fuchsia-300"
                     onClick={() => chooseAction("maneuver")}
-                    disabled={animating}
+                    disabled={animating || selectedUnit.hasActed}
                   />
                   <ActionButton
                     icon={Shield}
                     label={localizeUi("ui.game.tacticalcombatui.defend")}
                     color="text-amber-300"
                     onClick={() => chooseAction("defend")}
-                    disabled={animating}
+                    disabled={animating || selectedUnit.hasActed}
                   />
                   {selectedUnit.attackRange.max > 1 && (
                     <ActionButton
@@ -2103,7 +2140,7 @@ export function TacticalCombatUI({
                       label={localizeUi("ui.game.tacticalcombatui.overwatch")}
                       color="text-cyan-300"
                       onClick={() => chooseAction("overwatch")}
-                      disabled={animating}
+                      disabled={animating || selectedUnit.hasActed}
                     />
                   )}
                   <ActionButton
@@ -2111,7 +2148,7 @@ export function TacticalCombatUI({
                     label={localizeUi("ui.game.tacticalcombatui.wait")}
                     color="text-white/70"
                     onClick={() => chooseAction("wait")}
-                    disabled={animating}
+                    disabled={animating || selectedUnit.hasActed}
                   />
                   {stagedMove && (
                     <ActionButton
@@ -2119,7 +2156,7 @@ export function TacticalCombatUI({
                       label={localizeUi("ui.game.tacticalcombatui.resetMove")}
                       color="text-white/60"
                       onClick={() => setStagedMove(null)}
-                      disabled={animating}
+                      disabled={animating || selectedUnit.hasActed}
                     />
                   )}
                 </div>
@@ -2131,7 +2168,7 @@ export function TacticalCombatUI({
               <div className="flex flex-col gap-1.5">
                 {selectedUnit.skills.map((skill) => {
                   const cd = selectedUnit.skillCooldowns[skill.name] ?? 0;
-                  const ready = cd <= 0 && selectedUnit.mp >= skill.mpCost && !animating;
+                  const ready = cd <= 0 && selectedUnit.mp >= skill.mpCost && !selectedUnit.hasActed && !animating;
                   return (
                     <button
                       type="button"
@@ -2221,7 +2258,7 @@ export function TacticalCombatUI({
                   <button
                     type="button"
                     onClick={submitManeuver}
-                    disabled={maneuverText.trim().length < 3 || animating}
+                    disabled={maneuverText.trim().length < 3 || selectedUnit.hasActed || animating}
                     className="flex-1 rounded-lg border border-fuchsia-300/35 bg-fuchsia-500/15 px-3 py-2 text-xs font-bold text-fuchsia-100 hover:bg-fuchsia-500/25 disabled:opacity-40"
                   >
                     {localizeUi("ui.game.tacticalcombatui.resolveManeuver")}
@@ -2245,7 +2282,7 @@ export function TacticalCombatUI({
                     <button
                       type="button"
                       key={item.name}
-                      disabled={!effect || animating}
+                      disabled={!effect || selectedUnit.hasActed || animating}
                       onClick={() => chooseItem(item.name)}
                       className={cn(
                         "flex items-center justify-between rounded-lg border px-2.5 py-2 text-left text-xs transition-colors",
@@ -2562,6 +2599,8 @@ function UnitToken({
   return (
     <motion.button
       type="button"
+      aria-label={unit.name}
+      data-unit-id={unit.id}
       onClick={onClick}
       initial={false}
       // Opacity lives HERE (inline) — framer would override a Tailwind opacity
@@ -2577,7 +2616,7 @@ function UnitToken({
       transition={{ type: "tween", duration: 0.25 }}
       style={style}
       className={cn(
-        "absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center",
+        "absolute z-10 flex cursor-pointer touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center",
         unit.hasActed && unit.side === "party" && "grayscale",
       )}
     >
