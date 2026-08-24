@@ -886,6 +886,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
+  background: var(--card);
 }
 
 .mari-strip > [data-group] {
@@ -898,6 +899,38 @@
 
 .mari-strip > [data-group="end"] {
   margin-inline-start: auto;
+}
+
+/* Wrapping is right when there is room to wrap into. On a phone this band is ten
+   chips, and wrapping turned two rows of chrome into four - four rows above a
+   conversation, on the viewport with the least room for it. A chip that scrolls
+   out of sight costs a swipe; a chip that pushes the transcript down costs the
+   screen. So below the panel's breakpoint the two groups stack and each scrolls,
+   which is two rows: what it was before, with one chip shape instead of three. */
+@media (max-width: 39.99rem) {
+  .mari-strip--stacked {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mari-strip--stacked > [data-group] {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .mari-strip--stacked > [data-group]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mari-strip--stacked > [data-group] > * {
+    flex: 0 0 auto;
+  }
+
+  .mari-strip--stacked > [data-group="end"] {
+    margin-inline-start: 0;
+  }
 }
 
 /* R35: pending changes sit between the transcript and the composer, so a long
@@ -1385,6 +1418,7 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
 
 .mari-suggestion-chips {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   gap: 0.375rem;
   align-items: center;
@@ -1452,6 +1486,23 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   padding: 0.3125rem 0.5625rem;
   border-radius: 0.625rem;
   font-size: 0.6875rem;
+}
+
+@media (max-width: 39.99rem) {
+  .mari-suggestion-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .mari-suggestion-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mari-suggestion-chips > * {
+    flex: 0 0 auto;
+  }
 }
 
 .mari-suggestion-chip--neutral {

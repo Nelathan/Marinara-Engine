@@ -2041,16 +2041,16 @@ function ProfessorMariTrustStrip({
           {connectionName ?? localizeUi("ui.chat.homeprofessormarichat.missingConnection")}
         </span>
       </button>
-      <button
-        type="button"
-        onClick={onContextClick}
-        className="mari-chrome-control mari-chrome-control--compact mari-chrome-control--regular-label tabular-nums"
-        title={localizeUi("ui.chat.homeprofessormarichat.trustContextTitle")}
-      >
-        {contextBudget
-          ? localizeUi("ui.chat.homeprofessormarichat.contextBudgetValue", { used, maximum })
-          : localizeUi("ui.chat.homeprofessormarichat.contextUnavailable")}
-      </button>
+      {contextBudget ? (
+        <button
+          type="button"
+          onClick={onContextClick}
+          className="mari-chrome-control mari-chrome-control--compact mari-chrome-control--regular-label tabular-nums"
+          title={localizeUi("ui.chat.homeprofessormarichat.trustContextTitle")}
+        >
+          {localizeUi("ui.chat.homeprofessormarichat.contextBudgetValue", { used, maximum })}
+        </button>
+      ) : null}
       <span
         className={cn(
           "mari-chrome-control mari-chrome-control--compact mari-chrome-control--regular-label",
@@ -2077,18 +2077,16 @@ function ProfessorMariTrustStrip({
           />
         )}
       </span>
-      <button
-        type="button"
-        onClick={onApprovalClick}
-        disabled={pendingApprovalCount === 0}
-        className={cn(
-          "mari-chrome-control mari-chrome-control--compact mari-chrome-control--regular-label",
-          pendingApprovalCount > 0 && "font-semibold text-[var(--foreground)]",
-        )}
-        title={localizeUi("ui.chat.homeprofessormarichat.trustApprovalTitle")}
-      >
-        {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", { count: pendingApprovalCount })}
-      </button>
+      {pendingApprovalCount > 0 ? (
+        <button
+          type="button"
+          onClick={onApprovalClick}
+          className="mari-chrome-control mari-chrome-control--compact font-semibold text-[var(--foreground)]"
+          title={localizeUi("ui.chat.homeprofessormarichat.trustApprovalTitle")}
+        >
+          {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", { count: pendingApprovalCount })}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -4417,7 +4415,7 @@ export function HomeProfessorMariChat({
               >
                 {omnibarMode ? (
                   <>
-                    <MariStrip className="shrink-0 border-b border-[var(--border)]/45 px-2 py-1">
+                    <MariStrip className="mari-strip--stacked shrink-0 border-b border-[var(--border)]/45 px-2 py-1">
                       <nav
                         data-group="start"
                         aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
