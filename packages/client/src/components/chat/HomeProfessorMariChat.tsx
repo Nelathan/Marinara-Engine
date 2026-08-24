@@ -4662,6 +4662,21 @@ export function HomeProfessorMariChat({
                               <Square size="0.7rem" /> {localizeUi("ui.chat.summarypopover.stop")}
                             </button>
                           )}
+                          {visiblePendingChangeReviews.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={openPendingApprovals}
+                              className="mari-chrome-control mari-chrome-control--compact font-semibold"
+                              aria-pressed={workspaceDestination === "approvals"}
+                            >
+                              <ShieldAlert size="0.75rem" />
+                              <span>
+                                {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", {
+                                  count: visiblePendingChangeReviews.length,
+                                })}
+                              </span>
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => void runRestart()}
