@@ -928,6 +928,25 @@
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
 }
 
+.mari-user-request__fallback {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 58%, var(--card));
+  color: var(--primary-foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.mari-user-request__name {
+  margin-bottom: 0.15rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
 .mari-workspace-focusbar {
   background: color-mix(in srgb, var(--card) 95%, var(--mari-workspace-hoodie));
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--mari-workspace-gold) 8%, transparent);
@@ -943,6 +962,71 @@
 
 .mari-workspace-focusbar[data-state="broken"] {
   background: color-mix(in srgb, var(--card) 94%, var(--destructive));
+}
+
+.mari-workspace-focusbar__title {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.mari-workspace-focusbar__title > span:nth-child(2) {
+  color: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+}
+
+.mari-workspace-focusbar__nav {
+  display: none;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-self: stretch;
+  justify-content: center;
+}
+
+.mari-workspace-focusbar__nav button {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
+  padding-inline: 0.8rem;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.mari-workspace-focusbar__nav button:hover,
+.mari-workspace-focusbar__nav button[data-active="true"] {
+  color: var(--foreground);
+}
+
+.mari-workspace-focusbar__nav button[data-active="true"]::after {
+  position: absolute;
+  right: 0.5rem;
+  bottom: -0.4rem;
+  left: 0.5rem;
+  height: 1px;
+  content: "";
+  background: color-mix(in srgb, var(--mari-workspace-blush) 72%, var(--primary));
+}
+
+.mari-workspace-focusbar__nav b {
+  display: grid;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, var(--muted));
+  font-size: 0.6rem;
+  font-weight: 650;
+}
+
+@media (min-width: 40rem) {
+  .mari-workspace-focusbar__nav {
+    display: flex;
+  }
 }
 
 .mari-workspace-focusbar__mark {
@@ -1070,25 +1154,24 @@
 
 .mari-live-work {
   position: relative;
+  overflow: hidden;
   min-width: 0;
-  padding: 0.75rem 0.25rem 0;
-}
-
-.mari-live-work__speaker {
-  margin: 0 0 0.45rem 4.9rem;
-  color: color-mix(in srgb, var(--primary) 72%, var(--foreground));
-  font-size: 0.75rem;
-  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--mari-workspace-gold) 24%, var(--border));
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--card) 96%, var(--mari-workspace-hoodie));
+  padding: 0.9rem;
 }
 
 .mari-live-work__body {
   display: grid;
   min-width: 0;
-  grid-template-columns: 4.25rem minmax(0, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  grid-template-areas: "content scene";
+  gap: 1rem;
 }
 
 .mari-live-work__content {
+  grid-area: content;
   min-width: 0;
 }
 
@@ -1142,6 +1225,7 @@
 }
 
 .mari-live-work__scene {
+  grid-area: scene;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -1220,7 +1304,7 @@
   gap: 0.15rem;
   margin-top: 0.75rem;
   padding-block: 0.5rem;
-  border-block: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .mari-live-work__steps li {
@@ -1263,8 +1347,8 @@
 
 .mari-live-work__technical {
   overflow: hidden;
-  border-block: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 0.4rem;
   margin-top: 0.65rem;
 }
 
@@ -1321,9 +1405,9 @@
   width: 100%;
   margin-top: 0.65rem;
   padding: 0.5rem 0.25rem;
-  border-block: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
-  border-radius: 0 !important;
-  background: transparent !important;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent) !important;
+  border-radius: 0.45rem !important;
+  background: color-mix(in srgb, var(--background) 68%, transparent) !important;
 }
 
 .mari-live-work__stop {
@@ -1406,15 +1490,11 @@
 
 @media (max-width: 30rem) {
   .mari-live-work {
-    padding: 0.5rem 0 0;
-  }
-
-  .mari-live-work__speaker {
-    margin-left: 4rem;
+    padding: 0.7rem;
   }
 
   .mari-live-work__body {
-    grid-template-columns: 3.5rem minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 4rem;
     gap: 0.5rem;
   }
 
