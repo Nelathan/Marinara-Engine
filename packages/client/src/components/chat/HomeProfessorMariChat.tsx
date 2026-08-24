@@ -2256,12 +2256,11 @@ export function HomeProfessorMariChat({
   const [workspaceTimeline, setWorkspaceTimeline] = useState<WorkspaceTimelineItem[]>([]);
   const [workspaceReviewActionId, setWorkspaceReviewActionId] = useState<string | null>(null);
   const [workspaceDestination, setWorkspaceDestination] = useState<ProfessorMariWorkspaceDestination>("chat");
+  const [panelMenuOpen, setPanelMenuOpen] = useState(false);
   const chatHistoryOpen = workspaceDestination === "chats";
   // R52: the slot is empty by default. A user who never opens a panel sees a
   // stream and a composer, and nothing else exists for them.
   const panelOpen = workspaceDestination !== "chat";
-  const togglePanel = (destination: ProfessorMariWorkspaceDestination) =>
-    setWorkspaceDestination(workspaceDestination === destination ? "chat" : destination);
   const [chatHistory, setChatHistory] = useState<ProfessorMariChatSummary[]>([]);
   const [chatHistoryQuery, setChatHistoryQuery] = useState("");
   const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
@@ -4447,104 +4446,118 @@ export function HomeProfessorMariChat({
                 }}
               >
                 {omnibarMode ? (
-                  <>
-                    <MariStrip className="mari-strip--stacked shrink-0 border-b border-[var(--border)]/45 px-2 py-1">
-                      <nav
-                        data-group="start"
-                        aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
+                  <div className="mari-workspace-focusbar relative z-20 flex min-h-11 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5">
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-[0.75rem] font-semibold text-[var(--foreground)]">
+                        {focusedCharacter
+                          ? localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")
+                          : focusedLorebook
+                            ? localizeUi("ui.chat.homeprofessormarichat.aboutLorebook")
+                            : localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
+                      </span>
+                      {(focusedCharacter || focusedLorebook) && (
+                        <span className="block truncate text-[0.6875rem] text-[var(--muted-foreground)]">
+                          {focusedCharacter?.name ?? focusedLorebook?.name}
+                        </span>
+                      )}
+                    </div>
+                    {visiblePendingChangeReviews.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={openPendingApprovals}
+                        className="mari-chrome-control mari-chrome-control--compact font-semibold"
+                        aria-pressed={workspaceDestination === "approvals"}
                       >
-                        <button
-                          type="button"
-                          onClick={toggleChatHistory}
-                          disabled={isBusy && workspaceDestination !== "chats"}
-                          className={cn("mari-chrome-control mari-chrome-control--compact")}
-                          aria-pressed={workspaceDestination === "chats"}
-                        >
-                          <BookOpen size="0.75rem" />
-                          <span>{localizeUi("navigation.common.chats")}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={toggleSkillsMenu}
-                          className={cn("mari-chrome-control mari-chrome-control--compact")}
-                          aria-pressed={workspaceDestination === "skills"}
-                        >
-                          <ArrowDown size="0.75rem" />
-                          <span>{localizeUi("ui.chat.homeprofessormarichat.skills")}</span>
-                          {skills.length > 0 ? (
-                            <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">
-                              {activeSkillCount}
-                            </span>
-                          ) : null}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={toggleMemoriesMenu}
-                          className={cn("mari-chrome-control mari-chrome-control--compact")}
-                          aria-pressed={workspaceDestination === "memories"}
-                        >
-                          <Brain size="0.75rem" />
-                          <span>{localizeUi("ui.chat.homeprofessormarichat.memories")}</span>
-                          {memories.length > 0 ? (
-                            <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">
-                              {activeMemoryCount}
-                            </span>
-                          ) : null}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => togglePanel("context")}
-                          className={cn("mari-chrome-control mari-chrome-control--compact")}
-                          aria-pressed={workspaceDestination === "context"}
-                        >
-                          <Sparkles size="0.75rem" />
-                          <span>{localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}</span>
-                          {(attachedContext?.length ?? 0) > 0 || handoffContext ? (
-                            <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.56rem]">
-                              {(attachedContext?.length ?? 0) + (handoffContext ? 1 : 0)}
-                            </span>
-                          ) : null}
-                        </button>
-                        {visiblePendingChangeReviews.length > 0 ? (
+                        <ShieldAlert size="0.75rem" />
+                        <span>{localizeUi("commandCenter.completion.review")}</span>
+                        <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.625rem]">
+                          {visiblePendingChangeReviews.length}
+                        </span>
+                      </button>
+                    ) : null}
+                    {(workspaceActive || hasActiveGeneration) && (
+                      <button
+                        type="button"
+                        onClick={() => void stopWorkspace()}
+                        className="mari-chrome-control mari-chrome-control--compact text-[var(--destructive)]"
+                        title={localizeUi("ui.chat.homeprofessormarichat.stopProfessorMariWorkspaceAgent")}
+                      >
+                        <Square size="0.7rem" />
+                        <span>{localizeUi("ui.chat.summarypopover.stop")}</span>
+                      </button>
+                    )}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setPanelMenuOpen((open) => !open)}
+                        className="mari-chrome-control mari-chrome-control--compact"
+                        aria-expanded={panelMenuOpen}
+                      >
+                        <Sparkles size="0.75rem" />
+                        <span>{localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}</span>
+                      </button>
+                      {panelMenuOpen ? (
+                        <div className="absolute right-0 top-full mt-1 w-52 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 shadow-xl">
+                          {(
+                            [
+                              ["chats", BookOpen, localizeUi("navigation.common.chats"), 0],
+                              [
+                                "skills",
+                                ArrowDown,
+                                localizeUi("ui.chat.homeprofessormarichat.skills"),
+                                activeSkillCount,
+                              ],
+                              [
+                                "memories",
+                                Brain,
+                                localizeUi("ui.chat.homeprofessormarichat.memories"),
+                                activeMemoryCount,
+                              ],
+                              [
+                                "context",
+                                Sparkles,
+                                localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
+                                (attachedContext?.length ?? 0) + (handoffContext ? 1 : 0),
+                              ],
+                            ] as const
+                          ).map(([destination, Icon, label, count]) => (
+                            <button
+                              key={destination}
+                              type="button"
+                              onClick={() => {
+                                setWorkspaceDestination(destination);
+                                setPanelMenuOpen(false);
+                              }}
+                              disabled={destination === "chats" && isBusy}
+                              className={cn(
+                                "flex min-h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-[0.8125rem] text-[var(--foreground)] hover:bg-[var(--accent)] disabled:opacity-45",
+                                workspaceDestination === destination && "bg-[var(--accent)]",
+                              )}
+                            >
+                              <Icon size="0.875rem" className="text-[var(--muted-foreground)]" />
+                              <span className="min-w-0 flex-1 truncate">{label}</span>
+                              {count > 0 ? (
+                                <span className="text-[0.75rem] text-[var(--muted-foreground)]">{count}</span>
+                              ) : null}
+                            </button>
+                          ))}
+                          <div className="my-1 border-t border-[var(--border)]/60" />
                           <button
                             type="button"
-                            onClick={openPendingApprovals}
-                            className="mari-chrome-control mari-chrome-control--compact font-semibold"
-                            aria-pressed={workspaceDestination === "approvals"}
+                            onClick={() => {
+                              setPanelMenuOpen(false);
+                              void runRestart();
+                            }}
+                            disabled={isBusy}
+                            className="flex min-h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-[0.8125rem] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:opacity-45"
                           >
-                            <ShieldAlert size="0.75rem" />
-                            <span>
-                              {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", {
-                                count: visiblePendingChangeReviews.length,
-                              })}
-                            </span>
+                            <RefreshCw size="0.875rem" />
+                            {localizeUi("ui.chat.homeprofessormarichat.restart")}
                           </button>
-                        ) : null}
-                        <span className="min-w-1 flex-1" aria-hidden="true" />
-                        {(workspaceActive || hasActiveGeneration) && (
-                          <button
-                            type="button"
-                            onClick={() => void stopWorkspace()}
-                            className="mari-chrome-control mari-chrome-control--compact text-[var(--destructive)]"
-                            title={localizeUi("ui.chat.homeprofessormarichat.stopProfessorMariWorkspaceAgent")}
-                          >
-                            <Square size="0.7rem" />
-                            <span>{localizeUi("ui.chat.summarypopover.stop")}</span>
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => void runRestart()}
-                          disabled={isBusy}
-                          className="mari-chrome-control mari-chrome-control--compact disabled:cursor-not-allowed disabled:opacity-50"
-                          title={t("home.professorMari.restart")}
-                        >
-                          <RefreshCw size="0.75rem" />
-                          <span>{localizeUi("ui.chat.homeprofessormarichat.restart")}</span>
-                        </button>
-                      </nav>
-                    </MariStrip>
-                  </>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 ) : null}
                 <div
                   data-mari-panel={panelOpen ? "open" : "closed"}
