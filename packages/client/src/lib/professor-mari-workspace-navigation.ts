@@ -1,4 +1,4 @@
-export type ProfessorMariWorkspaceDestination = "chat" | "chats" | "memories" | "skills" | "context";
+export type ProfessorMariWorkspaceDestination = "chat" | "chats" | "memories" | "skills" | "context" | "approvals";
 
 export type ProfessorMariWorkspaceBackAction = "detail" | "destination" | "workspace";
 

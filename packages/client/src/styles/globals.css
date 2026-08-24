@@ -933,18 +933,6 @@
   }
 }
 
-/* R35: pending changes sit between the transcript and the composer, so a long
-   conversation can never scroll them out of view. Capped and scrollable, since
-   one rewrite must not push the composer off the surface. */
-.mari-pending-change-dock {
-  display: flex;
-  max-height: min(40vh, 22rem);
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow-y: auto;
-  padding-bottom: 0.5rem;
-}
-
 /* R53: a split at 44rem gives each side 20rem, which is too narrow for a diff.
    The shell already animates its height when she takes over; this is the same
    motion on the other axis, and it needs no state passed up from the panel. */

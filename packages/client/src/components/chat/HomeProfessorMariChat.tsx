@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  ShieldAlert,
   Sparkles,
   Square,
   Terminal,
@@ -2295,6 +2296,7 @@ export function HomeProfessorMariChat({
   const [mobileFocusMode, setMobileFocusMode] = useState(false);
   const hasLoadedRef = useRef(false);
   const notifiedApprovalIdsRef = useRef<Set<string>>(new Set());
+  const lastAutoOpenedApprovalKeyRef = useRef("");
   const activeChatIdRef = useRef<string | null>(null);
   const messagesRef = useRef<Message[]>(messages);
   const messageLoadAbortRef = useRef<AbortController | null>(null);
@@ -4185,13 +4187,8 @@ export function HomeProfessorMariChat({
   };
 
   const openPendingApprovals = useCallback(() => {
-    void refreshWorkspaceStatus().then(() => {
-      const transcript = scrollRef.current;
-      transcript
-        ?.querySelector('[data-component="HomeProfessorMariChat.Recovery"]')
-        ?.scrollIntoView({ behavior: "smooth" });
-      transcript?.scrollTo({ top: transcript.scrollHeight, behavior: "smooth" });
-    });
+    setWorkspaceDestination("approvals");
+    void refreshWorkspaceStatus();
   }, [refreshWorkspaceStatus]);
 
   const handledPendingReviewRequestRef = useRef(0);
@@ -4201,27 +4198,30 @@ export function HomeProfessorMariChat({
     openPendingApprovals();
   }, [chatWindowOpen, openPendingApprovals, pendingReviewRequest]);
 
-  // R35: a pending change is answered where the hands already are. Rendered at
-  // the end of the transcript it scrolls out of view the moment she keeps
-  // talking, which is exactly when the user stops noticing it.
-  const pendingChangeDock =
-    visiblePendingChangeReviews.length > 0 ? (
-      <div className="mari-pending-change-dock">
-        {visiblePendingChangeReviews.map((approval) => (
-          <WorkspaceApprovalCard
-            key={approval.id}
-            approval={approval}
-            busy={approvalBusyId === approval.id}
-            disabled={approvalBusyId !== null}
-            onKeep={(id) => void keepWorkspaceChange(id)}
-            onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
-            onRestore={(id) => void restoreWorkspaceChange(id)}
-            onRejectRows={(id, rows) => rejectWorkspaceRows(id, rows)}
-            onRenderPrompt={renderWorkspacePrompt}
-          />
-        ))}
-      </div>
-    ) : null;
+  // R56: a decision owns the work slot. It stays beside Mari's explanation on
+  // desktop and becomes the same focused sheet on mobile, never a cramped dock.
+  const pendingApprovalsPanel = visiblePendingChangeReviews.map((approval) => (
+    <WorkspaceApprovalCard
+      key={approval.id}
+      approval={approval}
+      busy={approvalBusyId === approval.id}
+      disabled={approvalBusyId !== null}
+      onKeep={(id) => void keepWorkspaceChange(id)}
+      onKeepEnable={(id) => void keepWorkspaceChange(id, { enable: true })}
+      onRestore={(id) => void restoreWorkspaceChange(id)}
+      onRejectRows={(id, rows) => rejectWorkspaceRows(id, rows)}
+      onRenderPrompt={renderWorkspacePrompt}
+    />
+  ));
+
+  useEffect(() => {
+    if (visiblePendingChangeReviewKey && visiblePendingChangeReviewKey !== lastAutoOpenedApprovalKeyRef.current) {
+      lastAutoOpenedApprovalKeyRef.current = visiblePendingChangeReviewKey;
+      setWorkspaceDestination("approvals");
+    } else if (workspaceDestination === "approvals") {
+      if (!visiblePendingChangeReviewKey) setWorkspaceDestination("chat");
+    }
+  }, [visiblePendingChangeReviewKey, workspaceDestination]);
 
   const trustStrip = (
     <ProfessorMariTrustStrip
@@ -4505,6 +4505,21 @@ export function HomeProfessorMariChat({
                             </span>
                           ) : null}
                         </button>
+                        {visiblePendingChangeReviews.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={openPendingApprovals}
+                            className="mari-chrome-control mari-chrome-control--compact font-semibold"
+                            aria-pressed={workspaceDestination === "approvals"}
+                          >
+                            <ShieldAlert size="0.75rem" />
+                            <span>
+                              {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", {
+                                count: visiblePendingChangeReviews.length,
+                              })}
+                            </span>
+                          </button>
+                        ) : null}
                         <span className="min-w-1 flex-1" aria-hidden="true" />
                         {(workspaceActive || hasActiveGeneration) && (
                           <button
@@ -4727,7 +4742,6 @@ export function HomeProfessorMariChat({
                           void handleSubmit();
                         }}
                       >
-                        {pendingChangeDock}
                         <input
                           ref={attachmentInputRef}
                           type="file"
@@ -4912,7 +4926,43 @@ export function HomeProfessorMariChat({
                     </div>
                   </motion.div>
                   <AnimatePresence initial={false}>
-                    {chatHistoryOpen ? (
+                    {workspaceDestination === "approvals" ? (
+                      <motion.section
+                        key="professor-mari-approvals"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={PROFESSOR_MARI_PANE_TRANSITION}
+                        className={cn(MARI_PANEL_SLOT_CLASS, "flex flex-col bg-[var(--background)]")}
+                        aria-labelledby="professor-mari-approvals-title"
+                      >
+                        <div className="flex items-center gap-2 border-b border-[var(--border)]/60 px-3 py-2.5">
+                          <ShieldAlert size="0.9rem" className="shrink-0 text-[var(--primary)]" />
+                          <div className="min-w-0 flex-1">
+                            <h3
+                              id="professor-mari-approvals-title"
+                              className="truncate text-xs font-semibold text-[var(--foreground)]"
+                            >
+                              {localizeUi("commandCenter.completion.review")}
+                            </h3>
+                            <p className="truncate text-[0.625rem] text-[var(--muted-foreground)]">
+                              {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", {
+                                count: visiblePendingChangeReviews.length,
+                              })}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setWorkspaceDestination("chat")}
+                            className="mari-chrome-control mari-chrome-control--small h-8 w-8 p-0"
+                            aria-label={t("home.professorMari.close")}
+                          >
+                            <X size="0.85rem" />
+                          </button>
+                        </div>
+                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">{pendingApprovalsPanel}</div>
+                      </motion.section>
+                    ) : chatHistoryOpen ? (
                       <motion.div
                         key="professor-mari-chats"
                         initial={{ opacity: 0, y: -14, rotateX: -10, transformOrigin: "top center" }}

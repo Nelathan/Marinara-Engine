@@ -6,7 +6,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
-- Professor Mari now keeps one animated presence in the workspace header while a single live transcript row reports her current work, replacing repeated mascot artwork and the separate working card.
+- Professor Mari now keeps one animated presence in the workspace header while a single live transcript row reports her current work, replacing repeated mascot artwork and the separate working card; decisions use the companion work panel beside her explanation on desktop and as a focused sheet on mobile instead of crowding the composer.
 - Professor Mari is now a state of the omnibar rather than a separate destination: Home, the FAQ, and error hand-offs open the same workspace, Chat, Chats, Skills, Memories, and Context are labelled single-column destinations that keep search, selection, scroll, drafts, and the composer intact, and her pixel art reacts to what she is actually doing (with static poses under reduced motion).
 - Quick assistance in the omnibar answers bounded questions and proposes single-field edits with exactly one model call, labelled `Quick · 1 model call` before it runs, with an optional cheaper connection that visibly falls back to Mari's usual connection. Proposed edits expire, are rejected when the field changed underneath them, and are applied through the existing reversible Keep/Restore review without a second model call.
 - Professor Mari's custom skills are now injected as a name-and-summary index instead of in full on every turn, so a long skill no longer costs its whole body each request; short skills stay inline and Mari fetches a full skill only when it is relevant.
