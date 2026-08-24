@@ -14,7 +14,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDown,
@@ -78,6 +78,7 @@ import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
 import { presetKeys, usePresets } from "../../hooks/use-presets";
 import { useMariWorkspaceContext } from "../../hooks/use-mari-workspace-context";
+import { useDialogFocusScope } from "../../hooks/use-dialog-focus-scope";
 import { MariAttachButton } from "./MariAttachButton";
 import { MariChatHistoryPicker } from "./MariChatHistoryPicker";
 import { MariContextViewer } from "./MariContextViewer";
@@ -1923,6 +1924,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onReviewActionResult,
   characterSubject,
   lorebookSubject,
+  characterPreviews,
+  lorebookPreviews,
 }: {
   message: Message;
   thinking?: string | null;
@@ -1935,6 +1938,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
   onReviewActionResult: (reviewId: string) => void;
   characterSubject?: CharacterPreviewModel | null;
   lorebookSubject?: LorebookPreviewModel | null;
+  characterPreviews: ReadonlyMap<string, CharacterPreviewModel>;
+  lorebookPreviews: ReadonlyMap<string, LorebookPreviewModel>;
 }) {
   const { t: localizeUi } = useUiTranslation();
   const content = message.content ?? "";
@@ -2038,8 +2043,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
             result={result}
             onOpen={onOpenActionResult}
             onReview={onReviewActionResult}
-            character={characterSubject}
-            lorebook={lorebookSubject}
+            character={characterPreviews.get(result.resource.id)}
+            lorebook={lorebookPreviews.get(result.resource.id)}
           />
         ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
@@ -2083,8 +2088,8 @@ const CompactMariMessage = memo(function CompactMariMessage({
             result={result}
             onOpen={onOpenActionResult}
             onReview={onReviewActionResult}
-            character={characterSubject}
-            lorebook={lorebookSubject}
+            character={characterPreviews.get(result.resource.id)}
+            lorebook={lorebookPreviews.get(result.resource.id)}
           />
         ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
@@ -2432,6 +2437,7 @@ export function HomeProfessorMariChat({
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const embeddedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const floatingTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
   const workspaceAbortRef = useRef<AbortController | null>(null);
   const workspaceRunIdRef = useRef(0);
   const pendingWorkspaceTextRef = useRef("");
@@ -2525,6 +2531,8 @@ export function HomeProfessorMariChat({
   }, [draft, resizeComposer]);
 
   const hasActiveGeneration = useChatStore((state) => (chatId ? state.abortControllers.has(chatId) : false));
+  const reduceMotion = useReducedMotion();
+  const paneTransition = reduceMotion ? { duration: 0 } : PROFESSOR_MARI_PANE_TRANSITION;
   const mariPhase = useChatStore((state) => (chatId ? (state.mariPhaseByChatId.get(chatId) ?? null) : null));
   const mariChips = useAgentStore((state) => state.mariChips);
   const mariChipsChatId = useAgentStore((state) => state.mariChipsChatId);
@@ -3145,6 +3153,8 @@ export function HomeProfessorMariChat({
     setChatWindowOpen(false);
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   }, [setChatWindowOpen]);
+
+  useDialogFocusScope(chatWindowOpen && mobileFocusMode && !embeddedTab, mobileDialogRef, floatingTextareaRef);
 
   const openChatWindow = useCallback(() => {
     setWorkspaceDestination("chat");
@@ -4447,6 +4457,8 @@ export function HomeProfessorMariChat({
         onReviewActionResult={reviewActionResult}
         characterSubject={messageCharacter}
         lorebookSubject={messageLorebook}
+        characterPreviews={characterPreviewById}
+        lorebookPreviews={lorebookPreviewById}
       />
     );
   };
@@ -4535,12 +4547,17 @@ export function HomeProfessorMariChat({
         {chatWindowOpen && (
           <ProfessorMariMobilePortal disabled={embeddedTab}>
             <motion.div
+              ref={mobileDialogRef}
               key="professor-mari-window"
               data-component="HomeProfessorMariChat.Window"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={PROFESSOR_MARI_PANE_TRANSITION}
+              transition={paneTransition}
+              role={mobileFocusMode && !embeddedTab ? "dialog" : undefined}
+              aria-modal={mobileFocusMode && !embeddedTab ? true : undefined}
+              aria-label={mobileFocusMode && !embeddedTab ? localizeUi("ui.chat.homefaq.professorMari") : undefined}
+              tabIndex={mobileFocusMode && !embeddedTab ? -1 : undefined}
               className={cn(
                 "flex min-h-0 items-stretch justify-center",
                 embeddedTab
@@ -4560,7 +4577,13 @@ export function HomeProfessorMariChat({
                     (workspaceDestination === "skills" && Boolean(selectedSkillId)) ||
                     (workspaceDestination === "memories" && Boolean(selectedMemoryId));
                   const action = resolveProfessorMariWorkspaceBackAction(workspaceDestination, hasDetail);
-                  if (action === "workspace") return;
+                  if (action === "workspace") {
+                    if (mobileFocusMode && !embeddedTab) {
+                      event.stopPropagation();
+                      closeChatWindow();
+                    }
+                    return;
+                  }
                   event.stopPropagation();
                   if (action === "detail" && workspaceDestination === "context") {
                     setSelectedContextId(null);
@@ -4696,7 +4719,7 @@ export function HomeProfessorMariChat({
                 >
                   <motion.div
                     key="professor-mari-chat"
-                    transition={PROFESSOR_MARI_PANE_TRANSITION}
+                    transition={paneTransition}
                     className="h-full min-h-0 min-w-0 flex-1"
                   >
                     <div
@@ -5088,7 +5111,7 @@ export function HomeProfessorMariChat({
                         initial={{ opacity: 0, x: 8 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 8 }}
-                        transition={PROFESSOR_MARI_PANE_TRANSITION}
+                        transition={paneTransition}
                         className={MARI_PANEL_SLOT_CLASS}
                       >
                         <section className="flex h-full min-h-0 min-w-0 flex-col rounded-none border-0 bg-[var(--background)] sm:rounded-xl sm:border sm:border-[var(--border)]/70 sm:bg-[var(--background)] sm:shadow-2xl">
@@ -5297,7 +5320,7 @@ export function HomeProfessorMariChat({
                         initial={{ opacity: 0, x: 8 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 8 }}
-                        transition={PROFESSOR_MARI_PANE_TRANSITION}
+                        transition={paneTransition}
                         className={MARI_PANEL_SLOT_CLASS}
                       >
                         <Suspense fallback={null}>
@@ -5330,7 +5353,7 @@ export function HomeProfessorMariChat({
                         initial={{ opacity: 0, x: 8 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 8 }}
-                        transition={PROFESSOR_MARI_PANE_TRANSITION}
+                        transition={paneTransition}
                         className={MARI_PANEL_SLOT_CLASS}
                       >
                         <Suspense fallback={null}>
@@ -5363,7 +5386,7 @@ export function HomeProfessorMariChat({
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        transition={PROFESSOR_MARI_PANE_TRANSITION}
+                        transition={paneTransition}
                         className={cn(MARI_PANEL_SLOT_CLASS, "flex flex-col bg-[var(--background)]/45")}
                       >
                         <MariStrip className="shrink-0 border-b border-[var(--border)]/45 px-2 py-1.5">
