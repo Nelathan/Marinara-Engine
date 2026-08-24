@@ -617,6 +617,15 @@ export function TacticalCombatUI({
     ) => {
       setStarting(true);
       setStartError(null);
+      // A fresh encounter is initialized at configured max HP. This also makes
+      // Tactical Retry recover a party whose previous terminal result persisted
+      // zero HP into Game state, instead of creating a battlefield with no
+      // renderable or actionable party units.
+      const freshParty = party.map((combatant) => {
+        const maxHp =
+          Number.isFinite(combatant.maxHp) && combatant.maxHp > 0 ? combatant.maxHp : Math.max(1, combatant.hp);
+        return { ...combatant, hp: maxHp, maxHp };
+      });
       // Typed intermediate (not a fresh literal) so environment/formation reach the
       // POST body even though the hook's mutationFn type predates these fields.
       const startPayload: {
@@ -632,7 +641,7 @@ export function TacticalCombatUI({
         replaceSessionId?: string;
       } = {
         chatId,
-        party,
+        party: freshParty,
         enemies,
         inventory: inventoryItems,
         itemEffects: combatItemEffects,
@@ -647,7 +656,7 @@ export function TacticalCombatUI({
         .then((res) => {
           if (isCancelled?.()) return;
           // Engine does NOT set isPlayer — the client marks the persona's combatant.
-          const playerId = playerCombatantId ?? party[0]?.id ?? null;
+          const playerId = playerCombatantId ?? freshParty[0]?.id ?? null;
           const marked: TacticalCombatState = {
             ...res.state,
             units: res.state.units.map((u) =>

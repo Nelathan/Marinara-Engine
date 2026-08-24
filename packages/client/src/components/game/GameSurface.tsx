@@ -9362,7 +9362,7 @@ function GameSurfaceComponent({
         const hpStat = findStat(stats, ["hp", "health", "hit points"]);
         const mpStat = findStat(stats, ["mp", "mana", "magic points", "energy"]);
         const hpFromCard = readNumeric(cardRpgStats?.hp?.value) ?? readNumeric(cardRpgStats?.hp?.max);
-        const maxHpFromCard = readNumeric(cardRpgStats?.hp?.max) ?? hpFromCard;
+        const maxHpFromCard = readNumeric(cardRpgStats?.hp?.max);
         const attributeValue = (...aliases: string[]) => {
           for (const alias of aliases) {
             const normalizedAlias = normalizeKey(alias);
@@ -9386,8 +9386,13 @@ function GameSurfaceComponent({
         const derivedAttack = attributeValue("attack", "atk", "str", "strength") ?? 8 + pLevel * 2;
         const derivedDefense = attributeValue("defense", "def", "con", "constitution") ?? 5 + pLevel;
         const derivedSpeed = attributeValue("speed", "spd", "dex", "dexterity", "agility") ?? 5 + pLevel;
-        const derivedMaxHp = maxHpFromCard ?? 50 + pLevel * 10;
-        const derivedHp = hpFromCard ?? derivedMaxHp;
+        // Combat encounters start from configured max HP. The tracked value is
+        // a running story-state pool and may be zero after a prior defeat; using
+        // it here would create an unwinnable battle with no visible party units.
+        const maxHpCandidate = [hpStat?.max, maxHpFromCard, hpFromCard].find(
+          (value): value is number => value != null && value > 0,
+        );
+        const derivedMaxHp = Math.max(1, maxHpCandidate ?? 50 + pLevel * 10);
         const derivedMaxMp =
           manaFromCard?.max ?? (intelligenceValue != null ? 12 + intelligenceValue * 2 : 20 + pLevel * 3);
         const derivedMp = manaFromCard?.value ?? derivedMaxMp;
@@ -9395,8 +9400,8 @@ function GameSurfaceComponent({
         return {
           id: m.id,
           name: m.name,
-          hp: hpStat?.value ?? derivedHp,
-          maxHp: hpStat?.max ?? hpStat?.value ?? derivedMaxHp,
+          hp: derivedMaxHp,
+          maxHp: derivedMaxHp,
           mp: mpStat?.value ?? derivedMp,
           maxMp: mpStat?.max ?? mpStat?.value ?? derivedMaxMp,
           attack: attackStat?.value ?? derivedAttack,

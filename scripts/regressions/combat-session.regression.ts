@@ -431,6 +431,21 @@ assert.match(
   /const partyWiped = state\.party\.length > 0 && state\.party\.every/,
   "an empty party must not read as wiped in the Classic terminal check",
 );
+assert.match(
+  gameSurfaceSource,
+  /const maxHpCandidate = \[hpStat\?\.max, maxHpFromCard, hpFromCard\]\.find\([\s\S]{0,220}value > 0/,
+  "new Game Mode encounters must ignore persisted zero HP when choosing party max HP",
+);
+assert.match(
+  gameSurfaceSource,
+  /hp: derivedMaxHp,\s*maxHp: derivedMaxHp,/,
+  "new Game Mode encounters must initialize every party member at max HP",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /const freshParty = party\.map\(\(combatant\) => \{[\s\S]{0,420}return \{ \.\.\.combatant, hp: maxHp, maxHp \}/,
+  "Tactical fresh starts and retries must revive a zero-HP party snapshot",
+);
 assert.doesNotMatch(
   encounterRoutesSource,
   /"kind":"eliminate\|survive_rounds[^\n]*"failAtRound"/,
