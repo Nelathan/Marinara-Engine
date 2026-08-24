@@ -3032,7 +3032,7 @@ export function HomeProfessorMariChat({
     setMobileFocusMode(false);
     setChatWindowOpen(false);
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  }, [omnibarMode, setChatWindowOpen]);
+  }, [setChatWindowOpen]);
 
   const openChatWindow = useCallback(() => {
     setWorkspaceDestination("chat");

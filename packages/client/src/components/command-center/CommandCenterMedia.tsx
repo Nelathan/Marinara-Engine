@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -21,12 +21,6 @@ export interface CommandCenterMediaProps {
   accent?: string | null;
   className?: string;
 }
-
-const sizeClasses: Record<CommandCenterMediaSize, string> = {
-  row: "size-9",
-  preview: "size-16",
-  grid: "size-24",
-};
 
 const iconClasses: Record<CommandCenterMediaSize, string> = {
   row: "size-4",
@@ -76,11 +70,6 @@ export function CommandCenterMedia({
   const hasImage = Boolean(resolvedSrc && resolvedSrc !== failedSrc);
   const validAccent = getValidatedCommandCenterAccent(accent);
 
-  useEffect(() => {
-    setFailedSrc(undefined);
-    setLoadedSrc(undefined);
-  }, [resolvedSrc]);
-
   return (
     <span
       aria-hidden={role === "row" ? true : undefined}
@@ -88,7 +77,7 @@ export function CommandCenterMedia({
       data-media-kind={kind}
       className={cn(
         "relative flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-[color-mix(in_srgb,var(--mari-panel-gradient-start,var(--border))_24%,var(--border))] bg-[color-mix(in_srgb,var(--mari-panel-gradient-start,var(--muted))_8%,var(--muted))] text-[color-mix(in_srgb,var(--mari-panel-gradient-start,var(--muted-foreground))_30%,var(--foreground))]",
-        role === "preview" ? roleClasses.preview : role === "browse" ? roleClasses.browse : sizeClasses.row,
+        role === "preview" ? roleClasses.preview : role === "browse" ? roleClasses.browse : "size-9",
         kind === "avatar" && "rounded-full",
         role === "browse" && kind === "avatar" && "aspect-square h-auto w-full",
         role === "preview" && kind !== "avatar" && kind !== "artwork" && "aspect-[4/5] h-auto w-24 sm:w-28",
@@ -99,6 +88,7 @@ export function CommandCenterMedia({
     >
       {hasImage ? (
         <img
+          key={resolvedSrc}
           // A cached image can complete before React attaches onLoad, which used
           // to leave it stuck at opacity-0. Read the state on mount instead.
           // The inline callback is a new function every render, so React

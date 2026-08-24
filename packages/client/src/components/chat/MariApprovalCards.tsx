@@ -291,8 +291,11 @@ function DatabaseWorkspaceApprovalCard({
               {localizeUi("ui.chat.databaseworkspaceapprovalcard.restoreWillPutTheSavedRowSnapshotBack")}
             </p>
             <div className="mt-2 space-y-2">
-              {deletedRows.slice(0, 3).map((change) => (
-                <details key={`${change.table}:${change.id}`} className="rounded-md bg-[var(--background)]/80 p-2">
+              {deletedRows.slice(0, 3).map((change, index) => (
+                <details
+                  key={`${change.table}:${change.id}:${index}`}
+                  className="rounded-md bg-[var(--background)]/80 p-2"
+                >
                   <summary className="cursor-pointer font-medium text-[var(--foreground)]">
                     {summarizeDeletedRow(change)}
                   </summary>
@@ -321,8 +324,11 @@ function DatabaseWorkspaceApprovalCard({
               {localizeUi("ui.chat.databaseworkspaceapprovalcard.keepSavesThemToYourLibraryRestoreRemovesEverything")}
             </p>
             <div className="mt-2 space-y-2">
-              {insertedRows.slice(0, 3).map((change) => (
-                <details key={`${change.table}:${change.id}`} className="rounded-md bg-[var(--background)]/80 p-2">
+              {insertedRows.slice(0, 3).map((change, index) => (
+                <details
+                  key={`${change.table}:${change.id}:${index}`}
+                  className="rounded-md bg-[var(--background)]/80 p-2"
+                >
                   <summary className="cursor-pointer font-medium text-[var(--foreground)]">
                     {summarizeCreatedRow(change)}
                   </summary>

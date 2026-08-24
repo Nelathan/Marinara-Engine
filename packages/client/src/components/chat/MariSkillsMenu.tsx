@@ -54,8 +54,8 @@ export function ProfessorMariSkillsMenu({
   const enabledCount = skills.filter((skill) => skill.enabled).length;
   const hasSkills = skills.length > 0;
   const normalizedQuery = query.trim().toLowerCase();
-  // Pure textual match: drives the noMatches message. The open (selected) row is re-added in
-  // `displayed` below so its editor stays visible even when the search excludes it.
+  // Pure textual match: drives the noMatches message. While an editor is open,
+  // that selected row is rendered directly instead of this list.
   const filtered = useMemo(
     () =>
       normalizedQuery
@@ -65,15 +65,10 @@ export function ProfessorMariSkillsMenu({
   );
   const sortMode = useUIStore((s) => s.mariPanelSortMode);
   const setSortMode = useUIStore((s) => s.setMariPanelSortMode);
-  const displayed = useMemo(() => {
-    // Re-add the open (selected) row BEFORE sorting so it lands in its correct sorted position,
-    // not appended out of order at the end.
-    const candidates =
-      selectedSkill && !filtered.some((skill) => skill.id === selectedSkill.id)
-        ? [...filtered, selectedSkill]
-        : filtered;
-    return [...candidates].sort((a, b) => compareMariPanelItems(a, b, sortMode));
-  }, [filtered, sortMode, selectedSkill]);
+  const displayed = useMemo(
+    () => [...filtered].sort((a, b) => compareMariPanelItems(a, b, sortMode)),
+    [filtered, sortMode],
+  );
   // Keep the open editor in view when its row moves (selection change, or a rename that re-sorts it).
   const activeEditorRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
