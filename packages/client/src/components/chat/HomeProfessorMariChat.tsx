@@ -1233,26 +1233,6 @@ function inferToolPresentation(tool: WorkspaceToolCall): ToolPresentation {
   return { eyebrow: "Tool", title: name, detail, tone: "generic" };
 }
 
-function toolToneClasses(tone: ToolTone) {
-  switch (tone) {
-    case "db":
-    case "skill":
-      return "border-[var(--primary)]/20 bg-[var(--primary)]/10";
-    case "theme":
-      return "border-[var(--marinara-chat-chrome-button-border)] bg-[var(--marinara-chat-chrome-highlight-bg)]";
-    case "image":
-      return "border-sky-400/20 bg-sky-400/10";
-    case "wiki":
-      return "border-emerald-400/20 bg-emerald-400/10";
-    case "write":
-      return "border-amber-400/20 bg-amber-400/10";
-    case "search":
-      return "border-cyan-400/20 bg-cyan-400/10";
-    default:
-      return "border-[var(--border)]/70 bg-[var(--card)]/70";
-  }
-}
-
 function ToolGlyph({ tool, tone }: { tool: WorkspaceToolCall; tone: ToolTone }) {
   if (tool.status === "running") return <Loader2 size="0.72rem" className="animate-spin" />;
   if (tool.status === "error") return <AlertTriangle size="0.72rem" />;
@@ -1479,43 +1459,49 @@ function WorkspaceToolEvent({ tool }: { tool: WorkspaceToolCall }) {
   const { t: localizeUi } = useUiTranslation();
   const presentation = inferToolPresentation(tool);
   const isError = tool.status === "error";
+  const running = tool.status === "running";
 
   return (
     <TranscriptRow
       marker={
         <span
           className={cn(
-            "mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border bg-[var(--card)] shadow-sm",
+            "mt-0.5 flex h-5 w-5 items-center justify-center rounded-md",
             isError
-              ? "border-[var(--destructive)]/40 text-[var(--destructive)]"
-              : "border-[var(--border)]/70 text-[var(--muted-foreground)]",
+              ? "bg-[var(--destructive)]/10 text-[var(--destructive)]"
+              : running
+                ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                : "text-[var(--muted-foreground)]",
           )}
         >
           <ToolGlyph tool={tool} tone={presentation.tone} />
         </span>
       }
     >
-      <div className="min-w-0 space-y-1.5">
+      <div className="min-w-0 py-0.5">
         <div
-          className={cn(
-            "inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-[0.7rem] leading-5 shadow-sm",
-            toolToneClasses(presentation.tone),
-            isError && "border-[var(--destructive)]/35 bg-[var(--destructive)]/10",
-          )}
+          className="mari-tool-line flex min-w-0 items-baseline gap-2 text-xs leading-5"
+          data-status={tool.status}
           title={presentation.detail ?? presentation.title}
         >
-          <span className="shrink-0 rounded-full bg-[var(--background)]/70 px-1.5 py-0.5 text-[0.56rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
-            {presentation.eyebrow}
-          </span>
-          <span className="min-w-0 truncate font-semibold text-[var(--foreground)]">{presentation.title}</span>
+          <span className="shrink-0 font-semibold text-[var(--foreground)]">{presentation.title}</span>
           {presentation.detail && (
-            <span className="min-w-0 truncate text-[var(--muted-foreground)]">· {presentation.detail}</span>
+            <code className="min-w-0 truncate font-mono text-[0.6875rem] text-[var(--muted-foreground)]">
+              {presentation.detail}
+            </code>
           )}
-          {isError && (
-            <span className="shrink-0 text-[0.65rem] font-semibold text-[var(--destructive)]">
-              {localizeUi("ui.chat.workspacetoolevent.needsAttention")}
-            </span>
-          )}
+          <span
+            className={cn(
+              "ml-auto shrink-0 text-[0.65rem] font-medium",
+              isError ? "text-[var(--destructive)]" : "text-[var(--muted-foreground)]",
+            )}
+          >
+            {isError
+              ? localizeUi("ui.chat.workspacetoolevent.needsAttention")
+              : running
+                ? localizeUi("ui.chat.workspacetoolevent.running")
+                : localizeUi("ui.chat.workspacetoolevent.done")}
+          </span>
         </div>
         {isError && tool.output?.trim() && (
           <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/8 px-2.5 py-2 text-[0.6875rem] leading-relaxed text-[var(--destructive)]">

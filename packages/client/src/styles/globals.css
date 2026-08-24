@@ -1019,6 +1019,32 @@
   gap: 0.2rem;
 }
 
+.mari-tool-line[data-status="running"] {
+  position: relative;
+}
+
+.mari-tool-line[data-status="running"]::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.25rem;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  background-size: 45% 100%;
+  background-repeat: no-repeat;
+  animation: mari-tool-progress 1.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes mari-tool-progress {
+  from {
+    background-position: -80% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+
 .mari-live-activity__dots i {
   width: 0.22rem;
   height: 0.22rem;
@@ -1142,7 +1168,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mari-live-activity__dots i {
+  .mari-live-activity__dots i,
+  .mari-tool-line[data-status="running"]::after {
     animation: none;
   }
 }
