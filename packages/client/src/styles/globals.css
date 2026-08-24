@@ -829,25 +829,6 @@
   }
 }
 
-/* R42: the Card. A border means your data is involved - approvals, action
-   results, diffs, artifacts. Nothing else gets one, and there is deliberately no
-   second weight, because a decorative border would dilute the only signal this
-   one carries. */
-.mari-card {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--card);
-  padding: 0.625rem;
-}
-
-.mari-card[data-tone="attention"] {
-  border-color: color-mix(in srgb, var(--mari-workspace-gold) 40%, var(--border));
-}
-
-.mari-card[data-tone="danger"] {
-  border-color: color-mix(in srgb, var(--destructive) 40%, var(--border));
-}
-
 /* R43: the Note. One muted line, no box, no icon of its own. */
 .mari-note {
   font-size: 0.6875rem;
@@ -863,8 +844,8 @@
   color: var(--destructive);
 }
 
-/* R45: the Strip. Wraps, never scrolls - a horizontal scroller hides the status
-   facts that have to stay readable on a phone. */
+/* Grouped controls wrap when space is available. Dense context groups use two
+   scrollable lanes at the phone breakpoint below. */
 .mari-strip {
   display: flex;
   min-width: 0;
