@@ -1579,6 +1579,7 @@ function WorkspaceLiveWorkCard({
     );
   const currentTool = [...toolItems].reverse().find(({ tool }) => tool.status === "running") ?? toolItems.at(-1);
   const phaseSignal = latestNarrative?.content ?? currentTool?.tool.name ?? activity;
+  const workTitle = currentTool ? inferToolPresentation(currentTool.tool).title : activity;
   const animationSeed = items[0]?.id ?? `${subjectName ?? "mari"}:${activity}`;
   const workAnimation = selectMariWorkAnimation({
     seed: animationSeed,
@@ -1587,7 +1588,7 @@ function WorkspaceLiveWorkCard({
   });
 
   return (
-    <TranscriptRow marker={<MariAvatar active />}>
+    <TranscriptRow marker={null} layout="document">
       <motion.section
         className="mari-live-work"
         aria-label={t("mari.workCard.label")}
@@ -1595,31 +1596,8 @@ function WorkspaceLiveWorkCard({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="mari-live-work__intro">
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className="truncate text-[0.8125rem] font-semibold text-[var(--foreground)]">
-                {subjectName ? t("mari.workCard.workingWith", { name: subjectName }) : t("mari.workCard.working")}
-              </h3>
-              <span className="mari-live-work__elapsed">
-                <i aria-hidden="true" />
-                {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
-              </span>
-            </div>
-            <AnimatePresence initial={false} mode="popLayout">
-              <motion.p
-                key={latestNarrative?.id ?? activity}
-                className="mari-live-work__narrative"
-                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
-                transition={{ duration: reduceMotion ? 0 : 0.2 }}
-              >
-                {latestNarrative?.content.trim() || activity}
-              </motion.p>
-            </AnimatePresence>
-            <MariResourceSubject character={character} lorebook={lorebook} className="mt-3" />
-          </div>
+        <p className="mari-live-work__speaker">{t("ui.chat.homefaq.professorMari")}</p>
+        <div className="mari-live-work__body">
           <div className="mari-live-work__scene">
             <AnimatePresence initial={false} mode="wait">
               <motion.span
@@ -1634,72 +1612,104 @@ function WorkspaceLiveWorkCard({
                 aria-hidden="true"
               />
             </AnimatePresence>
-            <button type="button" className="mari-live-work__stop" onClick={onStop}>
-              <Square size="0.65rem" aria-hidden="true" />
-              {t("ui.chat.summarypopover.stop")}
-            </button>
+          </div>
+          <div className="mari-live-work__content">
+            <div className="mari-live-work__heading">
+              <span className="mari-live-work__activity" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <h3>{workTitle}</h3>
+            </div>
+            <AnimatePresence initial={false} mode="popLayout">
+              <motion.p
+                key={latestNarrative?.id ?? activity}
+                className="mari-live-work__narrative"
+                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
+                transition={{ duration: reduceMotion ? 0 : 0.2 }}
+              >
+                {latestNarrative?.content.trim() || activity}
+              </motion.p>
+            </AnimatePresence>
+            <div className="mari-live-work__controls">
+              <span className="mari-live-work__elapsed">
+                <i aria-hidden="true" />
+                {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
+              </span>
+              <button type="button" className="mari-live-work__stop" onClick={onStop}>
+                <Square size="0.65rem" aria-hidden="true" />
+                {t("ui.chat.summarypopover.stop")}
+              </button>
+            </div>
+
+            {visibleSteps.length > 0 ? (
+              <ol className="mari-live-work__steps" aria-label={t("mari.workCard.progress")}>
+                <AnimatePresence initial={false} mode="popLayout">
+                  {visibleSteps.map(({ id, tool }) => {
+                    const presentation = inferToolPresentation(tool);
+                    const running = tool.status === "running";
+                    const failed = tool.status === "error";
+                    const Icon = failed ? AlertTriangle : running ? Loader2 : Check;
+                    return (
+                      <motion.li
+                        layout={!reduceMotion}
+                        key={`${id}:${tool.status}`}
+                        data-status={tool.status}
+                        initial={reduceMotion ? false : { opacity: 0, x: -8, height: 0 }}
+                        animate={{ opacity: 1, x: 0, height: "auto" }}
+                        exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+                      >
+                        <Icon
+                          size="0.75rem"
+                          className={cn(
+                            "mari-live-work__step-icon shrink-0",
+                            running && "animate-spin motion-reduce:animate-none",
+                          )}
+                        />
+                        <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                        {presentation.detail ? (
+                          <code className="hidden max-w-[45%] truncate font-mono text-[0.65rem] text-[var(--muted-foreground)] sm:block">
+                            {presentation.detail}
+                          </code>
+                        ) : null}
+                      </motion.li>
+                    );
+                  })}
+                </AnimatePresence>
+              </ol>
+            ) : null}
+
+            <MariResourceSubject character={character} lorebook={lorebook} className="mari-live-work__subject" />
+
+            {toolItems.length > 0 ? (
+              <details className="mari-live-work__technical group">
+                <summary>
+                  <Terminal size="0.75rem" aria-hidden="true" />
+                  <span>{t("mari.workCard.technicalActions", { count: toolItems.length })}</span>
+                  <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
+                </summary>
+                <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
+                  {toolItems.map(({ id, tool }) => {
+                    const presentation = inferToolPresentation(tool);
+                    return (
+                      <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
+                        <ToolGlyph tool={tool} tone={presentation.tone} />
+                        <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                        {presentation.detail ? (
+                          <code className="max-w-[45%] truncate">{presentation.detail}</code>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ) : null}
           </div>
         </div>
-
-        {visibleSteps.length > 0 ? (
-          <ol className="mari-live-work__steps" aria-label={t("mari.workCard.progress")}>
-            <AnimatePresence initial={false} mode="popLayout">
-              {visibleSteps.map(({ id, tool }) => {
-                const presentation = inferToolPresentation(tool);
-                const running = tool.status === "running";
-                const failed = tool.status === "error";
-                const Icon = failed ? AlertTriangle : running ? Loader2 : Check;
-                return (
-                  <motion.li
-                    layout={!reduceMotion}
-                    key={`${id}:${tool.status}`}
-                    data-status={tool.status}
-                    initial={reduceMotion ? false : { opacity: 0, x: -8, height: 0 }}
-                    animate={{ opacity: 1, x: 0, height: "auto" }}
-                    exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <Icon
-                      size="0.75rem"
-                      className={cn(
-                        "mari-live-work__step-icon shrink-0",
-                        running && "animate-spin motion-reduce:animate-none",
-                      )}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                    {presentation.detail ? (
-                      <code className="hidden max-w-[45%] truncate font-mono text-[0.65rem] text-[var(--muted-foreground)] sm:block">
-                        {presentation.detail}
-                      </code>
-                    ) : null}
-                  </motion.li>
-                );
-              })}
-            </AnimatePresence>
-          </ol>
-        ) : null}
-
-        {toolItems.length > 0 ? (
-          <details className="mari-live-work__technical group mt-3">
-            <summary>
-              <Terminal size="0.75rem" aria-hidden="true" />
-              <span>{t("mari.workCard.technicalActions", { count: toolItems.length })}</span>
-              <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
-            </summary>
-            <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
-              {toolItems.map(({ id, tool }) => {
-                const presentation = inferToolPresentation(tool);
-                return (
-                  <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
-                    <ToolGlyph tool={tool} tone={presentation.tone} />
-                    <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                    {presentation.detail ? <code className="max-w-[45%] truncate">{presentation.detail}</code> : null}
-                  </div>
-                );
-              })}
-            </div>
-          </details>
-        ) : null}
       </motion.section>
     </TranscriptRow>
   );
@@ -1999,7 +2009,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   if (message.role === "user") {
     return (
       <TranscriptRow
-        className="group border-y border-[var(--border)]/60 py-2.5"
+        className="mari-user-request group"
         marker={
           <span className="pt-0.5 text-[0.6875rem] font-semibold text-[var(--marinara-chat-chrome-panel-muted)]">
             {localizeUi("ui.chat.compactmarimessage.you")}
@@ -4670,7 +4680,7 @@ export function HomeProfessorMariChat({
               >
                 {omnibarMode ? (
                   <div
-                    className="mari-workspace-focusbar relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5"
+                    className="mari-workspace-focusbar relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5 sm:px-7"
                     data-state={mariPresentationState}
                   >
                     <span
@@ -4967,7 +4977,7 @@ export function HomeProfessorMariChat({
                         data-component="HomeProfessorMariChat.Transcript"
                         data-mari-state={mariPresentationState}
                         className={cn(
-                          "min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3 pb-4 text-left",
+                          "min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4 pb-5 text-left sm:px-7",
                           omnibarMode
                             ? "mari-workspace-transcript bg-transparent"
                             : "bg-[radial-gradient(circle_at_12%_8%,oklch(0.79_0.16_205/0.06),transparent_26%),radial-gradient(circle_at_88%_12%,oklch(0.73_0.21_345/0.07),transparent_28%)]",
@@ -5013,7 +5023,7 @@ export function HomeProfessorMariChat({
                       <form
                         className={cn(
                           "border-t border-[var(--border)]/60 px-2.5 py-2.5",
-                          omnibarMode && "mari-workspace-composer-dock px-2 py-2",
+                          omnibarMode && "mari-workspace-composer-dock px-3 py-3 sm:px-7",
                         )}
                         onSubmit={(event) => {
                           event.preventDefault();

@@ -914,6 +914,18 @@
 
 .mari-workspace-transcript {
   scrollbar-gutter: stable;
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
+}
+
+.mari-user-request {
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--foreground) 7%, var(--border));
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--card) 94%, var(--mari-workspace-hoodie));
+  padding: 0.75rem 0.875rem;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
 }
 
 .mari-workspace-focusbar {
@@ -1058,43 +1070,70 @@
 
 .mari-live-work {
   position: relative;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
-  border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--card) 96%, var(--mari-workspace-hoodie));
-  padding: 0.875rem;
+  min-width: 0;
+  padding: 0.75rem 0.25rem 0;
 }
 
-.mari-live-work::before {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(
-    110deg,
-    transparent 15%,
-    color-mix(in srgb, var(--primary) 7%, transparent) 48%,
-    transparent 75%
-  );
-  transform: translateX(-100%);
-  animation: mari-live-work-sheen 7s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+.mari-live-work__speaker {
+  margin: 0 0 0.45rem 4.9rem;
+  color: color-mix(in srgb, var(--primary) 72%, var(--foreground));
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
-.mari-live-work > * {
-  position: relative;
-}
-
-.mari-live-work__intro {
+.mari-live-work__body {
   display: grid;
-  min-height: 6rem;
-  grid-template-columns: minmax(0, 1fr) 5.25rem;
+  min-width: 0;
+  grid-template-columns: 4.25rem minmax(0, 1fr);
   gap: 0.75rem;
+}
+
+.mari-live-work__content {
+  min-width: 0;
+}
+
+.mari-live-work__heading {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.mari-live-work__heading h3 {
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.mari-live-work__activity {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.14rem;
+  color: var(--primary);
+}
+
+.mari-live-work__activity i {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: currentColor;
+  animation: mari-live-activity-dot 1.2s ease-in-out infinite;
+}
+
+.mari-live-work__activity i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.mari-live-work__activity i:nth-child(3) {
+  animation-delay: 240ms;
 }
 
 .mari-live-work__narrative {
   display: -webkit-box;
   overflow: hidden;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   color: var(--muted-foreground);
   font-size: 0.75rem;
   line-height: 1.5;
@@ -1105,9 +1144,17 @@
 .mari-live-work__scene {
   display: flex;
   min-width: 0;
-  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  align-self: start;
+  justify-content: center;
+  padding-top: 0.1rem;
+}
+
+.mari-live-work__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
 }
 
 .mari-live-work__elapsed {
@@ -1131,8 +1178,8 @@
 .mari-live-work__sprite {
   position: relative;
   display: block;
-  width: 4rem;
-  height: 5.6rem;
+  width: 4.25rem;
+  height: 6rem;
   flex: 0 0 auto;
   background-image: var(--mari-work-sprite);
   background-position: 0 center;
@@ -1171,7 +1218,9 @@
 .mari-live-work__steps {
   display: grid;
   gap: 0.15rem;
-  margin-top: 0.25rem;
+  margin-top: 0.75rem;
+  padding-block: 0.5rem;
+  border-block: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .mari-live-work__steps li {
@@ -1214,8 +1263,9 @@
 
 .mari-live-work__technical {
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-block: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 0;
+  margin-top: 0.65rem;
 }
 
 .mari-live-work__technical > summary {
@@ -1225,7 +1275,7 @@
   list-style: none;
   align-items: center;
   gap: 0.5rem;
-  padding-inline: 0.625rem;
+  padding-inline: 0.25rem;
   color: var(--muted-foreground);
   font-size: 0.7rem;
   font-weight: 600;
@@ -1267,6 +1317,15 @@
   animation: mari-live-work-unfold 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.mari-live-work__subject {
+  width: 100%;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.25rem;
+  border-block: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
 .mari-live-work__stop {
   display: inline-flex;
   min-height: 1.75rem;
@@ -1277,6 +1336,7 @@
   color: var(--destructive);
   font-size: 0.6875rem;
   font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--destructive) 55%, var(--border));
 }
 
 .mari-live-work__stop:hover {
@@ -1314,21 +1374,6 @@
   }
 }
 
-@keyframes mari-live-work-sheen {
-  0%,
-  72% {
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-  78% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-}
-
 @keyframes mari-live-work-confirm {
   0% {
     opacity: 0.4;
@@ -1352,7 +1397,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mari-live-work::before,
+  .mari-live-work__activity i,
   .mari-live-work__technical[open] > div,
   .mari-live-work__steps li .mari-live-work__step-icon {
     animation: none;
@@ -1361,12 +1406,15 @@
 
 @media (max-width: 30rem) {
   .mari-live-work {
-    padding: 0.625rem;
+    padding: 0.5rem 0 0;
   }
 
-  .mari-live-work__intro {
-    min-height: 5.25rem;
-    grid-template-columns: minmax(0, 1fr) 4rem;
+  .mari-live-work__speaker {
+    margin-left: 4rem;
+  }
+
+  .mari-live-work__body {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
     gap: 0.5rem;
   }
 
@@ -1470,6 +1518,9 @@
 }
 
 .mari-workspace-composer-dock {
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
   background: color-mix(in srgb, var(--card) 76%, transparent);
 }
 
