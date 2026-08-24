@@ -1255,7 +1255,24 @@ export function TacticalCombatUI({
   const onTokenClick = useCallback(
     (unit: TacticalUnit) => {
       if (!liveState || animating) return;
-      setInspectTile({ x: unit.x, y: unit.y });
+
+      const isLivingPartyUnit = unit.side === "party" && unit.hp > 0 && liveState.phase === "player";
+      const isDifferentPartyUnit = isLivingPartyUnit && unit.id !== selectedUnitId;
+      const isIntentionalSupportTarget = ui.kind === "target" && ui.action !== "attack" && targetIds.has(unit.id);
+
+      // Switching party units must remain available while the current unit is in
+      // attack/skill/item targeting. Support-target clicks are handled by the
+      // wrapper above, and maneuver mode keeps its explicit target-picking flow.
+      // Do not open the terrain inspector from token clicks: its fixed z-20 card
+      // otherwise covers the spawn row and captures clicks for nearby units.
+      if (isDifferentPartyUnit && ui.kind !== "maneuver" && !isIntentionalSupportTarget) {
+        playSfx(SFX.select);
+        setInspectTile(null);
+        setStagedMove(null);
+        setForecastTargetId(null);
+        setUi({ kind: "unit", unitId: unit.id });
+        return;
+      }
 
       // Target selection mode — confirm target if valid.
       if (ui.kind === "target") {
@@ -1271,8 +1288,9 @@ export function TacticalCombatUI({
 
       // Select any living party unit during the player phase. Acted units remain
       // inspectable, while their action controls are disabled below.
-      if (unit.side === "party" && unit.hp > 0 && liveState.phase === "player") {
+      if (isLivingPartyUnit) {
         playSfx(SFX.select);
+        setInspectTile(null);
         setStagedMove(null);
         setForecastTargetId(null);
         setUi({ kind: "unit", unitId: unit.id });
@@ -1282,7 +1300,7 @@ export function TacticalCombatUI({
       // Otherwise just inspect (enemy or acted unit).
       resetSelection();
     },
-    [liveState, animating, ui, targetIds, playSfx, resetSelection],
+    [liveState, animating, selectedUnitId, ui, targetIds, playSfx, resetSelection],
   );
 
   // ── Commit a pure move, then re-select the same unit so it can still act. ──

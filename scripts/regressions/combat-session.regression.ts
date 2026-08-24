@@ -325,6 +325,21 @@ assert.match(
   "only an active session may suppress launching a fresh Tactical battle",
 );
 assert.match(
+  tacticalCombatUiSource,
+  /const isLivingPartyUnit = unit\.side === "party" && unit\.hp > 0 && liveState\.phase === "player"/,
+  "Tactical token selection must recognize every living party unit during player phase",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(isDifferentPartyUnit && ui\.kind !== "maneuver" && !isIntentionalSupportTarget\)/,
+  "Tactical party switching must happen before target validation for other units",
+);
+assert.doesNotMatch(
+  tacticalCombatUiSource,
+  /setInspectTile\(\{ x: unit\.x, y: unit\.y \}\)/,
+  "Tactical token clicks must not reopen the blocking inspector card",
+);
+assert.match(
   gameCombatUiSource,
   /session\.style !== "classic" \|\| session\.status !== "active"/,
   "a completed session must never hydrate the Classic battle component as a live fight",
