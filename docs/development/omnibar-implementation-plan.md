@@ -9,52 +9,47 @@ gets its own commit. Later slices depend on earlier ones only where stated.
 
 ## Status
 
-Updated 2026-08-23, third run on `feat/omnibar-professor-mari`, merged with
-`origin/staging`. Every commit passed `pnpm check` (exit 0).
+**All eight slices are built.** Updated 2026-08-23 on
+`feat/omnibar-professor-mari`, merged with `origin/staging`. Every commit passed
+`pnpm check` (exit 0).
 
 | Slice | State |
 | --- | --- |
-| A — persona split (R17) | **Done.** |
-| B — state survives close (R6) | **Done.** |
-| C — indicator in, floating window out | **Done**, including the dead `floatingMode` branch. |
-| D — takeover surface | **Done.** R34, R35, R36, R37 landed; R38 and R39 needed no work. |
-| E — pane collapse | **Done.** Five panes are three. |
-| F — the aside | **Done.** |
-| G — touch and composer transition | **Half done**, see below. |
-| H — Home's professor tab | **Done, no code needed**, see below. |
+| A — persona split (R17) | Done. |
+| B — state survives close (R6) | Done. |
+| C — indicator in, floating window out | Done, including the dead `floatingMode` branch. |
+| D — takeover surface | Done. R34–R37 landed; R38 and R39 needed no work. |
+| E — pane collapse | Done. Five panes are three. |
+| F — the aside | Done. |
+| G — touch and composer transition | Done. R26 was already satisfied by the layout; R33 is a one-shot flight. |
+| H — Home's professor tab | Done, no code needed. |
 
-### H needed no code
+Every rule R1–R40 in `omnibar-concept.md` is now implemented.
+`omnibar-feature-inventory.md` was rewritten to describe the built shape.
 
-`HomeBrowserHub`'s professor tab and the omnibar takeover render the same
-component, and both resolve their chat through `GET
-/chats/internal/professor-mari`, which is a server-side singleton. They are
-already one Mari on one thread. What R28 forbids — a *different* Mari on Home —
-does not exist. The remaining prop-level difference is framing, like the
-wide-screen preview panel.
+### Not verified in a browser
 
-Caveat worth knowing: both can be mounted at once if the omnibar is opened while
-the professor tab is showing. That is pre-existing and handled — see the comment
-about a co-mounted Home instance not stealing the handoff context.
+Nothing here has been seen running. `pnpm check` typechecks, lints and builds;
+it renders nothing. These four want eyes before this is called finished:
 
-### G is half done
+1. **Ranking of searchable choice values.** Those rows enter a scored set that
+   was tuned without them. Type a model name and see whether anything real gets
+   crowded out.
+2. **The field flight (R33).** Whether it reads as one field moving, or as a
+   rectangle sliding past. It is the one piece that is pure feel.
+3. **Inline expansion on a narrow viewport.** The row grows inside a scrolling
+   list inside a modal; check that the expanded row scrolls into view and that
+   the selection does not jump.
+4. **The aside with a real model.** Both the local sidecar and a remote
+   connection, plus the sidecar being down, which should show one quiet line and
+   leave the list working.
 
-R26's layout half is already satisfied: the dialog is `h-[100dvh] w-full` on
-small viewports, so it is full screen, and the aside sits at the bottom of that
-panel where `dvh` accounts for the on-screen keyboard. The indicator was pinned
-inside the safe area in slice C.
+### Known ceilings
 
-**R33 is not built.** The search input still cuts to Mari's composer rather than
-animating into it. Doing it properly means a shared layout animation between two
-elements that live in different components, and it is polish rather than
-behaviour — which is why it is last.
-
-### Carried forward
-
-- **R33**, above.
-- **Ranking of searchable choice values needs a look in the browser.** Those rows
-  enter a scored set that was tuned without them.
 - **`isProseField` is a name list.** An unusual custom field falls back to diff
   colours. Widen it when a real field is missing, not preemptively.
+- **Leaving Mari is a cut, not a flight.** The return trip was not worth
+  doubling the animation surface.
 - **No draft PR**, by decision.
 
 ## Ground rules for every slice
