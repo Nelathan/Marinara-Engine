@@ -4,6 +4,7 @@ import {
   useDeferredValue,
   useEffect,
   useEffectEvent,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -400,6 +401,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // R33: how far the search field has to fall to land where Mari's composer sits.
+  // Measured while the list is still up, because by the time it leaves the field
+  // is gone. 0 means "do not travel" - reduced motion, or a phone, where the
+  // composer is already pinned above the keyboard and there is nowhere to fall.
+  const [inputTravel, setInputTravel] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
   // The session normalizer resets any persisted `mari` pane to `results`, so the
@@ -1434,6 +1441,20 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // Quick and Mari both own the whole dialog. Leaving the search input mounted
   // under them let one keystroke re-enter `results` and abort a running answer.
   const mariSurface = pane === "mari";
+  useLayoutEffect(() => {
+    if (mariSurface) return;
+    const dialog = dialogRef.current;
+    const input = inputRef.current;
+    if (!dialog || !input || reduceMotion || !window.matchMedia("(min-width: 640px)").matches) {
+      setInputTravel(0);
+      return;
+    }
+    // The panel grows into the takeover, so aim at the taller shell, not this one.
+    const grown = Math.min(44 * 16, window.innerHeight * 0.8);
+    setInputTravel(
+      Math.max(0, grown - (input.getBoundingClientRect().bottom - dialog.getBoundingClientRect().top) - 44),
+    );
+  }, [mariSurface, reduceMotion]);
   // Ghost text: continue the query with the best-ranked result title. Uses the
   // ranked list already on screen, so the guess never disagrees with row 1.
   // With a chat open, an action verb completes to the whole sentence the omnibar
@@ -2682,6 +2703,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="global-omnibar-title"
+        ref={dialogRef}
         data-component="GlobalOmnibar.Panel"
         className={`relative isolate flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--card)] shadow-2xl motion-safe:animate-omnibar-in sm:max-w-[44rem] sm:rounded-2xl sm:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-[var(--border)]/60 motion-safe:transition-[height,max-height] motion-safe:duration-300 motion-safe:ease-out motion-reduce:transition-none ${pane === "mari" ? "mari-workspace-shell sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]" : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"}`}
       >
@@ -2756,9 +2778,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   key="omnibar-search-header"
                   initial={reduceMotion ? false : { opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, x: 10 }}
-                  transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
-                  className="relative flex min-w-0 flex-1"
+                  exit={reduceMotion ? undefined : inputTravel ? { opacity: 0, y: inputTravel } : { opacity: 0, x: 10 }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: inputTravel ? 0.28 : 0.16, ease: "easeOut" }}
+                  className="relative z-20 flex min-w-0 flex-1"
                 >
                   <InlineGhostText
                     value={query}
