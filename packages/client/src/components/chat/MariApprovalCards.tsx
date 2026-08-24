@@ -587,6 +587,7 @@ export function WorkspaceApprovalCard({
     row: { index: number; table: string; id: string; action: string },
   ) => Promise<{ before: MariPromptRenderSide; after: MariPromptRenderSide } | null>;
 }) {
+  const { t: localizeUi } = useUiTranslation();
   let card: ReactNode;
   if (approval.kind === "dependency_install") {
     card = (
@@ -623,7 +624,12 @@ export function WorkspaceApprovalCard({
     );
   }
   return (
-    <div id={`mari-workspace-review-${approval.id}`} data-review-id={approval.id}>
+    <div
+      id={`mari-workspace-review-${approval.id}`}
+      data-review-id={approval.id}
+      className="mari-inline-review"
+      aria-label={localizeUi("commandCenter.completion.review")}
+    >
       {card}
     </div>
   );

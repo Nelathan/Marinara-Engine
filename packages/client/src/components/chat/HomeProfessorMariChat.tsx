@@ -3060,6 +3060,20 @@ export function HomeProfessorMariChat({
   const visiblePendingChangeReviewKey = visiblePendingChangeReviews.map((approval) => approval.id).join("|");
   const latestMessage = messages[messages.length - 1];
   const latestActionResults = latestMessage ? getMessageWorkspaceActionResults(latestMessage) : [];
+  const mariPresentationState =
+    recovery || workspaceStatus?.error
+      ? "broken"
+      : visiblePendingChangeReviews.length > 0
+        ? "waiting-approval"
+        : workspaceTimelineActive
+          ? "working"
+          : draft.trim() || attachments.length > 0
+            ? "composing"
+            : latestActionResults.length > 0
+              ? "completed"
+              : messages.length > 0
+                ? "history"
+                : "empty";
   const mariVisualState = resolveProfessorMariVisualState({
     busy: isBusy,
     hasActionResult: latestActionResults.length > 0,
@@ -3262,7 +3276,7 @@ export function HomeProfessorMariChat({
         ? localizeUi("ui.chat.homeprofessormarichat.suggestions.afterChange")
         : localizeUi("ui.chat.homeprofessormarichat.suggestions.next")
       : null;
-  const suggestionsSuppressed = attachments.length > 0 || visiblePendingChangeReviews.length > 0 || isBusy;
+  const suggestionsSuppressed = !["empty", "history", "completed"].includes(mariPresentationState);
   const showSuggestionPrompt = !suggestionsSuppressed && Boolean(suggestionQuestion) && chipRowChips.length > 0;
 
   const runRestart = useCallback(async () => {
@@ -4727,6 +4741,7 @@ export function HomeProfessorMariChat({
                 ) : null}
                 <div
                   data-mari-panel={panelOpen ? "open" : "closed"}
+                  data-mari-state={mariPresentationState}
                   className={cn("relative flex min-h-0 flex-1 flex-col", panelOpen && "sm:flex-row")}
                 >
                   <motion.div
@@ -4888,6 +4903,7 @@ export function HomeProfessorMariChat({
                         ref={setTranscriptScrollNode}
                         onScroll={handleTranscriptScroll}
                         data-component="HomeProfessorMariChat.Transcript"
+                        data-mari-state={mariPresentationState}
                         className={cn(
                           "min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3 pb-4 text-left",
                           omnibarMode
@@ -4914,6 +4930,8 @@ export function HomeProfessorMariChat({
                                 onStop={() => void stopWorkspace()}
                               />
                             ) : null}
+                            {recoveryNotice}
+                            {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
                             {showSuggestionPrompt && suggestionQuestion ? (
                               <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
                                 <CompactMarkdown content={suggestionQuestion} />
@@ -4925,20 +4943,7 @@ export function HomeProfessorMariChat({
                                 />
                               </TranscriptRow>
                             ) : null}
-                            {visiblePendingChangeReviews.length > 0 ? (
-                              <TranscriptRow
-                                marker={<ShieldAlert size="0.85rem" className="mt-1 text-[var(--primary)]" />}
-                              >
-                                <section
-                                  className="mari-inline-review space-y-4"
-                                  aria-label={localizeUi("commandCenter.completion.review")}
-                                >
-                                  {pendingApprovalsPanel}
-                                </section>
-                              </TranscriptRow>
-                            ) : null}
-                            {recoveryNotice}
-                            {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
+                            {visiblePendingChangeReviews.length > 0 ? pendingApprovalsPanel : null}
                           </>
                         )}
                       </div>

@@ -931,6 +931,13 @@
   border-radius: 0.75rem;
   background: var(--card);
   padding: 0.875rem;
+  animation: mari-artifact-arrive 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mari-workspace-transcript[data-mari-state="broken"] .mari-suggestion-turn,
+.mari-workspace-transcript[data-mari-state="waiting-approval"] .mari-suggestion-turn,
+.mari-workspace-transcript[data-mari-state="composing"] .mari-suggestion-turn {
+  display: none;
 }
 
 .mari-inline-review .mari-decision-surface {
