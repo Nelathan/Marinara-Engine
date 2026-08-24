@@ -22,14 +22,12 @@ import {
   Brain,
   Check,
   ChevronRight,
-  Contact,
   Database,
   FileText,
   ImageIcon,
   Link,
   Loader2,
   MessageCircle,
-  ExternalLink,
   Palette,
   Pencil,
   RefreshCw,
@@ -37,11 +35,9 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
-  SlidersHorizontal,
   Square,
   Terminal,
   Trash2,
-  UserRound,
   Wrench,
   X,
 } from "lucide-react";
@@ -102,7 +98,8 @@ import { useAgentStore } from "../../stores/agent.store";
 import { useSidecarStore } from "../../stores/sidecar.store";
 import { useUIStore } from "../../stores/ui.store";
 import { WorkspaceApprovalCard, WorkspaceErrorEvent } from "./MariApprovalCards";
-import { ResourceIdentityHeader } from "../command-center/ResourceIdentityHeader";
+import { CommandResultPreview } from "../command-center/CommandResultPreview";
+import type { RichCommandResult } from "../command-center/command-result-preview.types";
 import {
   MariPanelSortSelect,
   compareMariPanelItems,
@@ -1824,14 +1821,6 @@ function MariWorkspaceActionResultRow({
   lorebook?: LorebookPreviewModel | null;
 }) {
   const { t: localizeUi } = useUiTranslation();
-  const ResourceIcon =
-    result.resource.kind === "character"
-      ? UserRound
-      : result.resource.kind === "lorebook"
-        ? BookOpen
-        : result.resource.kind === "persona"
-          ? Contact
-          : SlidersHorizontal;
   const characterPreview =
     result.resource.kind === "character" && character?.id === result.resource.id ? character : null;
   const lorebookPreview = result.resource.kind === "lorebook" && lorebook?.id === result.resource.id ? lorebook : null;
@@ -1840,50 +1829,69 @@ function MariWorkspaceActionResultRow({
     result.status === "created"
       ? localizeUi("ui.chat.homeprofessormarichat.createdResource")
       : localizeUi("ui.chat.homeprofessormarichat.updatedResource");
+  const previewResult: RichCommandResult = {
+    command: {
+      id: `mari-result:${result.resource.kind}:${result.resource.id}`,
+      title: result.resource.label || result.summary,
+      kind: "resource",
+      icon:
+        result.resource.kind === "character"
+          ? "character"
+          : result.resource.kind === "lorebook"
+            ? "lorebook"
+            : result.resource.kind === "persona"
+              ? "persona"
+              : "preset",
+    },
+    score: 0,
+    preview: {
+      kind: result.resource.kind,
+      title: result.resource.label || result.summary,
+      eyebrow: statusLabel,
+      description,
+      media:
+        characterPreview?.avatarSrc || lorebookPreview?.imageSrc
+          ? {
+              src: characterPreview?.avatarSrc ?? lorebookPreview?.imageSrc ?? "",
+              alt:
+                characterPreview?.name ??
+                lorebookPreview?.name ??
+                result.resource.label ??
+                result.summary ??
+                statusLabel,
+              kind: characterPreview ? "avatar" : "image",
+              avatarCropStyle: characterPreview?.avatarCropStyle,
+            }
+          : undefined,
+      tags: characterPreview?.tags ?? lorebookPreview?.tags,
+      supportingInfo:
+        result.changedFields.length > 0
+          ? localizeUi("ui.chat.homeprofessormarichat.changedFields", {
+              fields: result.changedFields.join(", "),
+            })
+          : result.summary,
+    },
+  };
   return (
-    <article className="mari-workspace-artifact mari-workspace-artifact--complete mt-3 min-w-0 text-xs">
-      <ResourceIdentityHeader
-        icon={ResourceIcon}
-        title={result.resource.label || result.summary}
-        eyebrow={statusLabel}
-        subtitle={
-          result.changedFields.length > 0
-            ? localizeUi("ui.chat.homeprofessormarichat.changedFields", {
-                fields: result.changedFields.join(", "),
-              })
-            : undefined
-        }
-        mediaSrc={characterPreview?.avatarSrc ?? lorebookPreview?.imageSrc}
-        mediaAlt={characterPreview?.name ?? lorebookPreview?.name ?? result.resource.label}
-        mediaKind={characterPreview ? "avatar" : "image"}
-        avatarCropStyle={characterPreview?.avatarCropStyle}
-        variant="row"
-      />
-      {description ? (
-        <p className="mt-2 line-clamp-3 max-w-[70ch] text-[0.75rem] leading-5 text-[var(--muted-foreground)]">
-          {description}
-        </p>
-      ) : null}
-      <div className="mt-3 flex flex-col-reverse gap-1.5 sm:flex-row sm:justify-end">
-        {result.reviewId && (
-          <button
-            type="button"
-            onClick={() => onReview(result.reviewId!)}
-            className="min-h-9 shrink-0 rounded-md px-2.5 font-medium text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-          >
-            {localizeUi("ui.chat.homeprofessormarichat.reviewResult")}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => onOpen(result)}
-          className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 font-medium text-[var(--primary-foreground)] transition-transform active:scale-[0.98] motion-reduce:transition-none"
-        >
-          <ExternalLink size="0.7rem" />
-          {localizeUi("ui.chat.homeprofessormarichat.openResult")}
-        </button>
-      </div>
-    </article>
+    <CommandResultPreview
+      result={previewResult}
+      variant="inline"
+      className="mari-workspace-artifact mari-workspace-artifact--complete mt-3"
+      actions={[
+        ...(result.reviewId
+          ? [
+              {
+                label: localizeUi("ui.chat.homeprofessormarichat.reviewResult"),
+                onSelect: () => onReview(result.reviewId!),
+              },
+            ]
+          : []),
+        {
+          label: localizeUi("ui.chat.homeprofessormarichat.openResult"),
+          onSelect: () => onOpen(result),
+        },
+      ]}
+    />
   );
 }
 
@@ -4627,20 +4635,38 @@ export function HomeProfessorMariChat({
                 }}
               >
                 {omnibarMode ? (
-                  <div className="mari-workspace-focusbar relative z-20 flex min-h-11 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5">
-                    <div className="min-w-0 flex-1">
+                  <div
+                    className="mari-workspace-focusbar relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5"
+                    data-state={mariPresentationState}
+                  >
+                    <span
+                      className="mari-workspace-focusbar__mark"
+                      data-active={workspaceTimelineActive ? "true" : "false"}
+                      aria-hidden="true"
+                    >
+                      {workspaceTimelineActive ? <Sparkles size="0.85rem" /> : <img src={MARI_AVATAR_URL} alt="" />}
+                    </span>
+                    <div className="min-w-0 flex-1 leading-tight">
                       <span className="block truncate text-[0.75rem] font-semibold text-[var(--foreground)]">
-                        {focusedCharacter
-                          ? localizeUi("ui.chat.homeprofessormarichat.aboutCharacter")
-                          : focusedLorebook
-                            ? localizeUi("ui.chat.homeprofessormarichat.aboutLorebook")
-                            : localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
+                        {localizeUi("ui.chat.homefaq.professorMari")}
                       </span>
-                      {(focusedCharacter || focusedLorebook) && (
-                        <span className="block truncate text-[0.6875rem] text-[var(--muted-foreground)]">
-                          {focusedCharacter?.name ?? focusedLorebook?.name}
-                        </span>
-                      )}
+                      <span className="block truncate text-[0.65rem] text-[var(--muted-foreground)]">
+                        {workspaceTimelineActive
+                          ? focusedCharacter || focusedLorebook
+                            ? localizeUi("ui.chat.homeprofessormarichat.workingOnValue1", {
+                                value1: focusedCharacter?.name ?? focusedLorebook?.name ?? "",
+                              })
+                            : (workspaceActivity ?? localizeUi("ui.chat.homeprofessormarichat.workingOnIt"))
+                          : focusedCharacter
+                            ? localizeUi("ui.chat.homeprofessormarichat.aboutCharacterValue1", {
+                                value1: focusedCharacter.name,
+                              })
+                            : focusedLorebook
+                              ? localizeUi("ui.chat.homeprofessormarichat.aboutLorebookValue1", {
+                                  value1: focusedLorebook.name,
+                                })
+                              : localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
+                      </span>
                     </div>
                     {visiblePendingChangeReviews.length > 0 ? (
                       <button
@@ -4674,7 +4700,9 @@ export function HomeProfessorMariChat({
                         aria-expanded={panelMenuOpen}
                       >
                         <Sparkles size="0.75rem" />
-                        <span>{localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}</span>
+                        <span className="hidden sm:inline">
+                          {localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
+                        </span>
                       </button>
                       {panelMenuOpen ? (
                         <div className="absolute right-0 top-full mt-1 w-52 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 shadow-xl">

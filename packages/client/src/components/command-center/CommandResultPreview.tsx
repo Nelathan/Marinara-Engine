@@ -14,7 +14,7 @@ export interface CommandResultPreviewProps {
   result: RichCommandResult;
   actions?: readonly CommandResultPreviewAction[];
   statusLabel?: string;
-  variant?: "default" | "compact";
+  variant?: "default" | "compact" | "inline";
   className?: string;
   /** Facts fetched lazily on focus, appended after the eager facts. */
   extraFacts?: readonly CommandCenterPreviewFact[];
@@ -46,6 +46,7 @@ export function CommandResultPreview({
   const facts = allFacts.slice(0, 8);
   const tags = preview?.tags ?? preview?.badges;
   const compact = variant === "compact";
+  const inline = variant === "inline";
 
   return (
     <article
@@ -55,14 +56,16 @@ export function CommandResultPreview({
       data-preview-kind={preview?.kind ?? result.command.kind}
       data-variant={variant}
       className={cn(
-        "flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--card)] text-[var(--foreground)] animate-in fade-in slide-in-from-right-1 duration-200 motion-reduce:animate-none",
+        "flex min-h-0 w-full flex-col overflow-hidden bg-[var(--card)] text-[var(--foreground)] animate-in fade-in duration-200 motion-reduce:animate-none",
+        !inline && "h-full slide-in-from-right-1",
+        inline && "rounded-xl border border-[color-mix(in_srgb,var(--primary)_20%,var(--border))]",
         className,
       )}
     >
       <header
         className={cn(
           "flex items-start border-b border-[var(--border)]",
-          compact ? "gap-2.5 px-3 py-3" : "gap-3 px-4 py-3 sm:px-5",
+          compact ? "gap-2.5 px-3 py-3" : inline ? "gap-3 px-3.5 py-3.5 sm:px-4" : "gap-3 px-4 py-3 sm:px-5",
         )}
       >
         <ResourceIdentityHeader
@@ -91,8 +94,8 @@ export function CommandResultPreview({
             "min-h-0 flex-1 overflow-y-auto overscroll-contain",
             // Only cap the body when the preview is not already inside a
             // height-bounded panel; otherwise the footer floats mid-panel.
-            !compact && "max-h-[min(20rem,45vh)]",
-            compact ? "px-3 py-3" : "px-4 py-3 sm:px-5",
+            !compact && !inline && "max-h-[min(20rem,45vh)]",
+            compact ? "px-3 py-3" : inline ? "overflow-visible px-3.5 py-3 sm:px-4" : "px-4 py-3 sm:px-5",
           )}
         >
           {preview?.description && (
@@ -171,7 +174,7 @@ export function CommandResultPreview({
         <footer
           className={cn(
             "mt-auto flex flex-col-reverse gap-2 border-t border-[var(--border)] sm:flex-row sm:justify-end",
-            compact ? "px-3 py-2" : "px-4 py-3 sm:px-5",
+            compact ? "px-3 py-2" : inline ? "px-3.5 py-2.5 sm:px-4" : "px-4 py-3 sm:px-5",
           )}
         >
           {resolvedActions.map((action, index) => {

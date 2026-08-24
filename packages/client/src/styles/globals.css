@@ -917,7 +917,43 @@
 }
 
 .mari-workspace-focusbar {
-  background: color-mix(in srgb, var(--card) 92%, var(--mari-workspace-hoodie));
+  background: color-mix(in srgb, var(--card) 95%, var(--mari-workspace-hoodie));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--mari-workspace-gold) 8%, transparent);
+}
+
+.mari-workspace-focusbar[data-state="working"] {
+  background: color-mix(in srgb, var(--card) 91%, var(--mari-workspace-hoodie));
+}
+
+.mari-workspace-focusbar[data-state="waiting-approval"] {
+  background: color-mix(in srgb, var(--card) 92%, var(--mari-workspace-gold));
+}
+
+.mari-workspace-focusbar[data-state="broken"] {
+  background: color-mix(in srgb, var(--card) 94%, var(--destructive));
+}
+
+.mari-workspace-focusbar__mark {
+  display: grid;
+  width: 1.875rem;
+  height: 1.875rem;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--mari-workspace-blush) 24%, var(--border));
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--mari-workspace-blush) 8%, var(--card));
+  color: var(--mari-workspace-gold);
+}
+
+.mari-workspace-focusbar__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mari-workspace-focusbar__mark[data-active="true"] {
+  animation: mari-live-work-breathe 1.8s ease-in-out infinite;
 }
 
 .mari-decision-surface {
