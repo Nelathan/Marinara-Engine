@@ -9,7 +9,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation as useUiTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import { buildCharacterPreviewModel } from "../../lib/character-preview";
-import { CommandCenterMedia } from "../command-center/CommandCenterMedia";
+import { ResourceIdentityHeader } from "../command-center/ResourceIdentityHeader";
 import {
   computeFieldChanges,
   resolveLorebookVectorStatus,
@@ -540,26 +540,48 @@ function canRenderPrompt(change: MariDbRowChange): boolean {
   return change.table === "characters" || PROMPT_RENDER_TABLES.has(change.table);
 }
 
-function RowIdentity({ change }: { change: MariDbRowChange }) {
+function RowIdentityHeader({ change, title, status }: { change: MariDbRowChange; title: string; status: ReactNode }) {
   const row = asRecord(change.after) ?? asRecord(change.before);
   if (change.table === "characters") {
     const character = buildCharacterPreviewModel(row);
     return (
-      <CommandCenterMedia
-        size="row"
-        role="row"
+      <ResourceIdentityHeader
+        variant="row"
         icon={UserRound}
-        src={character?.avatarSrc}
+        title={character?.name ?? title}
+        eyebrow={title}
+        mediaSrc={character?.avatarSrc}
         avatarCropStyle={character?.avatarCropStyle}
-        kind="avatar"
-        className="size-9"
+        mediaKind="avatar"
+        trailing={status}
+        className="flex-1"
       />
     );
   }
   if (change.table === "lorebook_entries") {
-    return <CommandCenterMedia size="row" role="row" icon={BookOpen} kind="artwork" className="size-9" />;
+    const name = stringField(row, "name") || title;
+    return (
+      <ResourceIdentityHeader
+        variant="row"
+        icon={BookOpen}
+        title={name}
+        eyebrow={title}
+        mediaKind="artwork"
+        trailing={status}
+        className="flex-1"
+      />
+    );
   }
-  return <CommandCenterMedia size="row" role="row" icon={FileText} className="size-9" />;
+  return (
+    <ResourceIdentityHeader
+      variant="row"
+      icon={FileText}
+      title={title}
+      eyebrow={change.table.replaceAll("_", " ")}
+      trailing={status}
+      className="flex-1"
+    />
+  );
 }
 
 function RowCard({
@@ -581,7 +603,6 @@ function RowCard({
 }) {
   const { t: localizeUi } = useUiTranslation();
   const meta = actionMeta(change.action, localizeUi);
-  const MetaIcon = meta.icon;
   // A delete is Mari's most destructive action — make the whole row unmistakably red.
   const isDelete = change.action === "delete";
   // Reject reverts the row on the server (a real undo). Only top-level lorebook entries are
@@ -595,7 +616,6 @@ function RowCard({
   return (
     <section className={cn("mari-artifact-row", isDelete ? "mari-artifact-row--destructive" : "")}>
       <div className="mb-2 flex min-w-0 items-center gap-2">
-        <RowIdentity change={change} />
         {/* The header is the accordion toggle: click to fold the details away and re-open later. */}
         <button
           type="button"
@@ -607,25 +627,27 @@ function RowCard({
               name: accessibleName,
             },
           )}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           {collapsed ? (
             <ChevronRight size="0.75rem" className="shrink-0 text-[var(--muted-foreground)]" />
           ) : (
             <ChevronDown size="0.75rem" className="shrink-0 text-[var(--muted-foreground)]" />
           )}
-          <MetaIcon size="0.75rem" className={cn("shrink-0", meta.tone)} />
-          <span className="truncate text-[0.6875rem] font-semibold text-[var(--foreground)]">
-            {rowTitle(change, localizeUi)}
-          </span>
-          <span
-            className={cn(
-              "shrink-0 text-[0.625rem]",
-              isDelete ? "font-semibold uppercase tracking-wide text-[var(--destructive)]" : meta.tone,
-            )}
-          >
-            {meta.label}
-          </span>
+          <RowIdentityHeader
+            change={change}
+            title={rowTitle(change, localizeUi)}
+            status={
+              <span
+                className={cn(
+                  "text-[0.625rem]",
+                  isDelete ? "font-semibold uppercase tracking-wide text-[var(--destructive)]" : meta.tone,
+                )}
+              >
+                {meta.label}
+              </span>
+            }
+          />
         </button>
         <div className="flex shrink-0 items-center gap-1">
           {canRender && (

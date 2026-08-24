@@ -2,7 +2,7 @@ import { ArrowRight, CornerDownRight } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { getCommandIcon } from "../../lib/command-icons";
 import { cn } from "../../lib/utils";
-import { CommandCenterMedia } from "./CommandCenterMedia";
+import { ResourceIdentityHeader } from "./ResourceIdentityHeader";
 import { getCommandCenterStatusClass } from "./command-center-visuals";
 import type {
   CommandCenterPreviewFact,
@@ -65,35 +65,20 @@ export function CommandResultPreview({
           compact ? "gap-2.5 px-3 py-3" : "gap-3 px-4 py-3 sm:px-5",
         )}
       >
-        <CommandCenterMedia
-          size="preview"
-          role="preview"
+        <ResourceIdentityHeader
           icon={Icon}
-          src={preview?.media?.src}
-          alt={preview?.media?.alt}
-          kind={preview?.media?.kind}
+          title={title}
+          eyebrow={preview?.eyebrow ?? preview?.categoryLabel}
+          subtitle={preview?.subtitle}
+          metadata={preview?.metadataLine}
+          mediaSrc={preview?.media?.src}
+          mediaAlt={preview?.media?.alt}
+          mediaKind={preview?.media?.kind}
           avatarCropStyle={preview?.media?.avatarCropStyle}
           accent={preview?.accent}
-          className={compact ? "size-20 sm:size-24" : undefined}
+          titleId={titleId}
+          className="min-w-0 flex-1"
         />
-
-        <div className="min-w-0 flex-1 self-center">
-          {(preview?.eyebrow || preview?.categoryLabel) && (
-            <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--primary)_65%,var(--muted-foreground))]">
-              <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-              {preview.eyebrow ?? preview.categoryLabel}
-            </div>
-          )}
-          <h2 id={titleId} className="break-words text-[18px] font-semibold leading-6">
-            {title}
-          </h2>
-          {preview?.subtitle && (
-            <p className="mt-0.5 break-words text-xs leading-5 text-[var(--muted-foreground)]">{preview.subtitle}</p>
-          )}
-          {preview?.metadataLine && (
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">{preview.metadataLine}</p>
-          )}
-        </div>
       </header>
 
       {((preview && (preview.description || tags?.length || preview.status || preview.supportingInfo || hasFacts)) ||
