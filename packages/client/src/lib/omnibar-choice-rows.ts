@@ -3,6 +3,9 @@ import type { RankedOmnibarResult } from "../components/layout/omnibar/omnibar-r
 
 const CHOICE_SEPARATOR = "::choice:";
 
+/** How far a searched control value sits below an ordinary hit of the same strength. */
+export const CHOICE_SCORE_PENALTY = 60;
+
 /**
  * A choice row's options, as rows.
  *

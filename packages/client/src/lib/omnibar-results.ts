@@ -16,7 +16,7 @@ import {
 import type { AgentConfigRow } from "../hooks/use-agents";
 import type { GlobalMessageSearchHit } from "../hooks/use-chats";
 import type { HomeFaqItem } from "../components/chat/HomeFaq";
-import { buildChoiceOptionResults } from "./omnibar-choice-rows";
+import { CHOICE_SCORE_PENALTY, buildChoiceOptionResults, readChoiceOptionId } from "./omnibar-choice-rows";
 import { readNamedRow } from "./omnibar-row-readers";
 import { parseChatMetadata } from "./chat-display";
 import { deriveActiveLorebookViews, getChatActiveLorebookIds, getChatExcludedLorebookIds } from "./chat-lorebooks";
@@ -588,7 +588,14 @@ export function buildOmnibarSearchResults({
     controls: [...controls, ...chatControls, ...controlChoices],
     context: omnibarContext,
     contextLabels,
-  }).filter((result) => mariEnabled || result.id !== "ask-professor-mari");
+  })
+    .filter((result) => mariEnabled || result.id !== "ask-professor-mari")
+    // A control's values were never part of the set this ranking was tuned on.
+    // Damp them so they surface on a deliberate "gpt" and never crowd a real hit.
+    .map((result) =>
+      readChoiceOptionId(result.id) ? { ...result, score: result.score - CHOICE_SCORE_PENALTY } : result,
+    )
+    .sort((a, b) => b.score - a.score);
   const bestMatchScore = baseResults.reduce(
     (best, result) => (result.id === "ask-professor-mari" ? best : Math.max(best, result.score)),
     -1,
