@@ -60,7 +60,7 @@ export function createPhase4CommandDefinitions(source: CommandCenterTitleSource)
       id: "create-agent",
       title: title.createAgent,
       kind: "action",
-      icon: "music",
+      icon: "agent",
       aliases: ["new agent", "add agent"],
       availability: AVAILABLE,
       action: { kind: "navigate", target: { kind: "resource", resource: "agent", id: "__new__" } },

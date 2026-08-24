@@ -26,7 +26,6 @@ export interface FieldChange {
  * Widen it when a real field is missing, not preemptively.
  */
 const PROSE_FIELD_NAMES = new Set([
-  "abouttme",
   "aboutme",
   "appearance",
   "backstory",

@@ -792,9 +792,12 @@ export function buildOmnibarIdleResults({
   recentEntries.forEach((entry) => add(entry.id));
   SURFACE_IDLE_COMMAND_IDS[surface].forEach(add);
   ["control:theme", "control:presence", "create-character", "create-persona", "documentation"].forEach(add);
+  let searchableCommandCount = 0;
   for (const result of searchableCommandResults) {
-    if (selected.length >= 4) break;
+    if (searchableCommandCount >= 4) break;
+    const previousLength = selected.length;
     add(result.id);
+    if (selected.length > previousLength) searchableCommandCount += 1;
   }
   return selected.slice(0, 12);
 }

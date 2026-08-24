@@ -49,6 +49,9 @@ export const chatKeys = {
   messages: (chatId: string) => [...chatKeys.all, "messages", chatId] as const,
   messageCount: (chatId: string) => [...chatKeys.all, "messageCount", chatId] as const,
   messagePeek: (chatId: string) => [...chatKeys.all, "messagePeek", chatId] as const,
+  messageSearch: (chatId: string) => [...chatKeys.all, "messageSearch", chatId] as const,
+  globalMessageSearch: (query: string) => [...chatKeys.all, "globalMessageSearch", query] as const,
+  professorMari: () => [...chatKeys.all, "professorMari"] as const,
   memories: (chatId: string) => [...chatKeys.all, "memories", chatId] as const,
   notes: (chatId: string) => [...chatKeys.all, "notes", chatId] as const,
   group: (groupId: string) => [...chatKeys.all, "group", groupId] as const,
@@ -323,7 +326,7 @@ export function useChatMessagePeek(chatId: string | null, limit = 4, enabled = f
  */
 export function useChatMessageSearchSource(chatId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["chat-message-search", chatId ?? ""],
+    queryKey: chatKeys.messageSearch(chatId ?? ""),
     queryFn: ({ signal }) =>
       api
         .get<Message[]>(`/chats/${chatId}/messages`, { signal })
@@ -346,11 +349,12 @@ export type GlobalMessageSearchHit = {
  * ever holds the open chat's transcript.
  */
 export function useGlobalMessageSearch(query: string, enabled: boolean) {
+  const normalizedQuery = query.trim();
   return useQuery({
-    queryKey: ["chat-message-search-all", query],
+    queryKey: chatKeys.globalMessageSearch(normalizedQuery),
     queryFn: ({ signal }) =>
-      api.get<GlobalMessageSearchHit[]>(`/chats/search/messages?q=${encodeURIComponent(query)}`, { signal }),
-    enabled: enabled && query.trim().length > 0,
+      api.get<GlobalMessageSearchHit[]>(`/chats/search/messages?q=${encodeURIComponent(normalizedQuery)}`, { signal }),
+    enabled: enabled && normalizedQuery.length > 0,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
   });
@@ -362,7 +366,7 @@ export function useGlobalMessageSearch(query: string, enabled: boolean) {
  */
 export function useProfessorMariChats(enabled: boolean) {
   return useQuery({
-    queryKey: ["professor-mari-chats"],
+    queryKey: chatKeys.professorMari(),
     queryFn: ({ signal }) => api.get<Chat[]>("/chats/internal/professor-mari/chats", { signal }),
     enabled,
     staleTime: 30_000,
