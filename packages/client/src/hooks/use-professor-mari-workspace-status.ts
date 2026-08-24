@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { MariWorkspaceStatus } from "@marinara-engine/shared";
-import { api } from "../lib/api-client";
+import { api, ApiError } from "../lib/api-client";
 
 export const professorMariWorkspaceStatusKeys = {
   all: ["professor-mari", "workspace", "status"] as const,
@@ -20,11 +20,15 @@ export function useProfessorMariWorkspaceStatus(options?: { intervalMs?: number 
     queryKey: professorMariWorkspaceStatusKeys.all,
     queryFn: () => api.get<MariWorkspaceStatus>("/professor-mari/workspace/status"),
     staleTime: 2_000,
-    // Stop polling once the server says the workspace is off, and after a
-    // failure: the route is privileged, so an unprivileged client would
-    // otherwise retry on every tick for the whole session.
-    refetchInterval: (query) =>
-      query.state.status === "error" || query.state.data?.enabled === false ? false : intervalMs,
+    // Stop for a disabled workspace or a client that cannot access the route.
+    // Transient network/server failures must keep the heartbeat alive or a
+    // background run can finish without the UI ever noticing.
+    refetchInterval: (query) => {
+      if (query.state.data?.enabled === false) return false;
+      const error = query.state.error;
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false;
+      return intervalMs;
+    },
     retry: false,
   });
 }

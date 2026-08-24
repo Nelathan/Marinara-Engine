@@ -94,6 +94,15 @@ export function useOmnibarAside(params: {
               throw new Error(typeof event.data === "string" ? event.data : "Professor Mari could not answer.");
             }
           }
+          // A cleanly closed stream is still a completed response even if an
+          // intermediary omitted the optional terminal event.
+          if (!controller.signal.aborted) {
+            setState((current) =>
+              current.query === trimmed && current.status === "streaming"
+                ? { status: "complete", answer, error: null, query: trimmed, tier }
+                : current,
+            );
+          }
         } catch (error) {
           if (controller.signal.aborted) return;
           setState({

@@ -32,56 +32,65 @@ export function OmnibarAside({
   onEscalate,
 }: OmnibarAsideProps) {
   const { t } = useTranslation();
-  if (state.status === "idle" || state.status === "waiting") return null;
-
   const failed = state.status === "error";
   const tierLabel =
     state.tier === "local"
       ? t("omnibar.aside.tierLocal", "Local")
       : (connectionName ?? t("omnibar.aside.tierRemote", "Your connection"));
 
+  const announcement = state.status === "complete" ? state.answer : state.status === "error" ? (state.error ?? "") : "";
+
   return (
-    <section
-      data-component="GlobalOmnibar.Aside"
-      className="shrink-0 border-t border-[var(--border)] px-3 py-2"
-      aria-label={t("omnibar.aside.label", "Professor Mari's answer")}
-    >
-      <div className="flex min-w-0 items-start gap-2">
-        <span className="mari-workspace-portrait" data-state={failed ? "shrug" : "explaining"} aria-hidden="true">
-          <img src={failed ? SHRUG_SPRITE_URL : IDLE_SPRITE_URL} alt="" draggable={false} data-part="idle" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p
-            className={`max-h-24 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed ${
-              failed ? "text-[var(--muted-foreground)]" : "text-[var(--foreground)]"
-            }`}
-            aria-live="polite"
-          >
-            {failed ? state.error : state.answer}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.625rem] text-[var(--muted-foreground)]">
-            <span>{tierLabel}</span>
-            {!failed && (
-              <button type="button" onClick={onEscalate} className="underline-offset-2 hover:underline">
-                {t("omnibar.aside.escalate", "⌘↵ Continue with Professor Mari")}
-              </button>
-            )}
+    <>
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </span>
+      {state.status !== "idle" && state.status !== "waiting" ? (
+        <section
+          data-component="GlobalOmnibar.Aside"
+          className="shrink-0 border-t border-[var(--border)] px-3 py-2"
+          aria-label={t("omnibar.aside.label", "Professor Mari's answer")}
+        >
+          <div className="flex min-w-0 items-start gap-2">
+            <span className="mari-workspace-portrait" data-state={failed ? "shrug" : "explaining"} aria-hidden="true">
+              <img src={failed ? SHRUG_SPRITE_URL : IDLE_SPRITE_URL} alt="" draggable={false} data-part="idle" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p
+                className={`max-h-24 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed ${
+                  failed ? "text-[var(--muted-foreground)]" : "text-[var(--foreground)]"
+                }`}
+              >
+                {failed ? state.error : state.answer}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.625rem] text-[var(--muted-foreground)]">
+                <span>{tierLabel}</span>
+                {!failed && (
+                  <button type="button" onClick={onEscalate} className="underline-offset-2 hover:underline">
+                    {t("omnibar.aside.escalate", "⌘↵ Continue with Professor Mari")}
+                  </button>
+                )}
+              </div>
+              {!disclosed && state.status === "complete" ? (
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-[var(--secondary)] px-2 py-1 text-[0.625rem] text-[var(--muted-foreground)]">
+                  <span>
+                    {t(
+                      "omnibar.aside.disclosure",
+                      "Professor Mari answered this because nothing matched what you typed.",
+                    )}
+                  </span>
+                  <button type="button" onClick={onDisable} className="font-semibold underline underline-offset-2">
+                    {t("omnibar.aside.turnOff", "Turn this off")}
+                  </button>
+                  <button type="button" onClick={onDisclose} className="font-semibold underline underline-offset-2">
+                    {t("omnibar.aside.gotIt", "Got it")}
+                  </button>
+                </p>
+              ) : null}
+            </div>
           </div>
-          {!disclosed && state.status === "complete" ? (
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-[var(--secondary)] px-2 py-1 text-[0.625rem] text-[var(--muted-foreground)]">
-              <span>
-                {t("omnibar.aside.disclosure", "Professor Mari answered this because nothing matched what you typed.")}
-              </span>
-              <button type="button" onClick={onDisable} className="font-semibold underline underline-offset-2">
-                {t("omnibar.aside.turnOff", "Turn this off")}
-              </button>
-              <button type="button" onClick={onDisclose} className="font-semibold underline underline-offset-2">
-                {t("omnibar.aside.gotIt", "Got it")}
-              </button>
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </section>
+        </section>
+      ) : null}
+    </>
   );
 }

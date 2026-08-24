@@ -2624,6 +2624,7 @@
   "ui.characters.charactersheet.uploading": "Uploading character sheet…",
   "ui.characters.charactersheet.useAsReference": "Use as reference image",
   "ui.characters.charactersheet.useAsReferenceDescription": "Prefer this sheet wherever Marinara sends character likeness references. If it is unavailable, Marinara falls back to the avatar.",
+  "ui.characters.charactersubject.removeValue1": "Remove {{value1}}",
   "ui.characters.characterversionhistorypanel.changed": "changed",
   "ui.characters.characterversionhistorypanel.compareValue1": "Compare {{value1}}",
   "ui.characters.characterversionhistorypanel.compareVersion": "Compare Version",

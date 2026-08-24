@@ -1,4 +1,5 @@
 import { UserRound, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { CharacterPreviewModel } from "../../lib/character-preview";
 import { cn } from "../../lib/utils";
@@ -22,6 +23,9 @@ export function CharacterSubject({
   className,
   removeLabel,
 }: CharacterSubjectProps) {
+  const { t } = useTranslation();
+  const resolvedRemoveLabel =
+    removeLabel ?? t("ui.characters.charactersubject.removeValue1", "Remove {{value1}}", { value1: character.name });
   return (
     <div
       data-component="CharacterSubject"
@@ -54,8 +58,8 @@ export function CharacterSubject({
           type="button"
           onClick={onRemove}
           className="flex size-7 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
-          aria-label={removeLabel}
-          title={removeLabel}
+          aria-label={resolvedRemoveLabel}
+          title={resolvedRemoveLabel}
         >
           <X size="0.75rem" />
         </button>

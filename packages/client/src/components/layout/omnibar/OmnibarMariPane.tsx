@@ -56,6 +56,7 @@ export function OmnibarMariPane({
       transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
       className={`mari-workspace-canvas min-h-0 overflow-hidden ${active ? "relative flex-1" : "pointer-events-none absolute inset-0"}`}
       aria-hidden={!active}
+      inert={!active}
     >
       {proposalDraft ? (
         <div data-component="GlobalOmnibar.Proposal" className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4">
