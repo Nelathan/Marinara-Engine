@@ -11,12 +11,9 @@ Scope: `packages/client/src/components/layout/GlobalOmnibar.tsx`, the surfaces
 under `components/layout/omnibar/`, the `lib/omnibar-*.ts` modules, and the
 server route that backs cross-chat message search.
 
-Related documents: `omnibar-concept.md` (the rules this shape follows),
-`omnibar-implementation-plan.md` (how it was built),
-`omnibar-workflow-slice-plan.md` (why the 11 slices exist),
-`omnibar-completion-recovery-design.md`,
-`omnibar-command-center-professor-mari-plan.md`,
-`omnibar-improvement-backlog.md` (what to build next, and why).
+Related document: `omnibar-concept.md`, the design rules this implementation
+follows. Historical build plans were removed after the implementation landed;
+Git history retains them without presenting obsolete architecture as current.
 
 ## 1. Surfaces
 

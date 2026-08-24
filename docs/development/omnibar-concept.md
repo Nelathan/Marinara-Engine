@@ -8,12 +8,13 @@ This is a design document, not a behaviour contract. The contract is
 records, section 6 says so explicitly, because that file requires removals to be
 deliberate.
 
-Related: `omnibar-improvement-backlog.md` (the ceiling and its root cause),
-`omnibar-workflow-slice-plan.md` (how the current shape was reached).
+The behaviour contract is `omnibar-feature-inventory.md`. Historical build and
+slice plans were removed after landing so this document remains the single
+design source of truth.
 
 ## 1. Why this exists
 
-The backlog states the ceiling in one line:
+The original exploration stated the ceiling in one line:
 
 > The omnibar is a launcher, and Professor Mari is a room inside it. Every action
 > ends in `onClose()`. Every Mari path ends in `setPane("mari")`. She puts
