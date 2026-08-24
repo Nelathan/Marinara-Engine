@@ -4304,11 +4304,12 @@ export function HomeProfessorMariChat({
   useEffect(() => {
     const reviewId = requestedReviewIdRef.current;
     if (workspaceDestination !== "approvals" || !reviewId) return;
-    requestedReviewIdRef.current = null;
     window.requestAnimationFrame(() => {
       const review = document.getElementById(`mari-workspace-review-${reviewId}`);
-      review?.scrollIntoView({ block: "start" });
-      review?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+      if (!review) return;
+      requestedReviewIdRef.current = null;
+      review.scrollIntoView({ block: "start" });
+      review.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
     });
   }, [visiblePendingChangeReviewKey, workspaceDestination]);
 
