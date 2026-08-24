@@ -844,6 +844,62 @@
   }
 }
 
+/* R42: the Card. A border means your data is involved - approvals, action
+   results, diffs, artifacts. Nothing else gets one, and there is deliberately no
+   second weight, because a decorative border would dilute the only signal this
+   one carries. */
+.mari-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  padding: 0.625rem;
+}
+
+.mari-card[data-tone="attention"] {
+  border-color: color-mix(in srgb, var(--mari-workspace-gold) 40%, var(--border));
+}
+
+.mari-card[data-tone="danger"] {
+  border-color: color-mix(in srgb, var(--destructive) 40%, var(--border));
+}
+
+/* R43: the Note. One muted line, no box, no icon of its own. */
+.mari-note {
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.mari-note[data-tone="accent"] {
+  color: color-mix(in srgb, var(--mari-workspace-gold) 62%, var(--foreground));
+}
+
+.mari-note[data-tone="danger"] {
+  color: var(--destructive);
+}
+
+/* R45: the Strip. Wraps, never scrolls - a horizontal scroller hides the status
+   facts that have to stay readable on a phone. */
+.mari-strip {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mari-strip > [data-group] {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mari-strip > [data-group="end"] {
+  margin-inline-start: auto;
+}
+
 /* R35: pending changes sit between the transcript and the composer, so a long
    conversation can never scroll them out of view. Capped and scrollable, since
    one rewrite must not push the composer off the surface. */
@@ -7640,9 +7696,6 @@ strong {
   left: max(env(safe-area-inset-left), 0.75rem);
   transition: bottom 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-
-
 
 .mari-professor-pixel-scene::before {
   content: "";
