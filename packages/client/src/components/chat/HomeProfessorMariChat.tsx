@@ -1589,7 +1589,7 @@ function WorkspaceLiveWorkCard({
   const toolItems = items.filter(
     (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
   );
-  const visibleSteps = toolItems.slice(-4);
+  const visibleSteps = [...toolItems].sort((left, right) => left.tool.updatedAt - right.tool.updatedAt).slice(-4);
   const subjectName = character?.name ?? lorebook?.name ?? null;
 
   return (
@@ -1601,7 +1601,7 @@ function WorkspaceLiveWorkCard({
               <h3 className="truncate text-[0.8125rem] font-semibold text-[var(--foreground)]">
                 {subjectName ? t("mari.workCard.workingWith", { name: subjectName }) : t("mari.workCard.working")}
               </h3>
-              <span className="mari-live-work__elapsed" role="status" aria-live="polite">
+              <span className="mari-live-work__elapsed">
                 <i aria-hidden="true" />
                 {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
               </span>
