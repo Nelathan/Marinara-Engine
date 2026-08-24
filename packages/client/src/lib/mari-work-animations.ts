@@ -40,14 +40,42 @@ const ANIMATIONS = {
     id: "pixel-bug",
     src: "/sprites/mari/generated/professor-mari-inline-pixel-bug-sheet.png",
   },
+  telescope: {
+    id: "telescope",
+    src: "/sprites/mari/generated/professor-mari-work-telescope.png",
+  },
+  boat: {
+    id: "boat",
+    src: "/sprites/mari/generated/professor-mari-work-boat.png",
+  },
+  puzzle: {
+    id: "puzzle",
+    src: "/sprites/mari/generated/professor-mari-work-puzzle.png",
+  },
+  spelunking: {
+    id: "spelunking",
+    src: "/sprites/mari/generated/professor-mari-work-spelunking.png",
+  },
 } satisfies Record<string, MariWorkAnimation>;
 
-const GENERAL_POOL = [ANIMATIONS.assistant, ANIMATIONS.tea, ANIMATIONS.yarn, ANIMATIONS.airplane];
-const RESEARCH_POOL = [ANIMATIONS.detective, ANIMATIONS.books, ANIMATIONS.deepDive, ANIMATIONS.train];
-const PLANNING_POOL = [ANIMATIONS.yarn, ANIMATIONS.tea, ANIMATIONS.airplane, ANIMATIONS.detective];
+const GENERAL_POOL = [ANIMATIONS.assistant, ANIMATIONS.tea, ANIMATIONS.yarn, ANIMATIONS.airplane, ANIMATIONS.boat];
+const RESEARCH_POOL = [
+  ANIMATIONS.detective,
+  ANIMATIONS.books,
+  ANIMATIONS.deepDive,
+  ANIMATIONS.telescope,
+  ANIMATIONS.spelunking,
+];
+const PLANNING_POOL = [ANIMATIONS.yarn, ANIMATIONS.tea, ANIMATIONS.airplane, ANIMATIONS.telescope, ANIMATIONS.puzzle];
 const FILE_POOL = [ANIMATIONS.assistant, ANIMATIONS.detective, ANIMATIONS.yarn, ANIMATIONS.airplane];
-const DEBUG_POOL = [ANIMATIONS.pixelBug, ANIMATIONS.detective, ANIMATIONS.deepDive];
-const LONG_RUNNING_POOL = [ANIMATIONS.train, ANIMATIONS.tea, ANIMATIONS.books];
+const DEBUG_POOL = [
+  ANIMATIONS.pixelBug,
+  ANIMATIONS.detective,
+  ANIMATIONS.deepDive,
+  ANIMATIONS.puzzle,
+  ANIMATIONS.spelunking,
+];
+const LONG_RUNNING_POOL = [ANIMATIONS.train, ANIMATIONS.tea, ANIMATIONS.books, ANIMATIONS.boat];
 
 function stableHash(value: string): number {
   let hash = 2_166_136_261;

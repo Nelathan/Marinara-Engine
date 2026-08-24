@@ -1125,7 +1125,8 @@
 }
 
 .mari-live-work__sprite[data-scene="detective"],
-.mari-live-work__sprite[data-scene="pixel-bug"] {
+.mari-live-work__sprite[data-scene="pixel-bug"],
+.mari-live-work__sprite[data-scene="puzzle"] {
   animation-duration: 2.8s;
 }
 
@@ -1136,12 +1137,15 @@
 }
 
 .mari-live-work__sprite[data-scene="train"],
-.mari-live-work__sprite[data-scene="deep-dive"] {
+.mari-live-work__sprite[data-scene="deep-dive"],
+.mari-live-work__sprite[data-scene="boat"],
+.mari-live-work__sprite[data-scene="spelunking"] {
   width: 4.4rem;
   animation-duration: 5.2s;
 }
 
-.mari-live-work__sprite[data-scene="paper-airplane"] {
+.mari-live-work__sprite[data-scene="paper-airplane"],
+.mari-live-work__sprite[data-scene="telescope"] {
   animation-duration: 3.2s;
 }
 
