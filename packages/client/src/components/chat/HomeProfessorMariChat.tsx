@@ -3131,6 +3131,10 @@ export function HomeProfessorMariChat({
     professorMariSuggestionsEnabled &&
     chipRowChips.length === 0 &&
     workspaceActivity?.toLocaleLowerCase().includes("suggestion") === true;
+  const suggestionsSuppressed =
+    attachments.length > 0 || visiblePendingChangeReviews.length > 0 || (isBusy && !showSuggestionLoading);
+  const showSuggestionPrompt =
+    !suggestionsSuppressed && (Boolean(suggestionQuestion) || showSuggestionLoading || chipRowChips.length > 0);
 
   const runRestart = useCallback(async () => {
     if (isBusy) return;
@@ -4808,7 +4812,7 @@ export function HomeProfessorMariChat({
                             setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))
                           }
                         />
-                        {suggestionQuestion || showSuggestionLoading || chipRowChips.length > 0 ? (
+                        {showSuggestionPrompt ? (
                           <div className="mari-suggestion-prompt mb-2 px-0.5">
                             {suggestionQuestion ? (
                               <p className="mb-1.5 text-[0.8125rem] font-medium text-[var(--foreground)]">
