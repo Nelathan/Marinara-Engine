@@ -438,6 +438,12 @@ function getProfessorMariMessageContext(message: Message): ProfessorMariAskConte
   return extra.professorMariContext ?? null;
 }
 
+function formatMariMessageTime(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date);
+}
+
 function resolveContextCharacter(
   context: ProfessorMariAskContext | null | undefined,
   characters: ReadonlyMap<string, CharacterPreviewModel>,
@@ -2032,6 +2038,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   const actionResults = getMessageWorkspaceActionResults(message);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(content);
+  const messageTime = formatMariMessageTime(message.createdAt);
 
   if (message.role === "user") {
     const requestSubject = characterSubject;
@@ -2057,8 +2064,9 @@ const CompactMariMessage = memo(function CompactMariMessage({
           )
         }
       >
-        <p className="mari-user-request__name">
-          {requestSubject?.name ?? localizeUi("ui.chat.compactmarimessage.you")}
+        <p className="mari-message-byline">
+          <strong>{requestSubject?.name ?? localizeUi("ui.chat.compactmarimessage.you")}</strong>
+          {messageTime ? <time dateTime={message.createdAt}>{messageTime}</time> : null}
         </p>
         {isEditing ? (
           <div className="mt-1">
@@ -2137,6 +2145,10 @@ const CompactMariMessage = memo(function CompactMariMessage({
   if (workspaceTrace) {
     return (
       <TranscriptRow className="group" marker={<MariAvatar />}>
+        <p className="mari-message-byline mari-message-byline--mari">
+          <strong>{localizeUi("ui.chat.homefaq.professorMari")}</strong>
+          {messageTime ? <time dateTime={message.createdAt}>{messageTime}</time> : null}
+        </p>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <WorkspaceTimelineList
           items={timelineItemsFromTrace(workspaceTrace, message)}
@@ -2186,6 +2198,10 @@ const CompactMariMessage = memo(function CompactMariMessage({
   return (
     <>
       <TranscriptRow className="group" marker={<MariAvatar />}>
+        <p className="mari-message-byline mari-message-byline--mari">
+          <strong>{localizeUi("ui.chat.homefaq.professorMari")}</strong>
+          {messageTime ? <time dateTime={message.createdAt}>{messageTime}</time> : null}
+        </p>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <CompactMarkdown content={content} />
         {actionResults.map((result) => (
