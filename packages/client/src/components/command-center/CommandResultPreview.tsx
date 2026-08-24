@@ -1,4 +1,4 @@
-import { ArrowRight, CornerDownRight, Tag } from "lucide-react";
+import { ArrowRight, CornerDownRight } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { getCommandIcon } from "../../lib/command-icons";
 import { cn } from "../../lib/utils";
@@ -143,9 +143,8 @@ export function CommandResultPreview({
               {tags?.map((tag, index) => (
                 <li
                   key={`${tag}-${index}`}
-                  className="inline-flex max-w-full items-center gap-1 break-words rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-2 py-0.5 text-xs font-medium text-[color-mix(in_srgb,var(--primary)_70%,var(--foreground))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]"
+                  className="inline-flex max-w-full break-words rounded-md bg-[color-mix(in_srgb,var(--primary)_9%,var(--card))] px-2 py-1 text-xs font-medium text-[color-mix(in_srgb,var(--primary)_68%,var(--foreground))]"
                 >
-                  <Tag className="size-3 shrink-0 opacity-70" aria-hidden="true" />
                   {tag}
                 </li>
               ))}
@@ -157,16 +156,14 @@ export function CommandResultPreview({
           )}
 
           {hasFacts && (
-            <dl className={cn("mt-3 grid grid-cols-1 gap-2", !compact && "sm:grid-cols-2")}>
+            <dl className="mt-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
               {facts.map((fact, index) => (
                 <div
                   key={`${fact.label}-${index}`}
-                  className="min-w-0 rounded-lg bg-[color-mix(in_srgb,var(--foreground)_4%,var(--card))] px-3 py-2 ring-1 ring-inset ring-[var(--border)]/60"
+                  className="grid min-w-0 grid-cols-[minmax(5.5rem,0.8fr)_minmax(0,1.2fr)] gap-3 py-2.5"
                 >
-                  <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
-                    {fact.label}
-                  </dt>
-                  <dd className="mt-0.5 break-words text-sm leading-5 text-[var(--foreground)]">{fact.value}</dd>
+                  <dt className="text-xs font-medium text-[var(--muted-foreground)]">{fact.label}</dt>
+                  <dd className="break-words text-right text-sm leading-5 text-[var(--foreground)]">{fact.value}</dd>
                 </div>
               ))}
             </dl>

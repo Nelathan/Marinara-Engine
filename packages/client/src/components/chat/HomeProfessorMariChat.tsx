@@ -1733,7 +1733,7 @@ function MariWorkspaceActionResultRow({
 }) {
   const { t: localizeUi } = useUiTranslation();
   return (
-    <div className="mari-workspace-artifact mt-2 flex min-w-0 items-center gap-2 border-l-2 border-[var(--primary)]/50 pl-2 text-xs">
+    <div className="mari-workspace-artifact mt-2 flex min-w-0 items-center gap-2 text-xs">
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-[var(--foreground)]">{result.summary}</p>
         {result.changedFields.length > 0 && (
@@ -3113,10 +3113,12 @@ export function HomeProfessorMariChat({
   const guidedPlan = professorMariSuggestionsEnabled && mariPlanChatId === chatId ? mariPlan : null;
   const guidedPlanStep = guidedPlan ? (guidedPlan[mariPlanCursor] ?? null) : null;
   const chipRowChips = guidedPlanStep ? guidedPlanStep.chips : visibleSuggestionChips;
-  // R47: when a plan is running the text above the chips is not a caption, it is
-  // her question. It belongs in the transcript where she asked it. What is left
-  // here is the caption, and R46 folds that into the Strip itself.
-  const chipRowHint = chipRowChips.length > 0 ? "Suggestions only. Pick one, or type your own." : null;
+  const suggestionQuestion =
+    !guidedPlanStep && chipRowChips.length > 0
+      ? latestActionResults.length > 0
+        ? localizeUi("ui.chat.homeprofessormarichat.suggestions.afterChange")
+        : localizeUi("ui.chat.homeprofessormarichat.suggestions.next")
+      : null;
   const showSuggestionLoading =
     professorMariSuggestionsEnabled &&
     chipRowChips.length === 0 &&
@@ -4788,25 +4790,27 @@ export function HomeProfessorMariChat({
                             setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))
                           }
                         />
-                        {chipRowHint || showSuggestionLoading || chipRowChips.length > 0 ? (
-                          <MariStrip className="mb-1 px-0.5">
-                            <Sparkles
-                              size="0.6875rem"
-                              aria-hidden="true"
-                              className={cn("shrink-0 text-[var(--primary)]", showSuggestionLoading && "animate-pulse")}
-                            />
-                            <MariNote>
-                              {showSuggestionLoading
-                                ? localizeUi("ui.chat.homeprofessormarichat.thinkingUpSuggestions")
-                                : chipRowHint}
-                            </MariNote>
+                        {suggestionQuestion || showSuggestionLoading || chipRowChips.length > 0 ? (
+                          <div className="mari-suggestion-prompt mb-2 px-0.5">
+                            {suggestionQuestion ? (
+                              <p className="mb-1.5 text-[0.8125rem] font-medium text-[var(--foreground)]">
+                                <span className="mr-1.5 text-[var(--primary)]">
+                                  {localizeUi("ui.chat.compactmarimessage.mari")}
+                                </span>
+                                {suggestionQuestion}
+                              </p>
+                            ) : showSuggestionLoading ? (
+                              <p className="mb-1.5 text-[0.75rem] text-[var(--muted-foreground)]" role="status">
+                                {localizeUi("ui.chat.homeprofessormarichat.thinkingUpSuggestions")}
+                              </p>
+                            ) : null}
                             <MariSuggestionChips
                               chips={chipRowChips}
                               onSelect={handleSuggestionSelect}
                               disabled={isBusy}
                               compact
                             />
-                          </MariStrip>
+                          </div>
                         ) : null}
                         <div
                           className={cn(
@@ -4988,14 +4992,16 @@ export function HomeProfessorMariChat({
                             <X size="0.85rem" />
                           </button>
                         </div>
-                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">{pendingApprovalsPanel}</div>
+                        <div className="mari-decision-list min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-0 pt-4 sm:px-5">
+                          {pendingApprovalsPanel}
+                        </div>
                       </motion.section>
                     ) : chatHistoryOpen ? (
                       <motion.div
                         key="professor-mari-chats"
-                        initial={{ opacity: 0, y: -14, rotateX: -10, transformOrigin: "top center" }}
-                        animate={{ opacity: 1, y: 0, rotateX: 0, transformOrigin: "top center" }}
-                        exit={{ opacity: 0, y: 12, rotateX: 8, transformOrigin: "bottom center" }}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
                         transition={PROFESSOR_MARI_PANE_TRANSITION}
                         className={MARI_PANEL_SLOT_CLASS}
                       >
@@ -5202,9 +5208,9 @@ export function HomeProfessorMariChat({
                     ) : memoriesMenuOpen ? (
                       <motion.div
                         key="professor-mari-memories"
-                        initial={{ opacity: 0, y: -14, rotateX: -10, transformOrigin: "top center" }}
-                        animate={{ opacity: 1, y: 0, rotateX: 0, transformOrigin: "top center" }}
-                        exit={{ opacity: 0, y: 12, rotateX: 8, transformOrigin: "bottom center" }}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
                         transition={PROFESSOR_MARI_PANE_TRANSITION}
                         className={MARI_PANEL_SLOT_CLASS}
                       >
@@ -5235,9 +5241,9 @@ export function HomeProfessorMariChat({
                     ) : skillsMenuOpen ? (
                       <motion.div
                         key="professor-mari-skills"
-                        initial={{ opacity: 0, y: -14, rotateX: -10, transformOrigin: "top center" }}
-                        animate={{ opacity: 1, y: 0, rotateX: 0, transformOrigin: "top center" }}
-                        exit={{ opacity: 0, y: 12, rotateX: 8, transformOrigin: "bottom center" }}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
                         transition={PROFESSOR_MARI_PANE_TRANSITION}
                         className={MARI_PANEL_SLOT_CLASS}
                       >

@@ -949,6 +949,62 @@
   background: color-mix(in srgb, var(--card) 92%, var(--mari-workspace-hoodie));
 }
 
+.mari-decision-surface {
+  min-height: 100%;
+  padding-bottom: 0.25rem;
+}
+
+.mari-artifact-row {
+  padding-block: 0.875rem;
+  border-top: 1px solid var(--border);
+}
+
+.mari-artifact-row:first-child {
+  border-top: 0;
+  padding-top: 0.25rem;
+}
+
+.mari-artifact-row--destructive {
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--destructive) 8%, transparent);
+}
+
+.mari-decision-surface > :first-child > :first-child {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.mari-decision-surface p,
+.mari-decision-surface pre,
+.mari-decision-surface summary {
+  font-size: max(0.75rem, 1em);
+  line-height: 1.55;
+}
+
+.mari-decision-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-inline: -1rem;
+  padding: 0.875rem 1rem max(0.875rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 96%, var(--mari-workspace-hoodie));
+}
+
+.mari-decision-actions button {
+  min-height: 2.5rem;
+  padding-inline: 1rem;
+  font-size: 0.8125rem;
+}
+
+@media (pointer: coarse) {
+  .mari-decision-actions button {
+    min-height: 2.75rem;
+  }
+}
+
 .mari-live-activity > :last-child {
   display: flex;
   min-width: 0;

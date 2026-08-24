@@ -1,16 +1,6 @@
 import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation as useUiTranslation } from "react-i18next";
-import {
-  AlertTriangle,
-  Check,
-  Database,
-  Loader2,
-  PackagePlus,
-  RefreshCw,
-  ShieldAlert,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { AlertTriangle, Check, Database, Loader2, PackagePlus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import type {
   MariDbPendingApproval,
   MariDependencyInstallApproval,
@@ -198,11 +188,8 @@ function DatabaseWorkspaceApprovalCard({
   });
 
   return (
-    <TranscriptRow marker={<ShieldAlert size="0.85rem" className="mt-1 text-[var(--primary)]" />}>
-      <div
-        ref={cardRef}
-        className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/5 p-3 text-xs text-[var(--foreground)]"
-      >
+    <TranscriptRow layout="document" marker={null}>
+      <div ref={cardRef} className="mari-decision-surface text-xs text-[var(--foreground)]">
         <div className="flex min-w-0 items-center gap-2">
           <span className="font-semibold">
             {localizeUi("ui.chat.databaseworkspaceapprovalcard.reviewMariSChanges")}
@@ -352,7 +339,7 @@ function DatabaseWorkspaceApprovalCard({
             </div>
           </div>
         )}
-        <div className="mt-2 flex justify-end gap-1.5">
+        <div className="mari-decision-actions mt-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={() => onRestore(approval.id)}
@@ -421,8 +408,8 @@ function DependencyWorkspaceApprovalCard({
 }) {
   const { t: localizeUi } = useUiTranslation();
   return (
-    <TranscriptRow marker={<PackagePlus size="0.85rem" className="mt-1 text-[var(--primary)]" />}>
-      <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/5 p-3 text-xs text-[var(--foreground)]">
+    <TranscriptRow layout="document" marker={null}>
+      <div className="mari-decision-surface text-xs text-[var(--foreground)]">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="font-semibold">
             {localizeUi("ui.chat.dependencyworkspaceapprovalcard.installThisDependency")}
@@ -465,7 +452,7 @@ function DependencyWorkspaceApprovalCard({
           </div>
         </div>
         {approval.reason && <p className="mt-2 text-[0.6875rem] text-[var(--muted-foreground)]">{approval.reason}</p>}
-        <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="mari-decision-actions mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onDiscard(approval.id)}
@@ -508,8 +495,8 @@ function SensitiveFileWorkspaceApprovalCard({
 }) {
   const { t: localizeUi } = useUiTranslation();
   return (
-    <TranscriptRow marker={<ShieldAlert size="0.85rem" className="mt-1 text-[var(--primary)]" />}>
-      <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/5 p-3 text-xs text-[var(--foreground)]">
+    <TranscriptRow layout="document" marker={null}>
+      <div className="mari-decision-surface text-xs text-[var(--foreground)]">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="font-semibold">
             {localizeUi("ui.chat.sensitivefileworkspaceapprovalcard.applySensitiveFileChange")}
@@ -541,7 +528,7 @@ function SensitiveFileWorkspaceApprovalCard({
           </pre>
         </details>
         {approval.reason && <p className="mt-2 text-[0.6875rem] text-[var(--muted-foreground)]">{approval.reason}</p>}
-        <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="mari-decision-actions mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onDiscard(approval.id)}

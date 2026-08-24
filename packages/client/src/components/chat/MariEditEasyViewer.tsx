@@ -8,6 +8,8 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation as useUiTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
+import { buildCharacterPreviewModel } from "../../lib/character-preview";
+import { CommandCenterMedia } from "../command-center/CommandCenterMedia";
 import {
   computeFieldChanges,
   resolveLorebookVectorStatus,
@@ -17,7 +19,18 @@ import {
 } from "../../lib/mari-edit-diff";
 import { diffWords } from "../../lib/word-diff";
 import type { MariDbPendingApproval, MariDbRowChange } from "@marinara-engine/shared";
-import { ChevronDown, ChevronRight, Eye, FileText, Pencil, Sparkles, Trash2, Undo2 } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  FileText,
+  Pencil,
+  Sparkles,
+  Trash2,
+  Undo2,
+  UserRound,
+} from "lucide-react";
 
 type Row = Record<string, unknown> | null | undefined;
 
@@ -527,6 +540,28 @@ function canRenderPrompt(change: MariDbRowChange): boolean {
   return change.table === "characters" || PROMPT_RENDER_TABLES.has(change.table);
 }
 
+function RowIdentity({ change }: { change: MariDbRowChange }) {
+  const row = asRecord(change.after) ?? asRecord(change.before);
+  if (change.table === "characters") {
+    const character = buildCharacterPreviewModel(row);
+    return (
+      <CommandCenterMedia
+        size="row"
+        role="row"
+        icon={UserRound}
+        src={character?.avatarSrc}
+        avatarCropStyle={character?.avatarCropStyle}
+        kind="avatar"
+        className="size-9"
+      />
+    );
+  }
+  if (change.table === "lorebook_entries") {
+    return <CommandCenterMedia size="row" role="row" icon={BookOpen} kind="artwork" className="size-9" />;
+  }
+  return <CommandCenterMedia size="row" role="row" icon={FileText} className="size-9" />;
+}
+
 function RowCard({
   change,
   index,
@@ -558,15 +593,9 @@ function RowCard({
   const entryName = change.table === "lorebook_entries" ? stringField(change.after ?? change.before, "name") : "";
   const accessibleName = entryName || rowTitle(change, localizeUi);
   return (
-    <div
-      className={cn(
-        "rounded-lg border p-2",
-        isDelete
-          ? "border-[var(--destructive)]/60 bg-[var(--destructive)]/10"
-          : "border-[var(--border)] bg-[var(--background)]/40",
-      )}
-    >
-      <div className="mb-1.5 flex min-w-0 items-center gap-1.5">
+    <section className={cn("mari-artifact-row", isDelete ? "mari-artifact-row--destructive" : "")}>
+      <div className="mb-2 flex min-w-0 items-center gap-2">
+        <RowIdentity change={change} />
         {/* The header is the accordion toggle: click to fold the details away and re-open later. */}
         <button
           type="button"
@@ -632,7 +661,7 @@ function RowCard({
       ) : (
         <GenericRowDiff change={change} collapsed={collapsed} />
       )}
-    </div>
+    </section>
   );
 }
 
