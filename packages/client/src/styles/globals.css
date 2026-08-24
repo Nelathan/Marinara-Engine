@@ -913,14 +913,7 @@
 }
 
 .mari-workspace-canvas {
-  background:
-    radial-gradient(circle at 9% 5%, color-mix(in srgb, var(--mari-workspace-gold) 6%, transparent), transparent 24rem),
-    radial-gradient(
-      circle at 92% 7%,
-      color-mix(in srgb, var(--mari-workspace-blush) 6%, transparent),
-      transparent 22rem
-    ),
-    color-mix(in srgb, var(--background) 97%, oklch(0.2 0.025 315));
+  background: color-mix(in srgb, var(--background) 97%, oklch(0.2 0.025 315));
 }
 
 .mari-workspace-capabilities {
@@ -935,11 +928,6 @@
 
 .mari-workspace-transcript {
   scrollbar-gutter: stable;
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--mari-workspace-gold) 2.5%, transparent),
-    transparent 22%
-  );
 }
 
 .mari-workspace-idle {
@@ -986,30 +974,20 @@
   animation: mari-workspace-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.mari-workspace-canvas .mari-workspace-mari-message > :last-child {
-  border-radius: 0 0.75rem 0.75rem 0;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--mari-workspace-gold) 5%, transparent), transparent 72%);
-  box-shadow: -2px 0 0 color-mix(in srgb, var(--mari-workspace-gold) 30%, transparent);
-}
-
 .mari-workspace-canvas .mari-workspace-artifact {
   border: 1px solid color-mix(in srgb, var(--mari-workspace-gold) 22%, var(--border));
-  border-left-width: 2px;
   border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--mari-workspace-gold) 5%, var(--card));
+  background: var(--card);
   padding: 0.625rem;
-  box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--background) 36%, transparent);
 }
 
 .mari-workspace-composer-dock {
   background: color-mix(in srgb, var(--card) 76%, transparent);
-  box-shadow: 0 -0.75rem 2rem color-mix(in srgb, var(--background) 70%, transparent);
 }
 
 .mari-workspace-composer {
   border-color: color-mix(in srgb, var(--mari-workspace-blush) 28%, var(--border));
-  background: color-mix(in srgb, var(--card) 84%, var(--mari-workspace-hoodie));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 5%, transparent);
+  background: var(--card);
 }
 
 .mari-workspace-composer:focus-within {
@@ -1022,13 +1000,13 @@
 }
 
 @media (max-width: 30rem) {
-    .mari-workspace-capabilities {
+  .mari-workspace-capabilities {
     padding-block: 0.375rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  }
+}
 
 [data-component="GlobalOmnibar.Mari"][aria-hidden="true"] .mari-workspace-idle img,
 [data-component="GlobalOmnibar"]:not([data-pane="mari"]) .mari-workspace-portrait img,

@@ -1885,7 +1885,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
   const workspaceTrace = getMessageWorkspaceTrace(message);
   if (workspaceTrace) {
     return (
-      <div className="group">
+      <TranscriptRow className="group" marker={<MariAvatar />}>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <WorkspaceTimelineList items={timelineItemsFromTrace(workspaceTrace, message)} active={false} openReasoning />
         {actionResults.map((result) => (
@@ -1922,13 +1922,13 @@ const CompactMariMessage = memo(function CompactMariMessage({
             )}
           </div>
         )}
-      </div>
+      </TranscriptRow>
     );
   }
 
   return (
     <>
-      <TranscriptRow className="mari-workspace-mari-message group" marker={<MariAvatar />}>
+      <TranscriptRow className="group" marker={<MariAvatar />}>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
         <CompactMarkdown content={content} />
         {actionResults.map((result) => (
