@@ -45,7 +45,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
-- Professor Mari now preserves chat-open requests made while she is working, prevents overlapping Keep/Restore approval actions, and renders lazily loaded preview facts even when a result has no eager preview body.
+- Professor Mari now preserves chat-open requests made while she is working, prevents overlapping Keep/Restore approval actions, omits incomplete machine-edit markup, continues without optional skills when their index cannot load, and renders lazily loaded preview facts even when a result has no eager preview body; unhandled navigation also keeps the omnibar and its query open, while Quick assistance preferences persist across restarts.
 - Profile imports now keep only the local canonical Universal Preset protected; imported copies retain their content but remain editable and deletable (#5469).
 - Game creation now reports unreachable, refused, timed-out, and other GM provider failures with actionable messages instead of a bare internal-server error (#5466).
 - Termux now uses a 1 GB automatic Node.js heap ceiling while preserving explicit operator overrides, reducing Android memory pressure that could terminate the entire background session (#5470).

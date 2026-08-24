@@ -2440,6 +2440,9 @@ export class ProfessorMariWorkspaceService {
     if (quickEditTarget) {
       const match = answer.match(/<quick_edit>\s*([\s\S]*?)\s*<\/quick_edit>/u);
       answer = answer.replace(/<quick_edit>[\s\S]*?<\/quick_edit>/gu, "").trimEnd();
+      // Providers can stop at the output limit midway through the machine block.
+      // Keep the human explanation, but never surface partial JSON as prose.
+      if (!match) answer = answer.replace(/<quick_edit>[\s\S]*$/u, "").trimEnd();
       if (answer) args.onEvent({ type: "token", data: answer });
       if (match?.[1]) {
         try {
@@ -3127,8 +3130,13 @@ export class ProfessorMariWorkspaceService {
   // be injected in full on every round. Small ones stay inlined; the rest are fetched
   // with app_data skill.get. Rendering lives in a pure, regression-tested helper.
   private async buildSkillsPrompt(): Promise<string | null> {
-    const response = await getProfessorMariWorkspaceSkillsService().list();
-    return renderMariSkillsPrompt(response.skills, response.diagnostics);
+    try {
+      const response = await getProfessorMariWorkspaceSkillsService().list();
+      return renderMariSkillsPrompt(response.skills, response.diagnostics);
+    } catch (err) {
+      logger.warn(err, "Professor Mari: failed to read workspace skills");
+      return null;
+    }
   }
 
   // #4851: the user's saved memories (persistent standing instructions). Injected
