@@ -3016,7 +3016,10 @@ export function HomeProfessorMariChat({
   }, [pendingChangeReviews]);
 
   const workspaceTimelineActive = workspaceActive || hasActiveGeneration;
-  const visiblePendingChangeReviews = !sending && !workspaceTimelineActive ? pendingChangeReviews : [];
+  const visiblePendingChangeReviews = useMemo(
+    () => (!sending && !workspaceTimelineActive ? pendingChangeReviews : []),
+    [pendingChangeReviews, sending, workspaceTimelineActive],
+  );
   const visiblePendingChangeReviewKey = visiblePendingChangeReviews.map((approval) => approval.id).join("|");
   const latestMessage = messages[messages.length - 1];
   const latestActionResults = latestMessage ? getMessageWorkspaceActionResults(latestMessage) : [];
@@ -4290,10 +4293,12 @@ export function HomeProfessorMariChat({
     void handleSubmit(recovery.text, recovery);
   };
 
+  const requestedReviewIdRef = useRef<string | null>(null);
   const openPendingApprovals = useCallback(() => {
-    setWorkspaceDestination("approvals");
+    requestedReviewIdRef.current = visiblePendingChangeReviews[0]?.id ?? null;
+    setWorkspaceDestination("chat");
     void refreshWorkspaceStatus();
-  }, [refreshWorkspaceStatus]);
+  }, [refreshWorkspaceStatus, visiblePendingChangeReviews]);
 
   const handledPendingReviewRequestRef = useRef(0);
   useEffect(() => {
@@ -4302,8 +4307,6 @@ export function HomeProfessorMariChat({
     openPendingApprovals();
   }, [chatWindowOpen, openPendingApprovals, pendingReviewRequest]);
 
-  // R56: a decision owns the work slot. It stays beside Mari's explanation on
-  // desktop and becomes the same focused sheet on mobile, never a cramped dock.
   const pendingApprovalsPanel = visiblePendingChangeReviews.map((approval) => (
     <WorkspaceApprovalCard
       key={approval.id}
@@ -4321,11 +4324,10 @@ export function HomeProfessorMariChat({
   useEffect(() => {
     if (visiblePendingChangeReviewKey && visiblePendingChangeReviewKey !== lastAutoOpenedApprovalKeyRef.current) {
       lastAutoOpenedApprovalKeyRef.current = visiblePendingChangeReviewKey;
-      setWorkspaceDestination("approvals");
-    } else if (workspaceDestination === "approvals") {
-      if (!visiblePendingChangeReviewKey) setWorkspaceDestination("chat");
+      requestedReviewIdRef.current = visiblePendingChangeReviews[0]?.id ?? null;
+      setWorkspaceDestination("chat");
     }
-  }, [visiblePendingChangeReviewKey, workspaceDestination]);
+  }, [visiblePendingChangeReviewKey, visiblePendingChangeReviews]);
 
   const trustStrip = (
     <ProfessorMariTrustStrip
@@ -4383,19 +4385,18 @@ export function HomeProfessorMariChat({
     [closeChatWindow, invalidateActionResult, localizeUi, omnibarMode],
   );
 
-  const requestedReviewIdRef = useRef<string | null>(null);
   const reviewActionResult = useCallback(
     async (reviewId: string) => {
       await refreshWorkspaceStatus().catch(() => undefined);
       requestedReviewIdRef.current = reviewId;
-      setWorkspaceDestination("approvals");
+      setWorkspaceDestination("chat");
     },
     [refreshWorkspaceStatus],
   );
 
   useEffect(() => {
     const reviewId = requestedReviewIdRef.current;
-    if (workspaceDestination !== "approvals" || !reviewId) return;
+    if (workspaceDestination !== "chat" || !reviewId) return;
     window.requestAnimationFrame(() => {
       const review = document.getElementById(`mari-workspace-review-${reviewId}`);
       if (!review) return;
@@ -4581,7 +4582,6 @@ export function HomeProfessorMariChat({
                         type="button"
                         onClick={openPendingApprovals}
                         className="mari-chrome-control mari-chrome-control--compact font-semibold"
-                        aria-pressed={workspaceDestination === "approvals"}
                       >
                         <ShieldAlert size="0.75rem" />
                         <span>{localizeUi("commandCenter.completion.review")}</span>
@@ -4799,7 +4799,6 @@ export function HomeProfessorMariChat({
                               type="button"
                               onClick={openPendingApprovals}
                               className="mari-chrome-control mari-chrome-control--compact font-semibold"
-                              aria-pressed={workspaceDestination === "approvals"}
                             >
                               <ShieldAlert size="0.75rem" />
                               <span>
@@ -4873,6 +4872,18 @@ export function HomeProfessorMariChat({
                                   disabled={isBusy}
                                   compact
                                 />
+                              </TranscriptRow>
+                            ) : null}
+                            {visiblePendingChangeReviews.length > 0 ? (
+                              <TranscriptRow
+                                marker={<ShieldAlert size="0.85rem" className="mt-1 text-[var(--primary)]" />}
+                              >
+                                <section
+                                  className="mari-inline-review space-y-4"
+                                  aria-label={localizeUi("commandCenter.completion.review")}
+                                >
+                                  {pendingApprovalsPanel}
+                                </section>
                               </TranscriptRow>
                             ) : null}
                             {recoveryNotice}
@@ -5055,45 +5066,7 @@ export function HomeProfessorMariChat({
                     </div>
                   </motion.div>
                   <AnimatePresence initial={false}>
-                    {workspaceDestination === "approvals" ? (
-                      <motion.section
-                        key="professor-mari-approvals"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={PROFESSOR_MARI_PANE_TRANSITION}
-                        className={cn(MARI_PANEL_SLOT_CLASS, "flex flex-col bg-[var(--background)]")}
-                        aria-labelledby="professor-mari-approvals-title"
-                      >
-                        <div className="flex items-center gap-2 border-b border-[var(--border)]/60 px-3 py-2.5">
-                          <ShieldAlert size="0.9rem" className="shrink-0 text-[var(--primary)]" />
-                          <div className="min-w-0 flex-1">
-                            <h3
-                              id="professor-mari-approvals-title"
-                              className="truncate text-xs font-semibold text-[var(--foreground)]"
-                            >
-                              {localizeUi("commandCenter.completion.review")}
-                            </h3>
-                            <p className="truncate text-[0.625rem] text-[var(--muted-foreground)]">
-                              {localizeUi("ui.chat.homeprofessormarichat.pendingApprovals", {
-                                count: visiblePendingChangeReviews.length,
-                              })}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setWorkspaceDestination("chat")}
-                            className="mari-chrome-control mari-chrome-control--small h-8 w-8 p-0"
-                            aria-label={t("home.professorMari.close")}
-                          >
-                            <X size="0.85rem" />
-                          </button>
-                        </div>
-                        <div className="mari-decision-list min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-0 pt-4 sm:px-5">
-                          {pendingApprovalsPanel}
-                        </div>
-                      </motion.section>
-                    ) : chatHistoryOpen ? (
+                    {chatHistoryOpen ? (
                       <motion.div
                         key="professor-mari-chats"
                         initial={{ opacity: 0, x: 8 }}

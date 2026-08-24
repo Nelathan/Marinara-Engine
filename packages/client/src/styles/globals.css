@@ -935,6 +935,23 @@
   padding-bottom: 0.25rem;
 }
 
+.mari-inline-review {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: 0.75rem;
+  background: var(--card);
+  padding: 0.875rem;
+}
+
+.mari-inline-review .mari-decision-surface {
+  min-height: 0;
+}
+
+.mari-inline-review .mari-decision-actions {
+  margin-inline: -0.875rem;
+  padding-inline: 0.875rem;
+}
+
 .mari-artifact-row {
   padding-block: 0.875rem;
   border-top: 1px solid var(--border);
