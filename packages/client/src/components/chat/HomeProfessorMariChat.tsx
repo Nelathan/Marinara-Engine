@@ -128,7 +128,6 @@ import { rafThrottle } from "../../lib/raf-throttle";
 import { prepareImageAttachment } from "../../lib/chat-attachment-images";
 import { cn } from "../../lib/utils";
 import { executeStateNavigation } from "../../lib/state-navigation";
-import { ProfessorMariWorkingWindow } from "../ui/ProfessorMariWorkingWindow";
 import { MacroTextarea } from "../ui/MacroTextarea";
 import { MariSuggestionChips } from "./MariSuggestionChips";
 import { MariNote, MariStrip } from "./mari-primitives";
@@ -140,7 +139,6 @@ import {
 } from "../../lib/professor-mari-open";
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
-const MARI_WORKSPACE_SPRITE_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
 const PROFESSOR_MARI_WELCOME_MESSAGE_ID = "__professor_mari_home_welcome__";
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
@@ -1565,6 +1563,30 @@ function WorkspaceStatusEvent({ content, active }: { content: string; active?: b
   );
 }
 
+/**
+ * One transient row owns the gap between a request and Mari's first real output.
+ * Her portrait already carries global state in the header, so this row names the
+ * current phase without introducing another mascot, card, or transcript event.
+ */
+function WorkspaceLiveActivity({ content }: { content: string }) {
+  const { t: localizeUi } = useUiTranslation();
+  return (
+    <TranscriptRow marker={<MariAvatar active />} className="mari-live-activity">
+      <span className="min-w-0 truncate text-[0.75rem] font-medium text-[var(--muted-foreground)]">{content}</span>
+      <span
+        className="mari-live-activity__dots"
+        role="status"
+        aria-live="polite"
+        aria-label={localizeUi("ui.chat.homeprofessormarichat.workingOnIt")}
+      >
+        <i />
+        <i />
+        <i />
+      </span>
+    </TranscriptRow>
+  );
+}
+
 const WorkspaceTimelineEvent = memo(function WorkspaceTimelineEvent({
   item,
   active,
@@ -2893,8 +2915,6 @@ export function HomeProfessorMariChat({
   }, [pendingChangeReviews]);
 
   const workspaceTimelineActive = workspaceActive || hasActiveGeneration;
-  const workspaceHasResponseText = workspaceTimeline.some((item) => item.type === "text" && item.content.trim());
-  const showDottoreSupport = workspaceTimelineActive && !workspaceHasResponseText;
   const visiblePendingChangeReviews = !sending && !workspaceTimelineActive ? pendingChangeReviews : [];
   const visiblePendingChangeReviewKey = visiblePendingChangeReviews.map((approval) => approval.id).join("|");
   const latestMessage = messages[messages.length - 1];
@@ -4667,16 +4687,6 @@ export function HomeProfessorMariChat({
                           <LoadingHistoryState />
                         ) : (
                           <>
-                            {omnibarMode && messages.length === 0 ? (
-                              <div
-                                className="mari-workspace-idle"
-                                data-component="HomeProfessorMariChat.IdleMari"
-                                aria-hidden="true"
-                              >
-                                <span data-part="aura" />
-                                <img src={MARI_WORKSPACE_SPRITE_URL} alt="" draggable={false} />
-                              </div>
-                            ) : null}
                             {displayMessages.map(renderDisplayMessage)}
                             {showConnectionFirstHint && (
                               <p className="px-3 py-1 text-center text-xs text-[var(--muted-foreground)]">
@@ -4691,14 +4701,11 @@ export function HomeProfessorMariChat({
                             {workspaceTimelineActive ? (
                               <MariResourceSubject character={focusedCharacter} lorebook={focusedLorebook} />
                             ) : null}
-                            {workspaceTimeline.length === 0 && workspaceTimelineActive && !showDottoreSupport && (
-                              <WorkspaceStatusEvent content={workspaceActivity ?? "Thinking..."} />
-                            )}
-                            {showDottoreSupport && (
-                              <TranscriptRow marker={<MariAvatar active />}>
-                                <ProfessorMariWorkingWindow visible className="max-w-[18rem]" />
-                              </TranscriptRow>
-                            )}
+                            {workspaceTimeline.length === 0 && workspaceTimelineActive ? (
+                              <WorkspaceLiveActivity
+                                content={workspaceActivity ?? localizeUi("ui.chat.homeprofessormarichat.workingOnIt")}
+                              />
+                            ) : null}
                             <WorkspaceTimelineList
                               items={workspaceTimeline}
                               active={workspaceTimelineActive}

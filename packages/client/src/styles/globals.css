@@ -972,6 +972,50 @@
   scrollbar-gutter: stable;
 }
 
+.mari-live-activity > :last-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mari-live-activity__dots {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.mari-live-activity__dots i {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: var(--primary);
+  opacity: 0.28;
+  animation: mari-live-activity-dot 1.2s ease-in-out infinite;
+}
+
+.mari-live-activity__dots i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.mari-live-activity__dots i:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes mari-live-activity-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-0.12rem);
+  }
+}
+
 .mari-workspace-idle {
   position: relative;
   display: grid;
@@ -1048,6 +1092,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mari-live-activity__dots i {
+    animation: none;
+  }
 }
 
 [data-component="GlobalOmnibar.Mari"][aria-hidden="true"] .mari-workspace-idle img,

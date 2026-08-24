@@ -2769,7 +2769,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       {t("omnibar.categories.professor", "Professor Mari")}
                     </span>
                     <span className="block truncate text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
-                      {t("commandCenter.mode.work", "Ask Mari")}
+                      {mariVisualState === "thinking"
+                        ? t("ui.chat.homeprofessormarichat.workingOnIt", "Working on it...")
+                        : mariVisualState === "warning"
+                          ? t("mari.presence.needsYou", "Professor Mari needs your answer")
+                          : t("commandCenter.mode.work", "Ask Mari")}
                     </span>
                   </span>
                 </motion.div>
