@@ -1,44 +1,57 @@
 # Omnibar feature inventory
 
-What the omnibar does today, written down before any refactor so nothing is lost
-by accident. This is a behaviour contract, not a design document: if a change
-removes a line from this file, that removal must be deliberate.
+What the omnibar does today. This is a behaviour contract, not a design
+document: if a change removes a line from this file, that removal must be
+deliberate.
 
-Scope: `packages/client/src/components/layout/GlobalOmnibar.tsx`, the panes under
-`components/layout/omnibar/`, the `lib/omnibar-*.ts` modules, and the server
-route that backs cross-chat message search.
+Rewritten after the concept work in `omnibar-concept.md` landed. The five panes
+described by the previous version are gone; see section 1 and section 11.
 
-Related documents: `omnibar-workflow-slice-plan.md` (why the 11 slices exist),
-`omnibar-completion-recovery-design.md`, `omnibar-command-center-professor-mari-plan.md`,
+Scope: `packages/client/src/components/layout/GlobalOmnibar.tsx`, the surfaces
+under `components/layout/omnibar/`, the `lib/omnibar-*.ts` modules, and the
+server route that backs cross-chat message search.
+
+Related documents: `omnibar-concept.md` (the rules this shape follows),
+`omnibar-implementation-plan.md` (how it was built),
+`omnibar-workflow-slice-plan.md` (why the 11 slices exist),
+`omnibar-completion-recovery-design.md`,
+`omnibar-command-center-professor-mari-plan.md`,
 `omnibar-improvement-backlog.md` (what to build next, and why).
 
-## 1. Panes
+## 1. Surfaces
 
-The dialog has five panes, held in the persisted session state (`pane`).
+One list, and the surfaces that take it over. The persisted `pane` holds three
+values.
 
-| Pane | Purpose | Entered by |
+| Surface | Purpose | Entered by |
 | --- | --- | --- |
-| `results` | The ranked result list. The default. | Open, or Escape from any other pane |
+| `results` | The ranked result list. The default, and every open starts here. | Open, or Escape from a takeover |
 | `browse` | Grid of one category, with compare and batch attach. | A category chip with an empty query, or the Browse button |
-| `detail` | The preview panel for one result. | `→`, a rich row on a touch device, or a browse row |
-| `mari` | Professor Mari's work surface. | The Mari button, `⌘↵`, a row's Sparkles button, a Mari-owned row, or "Continue in Full Mari" from `quick` |
-| `quick` | One cheap answer for a typed question, with a reversible edit proposal. | Choosing "Ask Professor Mari" with a query typed |
+| `mari` | Professor Mari's work surface. | The Mari button, `⌘↵`, a row's Sparkles button, a Mari-owned row, or the Ask-Mari row |
+
+Two things render **inside** the list rather than replacing it:
+
+- **Inline expansion.** A focused row grows to show its preview, or a choice
+  control's options. The row itself grows; rows above it never move.
+- **The aside.** A cheap answer pinned to the bottom of the panel, below the
+  list and above the footer. It is not a row: never ranked, never in the
+  arrow-key cycle, never the target of Enter.
 
 Rules that must survive:
 
-- A persisted `mari` pane is reset to `results` on open. The omnibar always
-  reopens on search; a Mari conversation resumes only on explicit re-entry.
-- Escape steps back one pane at a time and only closes from `results`. `quick`
-  leaves through the same path as `mari`, so Escape and the back arrow agree and
-  a streaming answer is never discarded by a stray keystroke.
-- `quick` and `mari` both replace the search header. Leaving the input mounted
-  under `quick` let one keystroke re-enter `results` and abort the stream.
-- Leaving `detail` or `mari` restores focus to the row it came from
-  (`mariReturnResultId`), falling back to the input.
-- The detail panel renders in three places (mobile inline, browse inline, and
-  the external panel above 88rem) from one `renderResultPreview` body.
+- The omnibar always reopens on the list. A persisted `mari` pane is reset, and
+  a session persisted with the removed `detail` or `quick` panes falls back to
+  the list.
+- Escape collapses an expansion if one is open; otherwise it leaves a takeover;
+  otherwise it closes. One level, so Escape and the back arrow always agree.
+- Escape from a takeover never cancels a running answer.
+- Leaving `mari` restores focus to the row it came from (`mariReturnResultId`),
+  falling back to the input.
+- The result preview renders from one `renderResultPreview` body in two places:
+  inline under the focused row, and in the external panel above 88rem.
 - The external panel only appears when the result is "rich": media, prose,
-  facts, a control, or lazily fetched detail.
+  facts, a control, or lazily fetched detail. It never takes focus and is not
+  part of the keyboard model.
 
 ## 2. Query handling
 
@@ -82,7 +95,8 @@ Every builder is pure and lives in `lib/omnibar-results.ts` unless noted.
 | Creation proposal | `lib/omnibar-creation-proposal.ts` | Nothing is created until accepted |
 | Chat-to-world extraction | `lib/omnibar-chat-extraction.ts` | Lorebook, characters, locations or campaign |
 | Game commands | `lib/omnibar-game-commands.ts` | Party, quest, scene and encounter topics go to Mari with the live game state. Dice are deliberately absent — see section 11 |
-| "Ask Professor Mari" fallback | `buildOmnibarSearchResults` | Always last unless promoted. With a query typed it opens the Quick pane, not the Work pane: one Mari door, cheap answer first, escalated by "Continue in Full Mari". Cost is stated in the Quick header, never on the row |
+| Choice values | `lib/omnibar-choice-rows.ts` | With a query typed, every choice control's options join the searchable set, so "gpt" reaches GPT-4 without finding the Model row first. They stay out of the idle deck. Each row carries its own `chooseValue`, so a row found by typing works when its control is nowhere on screen |
+| "Ask Professor Mari" fallback | `buildOmnibarSearchResults` | Always last unless promoted. Opens Mari's takeover. The cheap answer arrives on its own, in the aside — see section 12 |
 | "Continue with Mari" | `buildOmnibarContinueResult` | Only when Mari is active or has pending approvals |
 
 De-duplication is by result id, first source wins. Message rows from the open
@@ -105,6 +119,8 @@ shared command ranking (recency and pins) reorders it.
   question, when the intent is explain, recommend or repair, or when nothing
   matched well — unless one result is a clear direct hit (score ≥ 250 with a
   navigate, action or create intent).
+- That promotion is also the aside's trigger (section 12). It is read back from
+  the ranked list, not recomputed, so the two can never disagree.
 
 ## 5. Actions
 
@@ -113,6 +129,8 @@ without one fall through to the generic open path.
 
 - `open-mari-chat`, `slash`, `goto-message`, `add-to-chat`, `detach-from-chat`,
   `refine-query`, `personal-extension`, `open-docs`, `open-faq`.
+- A row with `chooseValue` applies that value and is checked before any other
+  path. It exists so a choice option works wherever it was found.
 - Direct active-chat actions: "add Eliza" with a chat open attaches instead of
   opening, but only when the result is unambiguous.
 - Attach and detach reuse the drag-and-drop payload and its block rules, so the
@@ -151,15 +169,18 @@ without one fall through to the generic open path.
 This is the part most likely to break silently. All of it must survive.
 
 - `↑`/`↓` move the selection; `Home`/`End` jump to the ends. Not in browse.
-- `Enter` chooses. On a toggle row it flips the toggle; on a choice row it opens
-  the detail pane.
+- `Enter` chooses. On a toggle row it flips the toggle; on a choice row it
+  expands the row's options beneath it; on an option row it applies that value.
 - `⌘↵` / `Ctrl+↵` continues the selected result with Mari, skipping the detail
   pane. Not offered for admin-only rows.
-- `→` opens the detail pane for a choice or rich row; `←` returns focus to the
-  input from a focused row.
+- `→` expands a choice row's options, or a rich row's preview, in place. `←`
+  collapses whichever is open, and otherwise returns focus to the input.
+- **Expanded content is inserted below the focused row, never above it.** The
+  focused row does not move, so `reconcileActiveResultId` stays valid and the
+  two rules below cannot be violated by an expansion.
 - `Tab` accepts the ghost completion when there is one; otherwise it cycles
   focus inside the dialog (the dialog traps focus).
-- `Escape` steps back one pane, then closes.
+- `Escape` collapses an expansion, then leaves a takeover, then closes.
 - In browse, `↓` moves focus into the grid and `Enter` activates the first cell.
 - Native browser autocomplete is off on the input, because its popup steals the
   arrow keys.
@@ -174,9 +195,12 @@ This is the part most likely to break silently. All of it must survive.
 
 ## 8. State and persistence
 
-- Session state (`query`, `filter`, `pane`, `activeResultId`, `detailOrigin`,
-  `browseSelectedId`, `browseLimit`, `detailResultId`, `mariReturnResultId`)
-  survives a close and reopen, except the `mari` pane reset above.
+- Session state (`query`, `filter`, `pane`, `activeResultId`, `browseSelectedId`,
+  `browseLimit`, `detailResultId`, `mariReturnResultId`, `mariHandoff`,
+  `mariDestination`, `mariDetailId`) survives a close and reopen, except the
+  `mari` pane reset above.
+- Both expansions — the focused row's preview and a choice row's options — are
+  component state, not session state. Every open starts from a bare list.
 - Command ranking (recency and pins) is persisted separately.
 - UI-store slots the omnibar reads: `activeEditorField`, `lastAppError`,
   `creationSession`, the open-detail ids per resource kind, the settings target.
@@ -202,8 +226,9 @@ This is the part most likely to break silently. All of it must survive.
   is **not** the size printed in the build log — the same GameSurface chunk reads
   492 kB to the budget and 509 kB in the log. Debug budget failures with the
   budget's own numbers.
-- The panes (`OmnibarMariPane`, `OmnibarBrowsePane`, `OmnibarDetailPane`) are
-  lazy and mounted behind `Suspense`.
+- `OmnibarMariPane`, `OmnibarBrowsePane` and `OmnibarAside` are lazy and mounted
+  behind `Suspense`. So are Mari's Skills and Memories panels, which most
+  sessions never open.
 
 ## 11. Deliberate non-features
 
@@ -222,3 +247,44 @@ Do not "fix" these; each was a decision.
   its roll queues onto your turn so the model sees the result — the omnibar's
   did not. Restoring it would also restore a dynamic-import rule, because a
   static import of the game stores from here breaks the bundle budget.
+
+- **There is no detail pane.** A preview expands under its own row instead. The
+  pane hid the whole list on narrow screens to show one result, and on wide
+  screens the external panel already did the job without it.
+- **There is no Quick pane.** The aside answers the cheap case without being
+  asked, and the Ask-Mari row opens the takeover. Quick's one surviving job — a
+  single-field rewrite from one model call — moved into Mari's takeover, where
+  the proposal lands in the pending-change dock like every other change she
+  makes. That costs more than one call, deliberately, for one review surface.
+- **There is no floating Mari window.** What is left of it is a presence
+  indicator that shows state and opens her. She cannot sit beside an open
+  editor; she is a place you go.
+- **Escape does not walk a pane stack.** There is one level to step back from.
+- **Her sprite does not appear on messages.** One sprite, in the header, where
+  its pose carries her state. Her transcript rows are labelled instead.
+- **A prose rewrite is not painted red and green.** That reads as
+  wrong-and-right, when it is a rewrite. Structural changes keep diff colouring.
+
+## 12. The aside
+
+The cheap answer, `hooks/use-omnibar-aside.ts` and
+`components/layout/omnibar/OmnibarAside.tsx`.
+
+- Fires only when the Ask-Mari row is promoted — a question-shaped query, an
+  `explain` / `recommend` / `repair` intent, or no direct hit at score ≥ 250 —
+  and only after the input has been idle. One predicate, already tuned, read
+  back from the ranked list rather than duplicated.
+- The delay is a knob, not a constant. Default 3s. Too short spends a call on an
+  ordinary typing pause; too long makes the feature feel absent.
+- **The unasked call is a different call, not a trimmed one.**
+  `buildQuickContextPayload` assembles it from scratch: the surface, the typed
+  query, and the focused resource's label. It must never carry persistent
+  memories or the contents of the focused field, both of which an *asked* Quick
+  call does send. `quick-context-payload.test.ts` pins this.
+- Defaults to the local sidecar, so nothing is spent unasked.
+- Nothing is front-loaded into onboarding. The first answer says where it came
+  from and offers to turn the feature off, in place.
+- A failed call shows one quiet line and the `shrug` sprite. Never a toast — the
+  user did not ask for this call — and the ranked list is never degraded by it.
+- `⌘↵` needs no special case: when the aside fires, the promoted Ask-Mari row is
+  the selection, so continuing it already opens the takeover.
