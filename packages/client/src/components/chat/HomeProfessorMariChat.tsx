@@ -1564,6 +1564,7 @@ function WorkspaceLiveWorkCard({
   onStop: () => void;
 }) {
   const { t } = useUiTranslation();
+  const reduceMotion = useReducedMotion();
   const elapsedSeconds = useWorkspaceElapsedSeconds(true);
   const toolItems = items.filter(
     (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
@@ -1587,7 +1588,13 @@ function WorkspaceLiveWorkCard({
 
   return (
     <TranscriptRow marker={<MariAvatar active />}>
-      <section className="mari-live-work" aria-label={t("mari.workCard.label")}>
+      <motion.section
+        className="mari-live-work"
+        aria-label={t("mari.workCard.label")}
+        initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+      >
         <div className="mari-live-work__intro">
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -1599,16 +1606,34 @@ function WorkspaceLiveWorkCard({
                 {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
               </span>
             </div>
-            <p className="mari-live-work__narrative">{latestNarrative?.content.trim() || activity}</p>
+            <AnimatePresence initial={false} mode="popLayout">
+              <motion.p
+                key={latestNarrative?.id ?? activity}
+                className="mari-live-work__narrative"
+                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
+                transition={{ duration: reduceMotion ? 0 : 0.2 }}
+              >
+                {latestNarrative?.content.trim() || activity}
+              </motion.p>
+            </AnimatePresence>
             <MariResourceSubject character={character} lorebook={lorebook} className="mt-3" />
           </div>
           <div className="mari-live-work__scene">
-            <span
-              className="mari-live-work__sprite"
-              data-scene={workAnimation.id}
-              style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
-              aria-hidden="true"
-            />
+            <AnimatePresence initial={false} mode="wait">
+              <motion.span
+                key={workAnimation.id}
+                className="mari-live-work__sprite"
+                data-scene={workAnimation.id}
+                style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.92, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96, y: -2 }}
+                transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+                aria-hidden="true"
+              />
+            </AnimatePresence>
             <button type="button" className="mari-live-work__stop" onClick={onStop}>
               <Square size="0.65rem" aria-hidden="true" />
               {t("ui.chat.summarypopover.stop")}
@@ -1618,26 +1643,39 @@ function WorkspaceLiveWorkCard({
 
         {visibleSteps.length > 0 ? (
           <ol className="mari-live-work__steps" aria-label={t("mari.workCard.progress")}>
-            {visibleSteps.map(({ id, tool }) => {
-              const presentation = inferToolPresentation(tool);
-              const running = tool.status === "running";
-              const failed = tool.status === "error";
-              const Icon = failed ? AlertTriangle : running ? Loader2 : Check;
-              return (
-                <li key={id} data-status={tool.status}>
-                  <Icon
-                    size="0.75rem"
-                    className={cn("shrink-0", running && "animate-spin motion-reduce:animate-none")}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                  {presentation.detail ? (
-                    <code className="hidden max-w-[45%] truncate font-mono text-[0.65rem] text-[var(--muted-foreground)] sm:block">
-                      {presentation.detail}
-                    </code>
-                  ) : null}
-                </li>
-              );
-            })}
+            <AnimatePresence initial={false} mode="popLayout">
+              {visibleSteps.map(({ id, tool }) => {
+                const presentation = inferToolPresentation(tool);
+                const running = tool.status === "running";
+                const failed = tool.status === "error";
+                const Icon = failed ? AlertTriangle : running ? Loader2 : Check;
+                return (
+                  <motion.li
+                    layout={!reduceMotion}
+                    key={`${id}:${tool.status}`}
+                    data-status={tool.status}
+                    initial={reduceMotion ? false : { opacity: 0, x: -8, height: 0 }}
+                    animate={{ opacity: 1, x: 0, height: "auto" }}
+                    exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <Icon
+                      size="0.75rem"
+                      className={cn(
+                        "mari-live-work__step-icon shrink-0",
+                        running && "animate-spin motion-reduce:animate-none",
+                      )}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                    {presentation.detail ? (
+                      <code className="hidden max-w-[45%] truncate font-mono text-[0.65rem] text-[var(--muted-foreground)] sm:block">
+                        {presentation.detail}
+                      </code>
+                    ) : null}
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
           </ol>
         ) : null}
 
@@ -1662,7 +1700,7 @@ function WorkspaceLiveWorkCard({
             </div>
           </details>
         ) : null}
-      </section>
+      </motion.section>
     </TranscriptRow>
   );
 }
