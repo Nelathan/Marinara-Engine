@@ -1839,6 +1839,15 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   font-size: 0.6875rem;
 }
 
+.mari-suggestion-turn > :last-child {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mari-suggestion-turn .mari-suggestion-chips {
+  margin-top: 0.125rem;
+}
+
 @media (max-width: 39.99rem) {
   .mari-suggestion-chips {
     flex-wrap: nowrap;

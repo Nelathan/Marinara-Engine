@@ -3213,20 +3213,15 @@ export function HomeProfessorMariChat({
   const guidedPlan = professorMariSuggestionsEnabled && mariPlanChatId === chatId ? mariPlan : null;
   const guidedPlanStep = guidedPlan ? (guidedPlan[mariPlanCursor] ?? null) : null;
   const chipRowChips = guidedPlanStep ? guidedPlanStep.chips : visibleSuggestionChips;
-  const suggestionQuestion =
-    !guidedPlanStep && chipRowChips.length > 0
+  const suggestionQuestion = guidedPlanStep
+    ? guidedPlanStep.question
+    : chipRowChips.length > 0
       ? latestActionResults.length > 0
         ? localizeUi("ui.chat.homeprofessormarichat.suggestions.afterChange")
         : localizeUi("ui.chat.homeprofessormarichat.suggestions.next")
       : null;
-  const showSuggestionLoading =
-    professorMariSuggestionsEnabled &&
-    chipRowChips.length === 0 &&
-    workspaceActivity?.toLocaleLowerCase().includes("suggestion") === true;
-  const suggestionsSuppressed =
-    attachments.length > 0 || visiblePendingChangeReviews.length > 0 || (isBusy && !showSuggestionLoading);
-  const showSuggestionPrompt =
-    !suggestionsSuppressed && (Boolean(suggestionQuestion) || showSuggestionLoading || chipRowChips.length > 0);
+  const suggestionsSuppressed = attachments.length > 0 || visiblePendingChangeReviews.length > 0 || isBusy;
+  const showSuggestionPrompt = !suggestionsSuppressed && Boolean(suggestionQuestion) && chipRowChips.length > 0;
 
   const runRestart = useCallback(async () => {
     if (isBusy) return;
@@ -4708,8 +4703,12 @@ export function HomeProfessorMariChat({
                           <div />
                         ) : (
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-[oklch(0.73_0.21_345/0.4)] bg-[oklch(0.73_0.21_345/0.1)] shadow-[0_0_18px_oklch(0.73_0.21_345/0.18)]">
-                              <img src={MARI_AVATAR_URL} alt="" className="h-full w-full object-cover" />
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[oklch(0.73_0.21_345/0.4)] bg-[oklch(0.73_0.21_345/0.1)] text-[var(--primary)] shadow-[0_0_18px_oklch(0.73_0.21_345/0.18)]">
+                              {workspaceTimelineActive ? (
+                                <Sparkles size="0.9rem" aria-hidden="true" />
+                              ) : (
+                                <img src={MARI_AVATAR_URL} alt="" className="h-full w-full object-cover" />
+                              )}
                             </span>
                             <span className="min-w-0">
                               <span className="block truncate text-xs font-bold text-[var(--foreground)]">
@@ -4856,11 +4855,6 @@ export function HomeProfessorMariChat({
                                 {localizeUi("ui.chat.homeprofessormarichat.selectAConnectionFirst")}
                               </p>
                             )}
-                            {guidedPlanStep ? (
-                              <TranscriptRow marker={<MariAvatar active />}>
-                                <CompactMarkdown content={guidedPlanStep.question} />
-                              </TranscriptRow>
-                            ) : null}
                             {workspaceTimelineActive ? (
                               <WorkspaceLiveWorkCard
                                 activity={workspaceActivity ?? localizeUi("ui.chat.homeprofessormarichat.workingOnIt")}
@@ -4869,6 +4863,17 @@ export function HomeProfessorMariChat({
                                 lorebook={focusedLorebook}
                                 onStop={() => void stopWorkspace()}
                               />
+                            ) : null}
+                            {showSuggestionPrompt && suggestionQuestion ? (
+                              <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
+                                <CompactMarkdown content={suggestionQuestion} />
+                                <MariSuggestionChips
+                                  chips={chipRowChips}
+                                  onSelect={handleSuggestionSelect}
+                                  disabled={isBusy}
+                                  compact
+                                />
+                              </TranscriptRow>
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
@@ -4904,28 +4909,6 @@ export function HomeProfessorMariChat({
                             setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))
                           }
                         />
-                        {showSuggestionPrompt ? (
-                          <div className="mari-suggestion-prompt mb-2 px-0.5">
-                            {suggestionQuestion ? (
-                              <p className="mb-1.5 text-[0.8125rem] font-medium text-[var(--foreground)]">
-                                <span className="mr-1.5 text-[var(--primary)]">
-                                  {localizeUi("ui.chat.compactmarimessage.mari")}
-                                </span>
-                                {suggestionQuestion}
-                              </p>
-                            ) : showSuggestionLoading ? (
-                              <p className="mb-1.5 text-[0.75rem] text-[var(--muted-foreground)]" role="status">
-                                {localizeUi("ui.chat.homeprofessormarichat.thinkingUpSuggestions")}
-                              </p>
-                            ) : null}
-                            <MariSuggestionChips
-                              chips={chipRowChips}
-                              onSelect={handleSuggestionSelect}
-                              disabled={isBusy}
-                              compact
-                            />
-                          </div>
-                        ) : null}
                         <div
                           className={cn(
                             "mari-professor-composer relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 shadow-inner shadow-black/10 focus-within:border-[var(--primary)]/50",

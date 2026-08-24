@@ -55,17 +55,13 @@ function inferChipEntity(chip: MariSuggestionChip): MariChipEntity | undefined {
   return ENTITY_LABEL_MATCHERS.find(([, matcher]) => matcher.test(chip.label))?.[0];
 }
 
-// Fade + rise + scale, keyed per chip set, mode="wait" so the old set fully exits before the
-// next enters - this is the exact recipe GameSetupWizard/ChatSetupWizard use for step changes
-// (see GameSetupWizard.tsx / ChatSetupWizard.tsx step transitions), reused here so a new
-// suggestion set reads as "the next step" rather than an abrupt content swap.
 export function MariSuggestionChips({ chips, onSelect, disabled = false, compact = false }: MariSuggestionChipsProps) {
   const { t: localizeUi } = useUiTranslation();
   const reducedMotion = useReducedMotion();
   const setKey = chips.map((chip) => chip.id).join("|");
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence initial={false}>
       {chips.length > 0 && (
         <motion.div
           key={setKey}
@@ -99,7 +95,7 @@ export function MariSuggestionChips({ chips, onSelect, disabled = false, compact
                   chip.tone === "success" && "mari-suggestion-chip--success",
                 )}
                 aria-label={label}
-                title={chip.prompt}
+                title={label}
               >
                 {Icon ? <Icon size={compact ? "0.6875rem" : "0.8125rem"} className="shrink-0" /> : null}
                 <span className="min-w-0 truncate">{label}</span>

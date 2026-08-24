@@ -5,6 +5,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 ## [Unreleased]
 
 - Redesigned Professor Mari's live activity as one focused work card with elapsed time, progress, resource context, collapsible tool details, and an animated in-card mascot on desktop and mobile.
+- Professor Mari's suggestions now appear as answers to her question in the conversation, while the composer stays focused on attachments and writing.
 
 ### Added
 
