@@ -432,6 +432,62 @@ Cut deliberately, because both Apple and Anthropic would cut them: token
 counters, a second sprite, per-message avatars, a separate plan panel, and any
 decorative motion while she is working.
 
+## 11b. The vocabulary
+
+Her window renders 22 distinct visual elements. Each was designed alone, so each
+brought its own row, its own icon and its own muted-text style, and none of them
+agree. The suggestions alone are three stacked rows: a caption, a loading line,
+and the chips.
+
+The fix is not restyling 22 things. It is five primitives that everything
+conforms to. Two of them already exist and must be reused, not rebuilt.
+
+**R41 - Turn.** A marker column plus content, in one grid. Her prose, the user's
+turn, the tool log and the working window are all Turns. `TranscriptRow` is this
+primitive; nothing in the transcript may sit outside it. Today the tool-log turn
+does, which is why a message where she ran commands does not line up with the
+message above it.
+
+**R42 - Card.** A border, and it means exactly one thing: your data is involved.
+Approvals, action results, diffs and artifacts are Cards. Nothing else may carry
+a border - not her prose, not a status event, not a hint, not the working
+window. A second, quieter card weight is forbidden, because it dilutes the only
+signal the border carries.
+
+**R43 - Note.** One muted line. No border, no box, no icon of its own. Status
+events, errors, recovery notices, hints and loading states are Notes, and colour
+is their only variation. A Note that today lives in the composer dock belongs in
+the transcript, in order, where it happened.
+
+**R44 - Chip.** One pill everywhere: destinations, status facts, suggestions,
+attachments, context. `.mari-chrome-control` is this primitive and already has
+`--compact`, `--small`, `--selected`, `[aria-pressed]` and every state. Any
+hand-rolled pill is a bug.
+
+**R45 - Strip.** One row of Chips that wraps. It never scrolls horizontally: a
+scroller hides facts, and the status facts must stay visible on a phone. Desktop
+fits one line, a narrow viewport wraps to two, and there is no media query
+because `flex-wrap` already does it.
+
+**R46 - The dock is three rows, hard.** Approvals Card, one Strip, composer.
+Attachments win the Strip over suggestions, because once you have attached a
+file you are composing rather than browsing prompts. The other five rows are not
+features: the context budget duplicates the status strip, the recovery notice is
+a Note, and the chip caption and chip loading line are states of the Strip
+itself.
+
+**R47 - A question she asks is a Turn.** When a guided plan is running, the text
+above the chips is not a caption, it is her question. It renders in the
+transcript where she said it, with her name marker in the accent colour, and the
+chips below the composer are the answer strip. `MariAvatar active` already
+renders that accent.
+
+**R48 - Personality has two homes.** Her pose in the header, which carries live
+state, and the full sprite that greets an empty transcript. Everywhere else the
+room is a quiet tool. This supersedes the background washes on the canvas, the
+header, her message bubbles and the artifact cards: the theme is an accent on
+borders, focus rings, active states and her name, never a wash.
+
 ## 12. Build order
 
 Each step is useful alone and does not depend on the next.
