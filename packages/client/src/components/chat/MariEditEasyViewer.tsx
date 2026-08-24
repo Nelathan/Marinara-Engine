@@ -5,7 +5,7 @@
 // snapshots) — no server call. Per-row Dismiss hides a reviewed change to reduce clutter; the
 // card's Keep/Restore still governs the whole batch.
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useTranslation as useUiTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import { buildCharacterPreviewModel } from "../../lib/character-preview";
@@ -592,6 +592,8 @@ function RowCard({
   onReject,
   onRender,
   busy,
+  active,
+  itemKey,
 }: {
   change: MariDbRowChange;
   index: number;
@@ -600,6 +602,8 @@ function RowCard({
   onReject?: (change: MariDbRowChange, index: number) => void;
   onRender?: (change: MariDbRowChange, index: number) => void;
   busy?: boolean;
+  active?: boolean;
+  itemKey: string;
 }) {
   const { t: localizeUi } = useUiTranslation();
   const meta = actionMeta(change.action, localizeUi);
@@ -614,7 +618,15 @@ function RowCard({
   const entryName = change.table === "lorebook_entries" ? stringField(change.after ?? change.before, "name") : "";
   const accessibleName = entryName || rowTitle(change, localizeUi);
   return (
-    <section className={cn("mari-artifact-row", isDelete ? "mari-artifact-row--destructive" : "")}>
+    <section
+      data-change-key={itemKey}
+      tabIndex={-1}
+      className={cn(
+        "mari-artifact-row",
+        active && "mari-artifact-row--active",
+        isDelete && "mari-artifact-row--destructive",
+      )}
+    >
       <div className="mb-2 flex min-w-0 items-center gap-2">
         {/* The header is the accordion toggle: click to fold the details away and re-open later. */}
         <button
@@ -707,6 +719,24 @@ export function MariEditEasyViewer({
   // table/id/action, so the index guarantees a unique React key AND collapse-Set key. The index is
   // also the identifier a reject sends — it maps 1:1 to the server's plan.changes[index].
   const rows = approval.diffPreview.map((change, index) => ({ change, index, key: `${index}:${rowKey(change)}` }));
+  const listRef = useRef<HTMLDivElement>(null);
+  const [activeRowKey, setActiveRowKey] = useState(rows[0]?.key ?? "");
+  const resolvedActiveRowKey = rows.some((row) => row.key === activeRowKey) ? activeRowKey : (rows[0]?.key ?? "");
+  const activeIndex = Math.max(
+    0,
+    rows.findIndex((row) => row.key === resolvedActiveRowKey),
+  );
+  const focusRow = (index: number) => {
+    const row = rows[index];
+    if (!row) return;
+    setActiveRowKey(row.key);
+    if (collapsed.has(row.key)) onToggleCollapse(row.key);
+    window.requestAnimationFrame(() => {
+      const element = listRef.current?.querySelector<HTMLElement>(`[data-change-key="${CSS.escape(row.key)}"]`);
+      element?.scrollIntoView({ block: "nearest" });
+      element?.focus({ preventScroll: true });
+    });
+  };
   // Reject reverts one row and keeps the rest; on a single-row change that is identical to the whole-
   // card Restore, so don't offer the redundant per-row control there.
   const rejectRow = onRejectRow && approval.diffPreview.length > 1 ? onRejectRow : undefined;
@@ -721,7 +751,35 @@ export function MariEditEasyViewer({
   }
 
   return (
-    <div className="mt-2 space-y-2">
+    <div ref={listRef} className="mt-3">
+      {rows.length > 1 ? (
+        <nav className="mari-review-navigator" aria-label={localizeUi("ui.chat.mariediteasyviewer.changeNavigation")}>
+          <span className="text-xs font-medium text-[var(--muted-foreground)]" aria-live="polite">
+            {localizeUi("ui.chat.mariediteasyviewer.changePosition", {
+              current: activeIndex + 1,
+              total: rows.length,
+            })}
+          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => focusRow(Math.max(0, activeIndex - 1))}
+              disabled={activeIndex === 0}
+              className="mari-chrome-control mari-chrome-control--compact"
+            >
+              {localizeUi("ui.chat.mariediteasyviewer.previousChange")}
+            </button>
+            <button
+              type="button"
+              onClick={() => focusRow(Math.min(rows.length - 1, activeIndex + 1))}
+              disabled={activeIndex === rows.length - 1}
+              className="mari-chrome-control mari-chrome-control--compact"
+            >
+              {localizeUi("ui.chat.mariediteasyviewer.nextChange")}
+            </button>
+          </div>
+        </nav>
+      ) : null}
       {rows.map((item) => (
         <RowCard
           key={item.key}
@@ -732,6 +790,8 @@ export function MariEditEasyViewer({
           onReject={rejectRow}
           onRender={onRenderRow}
           busy={busy}
+          active={item.key === resolvedActiveRowKey}
+          itemKey={item.key}
         />
       ))}
       {approval.diffTruncated && (
