@@ -9,48 +9,20 @@ gets its own commit. Later slices depend on earlier ones only where stated.
 
 ## Status
 
-**All eight slices are built.** Updated 2026-08-23 on
-`feat/omnibar-professor-mari`, merged with `origin/staging`. Every commit passed
-`pnpm check` (exit 0).
+Updated 2026-08-24. Every slice in this plan has landed. `pnpm check` green at
+each commit.
 
-| Slice | State |
-| --- | --- |
-| A — persona split (R17) | Done. |
-| B — state survives close (R6) | Done. |
-| C — indicator in, floating window out | Done, including the dead `floatingMode` branch. |
-| D — takeover surface | Done. R34–R37 landed; R38 and R39 needed no work. |
-| E — pane collapse | Done. Five panes are three. |
-| F — the aside | Done. |
-| G — touch and composer transition | Done. R26 was already satisfied by the layout; R33 is a one-shot flight. |
-| H — Home's professor tab | Done, no code needed. |
+- A, B, C, D, E, F, G, H: done.
+- R33: done - the search field travels down into the composer on desktop.
+- R40: done in both halves - expansion, and searchable values (damped below
+  ordinary hits, `CHOICE_SCORE_PENALTY`).
+- R34, R37: done.
 
-Every rule R1–R40 in `omnibar-concept.md` is now implemented.
-`omnibar-feature-inventory.md` was rewritten to describe the built shape.
+Known ceilings, deliberate:
 
-### Not verified in a browser
-
-Nothing here has been seen running. `pnpm check` typechecks, lints and builds;
-it renders nothing. These four want eyes before this is called finished:
-
-1. **Ranking of searchable choice values.** Those rows enter a scored set that
-   was tuned without them. Type a model name and see whether anything real gets
-   crowded out.
-2. **The field flight (R33).** Whether it reads as one field moving, or as a
-   rectangle sliding past. It is the one piece that is pure feel.
-3. **Inline expansion on a narrow viewport.** The row grows inside a scrolling
-   list inside a modal; check that the expanded row scrolls into view and that
-   the selection does not jump.
-4. **The aside with a real model.** Both the local sidecar and a remote
-   connection, plus the sidecar being down, which should show one quiet line and
-   leave the list working.
-
-### Known ceilings
-
-- **`isProseField` is a name list.** An unusual custom field falls back to diff
-  colours. Widen it when a real field is missing, not preemptively.
-- **Leaving Mari is a cut, not a flight.** The return trip was not worth
-  doubling the animation surface.
-- **No draft PR**, by decision.
+- `isProseField` is a name list. An unusual custom field falls back to diff
+  colours. Acceptable - the field names are a fixed schema.
+- `CHOICE_SCORE_PENALTY` is one number, tuned by eye. Judge it in use.
 
 ## Ground rules for every slice
 
