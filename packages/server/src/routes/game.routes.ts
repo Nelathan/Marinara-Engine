@@ -9779,25 +9779,29 @@ export async function gameRoutes(app: FastifyInstance) {
         .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
     }
     if (!session) {
-      session = await sessions.create({
-        chatId,
-        style: "classic",
-        seed: randomInt(0, 0x1_0000_0000),
-        state: {
-          party: (combatants as Combatant[]).filter((combatant) => combatant.side === "player"),
-          enemies: (combatants as Combatant[]).filter((combatant) => combatant.side !== "player"),
-          inventory: inventory ?? [],
-          itemEffects: (itemEffects ?? []) as unknown as NonNullable<CombatSessionStartInput["itemEffects"]>,
-          mechanics: mechanics ?? [],
-          dialogueCues: [],
-          startMessageId: null,
-          round,
-          difficulty,
-          elementPreset,
-        },
-        objectives,
-        bossPhases: combatBossPhasesFromMechanics(mechanics ?? []),
-      });
+      try {
+        session = await sessions.create({
+          chatId,
+          style: "classic",
+          seed: randomInt(0, 0x1_0000_0000),
+          state: {
+            party: (combatants as Combatant[]).filter((combatant) => combatant.side === "player"),
+            enemies: (combatants as Combatant[]).filter((combatant) => combatant.side !== "player"),
+            inventory: inventory ?? [],
+            itemEffects: (itemEffects ?? []) as unknown as NonNullable<CombatSessionStartInput["itemEffects"]>,
+            mechanics: mechanics ?? [],
+            dialogueCues: [],
+            startMessageId: null,
+            round,
+            difficulty,
+            elementPreset,
+          },
+          objectives,
+          bossPhases: combatBossPhasesFromMechanics(mechanics ?? []),
+        });
+      } catch (error) {
+        return sendCombatSessionError(reply, error);
+      }
     }
     const request: CombatActionRequest = {
       sessionId: session.sessionId,
@@ -9959,6 +9963,7 @@ export async function gameRoutes(app: FastifyInstance) {
       actionCounter: z.number().int().min(0).max(1_000_000),
       log: z.array(z.record(z.unknown())).max(2000),
       difficulty: z.string(),
+      startMessageId: z.string().min(1).nullable().optional(),
       outcome: z.enum(["victory", "defeat", "fled"]).optional(),
     })
     .passthrough();
@@ -10369,14 +10374,15 @@ export async function gameRoutes(app: FastifyInstance) {
     return { sessionId: session?.sessionId ?? null, history: session?.actionHistory ?? [] };
   });
 
-  app.get<{ Params: { sessionId: string }; Querystring: { chatId?: string } }>(
+  app.get<{ Params: { sessionId: string }; Querystring: { chatId: string } }>(
     "/combat/session/:sessionId",
     async (req, reply) => {
+      const { chatId } = z.object({ chatId: z.string().min(1) }).parse(req.query);
       const session = await combatSessionStorage.get(req.params.sessionId);
       if (!session) {
         return reply.status(404).send({ error: "Combat session not found", code: "COMBAT_NOT_FOUND" });
       }
-      if (req.query.chatId && session.chatId !== req.query.chatId) {
+      if (session.chatId !== chatId) {
         return reply
           .status(403)
           .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
@@ -10441,12 +10447,34 @@ export async function gameRoutes(app: FastifyInstance) {
     }
   });
 
+  // Compatibility snapshots are fenced by the canonical combat session. Generic chat metadata
+  // PATCHes intentionally remain last-writer-wins for unrelated callers; this route is the narrow
+  // exception needed to prevent a delayed combat save from resurrecting a completed battle.
+  app.patch<{ Params: { sessionId: string } }>("/combat/session/:sessionId/snapshot", async (req, reply) => {
+    const schema = z.object({
+      chatId: z.string().min(1),
+      style: z.enum(["classic", "tactical"]),
+      snapshot: z.unknown().nullable(),
+    });
+    const { chatId, style, snapshot } = schema.parse(req.body);
+    try {
+      const result = await combatSessionStorage.patchSnapshot(req.params.sessionId, chatId, style, snapshot);
+      return { accepted: result.accepted };
+    } catch (error) {
+      return sendCombatSessionError(reply, error);
+    }
+  });
+
   app.post("/combat/session/abandon", async (req, reply) => {
-    const schema = z.object({ chatId: z.string().min(1) });
-    const { chatId } = schema.parse(req.body);
+    const schema = z.object({ chatId: z.string().min(1), sessionId: z.string().min(1).optional() });
+    const { chatId, sessionId } = schema.parse(req.body);
     const chat = await createChatsStorage(app.db).getById(chatId);
     if (!chat) return reply.status(404).send({ error: "Chat not found", code: "COMBAT_NOT_FOUND" });
-    await combatSessionStorage.abandonForChat(chatId);
+    try {
+      await combatSessionStorage.abandonForChat(chatId, sessionId);
+    } catch (error) {
+      return sendCombatSessionError(reply, error);
+    }
     return { ok: true };
   });
 
@@ -10462,6 +10490,7 @@ export async function gameRoutes(app: FastifyInstance) {
       // in the engine (environment → default, formation → "line").
       environment: z.string().optional(),
       formation: z.string().optional(),
+      startMessageId: z.string().min(1).nullable().optional(),
       inventory: z
         .array(z.object({ name: generatedRequiredStringSchema, quantity: z.number().int().min(0).max(9999) }))
         .max(200)
@@ -10478,6 +10507,7 @@ export async function gameRoutes(app: FastifyInstance) {
       seed,
       environment,
       formation,
+      startMessageId,
       inventory,
       itemEffects,
       objectives,
@@ -10494,14 +10524,17 @@ export async function gameRoutes(app: FastifyInstance) {
     // Determinism only matters once the seed exists, so any source is fine here.
     const resolvedSeed = seed ?? randomInt(0, 0x1_0000_0000);
 
-    const state = createTacticalCombat(party as unknown as Combatant[], enemies as unknown as Combatant[], {
-      seed: resolvedSeed,
-      difficulty,
-      environment,
-      formation,
-      inventory,
-      itemEffects: itemEffects as unknown as CombatSessionStartInput["itemEffects"],
-    });
+    const state = {
+      ...createTacticalCombat(party as unknown as Combatant[], enemies as unknown as Combatant[], {
+        seed: resolvedSeed,
+        difficulty,
+        environment,
+        formation,
+        inventory,
+        itemEffects: itemEffects as unknown as CombatSessionStartInput["itemEffects"],
+      }),
+      startMessageId: startMessageId ?? null,
+    };
 
     logger.info(
       "Tactical combat started for chat %s (%d party, %d enemies, difficulty=%s, seed=%d)",
@@ -10568,6 +10601,17 @@ export async function gameRoutes(app: FastifyInstance) {
         return reply
           .status(403)
           .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
+      }
+      if (
+        !sessionId &&
+        session &&
+        state &&
+        (state.startMessageId ?? null) !== (session.canonicalState.startMessageId ?? null)
+      ) {
+        return reply.status(409).send({
+          error: "Tactical combat snapshot does not belong to the active battle",
+          code: "COMBAT_SNAPSHOT_INVALID",
+        });
       }
       if (!session) {
         if (!state) {

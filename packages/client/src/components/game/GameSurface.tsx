@@ -4721,7 +4721,9 @@ function GameSurfaceComponent({
     if (isMessagesLoading) return;
     if (combatRestoredChatIdRef.current === activeChatId) return;
     const snapshot = chatMeta.gameCombatState as GameCombatStateSnapshot | null | undefined;
+    const tacticalSnapshot = chatMeta.gameTacticalCombatSnapshot as TacticalCombatState | null | undefined;
     combatRestoredChatIdRef.current = activeChatId;
+    if (tacticalSnapshot?.startMessageId) setCombatStartMessageId(tacticalSnapshot.startMessageId);
     if (!snapshot || !snapshot.party?.length || !snapshot.enemies?.length) return;
     if (chatMeta.gameActiveState !== "combat") {
       // Stale snapshot — combat ended but the metadata write didn't land. Clear it.
@@ -4773,6 +4775,7 @@ function GameSurfaceComponent({
     chatMeta.gameCombatStyle,
     chatMeta.gameSceneMusic,
     chatMeta.gameSetupConfig,
+    chatMeta.gameTacticalCombatSnapshot,
     isMessagesLoading,
   ]);
 
@@ -4781,28 +4784,83 @@ function GameSurfaceComponent({
   // The snapshot doesn't include per-round transient state (animations, log entries) —
   // those reset on restore and combat resumes from the start of the round.
   const combatPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const combatSnapshotWriteRef = useRef<Promise<unknown>>(Promise.resolve());
+  const combatSnapshotGenerationRef = useRef(0);
+  const combatSnapshotAbortRef = useRef<AbortController | null>(null);
+  const combatSessionIdRef = useRef<string | null>(null);
+  const [combatSessionId, setCombatSessionId] = useState<string | null>(null);
   // Latest snapshot stored in a ref so the cleanup path can flush it synchronously
   // when the effect re-runs (chat switch / unmount) — without this, a refresh inside
   // the 800 ms debounce window would silently drop the most recent state.
-  const combatPendingSnapshotRef = useRef<{ chatId: string; snapshot: GameCombatStateSnapshot } | null>(null);
+  const combatPendingSnapshotRef = useRef<{
+    chatId: string;
+    snapshot: GameCombatStateSnapshot;
+    sessionId: string;
+    generation: number;
+  } | null>(null);
+  const handleCombatSessionIdChange = useCallback((sessionId: string | null) => {
+    combatSessionIdRef.current = sessionId;
+    setCombatSessionId(sessionId);
+  }, []);
+
+  useEffect(() => {
+    combatSessionIdRef.current = null;
+    setCombatSessionId(null);
+    combatSnapshotGenerationRef.current += 1;
+    combatSnapshotAbortRef.current?.abort();
+    combatSnapshotAbortRef.current = null;
+    combatSnapshotWriteRef.current = Promise.resolve();
+  }, [activeChatId]);
+
   // Shared helper used by combat-end + return-to-pre-combat-turn so both paths reliably
   // wipe the persisted snapshot, even if the exploration-state PATCH is still in flight
   // when the user refreshes.
-  const clearCombatSnapshot = useCallback(async (chatId: string | null) => {
-    if (!chatId) return;
-    if (combatPersistTimer.current) {
-      clearTimeout(combatPersistTimer.current);
-      combatPersistTimer.current = null;
-    }
-    combatPendingSnapshotRef.current = null;
-    await api.patch(`/chats/${chatId}/metadata`, {
-      gameCombatState: null,
-      gameTacticalCombatSnapshot: null,
-    });
-  }, []);
+  const clearCombatSnapshot = useCallback(
+    async (chatId: string | null, sessionId = combatSessionIdRef.current) => {
+      if (!chatId) return;
+      if (combatPersistTimer.current) {
+        clearTimeout(combatPersistTimer.current);
+        combatPersistTimer.current = null;
+      }
+      combatPendingSnapshotRef.current = null;
+      combatSnapshotGenerationRef.current += 1;
+      combatSnapshotAbortRef.current?.abort();
+      combatSnapshotAbortRef.current = null;
+      // Do not await an old transport here. The session-scoped server operation below fences
+      // any late snapshot, and resetting the chain lets the terminal UI continue immediately.
+      combatSnapshotWriteRef.current = Promise.resolve();
+      const clearPatch = {
+        gameCombatState: null,
+        gameTacticalCombatSnapshot: null,
+      };
+      const cached = queryClient.getQueryData<Chat>(chatKeys.detail(chatId));
+      const cleared = patchChatMetadata(cached, clearPatch);
+      if (cleared) queryClient.setQueryData(chatKeys.detail(chatId), cleared);
+      const clearRequest = sessionId
+        ? api.patch(`/game/combat/session/${encodeURIComponent(sessionId)}/snapshot`, {
+            chatId,
+            style: activeCombatStyle === "tactical" ? "tactical" : "classic",
+            snapshot: null,
+          })
+        : api.patch(`/chats/${chatId}/metadata`, clearPatch);
+      await clearRequest
+        .catch((error) => console.warn("[game-surface] combat snapshot cleanup failed", error))
+        .finally(() => {
+          const latest = queryClient.getQueryData<Chat>(chatKeys.detail(chatId));
+          const reCleared = patchChatMetadata(latest, clearPatch);
+          if (reCleared) queryClient.setQueryData(chatKeys.detail(chatId), reCleared);
+        })
+        .catch(() => undefined);
+    },
+    [activeCombatStyle, queryClient],
+  );
   useEffect(() => {
     if (combatRestoredChatIdRef.current !== activeChatId) return;
     if (!combatParty || !combatEnemies || gameState !== "combat") return;
+    // TacticalCombatUI owns Tactical snapshot persistence. This compatibility
+    // writer is only for Classic state and must never overwrite the Tactical key.
+    if (activeCombatStyle !== "classic") return;
+    if (!combatSessionId) return;
     if (combatPersistTimer.current) clearTimeout(combatPersistTimer.current);
     const snapshot: GameCombatStateSnapshot = {
       style:
@@ -4822,17 +4880,37 @@ function GameSurfaceComponent({
       startMessageId: combatStartMessageId,
       musicTier: combatMusicTier,
     };
-    combatPendingSnapshotRef.current = { chatId: activeChatId, snapshot };
+    const generation = combatSnapshotGenerationRef.current;
+    const sessionId = combatSessionId;
+    combatPendingSnapshotRef.current = { chatId: activeChatId, snapshot, sessionId, generation };
     combatPersistTimer.current = setTimeout(() => {
       // Log on failure: this is the active-gameplay persist path, NOT the unmount
       // keepalive flush below or the lifecycle wipes in `clearCombatSnapshot`. A
       // silent failure here means the user keeps fighting believing state is saved,
       // then loses progress on refresh — the operator needs to see this in console.
-      api
-        .patch(`/chats/${activeChatId}/metadata`, { gameCombatState: snapshot })
-        .catch((err) => console.error("[game-surface] combat snapshot persist failed", err));
+      // Serialize snapshot writes so an older request cannot finish after cleanup
+      // and resurrect the completed battle in chat metadata.
+      const controller = new AbortController();
+      combatSnapshotAbortRef.current = controller;
+      const write = combatSnapshotWriteRef.current
+        .catch(() => undefined)
+        .then(() => {
+          if (generation !== combatSnapshotGenerationRef.current || combatSessionIdRef.current !== sessionId) return;
+          return api.patch(
+            `/game/combat/session/${encodeURIComponent(sessionId)}/snapshot`,
+            { chatId: activeChatId, style: "classic", snapshot },
+            { signal: controller.signal },
+          );
+        });
+      combatSnapshotWriteRef.current = write;
+      write.catch((err) => console.error("[game-surface] combat snapshot persist failed", err));
       combatPendingSnapshotRef.current = null;
       combatPersistTimer.current = null;
+      void write
+        .finally(() => {
+          if (combatSnapshotAbortRef.current === controller) combatSnapshotAbortRef.current = null;
+        })
+        .catch(() => undefined);
     }, 800);
     return () => {
       if (combatPersistTimer.current) {
@@ -4845,16 +4923,38 @@ function GameSurfaceComponent({
       // browsers will cancel an in-flight PATCH the moment the page begins unloading,
       // which is exactly the scenario this feature is meant to protect.
       const pending = combatPendingSnapshotRef.current;
-      if (pending) {
-        api
-          .patch(`/chats/${pending.chatId}/metadata`, { gameCombatState: pending.snapshot }, { keepalive: true })
-          .catch(() => {});
+      if (pending && pending.generation === combatSnapshotGenerationRef.current) {
+        const controller = new AbortController();
+        combatSnapshotAbortRef.current = controller;
+        const write = combatSnapshotWriteRef.current
+          .catch(() => undefined)
+          .then(() => {
+            if (
+              pending.generation !== combatSnapshotGenerationRef.current ||
+              combatSessionIdRef.current !== pending.sessionId
+            ) {
+              return;
+            }
+            return api.patch(
+              `/game/combat/session/${encodeURIComponent(pending.sessionId)}/snapshot`,
+              { chatId: pending.chatId, style: "classic", snapshot: pending.snapshot },
+              { keepalive: true, signal: controller.signal },
+            );
+          });
+        combatSnapshotWriteRef.current = write;
+        write.catch(() => {});
+        void write
+          .finally(() => {
+            if (combatSnapshotAbortRef.current === controller) combatSnapshotAbortRef.current = null;
+          })
+          .catch(() => undefined);
         combatPendingSnapshotRef.current = null;
       }
     };
   }, [
     activeChatId,
     activeCombatStyle,
+    combatSessionId,
     chatMeta.gameCombatStyle,
     chatMeta.gameSetupConfig,
     combatMusicTier,
@@ -8442,8 +8542,14 @@ function GameSurfaceComponent({
   const surfaceCombatSession = surfaceCombatSessionQuery.data?.session;
   const surfaceClassicStartMessageId =
     surfaceCombatSession?.style === "classic" ? surfaceCombatSession.canonicalState.startMessageId : null;
+  const surfaceTacticalStartMessageId =
+    surfaceCombatSession?.style === "tactical" ? surfaceCombatSession.canonicalState.startMessageId : null;
   const surfaceSessionMatchesCurrentCombat =
-    !surfaceClassicStartMessageId || !combatStartMessageId || surfaceClassicStartMessageId === combatStartMessageId;
+    !combatStartMessageId ||
+    (surfaceCombatSession?.style === "tactical"
+      ? surfaceTacticalStartMessageId === combatStartMessageId ||
+        (surfaceCombatSession.status !== "active" && !surfaceTacticalStartMessageId)
+      : !surfaceClassicStartMessageId || surfaceClassicStartMessageId === combatStartMessageId);
   const combatAuthoritySettled = surfaceCombatSessionQuery.isFetched && !surfaceCombatSessionQuery.isFetching;
   const completedAuthorityBlocksCombat =
     surfaceCombatSession?.status !== undefined &&
@@ -8458,6 +8564,15 @@ function GameSurfaceComponent({
     activeCombatStyle !== null &&
     combatAuthoritySettled &&
     !completedAuthorityBlocksCombat;
+  const tacticalInitialState =
+    (chatMeta.gameTacticalCombatSnapshot as TacticalCombatState | null | undefined) ?? null;
+  // Snapshots are durable chat metadata, so a completed prior battle can still
+  // be present while the next declaration starts. Restore only the snapshot
+  // owned by this declaration; matching absent IDs retain legacy refresh recovery.
+  const restorableTacticalInitialState =
+    tacticalInitialState && (tacticalInitialState.startMessageId ?? null) === (combatStartMessageId ?? null)
+      ? tacticalInitialState
+      : null;
   // Keep package callbacks tied to the current surface state. Experiences may
   // retain a requestCombat callback across renders, so reading this ref avoids
   // stale combat/replay/concluded flags during sequential battles.
@@ -8519,6 +8634,7 @@ function GameSurfaceComponent({
       );
       setInventoryItems(session.canonicalState.inventory ?? []);
       setCombatItemEffects(session.canonicalState.itemEffects ?? []);
+      setCombatStartMessageId(session.canonicalState.startMessageId ?? null);
     }
     setCombatObjectives(session.objectives);
     useGameModeStore.getState().setGameState("combat");
@@ -10297,12 +10413,15 @@ function GameSurfaceComponent({
     if (combatAftermathPendingRef.current) return;
     combatAftermathPendingRef.current = true;
     const combatChatId = activeChatId;
+    const combatSessionId = combatSessionIdRef.current;
 
     if (combatChatId) {
       try {
-        await api.post("/game/combat/session/abandon", { chatId: combatChatId });
+        await api.post("/game/combat/session/abandon", {
+          chatId: combatChatId,
+          ...(combatSessionId ? { sessionId: combatSessionId } : {}),
+        });
         await api.post("/game/state/transition", { chatId: combatChatId, newState: "exploration" });
-        await queryClient.invalidateQueries({ queryKey: chatKeys.detail(combatChatId) });
       } catch (error) {
         combatAftermathPendingRef.current = false;
         toast.error(
@@ -10313,15 +10432,18 @@ function GameSurfaceComponent({
         return;
       }
       try {
-        await clearCombatSnapshot(combatChatId);
+        await clearCombatSnapshot(combatChatId, combatSessionId);
       } catch (error) {
         console.warn("[game-surface] Previous-turn combat snapshot cleanup failed", error);
       }
+      await queryClient.invalidateQueries({ queryKey: chatKeys.detail(combatChatId) });
     }
 
     if (activeChatIdRef.current === combatChatId) {
       setCombatParty(null);
       setCombatEnemies(null);
+      combatSessionIdRef.current = null;
+      setCombatSessionId(null);
       setActiveCombatStyle(null);
       setCombatSceneMeta(null);
       setCombatMusicTier(null);
@@ -10355,13 +10477,14 @@ function GameSurfaceComponent({
       if (combatAftermathPendingRef.current) return;
       combatAftermathPendingRef.current = true;
       const combatChatId = activeChatId;
+      const combatSessionId = summary.sessionId ?? combatSessionIdRef.current;
       const aftermathWrites: Promise<unknown>[] = [];
       try {
         // Claim the terminal session and leave combat atomically before writing any
         // derived aftermath state. A stale tab must fail here rather than overwrite
         // a newer battle's HP, inventory, or character cards.
-        if (combatChatId && summary.sessionId) {
-          await api.post(`/game/combat/session/${summary.sessionId}/complete`, { chatId: combatChatId });
+        if (combatChatId && combatSessionId) {
+          await api.post(`/game/combat/session/${combatSessionId}/complete`, { chatId: combatChatId });
         }
         const playerCombatantId = combatParty?.find((member) => member.isPlayer)?.id ?? combatParty?.[0]?.id;
         const playerResult =
@@ -10561,6 +10684,11 @@ function GameSurfaceComponent({
         }
         await Promise.all(aftermathWrites);
         if (combatChatId) {
+          try {
+            await clearCombatSnapshot(combatChatId, combatSessionId);
+          } catch (error) {
+            console.warn("[game-surface] Completed combat snapshot cleanup failed", error);
+          }
           await queryClient.invalidateQueries({ queryKey: chatKeys.detail(combatChatId) });
         }
       } catch (error) {
@@ -10572,17 +10700,12 @@ function GameSurfaceComponent({
         );
         throw error;
       }
-      if (combatChatId) {
-        try {
-          await clearCombatSnapshot(combatChatId);
-        } catch (error) {
-          console.warn("[game-surface] Completed combat snapshot cleanup failed", error);
-        }
-      }
       if (activeChatIdRef.current === combatChatId) {
         useGameModeStore.getState().setGameState("exploration");
         setCombatParty(null);
         setCombatEnemies(null);
+        combatSessionIdRef.current = null;
+        setCombatSessionId(null);
         setActiveCombatStyle(null);
         setCombatSceneMeta(null);
         setCombatMusicTier(null);
@@ -12965,11 +13088,10 @@ function GameSurfaceComponent({
                               party={combatParty}
                               enemies={combatEnemies}
                               difficulty={(combatSetupConfig?.difficulty as string | undefined) ?? "normal"}
-                              initialState={
-                                (chatMeta.gameTacticalCombatSnapshot as TacticalCombatState | null | undefined) ?? null
-                              }
+                              initialState={restorableTacticalInitialState}
                               environment={combatSceneMeta?.environmentType ?? null}
                               formation={combatSceneMeta?.formation ?? null}
+                              startMessageId={combatStartMessageId}
                               inventoryItems={inventoryItems}
                               combatItemEffects={combatItemEffects}
                               combatObjectives={combatObjectives}
@@ -12980,6 +13102,7 @@ function GameSurfaceComponent({
                                 combatParty.find((member) => member.isPlayer)?.id ?? combatParty[0]?.id ?? null
                               }
                               onCombatEnd={handleCombatEnd}
+                              onCombatSessionIdChange={handleCombatSessionIdChange}
                               onCustomInstruction={handleCombatCustomInstruction}
                             />
                           ) : (
@@ -12993,6 +13116,7 @@ function GameSurfaceComponent({
                               enemies={combatEnemies}
                               inventoryItems={inventoryItems}
                               onCombatEnd={handleCombatEnd}
+                              onCombatSessionIdChange={handleCombatSessionIdChange}
                               onInventoryItemUsed={handleUseCombatInventoryItem}
                               onInventoryChange={setInventoryItems}
                               onCombatantsChange={handleCombatantsChange}

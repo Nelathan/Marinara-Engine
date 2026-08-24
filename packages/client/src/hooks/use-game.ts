@@ -842,6 +842,12 @@ export function useCombatRound() {
       qc.setQueryData([...gameKeys.all, "combat-session", "active", variables.chatId, "classic"], {
         session: res.state,
       });
+      // GameSurface reads the style-agnostic key while deciding whether a new
+      // encounter may mount. Keep it in sync so a previous completed session
+      // cannot block the next Classic battle.
+      qc.setQueryData([...gameKeys.all, "combat-session", "active", variables.chatId, "any"], {
+        session: res.state,
+      });
       qc.invalidateQueries({ queryKey: [...gameKeys.all, "combat-session", "history", variables.chatId] });
     },
   });
@@ -893,6 +899,8 @@ export function useTacticalCombatStart() {
       environment?: string;
       /** Blueprint battlefield.formation — drives spawn placement. */
       formation?: string;
+      /** Game Mode combat declaration that owns this battle. */
+      startMessageId?: string | null;
       inventory?: Array<{ name: string; quantity: number }>;
       itemEffects?: CombatItemEffect[];
       mechanics?: import("@marinara-engine/shared").CombatMechanic[];
@@ -910,6 +918,11 @@ export function useTacticalCombatStart() {
       }>("/game/combat/tactical/start", data),
     onSuccess: (res, variables) => {
       qc.setQueryData([...gameKeys.all, "combat-session", "active", variables.chatId, "tactical"], {
+        session: res.session,
+      });
+      // GameSurface reads the style-agnostic key while deciding whether a new
+      // encounter may mount. Publish the canonical start there as well.
+      qc.setQueryData([...gameKeys.all, "combat-session", "active", variables.chatId, "any"], {
         session: res.session,
       });
     },
@@ -941,6 +954,9 @@ export function useTacticalCombatAction() {
       }>("/game/combat/tactical/action", data),
     onSuccess: (res, variables) => {
       qc.setQueryData([...gameKeys.all, "combat-session", "active", variables.chatId, "tactical"], {
+        session: res.session,
+      });
+      qc.setQueryData([...gameKeys.all, "combat-session", "active", variables.chatId, "any"], {
         session: res.session,
       });
       qc.invalidateQueries({ queryKey: [...gameKeys.all, "combat-session", "history", variables.chatId] });

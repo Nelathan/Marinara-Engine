@@ -53,11 +53,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, generateClientId } from "../../lib/utils";
-import { ApiError } from "../../lib/api-client";
+import { api, ApiError } from "../../lib/api-client";
 import { audioManager } from "../../lib/game-audio";
 import { useGameAssetManifest } from "../../hooks/use-game-assets";
 import { useActiveCombatSession, useTacticalCombatStart, useTacticalCombatAction } from "../../hooks/use-game";
-import { useUpdateChatMetadata } from "../../hooks/use-chats";
 import {
   TERRAIN_DATA,
   CLASS_PROFILES,
@@ -100,6 +99,8 @@ interface TacticalCombatUIProps {
   environment?: string | null;
   /** Scene-derived starting formation (e.g. "ambush", "surrounded"). Passed to the start endpoint. */
   formation?: string | null;
+  /** Game Mode combat declaration that owns this battle. */
+  startMessageId?: string | null;
   /** Restore an in-progress battle after a refresh (from chat metadata snapshot). */
   initialState?: TacticalCombatState | null;
   inventoryItems?: Array<{ name: string; quantity: number }>;
@@ -112,6 +113,8 @@ interface TacticalCombatUIProps {
   playerCombatantId?: string | null;
   /** Called when combat ends. Same contract as classic GameCombatUI → drives GM narration. */
   onCombatEnd: (outcome: "victory" | "defeat" | "flee", summary: CombatSummary) => void | Promise<void>;
+  /** Reports the server-owned combat session so the surface can scope snapshots. */
+  onCombatSessionIdChange?: (sessionId: string | null) => void;
   /** Lets the GM adjudicate a freeform maneuver (parity with classic, currently unused UI-side). */
   onCustomInstruction?: (instruction: string) => void;
 }
@@ -474,6 +477,7 @@ export function TacticalCombatUI({
   enemies,
   environment,
   formation,
+  startMessageId,
   initialState,
   inventoryItems = [],
   combatItemEffects = [],
@@ -483,6 +487,7 @@ export function TacticalCombatUI({
   onInventoryChange,
   playerCombatantId,
   onCombatEnd,
+  onCombatSessionIdChange,
   onCustomInstruction,
 }: TacticalCombatUIProps) {
   const { t: localizeUi } = useUiTranslation();
@@ -490,10 +495,16 @@ export function TacticalCombatUI({
   const assets = manifest?.assets ?? null;
   const startMut = useTacticalCombatStart();
   const actionMut = useTacticalCombatAction();
-  const { mutate: updateMetadata } = useUpdateChatMetadata();
 
-  const [state, setState] = useState<TacticalCombatState | null>(initialState ?? null);
+  // GameSurface normally filters snapshots before mounting us. Retain the
+  // declaration check here too so a stale terminal snapshot cannot hand off a
+  // prior battle when this component is reused from another caller.
+  const restorableInitialState =
+    initialState && (initialState.startMessageId ?? null) === (startMessageId ?? null) ? initialState : null;
+
+  const [state, setState] = useState<TacticalCombatState | null>(restorableInitialState);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   // Keep the session being replaced available if the replacement request fails.
   // Restart clears the live state before the request returns, so state alone is
   // otherwise insufficient for the error/retreat recovery path.
@@ -504,17 +515,13 @@ export function TacticalCombatUI({
   const restartErrorRef = useRef<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [objectives, setObjectives] = useState<CombatObjectiveState[]>(initialObjectives);
-  const activeSessionQuery = useActiveCombatSession(
-    chatId,
-    "tactical",
-    !sessionId || Boolean(restartRecovery),
-  );
+  const activeSessionQuery = useActiveCombatSession(chatId, "tactical", !sessionId || Boolean(restartRecovery));
   const refetchActiveSession = activeSessionQuery.refetch;
-  const [starting, setStarting] = useState(!initialState);
+  const [starting, setStarting] = useState(!restorableInitialState);
   const [startError, setStartError] = useState<string | null>(null);
   // An initial snapshot is usable for rendering, but its server session identity
   // still needs to hydrate before restart can safely replace anything.
-  const [sessionHydrated, setSessionHydrated] = useState(!initialState);
+  const [sessionHydrated, setSessionHydrated] = useState(!restorableInitialState);
   const launchRequestedForChatRef = useRef<string | null>(null);
   const hydratedSessionRevisionRef = useRef<string | null>(null);
 
@@ -560,6 +567,14 @@ export function TacticalCombatUI({
   const terminalSummaryRef = useRef<CombatSummary | null>(null);
   const [aftermathPending, setAftermathPending] = useState(false);
   const [aftermathFailed, setAftermathFailed] = useState(false);
+  const snapshotGenerationRef = useRef(0);
+  const snapshotWriteRef = useRef<Promise<unknown>>(Promise.resolve());
+  const snapshotAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    onCombatSessionIdChange?.(sessionId);
+  }, [onCombatSessionIdChange, sessionId]);
 
   const playSfx = useCallback((tag: string) => audioManager.playSfx(tag, assets), [assets]);
 
@@ -579,6 +594,13 @@ export function TacticalCombatUI({
       setAftermathPending(true);
       setAftermathFailed(false);
       try {
+        // Terminal cleanup must not depend on a transport that may be stalled.
+        // The server's session/status guard fences any late snapshot, while the
+        // generation and abort invalidate queued/in-flight client writes here.
+        snapshotGenerationRef.current += 1;
+        snapshotAbortRef.current?.abort();
+        snapshotAbortRef.current = null;
+        snapshotWriteRef.current = Promise.resolve();
         await onCombatEnd(summary.outcome, summary);
       } catch {
         endedRef.current = false;
@@ -592,16 +614,36 @@ export function TacticalCombatUI({
 
   // ── Persist snapshot to chat metadata after every authoritative state change ──
   const persistSnapshot = useCallback(
-    (snap: TacticalCombatState | null) => {
-      updateMetadata({ id: chatId, gameTacticalCombatSnapshot: snap });
+    (snap: TacticalCombatState | null, ownerSessionId = sessionIdRef.current) => {
+      if (!ownerSessionId) return;
+      const generation = snapshotGenerationRef.current;
+      const controller = new AbortController();
+      snapshotAbortRef.current = controller;
+      const write = snapshotWriteRef.current
+        .catch(() => undefined)
+        .then(() => {
+          if (generation !== snapshotGenerationRef.current || sessionIdRef.current !== ownerSessionId) return;
+          return api.patch(
+            `/game/combat/session/${encodeURIComponent(ownerSessionId)}/snapshot`,
+            { chatId, style: "tactical", snapshot: snap },
+            { signal: controller.signal },
+          );
+        });
+      snapshotWriteRef.current = write;
+      void write.catch(() => undefined);
+      void write
+        .finally(() => {
+          if (snapshotAbortRef.current === controller) snapshotAbortRef.current = null;
+        })
+        .catch(() => undefined);
     },
-    [chatId, updateMetadata],
+    [chatId],
   );
 
   useEffect(() => {
     const session = activeSessionQuery.data?.session;
     if (
-      initialState &&
+      restorableInitialState &&
       activeSessionQuery.isFetched &&
       !activeSessionQuery.isFetching &&
       !activeSessionQuery.isError &&
@@ -641,6 +683,7 @@ export function TacticalCombatUI({
         restartSessionIdRef.current = null;
         hydratedSessionRevisionRef.current = null;
         launchRequestedForChatRef.current = null;
+        sessionIdRef.current = null;
         setSessionId(null);
         setRevision(0);
         setState(null);
@@ -659,6 +702,7 @@ export function TacticalCombatUI({
         unit.side === "party" && playerId ? { ...unit, isPlayer: unit.id === playerId } : unit,
       ),
     };
+    sessionIdRef.current = session.sessionId;
     setSessionId(session.sessionId);
     setRevision(session.revision);
     setObjectives(session.objectives);
@@ -666,7 +710,7 @@ export function TacticalCombatUI({
     setState(canonicalState);
     setStarting(false);
     setStartError(null);
-    persistSnapshot(canonicalState);
+    persistSnapshot(canonicalState, session.sessionId);
     if (restartRecovery) {
       restartRecoveryRef.current = null;
       restartRecoveryAttemptsRef.current = 0;
@@ -680,7 +724,7 @@ export function TacticalCombatUI({
     activeSessionQuery.isFetched,
     activeSessionQuery.isError,
     activeSessionQuery.isPending,
-    initialState,
+    restorableInitialState,
     party,
     persistSnapshot,
     playerCombatantId,
@@ -717,6 +761,7 @@ export function TacticalCombatUI({
         enemies: Combatant[];
         environment?: string;
         formation?: string;
+        startMessageId?: string | null;
         inventory?: Array<{ name: string; quantity: number }>;
         itemEffects?: CombatItemEffect[];
         mechanics?: import("@marinara-engine/shared").CombatMechanic[];
@@ -733,6 +778,7 @@ export function TacticalCombatUI({
       if (combatMechanics.length > 0) startPayload.mechanics = combatMechanics;
       if (environment) startPayload.environment = environment;
       if (formation) startPayload.formation = formation;
+      if (startMessageId !== undefined) startPayload.startMessageId = startMessageId;
       if (replaceSessionId) startPayload.replaceSessionId = replaceSessionId;
       if (replaceSessionId) restartSessionIdRef.current = replaceSessionId;
       startMut
@@ -747,6 +793,7 @@ export function TacticalCombatUI({
               u.side === "party" && (playerId ? u.id === playerId : false) ? { ...u, isPlayer: true } : u,
             ),
           };
+          sessionIdRef.current = res.sessionId;
           setSessionId(res.sessionId);
           if (restartSessionIdRef.current === replaceSessionId) {
             restartSessionIdRef.current = null;
@@ -760,7 +807,7 @@ export function TacticalCombatUI({
           setState(marked);
           setStarting(false);
           setStartError(null);
-          persistSnapshot(marked);
+          persistSnapshot(marked, res.sessionId);
           playSfx(SFX.start);
         })
         .catch((err: unknown) => {
@@ -774,6 +821,7 @@ export function TacticalCombatUI({
             restartRecoveryAttemptsRef.current = 0;
             restartErrorRef.current = err instanceof Error ? err.message : "Failed to start the tactical battle.";
             setRestartRecovery(recovery);
+            sessionIdRef.current = replaceSessionId;
             setSessionId(replaceSessionId);
             setStarting(true);
             setStartError(null);
@@ -789,6 +837,7 @@ export function TacticalCombatUI({
       enemies,
       environment,
       formation,
+      startMessageId,
       inventoryItems,
       combatItemEffects,
       objectives,
@@ -802,14 +851,14 @@ export function TacticalCombatUI({
 
   // ── Start a fresh battle (unless restoring) ──
   useEffect(() => {
-    if (initialState) return; // restored — do not re-create
+    if (restorableInitialState) return; // restored — do not re-create
     // Only a live session suppresses the launch: the active-session endpoint falls
     // back to the latest completed session, and that corpse must not block a new fight.
     if (
       sessionId ||
       activeSessionQuery.isPending ||
       activeSessionQuery.isFetching ||
-      activeSessionQuery.data?.session?.status === "active" ||
+      (!activeSessionQuery.isError && activeSessionQuery.data?.session?.status === "active") ||
       launchRequestedForChatRef.current === chatId
     ) {
       return;
@@ -822,10 +871,11 @@ export function TacticalCombatUI({
     };
   }, [
     activeSessionQuery.data?.session,
+    activeSessionQuery.isError,
     activeSessionQuery.isFetching,
     activeSessionQuery.isPending,
     chatId,
-    initialState,
+    restorableInitialState,
     launchBattle,
     sessionId,
   ]);
@@ -836,7 +886,7 @@ export function TacticalCombatUI({
   // this resolved-no-session case separately and deploy a fresh battle.
   useEffect(() => {
     if (
-      !initialState ||
+      !restorableInitialState ||
       !activeSessionQuery.isFetched ||
       activeSessionQuery.isFetching ||
       activeSessionQuery.data?.session?.status === "active" ||
@@ -857,7 +907,7 @@ export function TacticalCombatUI({
     activeSessionQuery.isFetched,
     activeSessionQuery.isFetching,
     chatId,
-    initialState,
+    restorableInitialState,
     launchBattle,
     sessionId,
   ]);
@@ -956,7 +1006,10 @@ export function TacticalCombatUI({
           if (u.side === selectedUnit.side || u.hp <= 0) continue;
           const d = Math.abs(u.x - from.x) + Math.abs(u.y - from.y);
           const max = Math.max(selectedUnit.attackRange.max, 2);
-          if (d >= 1 && d <= max) ids.push(u.id);
+          if (d < 1 || d > max) continue;
+          // Keep highlights aligned with the authoritative skill validation.
+          if (d > 1 && !hasLineOfSight(stagedState.grid, from, { x: u.x, y: u.y })) continue;
+          ids.push(u.id);
         }
         return new Set(ids);
       }
@@ -1100,14 +1153,8 @@ export function TacticalCombatUI({
   // ── End-of-battle handoff ──
   const maybeEnd = useCallback(
     (s: TacticalCombatState) => {
-      if (
-        !s.outcome ||
-        endedRef.current ||
-        aftermathPending ||
-        aftermathFailed ||
-        (!sessionId && !activeSessionQuery.isFetched)
-      )
-        return;
+      const sessionAuthorityUnavailable = !sessionId && (!activeSessionQuery.isFetched || activeSessionQuery.isError);
+      if (!s.outcome || endedRef.current || aftermathPending || aftermathFailed || sessionAuthorityUnavailable) return;
       endedRef.current = true;
       // Terminal snapshots stay persisted (not cleared here) so a refresh mid-flight
       // restores the outcome screen instead of soft-locking or re-launching a fresh
@@ -1128,7 +1175,15 @@ export function TacticalCombatUI({
       }, 1400);
       timersRef.current.push(t);
     },
-    [activeSessionQuery.isFetched, aftermathFailed, aftermathPending, handoffCombatEnd, objectives, sessionId],
+    [
+      activeSessionQuery.isError,
+      activeSessionQuery.isFetched,
+      aftermathFailed,
+      aftermathPending,
+      handoffCombatEnd,
+      objectives,
+      sessionId,
+    ],
   );
 
   // ── Restored-terminal-mount handoff ──
@@ -1228,7 +1283,7 @@ export function TacticalCombatUI({
       starting ||
       animating ||
       restartRecovery ||
-      (initialState &&
+      (restorableInitialState &&
         (!sessionHydrated ||
           activeSessionQuery.isPending ||
           activeSessionQuery.isFetching ||
@@ -1276,7 +1331,7 @@ export function TacticalCombatUI({
     animating,
     clearTimers,
     initialObjectives,
-    initialState,
+    restorableInitialState,
     launchBattle,
     actionMenuX,
     actionMenuY,
@@ -1320,6 +1375,7 @@ export function TacticalCombatUI({
           action,
         })
         .then((res) => {
+          sessionIdRef.current = res.sessionId;
           setSessionId(res.sessionId);
           setRevision(res.revision);
           setObjectives(res.objectives);
@@ -1355,7 +1411,7 @@ export function TacticalCombatUI({
               setRevision(payload.currentRevision ?? payload.state.revision ?? revision);
               setState(payload.state.canonicalState);
               setObjectives(payload.state.objectives ?? []);
-              persistSnapshot(payload.state.canonicalState);
+              persistSnapshot(payload.state.canonicalState, sessionIdRef.current);
             }
           }
           const msg = err instanceof Error ? err.message : "That action was rejected.";
@@ -1796,7 +1852,7 @@ export function TacticalCombatUI({
     starting ||
     animating ||
     Boolean(restartRecovery) ||
-    (Boolean(initialState) &&
+    (Boolean(restorableInitialState) &&
       (!sessionHydrated ||
         activeSessionQuery.isPending ||
         activeSessionQuery.isFetching ||
@@ -1850,6 +1906,7 @@ export function TacticalCombatUI({
   }
 
   if (startError || !liveState) {
+    const retreatUnavailable = restartUnavailable || (Boolean(restorableInitialState) && !sessionId);
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-slate-950/70 p-6 text-center text-white/80 backdrop-blur-sm">
         <SkullIcon className="h-8 w-8 text-red-400" />
@@ -1860,6 +1917,7 @@ export function TacticalCombatUI({
             // Clear any stale snapshot (e.g. the old terminal state after a failed
             // restart) so the next battle can't restore — and auto-hand-off — it.
             const recoverySessionId = sessionId ?? restartSessionIdRef.current;
+            if (retreatUnavailable) return;
             void handoffCombatEnd({
               outcome: "flee",
               rounds: 0,
@@ -1868,7 +1926,7 @@ export function TacticalCombatUI({
               ...(recoverySessionId ? { sessionId: recoverySessionId } : {}),
             });
           }}
-          disabled={aftermathPending}
+          disabled={aftermathPending || retreatUnavailable}
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
         >
           {localizeUi("ui.game.tacticalcombatui.retreatToStory")}
@@ -2696,10 +2754,11 @@ export function TacticalCombatUI({
                     objectives,
                     inventory: (liveState.inventory ?? []).map((item) => ({ ...item })),
                   };
+                  if (restartUnavailable || !sessionId) return;
                   void handoffCombatEnd(summary);
                 }}
-                disabled={aftermathPending}
-                className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10"
+                disabled={aftermathPending || restartUnavailable || !sessionId}
+                className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 {localizeUi("ui.noodle.wizardfooter.continue")}
               </button>
@@ -2714,9 +2773,10 @@ export function TacticalCombatUI({
                   objectives,
                   inventory: (liveState.inventory ?? []).map((item) => ({ ...item })),
                 };
+                if (restartUnavailable || !sessionId) return;
                 void handoffCombatEnd(summary);
               }}
-              disabled={aftermathPending}
+              disabled={aftermathPending || restartUnavailable || !sessionId}
               className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
             >
               {localizeUi("ui.noodle.wizardfooter.continue")}
@@ -2798,13 +2858,15 @@ function UnitToken({
       transition={{ type: "tween", duration: 0.25 }}
       style={style}
       className={cn(
-        "absolute z-10 flex cursor-pointer touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center",
+        // Keep the hit area on the token itself. The HP/MP column can be taller
+        // than a grid cell and must not steal clicks from neighboring tiles.
+        "pointer-events-none absolute z-10 flex aspect-square touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center",
         unit.hasActed && unit.side === "party" && "grayscale",
       )}
     >
       <div
         className={cn(
-          "relative flex aspect-square w-full items-center justify-center rounded-full border-2 shadow-lg drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)]",
+          "pointer-events-auto relative flex aspect-square w-full cursor-pointer items-center justify-center rounded-full border-2 shadow-lg drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)]",
           selected && "ring-2 ring-[var(--primary)] ring-offset-1 ring-offset-slate-900",
           targetable && "ring-2 ring-[var(--destructive)] animate-pulse",
           forecastTarget && "ring-2 ring-[var(--destructive)] ring-offset-1 ring-offset-slate-900",
@@ -2824,14 +2886,14 @@ function UnitToken({
           <span className="text-[min(3vw,0.9rem)] font-black text-white/90">{initialsOf(unit.name)}</span>
         )}
         {unit.isPlayer && (
-          <Crown className="absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 text-amber-300 drop-shadow" />
+          <Crown className="pointer-events-none absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 text-amber-300 drop-shadow" />
         )}
         {unit.isBoss && (
-          <Skull className="absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 text-[var(--destructive)] drop-shadow" />
+          <Skull className="pointer-events-none absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 text-[var(--destructive)] drop-shadow" />
         )}
         {/* Class badge (corner, side-tinted) */}
         <span
-          className="absolute -bottom-0.5 -right-0.5 flex h-[13px] w-[13px] items-center justify-center rounded-full border shadow-sm"
+          className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex h-[13px] w-[13px] items-center justify-center rounded-full border shadow-sm"
           style={{
             backgroundColor: unit.side === "party" ? "rgba(30,58,90,0.95)" : "rgba(90,30,40,0.95)",
             borderColor: ring,
@@ -2841,11 +2903,11 @@ function UnitToken({
         </span>
       </div>
       {/* HP bar */}
-      <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-black/60">
+      <div className="pointer-events-none mt-0.5 h-1 w-full overflow-hidden rounded-full bg-black/60">
         <div className={cn("h-full transition-all duration-300", hpColor)} style={{ width: `${hpPct}%` }} />
       </div>
       {unit.maxMp > 0 && (
-        <div className="mt-[1px] h-[2px] w-full overflow-hidden rounded-full bg-black/60">
+        <div className="pointer-events-none mt-[1px] h-[2px] w-full overflow-hidden rounded-full bg-black/60">
           <div className="h-full bg-sky-400 transition-all duration-300" style={{ width: `${mpPct}%` }} />
         </div>
       )}
@@ -3017,16 +3079,17 @@ function TileInspect({
       dragMomentum={false}
       dragElastic={0}
       dragConstraints={constraintsRef}
-      // Let the battlefield receive clicks through the informational body. The
-      // header remains the interactive drag/close surface below.
+      // Let the battlefield receive clicks through the informational body. Only
+      // the grip and close button accept events, so the title row does not mask
+      // nearby tiles after a terrain inspection.
       className="pointer-events-none absolute left-2 top-2 z-20 w-44 rounded-xl border border-[var(--border)] bg-slate-900/95 p-2.5 text-xs shadow-xl backdrop-blur sm:left-4 sm:top-16"
     >
-      <div className="pointer-events-auto mb-1 flex cursor-grab items-center justify-between active:cursor-grabbing">
-        <span className="flex items-center gap-1 font-bold text-white">
+      <div className="pointer-events-none mb-1 flex items-center justify-between">
+        <span className="pointer-events-auto flex cursor-grab items-center gap-1 font-bold text-white active:cursor-grabbing">
           <GripVertical className="h-3 w-3 text-white/40" />
           {info.label}
         </span>
-        <button type="button" onClick={onClose} className="text-white/40 hover:text-white">
+        <button type="button" onClick={onClose} className="pointer-events-auto text-white/40 hover:text-white">
           <X size={13} />
         </button>
       </div>

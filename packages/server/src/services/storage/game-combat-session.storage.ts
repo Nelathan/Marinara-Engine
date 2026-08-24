@@ -147,6 +147,20 @@ async function selectById(db: DB, sessionId: string) {
   return rows[0] ?? null;
 }
 
+function parseMetadata(raw: string | null | undefined): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function nextUpdatedAt(previousUpdatedAt?: string | null): string {
+  const previousTimestamp = Date.parse(previousUpdatedAt ?? "");
+  return new Date(Math.max(Date.now(), Number.isFinite(previousTimestamp) ? previousTimestamp + 1 : 0)).toISOString();
+}
+
 export function createGameCombatSessionStorage(db: DB) {
   return {
     async create(input: CombatSessionStartInput, options?: { replaceActiveSessionId?: string }) {
@@ -165,12 +179,22 @@ export function createGameCombatSessionStorage(db: DB) {
           400,
         );
       }
-      const timestamp = now();
-      const abandonedTimestamp = new Date(Date.parse(timestamp) - 1).toISOString();
       const sessionId = newId();
       const seed = (input.seed ?? randomInt(0, 0x1_0000_0000)) >>> 0;
       const objectives = initialObjectives(input);
-      await db.transaction(async (tx) => {
+      const row = await db.transaction(async (tx) => {
+        // Capture timestamps after this transaction acquires the file-store queue. A delayed
+        // start must not sort behind a later encounter merely because its request began first.
+        // The canonical-session fence orders by updatedAt, so preserve a strict per-chat
+        // ordering even when multiple encounters are created within the same millisecond.
+        const previousRows = await tx
+          .select({ updatedAt: gameCombatSessions.updatedAt })
+          .from(gameCombatSessions)
+          .where(eq(gameCombatSessions.chatId, input.chatId))
+          .orderBy(desc(gameCombatSessions.updatedAt))
+          .limit(1);
+        const timestamp = nextUpdatedAt(previousRows[0]?.updatedAt);
+        const abandonedTimestamp = new Date(Date.parse(timestamp) - 1).toISOString();
         const activeRows = await tx
           .select()
           .from(gameCombatSessions)
@@ -191,6 +215,22 @@ export function createGameCombatSessionStorage(db: DB) {
           .update(gameCombatSessions)
           .set({ status: "abandoned", updatedAt: abandonedTimestamp })
           .where(and(eq(gameCombatSessions.chatId, input.chatId), eq(gameCombatSessions.status, "active")));
+        const chatRows = await tx.select().from(chats).where(eq(chats.id, input.chatId)).limit(1);
+        const chat = chatRows[0];
+        if (chat) {
+          const metadata = parseMetadata(chat.metadata);
+          await tx
+            .update(chats)
+            .set({
+              metadata: JSON.stringify({
+                ...metadata,
+                gameCombatState: null,
+                gameTacticalCombatSnapshot: null,
+              }),
+              updatedAt: now(),
+            })
+            .where(eq(chats.id, input.chatId));
+        }
         await tx.insert(gameCombatSessions).values({
           sessionId,
           chatId: input.chatId,
@@ -208,8 +248,13 @@ export function createGameCombatSessionStorage(db: DB) {
           createdAt: timestamp,
           updatedAt: timestamp,
         });
+        const insertedRows = await tx
+          .select()
+          .from(gameCombatSessions)
+          .where(eq(gameCombatSessions.sessionId, sessionId))
+          .limit(1);
+        return insertedRows[0] ?? null;
       });
-      const row = await selectById(db, sessionId);
       if (!row) throw new CombatSessionStorageError("Combat session was not created", "COMBAT_NOT_FOUND", 500);
       return rowToSession(row);
     },
@@ -295,7 +340,7 @@ export function createGameCombatSessionStorage(db: DB) {
 
         const resolved = await resolve(session);
         const revision = session.revision + 1;
-        const updatedAt = now();
+        const updatedAt = nextUpdatedAt(session.updatedAt);
         const nextSession = {
           ...session,
           revision,
@@ -372,7 +417,7 @@ export function createGameCombatSessionStorage(db: DB) {
 
         await tx
           .update(gameCombatSessions)
-          .set({ status: "completed", updatedAt: now() })
+          .set({ status: "completed", updatedAt: nextUpdatedAt(session.updatedAt) })
           .where(and(eq(gameCombatSessions.sessionId, sessionId), eq(gameCombatSessions.status, "active")));
         const completedRows = await tx
           .select()
@@ -397,13 +442,17 @@ export function createGameCombatSessionStorage(db: DB) {
         if (session.chatId !== chatId) {
           throw new CombatSessionStorageError("Combat session does not belong to this chat", "COMBAT_WRONG_CHAT", 403);
         }
-        const activeRows = await tx
-          .select()
+        // A completion acknowledgement may arrive after the terminal action itself. The owner
+        // must still be the chat's most recently updated canonical session: otherwise a stale
+        // tab could erase the metadata of a later battle, including one already completed.
+        const latestRows = await tx
+          .select({ sessionId: gameCombatSessions.sessionId })
           .from(gameCombatSessions)
-          .where(and(eq(gameCombatSessions.chatId, chatId), eq(gameCombatSessions.status, "active")))
-          .limit(2);
-        const newerActive = activeRows.find((active) => active.sessionId !== sessionId);
-        if (newerActive) {
+          .where(eq(gameCombatSessions.chatId, chatId))
+          .orderBy(desc(gameCombatSessions.updatedAt))
+          .limit(1);
+        const latest = latestRows[0];
+        if (latest?.sessionId !== sessionId) {
           throw new CombatSessionStorageError(
             "Combat session was replaced by a newer battle",
             "COMBAT_COMPLETED",
@@ -434,7 +483,7 @@ export function createGameCombatSessionStorage(db: DB) {
         if (session.status === "active") {
           await tx
             .update(gameCombatSessions)
-            .set({ status: "completed", updatedAt: now() })
+            .set({ status: "completed", updatedAt: nextUpdatedAt(session.updatedAt) })
             .where(and(eq(gameCombatSessions.sessionId, sessionId), eq(gameCombatSessions.status, "active")));
         }
         const chatRows = await tx.select().from(chats).where(eq(chats.id, chatId)).limit(1);
@@ -449,7 +498,15 @@ export function createGameCombatSessionStorage(db: DB) {
         }
         await tx
           .update(chats)
-          .set({ metadata: JSON.stringify({ ...metadata, gameActiveState: "exploration" }), updatedAt: now() })
+          .set({
+            metadata: JSON.stringify({
+              ...metadata,
+              gameActiveState: "exploration",
+              gameCombatState: null,
+              gameTacticalCombatSnapshot: null,
+            }),
+            updatedAt: now(),
+          })
           .where(eq(chats.id, chatId));
         const completedRows = await tx
           .select()
@@ -460,11 +517,151 @@ export function createGameCombatSessionStorage(db: DB) {
       });
     },
 
-    async abandonForChat(chatId: string) {
-      await db
-        .update(gameCombatSessions)
-        .set({ status: "abandoned", updatedAt: now() })
-        .where(and(eq(gameCombatSessions.chatId, chatId), eq(gameCombatSessions.status, "active")));
+    /**
+     * Abandon a combat session and invalidate its compatibility snapshots in one transaction.
+     * A supplied sessionId is required for callers that may be holding a stale tab. The no-ID
+     * fallback is retained only for chats that have no canonical session row yet.
+     */
+    async abandonForChat(chatId: string, sessionId?: string) {
+      await db.transaction(async (tx) => {
+        if (sessionId) {
+          const rows = await tx
+            .select()
+            .from(gameCombatSessions)
+            .where(eq(gameCombatSessions.sessionId, sessionId))
+            .limit(1);
+          const session = rows[0];
+          if (!session) throw new CombatSessionStorageError("Combat session not found", "COMBAT_NOT_FOUND", 404);
+          if (session.chatId !== chatId) {
+            throw new CombatSessionStorageError(
+              "Combat session does not belong to this chat",
+              "COMBAT_WRONG_CHAT",
+              403,
+            );
+          }
+          const newerActive = await tx
+            .select({ sessionId: gameCombatSessions.sessionId })
+            .from(gameCombatSessions)
+            .where(and(eq(gameCombatSessions.chatId, chatId), eq(gameCombatSessions.status, "active")))
+            .limit(2);
+          if (newerActive.some((row) => row.sessionId !== sessionId)) {
+            throw new CombatSessionStorageError(
+              "Combat session was replaced by a newer battle",
+              "COMBAT_COMPLETED",
+              409,
+            );
+          }
+          // Terminal abandon requests are idempotent after the owner check. In particular, an
+          // old tab must not clear metadata belonging to a later completed encounter.
+          if (session.status !== "active") return;
+          await tx
+            .update(gameCombatSessions)
+            .set({ status: "abandoned", updatedAt: nextUpdatedAt(session.updatedAt) })
+            .where(and(eq(gameCombatSessions.sessionId, sessionId), eq(gameCombatSessions.status, "active")));
+        } else {
+          const activeRows = await tx
+            .select({ sessionId: gameCombatSessions.sessionId })
+            .from(gameCombatSessions)
+            .where(and(eq(gameCombatSessions.chatId, chatId), eq(gameCombatSessions.status, "active")))
+            .limit(2);
+          if (activeRows.length > 0) {
+            throw new CombatSessionStorageError(
+              "A combat session ID is required to abandon the active battle",
+              "INVALID_ACTION",
+              409,
+            );
+          }
+          // Once canonical rows exist, a legacy no-ID request has no unambiguous owner. Keep the
+          // fallback only for chats that predate canonical sessions entirely.
+          const existingRows = await tx
+            .select({ sessionId: gameCombatSessions.sessionId })
+            .from(gameCombatSessions)
+            .where(eq(gameCombatSessions.chatId, chatId))
+            .limit(1);
+          if (existingRows.length > 0) return;
+        }
+
+        const chatRows = await tx.select().from(chats).where(eq(chats.id, chatId)).limit(1);
+        const chat = chatRows[0];
+        if (!chat) throw new CombatSessionStorageError("Chat not found", "COMBAT_NOT_FOUND", 404);
+        const metadata = parseMetadata(chat.metadata);
+        await tx
+          .update(chats)
+          .set({
+            metadata: JSON.stringify({
+              ...metadata,
+              gameActiveState: "exploration",
+              gameCombatState: null,
+              gameTacticalCombatSnapshot: null,
+            }),
+            updatedAt: now(),
+          })
+          .where(eq(chats.id, chatId));
+      });
+    },
+
+    /**
+     * Persist a compatibility snapshot only while its owning session is active. Terminal clears
+     * are accepted for that same session (and only while no newer session is active), so an old
+     * request cannot resurrect a battle after completion or replacement.
+     */
+    async patchSnapshot(
+      sessionId: string,
+      chatId: string,
+      style: "classic" | "tactical",
+      snapshot: unknown | null,
+    ): Promise<{ accepted: boolean }> {
+      return db.transaction(async (tx) => {
+        const sessionRows = await tx
+          .select()
+          .from(gameCombatSessions)
+          .where(eq(gameCombatSessions.sessionId, sessionId))
+          .limit(1);
+        const row = sessionRows[0];
+        if (!row) throw new CombatSessionStorageError("Combat session not found", "COMBAT_NOT_FOUND", 404);
+        const session = rowToSession(row);
+        if (session.chatId !== chatId) {
+          throw new CombatSessionStorageError("Combat session does not belong to this chat", "COMBAT_WRONG_CHAT", 403);
+        }
+        if (session.style !== style) return { accepted: false };
+
+        if (snapshot !== null && session.style === "tactical") {
+          const snapshotStartMessageId =
+            snapshot && typeof snapshot === "object" && "startMessageId" in snapshot
+              ? typeof (snapshot as Record<string, unknown>).startMessageId === "string"
+                ? (snapshot as Record<string, unknown>).startMessageId
+                : null
+              : null;
+          const sessionStartMessageId = session.canonicalState.startMessageId ?? null;
+          if (snapshotStartMessageId !== sessionStartMessageId) return { accepted: false };
+        }
+
+        const activeRows = await tx
+          .select({ sessionId: gameCombatSessions.sessionId })
+          .from(gameCombatSessions)
+          .where(and(eq(gameCombatSessions.chatId, chatId), eq(gameCombatSessions.status, "active")))
+          .limit(2);
+        const newerActive = activeRows.some((row) => row.sessionId !== sessionId);
+        if (snapshot !== null && session.status !== "active") return { accepted: false };
+        if (newerActive) return { accepted: false };
+
+        const chatRows = await tx.select().from(chats).where(eq(chats.id, chatId)).limit(1);
+        const chat = chatRows[0];
+        if (!chat) throw new CombatSessionStorageError("Chat not found", "COMBAT_NOT_FOUND", 404);
+        const metadata = parseMetadata(chat.metadata);
+        const nextMetadata =
+          snapshot === null
+            ? { ...metadata, gameCombatState: null, gameTacticalCombatSnapshot: null }
+            : {
+                ...metadata,
+                [style === "classic" ? "gameCombatState" : "gameTacticalCombatSnapshot"]: snapshot,
+              };
+        await tx
+          .update(chats)
+          .set({ metadata: JSON.stringify(nextMetadata), updatedAt: now() })
+          .where(eq(chats.id, chatId));
+        return { accepted: true };
+      });
     },
 
     async deleteForChat(chatId: string) {

@@ -249,6 +249,8 @@ export type TacticalDifficulty = "casual" | "normal" | "hard" | "brutal";
 
 export interface TacticalCombatState {
   schemaVersion: 1;
+  /** Game Mode combat declaration that owns this battle. Optional for legacy snapshots. */
+  startMessageId?: string | null;
   grid: TacticalGrid;
   units: TacticalUnit[];
   phase: TacticalPhase;

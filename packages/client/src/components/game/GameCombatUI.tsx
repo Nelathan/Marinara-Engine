@@ -502,6 +502,8 @@ interface GameCombatUIProps {
   /** Whether we're waiting for a GM response. */
   isStreaming?: boolean;
   restoreSession?: boolean;
+  /** Reports the server-owned combat session so the surface can scope snapshots. */
+  onCombatSessionIdChange?: (sessionId: string | null) => void;
 }
 
 // ── Constants ──
@@ -687,6 +689,12 @@ function combatItemTargetsAllies(effect?: CombatItemEffect): boolean {
   return !effect || effect.target === "self" || effect.target === "ally" || effect.target === "any";
 }
 
+// Classic combat is resolved for the first living party member each round.
+function firstLivingPartyIndex(party: Combatant[]): number {
+  const index = party.findIndex((member) => member.hp > 0);
+  return index >= 0 ? index : 0;
+}
+
 function combatItemTargetsEnemies(effect?: CombatItemEffect): boolean {
   return effect?.target === "enemy" || effect?.target === "any";
 }
@@ -715,6 +723,7 @@ export function GameCombatUI({
   combatControlsSlot,
   onSpriteSuggestionChange,
   isStreaming,
+  onCombatSessionIdChange,
 }: GameCombatUIProps) {
   const { t: localizeUi } = useUiTranslation();
   useRenderTimer("game-combat"); // [#3104 diagnostic]
@@ -727,6 +736,10 @@ export function GameCombatUI({
   const [objectives, setObjectives] = useState<CombatObjectiveState[]>(initialObjectives);
   const terminalSummaryRef = useRef<CombatSummary | null>(null);
   const activeSessionQuery = useActiveCombatSession(chatId, "classic", !combatSessionId);
+
+  useEffect(() => {
+    onCombatSessionIdChange?.(combatSessionId);
+  }, [combatSessionId, onCombatSessionIdChange]);
   const [animationSpeed, setAnimationSpeed] = useState(() =>
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 4 : 1,
   );
@@ -735,6 +748,9 @@ export function GameCombatUI({
 
   useEffect(() => {
     const session = activeSessionQuery.data?.session;
+    // React Query keeps the previous session in `data` during a refetch. Do not
+    // hydrate that cached value or disable the query before this fetch settles.
+    if (activeSessionQuery.isPending || activeSessionQuery.isFetching || activeSessionQuery.isError) return;
     // The active-session endpoint falls back to the latest completed session for
     // refresh recovery — a finished battle must never hydrate as a live one.
     if (!session || session.style !== "classic" || session.status !== "active") return;
@@ -743,6 +759,7 @@ export function GameCombatUI({
     setObjectives(session.objectives);
     setParty(session.canonicalState.party);
     setEnemies(session.canonicalState.enemies);
+    setActivePlayerIndex(firstLivingPartyIndex(session.canonicalState.party));
     onCombatantsChange?.(session.canonicalState.party, session.canonicalState.enemies);
     onInventoryChange?.(session.canonicalState.inventory ?? []);
     setRound(session.canonicalState.round ?? 1);
@@ -775,7 +792,14 @@ export function GameCombatUI({
       terminalSummaryRef.current = summary;
       setPhase(outcome);
     }
-  }, [activeSessionQuery.data?.session, onCombatantsChange, onInventoryChange]);
+  }, [
+    activeSessionQuery.data?.session,
+    activeSessionQuery.isError,
+    activeSessionQuery.isFetching,
+    activeSessionQuery.isPending,
+    onCombatantsChange,
+    onInventoryChange,
+  ]);
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
@@ -1303,6 +1327,13 @@ export function GameCombatUI({
     setEnemies(initialEnemies);
   }, [initialEnemies]);
 
+  useEffect(() => {
+    setActivePlayerIndex((currentIndex) => {
+      const current = party[currentIndex];
+      return current?.hp > 0 ? currentIndex : firstLivingPartyIndex(party);
+    });
+  }, [party]);
+
   // ── Intro phase ──
   useEffect(() => {
     if (phase !== "intro") return;
@@ -1530,7 +1561,7 @@ export function GameCombatUI({
       setSelectedAction(null);
       setSelectedSkillId(null);
       setSelectedItemName(null);
-      setActivePlayerIndex(0);
+      setActivePlayerIndex(firstLivingPartyIndex(updatedParty));
     },
     [party, enemies, onCombatantsChange, playSfx],
   );

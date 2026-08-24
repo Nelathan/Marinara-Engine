@@ -179,6 +179,7 @@ const gameSurfaceSource = readFileSync(
   new URL("../../packages/client/src/components/game/GameSurface.tsx", import.meta.url),
   "utf8",
 );
+const gameHookSource = readFileSync(new URL("../../packages/client/src/hooks/use-game.ts", import.meta.url), "utf8");
 const tacticalCombatUiSource = readFileSync(
   new URL("../../packages/client/src/components/game/TacticalCombatUI.tsx", import.meta.url),
   "utf8",
@@ -187,10 +188,29 @@ const gameCombatUiSource = readFileSync(
   new URL("../../packages/client/src/components/game/GameCombatUI.tsx", import.meta.url),
   "utf8",
 );
+const tacticalTypesSource = readFileSync(
+  new URL("../../packages/shared/src/features/tactical-combat/types.ts", import.meta.url),
+  "utf8",
+);
 const combatSessionServiceSource = readFileSync(
   new URL("../../packages/server/src/services/game/combat-session.service.ts", import.meta.url),
   "utf8",
 );
+
+function exportedFunctionSource(source: string, name: string): string {
+  const start = source.indexOf(`export function ${name}(`);
+  assert.notEqual(start, -1, `expected ${name} to remain exported`);
+  const next = source.indexOf("\nexport function ", start + 1);
+  return source.slice(start, next === -1 ? undefined : next);
+}
+
+function assertBefore(source: string, first: string, second: string, message: string): void {
+  const firstIndex = source.indexOf(first);
+  assert.notEqual(firstIndex, -1, `${message}: missing first marker`);
+  const secondIndex = source.indexOf(second, firstIndex + first.length);
+  assert.notEqual(secondIndex, -1, `${message}: missing second marker after first`);
+  assert.ok(firstIndex < secondIndex, message);
+}
 assert.match(
   tacticalCombatUiSource,
   /function TileInspect\([\s\S]*?className="pointer-events-none absolute left-2 top-2 z-20 w-44/,
@@ -198,8 +218,13 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
-  /function TileInspect\([\s\S]*?<div className="pointer-events-auto mb-1 flex cursor-grab/,
-  "the Tactical tile inspector must retain an interactive drag and close header",
+  /function TileInspect\([\s\S]*?<span className="pointer-events-auto flex cursor-grab[\s\S]*?<button type="button" onClick=\{onClose\} className="pointer-events-auto/,
+  "the Tactical tile inspector must retain narrow interactive drag and close controls",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /Crown className="pointer-events-none absolute -top-2[\s\S]{0,300}Skull className="pointer-events-none absolute -top-2[\s\S]{0,500}className="pointer-events-none absolute -bottom-0\.5 -right-0\.5/,
+  "Tactical token decorations must not intercept clicks outside the avatar",
 );
 assert.equal(
   (routesSource.match(/await syncCombatInventory\(/g) ?? []).length,
@@ -283,7 +308,7 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
-  /initialState &&[\s\S]{0,260}!sessionHydrated[\s\S]{0,260}activeSessionQuery\.isFetching/,
+  /restorableInitialState &&[\s\S]{0,260}!sessionHydrated[\s\S]{0,260}activeSessionQuery\.isFetching/,
   "Tactical restart must wait for initial snapshot session hydration",
 );
 assert.match(
@@ -303,17 +328,34 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
+  /if \(restartUnavailable \|\| !sessionId\) return;[\s\S]{0,220}handoffCombatEnd\(summary\)/,
+  "Tactical terminal handoff must not proceed until a usable session identity is hydrated",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /!sessionId && \(!activeSessionQuery\.isFetched \|\| activeSessionQuery\.isError\)/,
+  "Tactical terminal auto-handoff must wait for an authoritative session lookup",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /disabled=\{aftermathPending \|\| restartUnavailable \|\| !sessionId\}/,
+  "Tactical retreat controls must remain disabled while session hydration is unresolved",
+);
+assert.match(
+  tacticalCombatUiSource,
   /restartSessionIdRef\.current = null;[\s\S]{0,500}setSessionId\(null\);[\s\S]{0,300}setState\(null\)/,
   "Tactical stale snapshots must clear their abandoned session before launching a fresh battle",
 );
-assert.ok(
-  routesSource.indexOf("if (existing && existing.chatId !== body.chatId)") <
-    routesSource.indexOf("if (!actionMatchesStyle)"),
+assertBefore(
+  routesSource,
+  "if (existing && existing.chatId !== body.chatId)",
+  "if (!actionMatchesStyle)",
   "generic action preflight must preserve wrong-chat precedence before exposing session style",
 );
-assert.ok(
-  routesSource.indexOf("if (!actionMatchesStyle)") <
-    routesSource.indexOf("await adjudicateCombatManeuver", routesSource.indexOf("if (!actionMatchesStyle)")),
+assertBefore(
+  routesSource,
+  "if (!actionMatchesStyle)",
+  "await adjudicateCombatManeuver",
   "generic wrong-style actions must be rejected before maneuver adjudication invokes the GM",
 );
 assert.equal(
@@ -321,15 +363,44 @@ assert.equal(
   3,
   "Classic, Tactical, and generic maneuver routes must reject terminal sessions before invoking the GM",
 );
-assert.ok(
-  gameSurfaceSource.indexOf("/game/combat/session/${summary.sessionId}/complete") <
-    gameSurfaceSource.indexOf("await Promise.all(aftermathWrites)"),
+assertBefore(
+  gameSurfaceSource,
+  "const combatSessionId = summary.sessionId ?? combatSessionIdRef.current",
+  "await Promise.all(aftermathWrites)",
   "combat aftermath must claim the terminal session before writing derived state",
 );
 assert.match(
   sessionStorageSource,
-  /async completeAndTransition\(sessionId: string, chatId: string\)[\s\S]{0,5000}newerActive[\s\S]{0,1800}gameActiveState: "exploration"/,
-  "combat completion must atomically reject replaced sessions and transition the chat",
+  /async completeAndTransition\(sessionId: string, chatId: string\)/,
+  "combat completion must retain an atomic session transition",
+);
+assert.match(
+  sessionStorageSource,
+  /completeAndTransition[\s\S]*?latestRows[\s\S]*?orderBy\(desc\(gameCombatSessions\.updatedAt\)\)[\s\S]*?latest\?\.sessionId !== sessionId[\s\S]*?gameActiveState: "exploration"/,
+  "combat completion must let only the latest session clean up the chat, including after terminal persistence",
+);
+assert.match(
+  sessionStorageSource,
+  /function nextUpdatedAt\(previousUpdatedAt\?: string \| null\): string[\s\S]*?Math\.max\(Date\.now\(\), Number\.isFinite\(previousTimestamp\) \? previousTimestamp \+ 1 : 0\)/,
+  "combat session timestamps must advance beyond the prior persisted timestamp",
+);
+assert.equal(
+  (sessionStorageSource.match(/nextUpdatedAt\(session\.updatedAt\)/g) ?? []).length,
+  4,
+  "combat actions, completion, transition, and abandonment must preserve session timestamp ordering",
+);
+assert.match(
+  sessionStorageSource,
+  /previousRows[\s\S]*?orderBy\(desc\(gameCombatSessions\.updatedAt\)\)[\s\S]*?nextUpdatedAt\(previousRows\[0\]\?\.updatedAt\)/,
+  "new combat sessions must use a strictly newer per-chat timestamp for latest-session ownership",
+);
+assert.doesNotMatch(
+  sessionStorageSource.slice(
+    sessionStorageSource.indexOf("async completeAndTransition"),
+    sessionStorageSource.indexOf("\n    /**\n     * Abandon"),
+  ),
+  /session\.status === "completed"\) return/,
+  "the owning completed session must still clear stale combat metadata",
 );
 assert.match(
   sessionStorageSource,
@@ -381,6 +452,21 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
+  /!activeSessionQuery\.isError && activeSessionQuery\.data\?\.session\?\.status === "active"/,
+  "a failed active-session lookup must not let retained cached data block a fresh Tactical launch",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(d > 1 && !hasLineOfSight\(stagedState\.grid, from, \{ x: u\.x, y: u\.y \}\)\) continue;/,
+  "Tactical attack-skill highlights must hide targets outside line of sight",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /pointer-events-none absolute z-10 flex aspect-square touch-manipulation[\s\S]{0,500}pointer-events-auto relative flex aspect-square/,
+  "Tactical unit hitboxes must not block clicks on neighboring tiles",
+);
+assert.match(
+  tacticalCombatUiSource,
   /const isLivingPartyUnit = unit\.side === "party" && unit\.hp > 0 && liveState\.phase === "player"/,
   "Tactical token selection must recognize every living party unit during player phase",
 );
@@ -398,6 +484,11 @@ assert.match(
   gameCombatUiSource,
   /session\.style !== "classic" \|\| session\.status !== "active"/,
   "a completed session must never hydrate the Classic battle component as a live fight",
+);
+assert.match(
+  gameCombatUiSource,
+  /if \(activeSessionQuery\.isPending \|\| activeSessionQuery\.isFetching \|\| activeSessionQuery\.isError\) return;/,
+  "Classic hydration must ignore retained active-session cache until the authoritative query settles",
 );
 assert.match(
   gameSurfaceSource,
@@ -429,15 +520,75 @@ assert.match(
   /surfaceCombatSessionQuery\.isFetched && !surfaceCombatSessionQuery\.isFetching && recoveringLegacySnapshot/,
   "legacy snapshot style fallback must wait for the authoritative active-session refetch to settle",
 );
-assert.ok(
-  gameSurfaceSource.indexOf('if (session.status !== "active")') <
-    gameSurfaceSource.indexOf("if ((combatParty || combatEnemies) && !recoveringLegacySnapshot) return"),
+assert.match(
+  gameSurfaceSource,
+  /surfaceTacticalStartMessageId[\s\S]{0,500}surfaceSessionMatchesCurrentCombat/,
+  "completed Tactical sessions must be matched to the current combat declaration",
+);
+assert.match(
+  gameSurfaceSource,
+  /surfaceTacticalStartMessageId === combatStartMessageId[\s\S]{0,180}surfaceCombatSession\.status !== "active"/,
+  "legacy completed Tactical sessions without a declaration id must still unwind cleanly",
+);
+assert.match(
+  gameSurfaceSource,
+  /setCombatStartMessageId\(session\.canonicalState\.startMessageId \?\? null\);/,
+  "authoritative Tactical session hydration must restore the declaration identity",
+);
+assert.match(
+  gameSurfaceSource,
+  /const clearPatch = \{[\s\S]{0,180}gameTacticalCombatSnapshot: null[\s\S]{0,500}queryClient\.setQueryData\(chatKeys\.detail\(chatId\)/,
+  "combat snapshot cleanup must clear the React Query chat cache as well as server metadata",
+);
+const classicCombatRoundSource = exportedFunctionSource(gameHookSource, "useCombatRound");
+const tacticalCombatStartSource = exportedFunctionSource(gameHookSource, "useTacticalCombatStart");
+const tacticalCombatActionSource = exportedFunctionSource(gameHookSource, "useTacticalCombatAction");
+for (const [source, style, name] of [
+  [classicCombatRoundSource, "classic", "Classic combat rounds"],
+  [tacticalCombatStartSource, "tactical", "Tactical combat starts"],
+  [tacticalCombatActionSource, "tactical", "Tactical combat actions"],
+] as const) {
+  assert.match(
+    source,
+    new RegExp(`combat-session\", \"active\", variables\\.chatId, \"${style}\"`),
+    `${name} must update its style-specific active-session cache`,
+  );
+  assert.match(
+    source,
+    /combat-session", "active", variables\.chatId, "any"/,
+    `${name} must update the style-agnostic session cache used by GameSurface`,
+  );
+}
+assert.match(
+  gameSurfaceSource,
+  /const write = combatSnapshotWriteRef\.current\s*\.catch\(\(\) => undefined\)\s*\.then\(\(\) => \{[\s\S]{0,700}game\/combat\/session\/\$\{encodeURIComponent\(sessionId\)\}\/snapshot/,
+  "GameSurface combat snapshot writes must serialize through the owning session",
+);
+assertBefore(
+  gameSurfaceSource,
+  'if (session.status !== "active")',
+  "if ((combatParty || combatEnemies) && !recoveringLegacySnapshot) return",
   "a completed authoritative session must win over an already styled local snapshot",
 );
 assert.match(
   gameCombatUiSource,
   /terminalSummaryRef\.current = summary;\s*setPhase\(outcome\)/,
   "restored Classic terminal sessions must reopen their retryable outcome overlay",
+);
+assert.match(
+  gameCombatUiSource,
+  /function firstLivingPartyIndex\(party: Combatant\[\]\): number/,
+  "Classic combat must centralize first-living actor selection",
+);
+assert.match(
+  gameCombatUiSource,
+  /setActivePlayerIndex\(firstLivingPartyIndex\(session\.canonicalState\.party\)\)/,
+  "restored Classic sessions must select the server-controlled living actor",
+);
+assert.match(
+  gameCombatUiSource,
+  /setActivePlayerIndex\(firstLivingPartyIndex\(updatedParty\)\)/,
+  "Classic round completion must advance past a defeated active actor",
 );
 assert.match(
   gameCombatUiSource,
@@ -458,6 +609,121 @@ assert.match(
   gameSurfaceSource,
   /const snapshot: GameCombatStateSnapshot = \{\s*style:/,
   "persisted Classic snapshots must retain the style that owns the active battle",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /const snapshotGenerationRef = useRef\(0\)/,
+  "Tactical combat must track snapshot write generations",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /snapshotGenerationRef\.current \+= 1;[\s\S]{0,300}snapshotWriteRef\.current = Promise\.resolve\(\)/,
+  "Tactical terminal cleanup must invalidate pending snapshot writes without awaiting them",
+);
+assert.doesNotMatch(
+  tacticalCombatUiSource,
+  /await snapshotWriteRef\.current\.catch\(\(\) => undefined\)/,
+  "Tactical terminal cleanup must not block on a stalled snapshot transport",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /onCombatSessionIdChange\?: \(sessionId: string \| null\) => void/,
+  "Tactical combat must expose its authoritative session identity",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /game\/combat\/session\/\$\{encodeURIComponent\(ownerSessionId\)\}\/snapshot[\s\S]{0,180}style: "tactical"/,
+  "Tactical snapshots must use the session-scoped endpoint",
+);
+assert.match(
+  gameCombatUiSource,
+  /onCombatSessionIdChange\?: \(sessionId: string \| null\) => void/,
+  "Classic combat must expose its authoritative session identity",
+);
+assert.match(
+  gameCombatUiSource,
+  /onCombatSessionIdChange\?\.\(combatSessionId\)/,
+  "Classic combat must report its authoritative session identity",
+);
+assert.match(
+  gameSurfaceSource,
+  /onCombatSessionIdChange=\{handleCombatSessionIdChange\}/,
+  "GameSurface must receive session identity from both combat UIs",
+);
+assert.match(
+  routesSource,
+  /app\.patch<\{ Params: \{ sessionId: string \} \}>\("\/combat\/session\/:sessionId\/snapshot"[\s\S]{0,500}combatSessionStorage\.patchSnapshot/,
+  "the server must expose a session-scoped compatibility snapshot endpoint",
+);
+assert.match(
+  sessionStorageSource,
+  /async patchSnapshot\(/,
+  "snapshot storage must expose the guarded compatibility snapshot patch",
+);
+assert.match(
+  sessionStorageSource,
+  /snapshot !== null && session\.status !== "active"/,
+  "snapshot storage must fence non-active sessions",
+);
+assert.match(
+  sessionStorageSource,
+  /if \(snapshot !== null && session\.status !== "active"\) return \{ accepted: false \}/,
+  "snapshot storage must reject stale snapshot writers",
+);
+assert.match(
+  sessionStorageSource,
+  /async patchSnapshot\([\s\S]{0,1200}session\.style !== style[\s\S]{0,120}return \{ accepted: false \}/,
+  "snapshot storage must fence cross-style callers",
+);
+assert.match(
+  sessionStorageSource,
+  /async abandonForChat\(chatId: string, sessionId\?: string\)[\s\S]{0,5000}gameCombatState: null[\s\S]{0,120}gameTacticalCombatSnapshot: null/,
+  "abandon must clear both compatibility snapshots atomically",
+);
+assert.match(
+  gameSurfaceSource,
+  /combatSnapshotWriteRef\.current = Promise\.resolve\(\);[\s\S]{0,500}const clearPatch/,
+  "GameSurface cleanup must reset the snapshot chain without awaiting it",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /startMessageId\?: string \| null[\s\S]{0,1800}startPayload\.startMessageId = startMessageId/,
+  "Tactical starts must persist the current combat declaration identity",
+);
+assert.match(
+  routesSource,
+  /startMessageId: z\.string\(\)\.min\(1\)\.nullable\(\)\.optional\(\)[\s\S]{0,2600}startMessageId: startMessageId \?\? null/,
+  "the server must store Tactical declaration identity in the canonical state",
+);
+assert.match(
+  routesSource,
+  /!sessionId[\s\S]{0,260}state\.startMessageId \?\? null[\s\S]{0,220}session\.canonicalState\.startMessageId \?\? null[\s\S]{0,260}COMBAT_SNAPSHOT_INVALID/,
+  "the legacy Tactical action route must reject snapshots from a prior declaration",
+);
+assert.match(
+  sessionStorageSource,
+  /snapshotStartMessageId[\s\S]{0,520}sessionStartMessageId[\s\S]{0,220}return \{ accepted: false \}/,
+  "snapshot storage must fence declaration identity before writing metadata",
+);
+assert.match(
+  gameSurfaceSource,
+  /if \(activeCombatStyle !== "classic"\) return;[\s\S]{0,120}if \(!combatSessionId\) return;/,
+  "GameSurface compatibility snapshots must be written only for Classic combat",
+);
+assert.match(
+  tacticalTypesSource,
+  /interface TacticalCombatState \{[\s\S]{0,160}startMessageId\?: string \| null;/,
+  "Tactical state must carry an optional declaration identity for legacy snapshots",
+);
+assert.match(
+  gameSurfaceSource,
+  /const restorableTacticalInitialState =\s*tacticalInitialState && \(tacticalInitialState\.startMessageId \?\? null\) === \(combatStartMessageId \?\? null\)/,
+  "Tactical snapshot restoration must require the current combat declaration identity",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /const restorableInitialState =\s*initialState && \(initialState\.startMessageId \?\? null\) === \(startMessageId \?\? null\)/,
+  "Tactical combat must reject a mismatched snapshot even when a caller bypasses GameSurface",
 );
 assert.match(
   gameCombatUiSource,
