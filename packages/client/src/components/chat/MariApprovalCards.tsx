@@ -191,11 +191,9 @@ function DatabaseWorkspaceApprovalCard({
     <TranscriptRow layout="document" marker={null}>
       <div ref={cardRef} className="mari-decision-surface text-xs text-[var(--foreground)]">
         <div className="flex min-w-0 items-center gap-2">
+          <Sparkles size="0.85rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
           <span className="font-semibold">
             {localizeUi("ui.chat.databaseworkspaceapprovalcard.reviewMariSChanges")}
-          </span>
-          <span className="rounded-full bg-[var(--primary)]/10 px-1.5 py-0.5 text-[0.625rem] text-[var(--primary)]">
-            {localizeUi("ui.chat.databaseworkspaceapprovalcard.saved")}
           </span>
           <div className="ml-auto flex shrink-0 items-center gap-0.5 rounded-md bg-[var(--background)]/60 p-0.5">
             <button
@@ -345,18 +343,7 @@ function DatabaseWorkspaceApprovalCard({
             </div>
           </div>
         )}
-        <div className="mari-decision-actions mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={() => onRestore(approval.id)}
-            disabled={busy || disabled}
-            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            <span className="inline-flex items-center gap-1">
-              <RefreshCw size="0.7rem" />
-              {localizeUi("ui.chat.databaseworkspaceapprovalcard.restore")}
-            </span>
-          </button>
+        <div className="mari-decision-actions mt-4 flex flex-col gap-2 sm:flex-row sm:justify-start">
           {enableableMemoryInsert && onKeepEnable && (
             <button
               type="button"
@@ -381,6 +368,17 @@ function DatabaseWorkspaceApprovalCard({
               {busy
                 ? localizeUi("ui.noodle.stageprofileform.saving")
                 : localizeUi("ui.chat.databaseworkspaceapprovalcard.keep")}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onRestore(approval.id)}
+            disabled={busy || disabled}
+            className="rounded-md border border-[var(--border)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <span className="inline-flex items-center gap-1">
+              <RefreshCw size="0.7rem" />
+              {localizeUi("ui.chat.databaseworkspaceapprovalcard.restore")}
             </span>
           </button>
         </div>
