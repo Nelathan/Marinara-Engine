@@ -2519,6 +2519,10 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   color: var(--marinara-editor-text);
 }
 
+.mari-editor-navigation-compact {
+  display: none;
+}
+
 .mari-editor-navigation-select:hover {
   border-color: var(--marinara-editor-border-strong);
   background: var(--marinara-editor-control-bg-hover);
@@ -2904,7 +2908,7 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   }
 }
 
-@container (min-width: 64.001rem) and (max-width: 96rem) {
+@container (min-width: 96.001rem) and (max-width: 108rem) {
   .mari-editor-tab {
     gap: 0.125rem;
     padding-inline: 0.25rem;
@@ -2944,7 +2948,15 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   }
 }
 
-@container (max-width: 64rem) {
+@container (max-width: 96rem) {
+  .mari-editor-navigation-tabs {
+    display: none;
+  }
+
+  .mari-editor-navigation-compact {
+    display: block;
+  }
+
   .mari-editor-header--with-nav {
     height: auto;
     min-height: 3.8125rem;
@@ -4062,6 +4074,13 @@ strong {
   max-width: 100%;
   overflow-wrap: anywhere;
   color: var(--foreground);
+}
+
+.mari-md-rule {
+  margin: 0.75em 0;
+  border: 0;
+  border-top: 1px solid currentcolor;
+  opacity: 0.3;
 }
 
 /* Hide <style> text inside inline SVGs (browser renders CSS text as visible SVG content) */

@@ -1865,7 +1865,7 @@ test("Conversation message actions follow their messages on desktop and mobile",
   }
 });
 
-test("Conversation Calls matches the participant control height", async ({ page, request }) => {
+test("Conversation Calls matches the participant control and sits beside it", async ({ page, request }) => {
   const characterResponse = await request.post("/api/characters", {
     data: { data: { name: "Call Toolbar Height" } },
   });
@@ -1941,8 +1941,11 @@ test("Conversation Calls matches the participant control height", async ({ page,
     const presenceButton = page.locator('button[title^="Call Toolbar Height:"]');
     const callHost = page.locator("marinara-capability-conversation-calls[view=toolbar]");
     const callButton = callHost.locator('button[title="Start call"]');
+    const headerIdentity = page.locator("[data-conversation-header-identity]");
     await expect(presenceButton).toBeVisible();
     await expect(callButton).toBeVisible();
+    await expect(headerIdentity.locator('button[title^="Call Toolbar Height:"]')).toHaveCount(1);
+    await expect(headerIdentity.locator("marinara-capability-conversation-calls[view=toolbar]")).toHaveCount(1);
     await expect
       .poll(() =>
         callHost.evaluate((element) =>
@@ -1957,6 +1960,8 @@ test("Conversation Calls matches the participant control height", async ({ page,
     expect(presenceBox).not.toBeNull();
     expect(callBox).not.toBeNull();
     expect(callBox!.height).toBeCloseTo(presenceBox!.height, 1);
+    expect(callBox!.x).toBeGreaterThanOrEqual(presenceBox!.x + presenceBox!.width);
+    expect(callBox!.x - (presenceBox!.x + presenceBox!.width)).toBeLessThanOrEqual(8);
   } finally {
     await Promise.all([
       request.delete(`/api/chats/${chat.id}`).catch(() => undefined),
@@ -3292,9 +3297,8 @@ test("Character Chat actions reuse mode selection and seed the chosen setup wiza
 });
 
 test("Character and Persona avatar actions stay separated and visually balanced", async ({ page }) => {
-  if ((page.viewportSize()?.width ?? 768) >= 768) {
-    await page.setViewportSize({ width: 1800, height: 900 });
-  }
+  const mobileProject = (page.viewportSize()?.width ?? 768) < 768;
+  if (!mobileProject) await page.setViewportSize({ width: 2560, height: 900 });
   const suffix = Date.now().toString(36);
   const connectionResponse = await page.request.post("/api/connections", {
     data: {
@@ -3374,8 +3378,10 @@ test("Character and Persona avatar actions stay separated and visually balanced"
     const actions = header.locator(".mari-editor-actions");
     const compactMenuButton = navigation.getByRole("button", { name: "Editor sections" });
     const desktopTabs = navigation.getByRole("navigation", { name: "Editor sections" });
-    if ((page.viewportSize()?.width ?? 768) < 768) {
+    const verifyCompactNavigation = async () => {
       await expect(compactMenuButton).toBeVisible();
+      await expect(desktopTabs).toBeHidden();
+      await expect(compactMenuButton).toHaveClass(/mari-editor-action/u);
       const [menuButtonBox, firstActionBox] = await Promise.all([
         compactMenuButton.boundingBox(),
         actions.locator(".mari-editor-action").first().boundingBox(),
@@ -3384,6 +3390,7 @@ test("Character and Persona avatar actions stay separated and visually balanced"
       expect(firstActionBox).not.toBeNull();
       if (menuButtonBox && firstActionBox) {
         expect(menuButtonBox.width).toBeLessThanOrEqual(137);
+        expect(Math.abs(menuButtonBox.height - firstActionBox.height)).toBeLessThanOrEqual(1);
         expect(
           Math.abs(menuButtonBox.y + menuButtonBox.height / 2 - (firstActionBox.y + firstActionBox.height / 2)),
         ).toBeLessThanOrEqual(1);
@@ -3404,8 +3411,40 @@ test("Character and Persona avatar actions stay separated and visually balanced"
       await expect(compactMenu).toHaveCount(0);
       await expect(compactMenuButton).toBeFocused();
       await expect(header.evaluate((element) => element.scrollWidth <= element.clientWidth)).resolves.toBe(true);
+    };
+
+    if (mobileProject) {
+      await verifyCompactNavigation();
     } else {
+      await page.setViewportSize({ width: 1800, height: 900 });
+      await verifyCompactNavigation();
+
+      let compactTabsWidth: number | null = null;
+      for (const width of [1900, 2000, 2100, 2200, 2300, 2400]) {
+        await page.setViewportSize({ width, height: 900 });
+        if ((await desktopTabs.isVisible()) && (await desktopTabs.locator(".mari-editor-tab svg").first().isHidden())) {
+          compactTabsWidth = width;
+          break;
+        }
+      }
+      expect(compactTabsWidth).not.toBeNull();
       await expect(desktopTabs).toBeVisible();
+      await expect(compactMenuButton).toBeHidden();
+      const compactTabBoxes = await desktopTabs.locator(".mari-editor-tab").evaluateAll((tabs) =>
+        tabs.map((tab) => {
+          const box = tab.getBoundingClientRect();
+          return { left: box.left, right: box.right };
+        }),
+      );
+      for (let index = 1; index < compactTabBoxes.length; index += 1) {
+        expect(compactTabBoxes[index].left - compactTabBoxes[index - 1].right).toBeGreaterThanOrEqual(-0.5);
+      }
+      await expect(header.evaluate((element) => element.scrollWidth <= element.clientWidth)).resolves.toBe(true);
+
+      await page.setViewportSize({ width: 2560, height: 900 });
+      await expect(desktopTabs).toBeVisible();
+      await expect(compactMenuButton).toBeHidden();
+      await expect(desktopTabs.locator(".mari-editor-tab svg").first()).toBeVisible();
       const [headerBox, navigationBox, firstActionBox, tabBoxes] = await Promise.all([
         header.boundingBox(),
         navigation.boundingBox(),
@@ -3423,11 +3462,13 @@ test("Character and Persona avatar actions stay separated and visually balanced"
         expect(navigationBox.width).toBeLessThan(headerBox.width * 0.65);
       }
       for (let index = 1; index < tabBoxes.length; index += 1) {
+        expect(tabBoxes[index].left - tabBoxes[index - 1].right).toBeGreaterThanOrEqual(-0.5);
         expect(tabBoxes[index].left - tabBoxes[index - 1].right).toBeLessThanOrEqual(5);
       }
       if (firstActionBox) {
         for (const tabBox of tabBoxes) expect(Math.abs(tabBox.height - firstActionBox.height)).toBeLessThanOrEqual(1);
       }
+      await expect(header.evaluate((element) => element.scrollWidth <= element.clientWidth)).resolves.toBe(true);
     }
 
     const [titleLineBox, titleInputBox, bylineBox] = await Promise.all([
@@ -10406,12 +10447,88 @@ test("custom Agent prompts preview the selected result format", async ({ page })
   await expect(promptEditor).toHaveAttribute("placeholder", /This result type returns plain text/u);
   await expect(promptEditor).toHaveAttribute("placeholder", /Plain text to inject into the main prompt/u);
 
+  const characterCardResult = editor.getByRole("button", { name: /^Character Card Creation/u });
+  await expect(characterCardResult).toBeDisabled();
+  await editor.getByText("Create character cards", { exact: true }).click();
+  await expect(characterCardResult).toBeEnabled();
+  await characterCardResult.click();
+  await expect(promptEditor).toHaveAttribute("placeholder", /"name": "Character name"/u);
+  await expect(promptEditor).toHaveAttribute(
+    "placeholder",
+    /"reason": "Why this recurring character deserves a card"/u,
+  );
+
   await editor.getByText("Edit lorebooks", { exact: true }).click();
   await editor.getByRole("button", { name: /^Lorebook Update/u }).click();
 
   await expect(promptEditor).toHaveAttribute("placeholder", /Its response must match this example JSON/u);
   await expect(promptEditor).toHaveAttribute("placeholder", /"updates": \[/u);
   await expect(promptEditor).toHaveAttribute("placeholder", /"order": 200/u);
+});
+
+test("custom Agent character cards are created only after approval", async ({ page }) => {
+  const name = `Approved Agent Character ${Date.now().toString(36)}`;
+  let createdId: string | null = null;
+
+  try {
+    await page.goto("/");
+    await page.evaluate(async (characterName) => {
+      const [{ useAgentStore }, { useUIStore }] = await Promise.all([
+        import("/src/stores/agent.store.ts"),
+        import("/src/stores/ui.store.ts"),
+      ]);
+      useAgentStore.getState().enqueuePendingAgentWriteApproval({
+        id: `card-create-${Date.now()}`,
+        kind: "character_card_create",
+        chatId: "approval-proof-chat",
+        agentType: "custom-card-maker",
+        agentName: "Card Maker",
+        title: `Card Maker: ${characterName}`,
+        text: JSON.stringify(
+          {
+            data: {
+              name: characterName,
+              description: "A recurring NPC proposed by a custom Agent.",
+            },
+            reason: "This character recurs in the roleplay.",
+          },
+          null,
+          2,
+        ),
+        canRegenerate: true,
+        timestamp: Date.now(),
+      });
+      useUIStore.getState().openModal("agent-write-approval");
+    }, name);
+
+    const beforeResponse = await page.request.get("/api/characters");
+    expect(beforeResponse.ok()).toBeTruthy();
+    const before = (await beforeResponse.json()) as Array<{ data?: unknown }>;
+    expect(
+      before.some((row) => {
+        const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+        return (data as { name?: unknown } | null)?.name === name;
+      }),
+    ).toBe(false);
+
+    const modal = page.getByRole("dialog");
+    await expect(modal.getByText("Review Character Card", { exact: true })).toBeVisible();
+    expect(await modal.locator("textarea").inputValue()).toContain(name);
+    await modal.getByRole("button", { name: "Accept", exact: true }).click();
+    await expect(modal).toBeHidden();
+
+    const afterResponse = await page.request.get("/api/characters");
+    expect(afterResponse.ok()).toBeTruthy();
+    const after = (await afterResponse.json()) as Array<{ id: string; data?: unknown }>;
+    const created = after.find((row) => {
+      const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+      return (data as { name?: unknown } | null)?.name === name;
+    });
+    expect(created).toBeTruthy();
+    createdId = created?.id ?? null;
+  } finally {
+    if (createdId) await page.request.delete(`/api/characters/${createdId}`).catch(() => undefined);
+  }
 });
 
 test("Storyboard Agent settings stay organized and contained at phone widths", async ({ page }, testInfo) => {
