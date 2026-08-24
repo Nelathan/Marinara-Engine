@@ -9,6 +9,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Pending Professor Mari changes now present their real Easy diff and Keep or Restore decision directly in the conversation instead of navigating to a separate side view.
 - Completed Professor Mari character and lorebook work now reuses the omnibar's resource identity system, including portraits and descriptive context, before flowing into review.
 - Professor Mari's full-screen mobile workspace now traps and restores focus, announces itself as a dialog, closes predictably with Escape, and honors reduced-motion preferences.
+- Finished Professor Mari runs now keep technical reasoning collapsed by default, and obsolete workspace presentation styles were removed.
 
 ### Added
 

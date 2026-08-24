@@ -2036,7 +2036,11 @@ const CompactMariMessage = memo(function CompactMariMessage({
     return (
       <TranscriptRow className="group" marker={<MariAvatar />}>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
-        <WorkspaceTimelineList items={timelineItemsFromTrace(workspaceTrace, message)} active={false} openReasoning />
+        <WorkspaceTimelineList
+          items={timelineItemsFromTrace(workspaceTrace, message)}
+          active={false}
+          openReasoning={false}
+        />
         {actionResults.map((result) => (
           <MariWorkspaceActionResultRow
             key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
