@@ -45,7 +45,6 @@ import { toast } from "sonner";
 import {
   LOCAL_SIDECAR_CONNECTION_ID,
   MARI_STARTER_CHIPS,
-  PROFESSOR_MARI_ID,
   type APIConnection,
   type Chat,
   type MariGuidedPlanStep,
@@ -145,7 +144,6 @@ import {
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
-const PROFESSOR_MARI_WELCOME_MESSAGE_ID = "__professor_mari_home_welcome__";
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const MARI_CONNECTION_STORAGE_KEY = "marinara:home-professor-mari-connection-id";
 const PROFESSOR_MARI_ERROR_TOAST_DURATION_MS = 120_000;
@@ -405,24 +403,6 @@ function isProfessorMariChatActive(chat: ProfessorMariChatSummary) {
   } catch {
     return false;
   }
-}
-
-function createWelcomeMessage(chatId: string | null): Message {
-  return {
-    id: PROFESSOR_MARI_WELCOME_MESSAGE_ID,
-    chatId: chatId ?? "__professor_mari_home__",
-    role: "assistant",
-    characterId: PROFESSOR_MARI_ID,
-    content: MARI_WELCOME,
-    activeSwipeIndex: 0,
-    createdAt: new Date(0).toISOString(),
-    extra: {
-      displayText: null,
-      isGenerated: false,
-      tokenCount: null,
-      generationInfo: null,
-    },
-  };
 }
 
 function createLocalUserMessage(
@@ -1590,19 +1570,26 @@ function WorkspaceLiveWorkCard({
   );
   const visibleSteps = [...toolItems].sort((left, right) => left.tool.updatedAt - right.tool.updatedAt).slice(-4);
   const subjectName = character?.name ?? lorebook?.name ?? null;
-  const animationSeed = toolItems[0]?.id ?? `${subjectName ?? "mari"}:${activity}`;
-  const firstToolName = toolItems[0]?.tool.name;
+  const latestNarrative = [...items]
+    .reverse()
+    .find(
+      (item): item is Extract<WorkspaceTimelineItem, { type: "text" | "thinking" | "status" }> =>
+        item.type !== "tool" && Boolean(item.content.trim()),
+    );
+  const currentTool = [...toolItems].reverse().find(({ tool }) => tool.status === "running") ?? toolItems.at(-1);
+  const phaseSignal = latestNarrative?.content ?? currentTool?.tool.name ?? activity;
+  const animationSeed = items[0]?.id ?? `${subjectName ?? "mari"}:${activity}`;
   const workAnimation = selectMariWorkAnimation({
     seed: animationSeed,
-    activity: firstToolName ?? activity,
-    toolNames: firstToolName ? [firstToolName] : [],
+    activity: phaseSignal,
+    toolNames: currentTool ? [currentTool.tool.name] : [],
   });
 
   return (
     <TranscriptRow marker={<MariAvatar active />}>
       <section className="mari-live-work" aria-label={t("mari.workCard.label")}>
         <div className="mari-live-work__intro">
-          <div className="min-w-0 pr-14 sm:pr-20">
+          <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <h3 className="truncate text-[0.8125rem] font-semibold text-[var(--foreground)]">
                 {subjectName ? t("mari.workCard.workingWith", { name: subjectName }) : t("mari.workCard.working")}
@@ -1612,14 +1599,21 @@ function WorkspaceLiveWorkCard({
                 {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
               </span>
             </div>
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted-foreground)]">{activity}</p>
+            <p className="mari-live-work__narrative">{latestNarrative?.content.trim() || activity}</p>
+            <MariResourceSubject character={character} lorebook={lorebook} className="mt-3" />
           </div>
-          <span
-            className="mari-live-work__sprite"
-            data-scene={workAnimation.id}
-            style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
-            aria-hidden="true"
-          />
+          <div className="mari-live-work__scene">
+            <span
+              className="mari-live-work__sprite"
+              data-scene={workAnimation.id}
+              style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
+              aria-hidden="true"
+            />
+            <button type="button" className="mari-live-work__stop" onClick={onStop}>
+              <Square size="0.65rem" aria-hidden="true" />
+              {t("ui.chat.summarypopover.stop")}
+            </button>
+          </div>
         </div>
 
         {visibleSteps.length > 0 ? (
@@ -1647,8 +1641,6 @@ function WorkspaceLiveWorkCard({
           </ol>
         ) : null}
 
-        <MariResourceSubject character={character} lorebook={lorebook} className="mt-3" />
-
         {toolItems.length > 0 ? (
           <details className="mari-live-work__technical group mt-3">
             <summary>
@@ -1656,18 +1648,20 @@ function WorkspaceLiveWorkCard({
               <span>{t("mari.workCard.technicalActions", { count: toolItems.length })}</span>
               <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
             </summary>
-            <div className="space-y-1 border-t border-[var(--border)]/60 px-2 py-2">
-              {toolItems.map((item) => (
-                <WorkspaceToolEvent key={item.id} tool={item.tool} />
-              ))}
+            <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
+              {toolItems.map(({ id, tool }) => {
+                const presentation = inferToolPresentation(tool);
+                return (
+                  <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
+                    <ToolGlyph tool={tool} tone={presentation.tone} />
+                    <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                    {presentation.detail ? <code className="max-w-[45%] truncate">{presentation.detail}</code> : null}
+                  </div>
+                );
+              })}
             </div>
           </details>
         ) : null}
-
-        <button type="button" className="mari-live-work__stop" onClick={onStop}>
-          <Square size="0.65rem" aria-hidden="true" />
-          {t("ui.chat.summarypopover.stop")}
-        </button>
       </section>
     </TranscriptRow>
   );
@@ -3106,7 +3100,7 @@ export function HomeProfessorMariChat({
     if (node) transcriptFollowOutputRef.current = isProfessorMariTranscriptNearBottom(node);
   }, []);
 
-  const displayMessages = useMemo(() => [createWelcomeMessage(chatId), ...messages], [chatId, messages]);
+  const displayMessages = messages;
   const showConnectionFirstHint =
     chatId !== null &&
     loadedMessagesChatId === chatId &&
@@ -3280,9 +3274,11 @@ export function HomeProfessorMariChat({
   const suggestionQuestion = guidedPlanStep
     ? guidedPlanStep.question
     : chipRowChips.length > 0
-      ? latestActionResults.length > 0
-        ? localizeUi("ui.chat.homeprofessormarichat.suggestions.afterChange")
-        : localizeUi("ui.chat.homeprofessormarichat.suggestions.next")
+      ? messages.length === 0
+        ? localizeUi("ui.chat.homeprofessormarichat.suggestions.start")
+        : latestActionResults.length > 0
+          ? localizeUi("ui.chat.homeprofessormarichat.suggestions.afterChange")
+          : localizeUi("ui.chat.homeprofessormarichat.suggestions.next")
       : null;
   const suggestionsSuppressed = !["empty", "history", "completed"].includes(mariPresentationState);
   const showSuggestionPrompt = !suggestionsSuppressed && Boolean(suggestionQuestion) && chipRowChips.length > 0;
@@ -4467,7 +4463,7 @@ export function HomeProfessorMariChat({
   }, [requestedReviewId, visiblePendingChangeReviewKey, workspaceDestination]);
 
   const renderDisplayMessage = (message: Message) => {
-    const canManageMessage = message.id !== PROFESSOR_MARI_WELCOME_MESSAGE_ID;
+    const canManageMessage = true;
     const messageContext = message.role === "assistant" ? getProfessorMariMessageContext(message) : null;
     const messageCharacter =
       message.role === "assistant"

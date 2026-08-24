@@ -1062,12 +1062,33 @@
   border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
   border-radius: 0.75rem;
   background: color-mix(in srgb, var(--card) 96%, var(--mari-workspace-hoodie));
-  padding: 0.75rem;
+  padding: 0.875rem;
 }
 
 .mari-live-work__intro {
-  position: relative;
-  min-height: 4.25rem;
+  display: grid;
+  min-height: 6rem;
+  grid-template-columns: minmax(0, 1fr) 5.25rem;
+  gap: 0.75rem;
+}
+
+.mari-live-work__narrative {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.mari-live-work__scene {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .mari-live-work__elapsed {
@@ -1089,11 +1110,11 @@
 }
 
 .mari-live-work__sprite {
-  position: absolute;
-  top: -0.35rem;
-  right: -0.15rem;
-  width: 3.25rem;
-  height: 4.9rem;
+  position: relative;
+  display: block;
+  width: 4rem;
+  height: 5.6rem;
+  flex: 0 0 auto;
   background-image: var(--mari-work-sprite);
   background-position: 0 center;
   background-repeat: no-repeat;
@@ -1116,7 +1137,7 @@
 
 .mari-live-work__sprite[data-scene="train"],
 .mari-live-work__sprite[data-scene="deep-dive"] {
-  width: 3.65rem;
+  width: 4.4rem;
   animation-duration: 5.2s;
 }
 
@@ -1191,10 +1212,30 @@
   color: var(--foreground);
 }
 
+.mari-live-work__technical-row {
+  display: flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.mari-live-work__technical-row[data-status="running"] {
+  color: var(--foreground);
+}
+
+.mari-live-work__technical-row[data-status="error"] {
+  color: var(--destructive);
+}
+
+.mari-live-work__technical-row code {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+}
+
 .mari-live-work__stop {
-  position: absolute;
-  top: 0.65rem;
-  right: 3.6rem;
   display: inline-flex;
   min-height: 1.75rem;
   align-items: center;
@@ -1247,16 +1288,14 @@
   }
 
   .mari-live-work__intro {
-    min-height: 3.75rem;
+    min-height: 5.25rem;
+    grid-template-columns: minmax(0, 1fr) 4rem;
+    gap: 0.5rem;
   }
 
   .mari-live-work__sprite {
-    width: 2.8rem;
-    height: 4.2rem;
-  }
-
-  .mari-live-work__stop {
-    right: 3rem;
+    width: 3.25rem;
+    height: 4.6rem;
   }
 }
 

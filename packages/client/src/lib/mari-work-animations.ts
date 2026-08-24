@@ -76,5 +76,5 @@ export function selectMariWorkAnimation({
   else if (/write|edit|patch|create|update|remove|file/.test(signal)) pool = FILE_POOL;
   else if (/install|build|compile|command|shell|bash|terminal|wait/.test(signal)) pool = LONG_RUNNING_POOL;
 
-  return pool[stableHash(`${seed}:${signal}`) % pool.length] ?? ANIMATIONS.assistant;
+  return pool[stableHash(seed) % pool.length] ?? ANIMATIONS.assistant;
 }

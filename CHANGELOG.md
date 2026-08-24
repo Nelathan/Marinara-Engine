@@ -4,6 +4,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+- Professor Mari's workspace now prioritizes one live state at a time, presents completed characters and lorebooks through the shared omnibar preview, keeps approvals in one aligned transcript surface, and gives active work a larger animated stage with live reasoning and task context.
 - Professor Mari now draws from a discoverable collection of animated work scenes, including research, debugging, long-running tasks, planning, and rare playful moments, while keeping one stable in-card mascot and honoring reduced-motion preferences.
 - Redesigned Professor Mari's live activity as one focused work card with elapsed time, progress, resource context, collapsible tool details, and an animated in-card mascot on desktop and mobile.
 - Professor Mari's suggestions now appear as answers to her question in the conversation, while the composer stays focused on attachments and writing.
