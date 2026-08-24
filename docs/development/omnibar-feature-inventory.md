@@ -252,7 +252,8 @@ Do not "fix" these; each was a decision.
   asked, and the Ask-Mari row opens the takeover. Quick's one surviving job — a
   single-field rewrite from one model call — moved into Mari's takeover, where
   the proposal lands in the pending-change dock like every other change she
-  makes. That costs more than one call, deliberately, for one review surface.
+  makes. It remains one model call; applying or rejecting the proposal does not
+  invoke the model again.
 - **There is no floating Mari window.** What is left of it is a presence
   indicator that shows state and opens her. She cannot sit beside an open
   editor; she is a place you go.

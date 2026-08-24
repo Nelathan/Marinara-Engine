@@ -6,7 +6,11 @@ import {
   readCommandCenterSessionState,
   writeCommandCenterSessionState,
 } from "../../lib/command-center";
-import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
+import {
+  consumeProfessorMariOpenRequest,
+  PROFESSOR_MARI_OPEN_EVENT,
+  type ProfessorMariOpenDetail,
+} from "../../lib/professor-mari-open";
 import { useMariPresence } from "../../hooks/use-mari-presence";
 import { useUIStore } from "../../stores/ui.store";
 
@@ -98,6 +102,7 @@ export function GlobalOmnibar() {
     const openProfessorMari = (event: Event) => {
       const request = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
       if ((request.destination ?? "omnibar") !== "omnibar") return;
+      consumeProfessorMariOpenRequest("omnibar");
       if (!useUIStore.getState().omnibarOpen) {
         const current = readCommandCenterSessionState();
         writeCommandCenterSessionState({

@@ -152,9 +152,10 @@ One dialog. Four regions, only two of them always present.
 └─────────────────────────────────────┘
 ```
 
-State is `selectedIndex` plus `takeover: null | "mari" | "browse" | "proposal"`.
-There is no persisted pane. Opening always gives a bare input. Escape leaves a
-takeover and returns to the list; Escape from the list closes.
+Session state persists `pane: "results" | "browse" | "mari"` alongside the
+query and focused result. Reopening always normalizes `mari` back to `results`,
+so a conversation resumes only through an explicit Mari entry point. Escape
+leaves a takeover and returns to the list; Escape from the list closes.
 
 Scope prefixes (`faq:`, `msg:`, …) stay exactly as they are — they are query
 text, not state, and they already obey R2 and R8.

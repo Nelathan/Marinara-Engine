@@ -2437,6 +2437,9 @@ export class ProfessorMariWorkspaceService {
     args.onEvent({ type: "status", data: { phase: "thinking" } });
     const result = await provider.chatComplete(messages, options);
     let answer = result.content ?? "";
+    for (const [proposalId, stored] of this.quickEditProposals) {
+      if (Date.parse(stored.expiresAt) <= Date.now()) this.quickEditProposals.delete(proposalId);
+    }
     if (quickEditTarget) {
       const match = answer.match(/<quick_edit>\s*([\s\S]*?)\s*<\/quick_edit>/u);
       answer = answer.replace(/<quick_edit>[\s\S]*?<\/quick_edit>/gu, "").trimEnd();
@@ -2459,9 +2462,6 @@ export class ProfessorMariWorkspaceService {
               fingerprint: quickEditFingerprint(quickEditTarget.currentValue),
               expiresAt: new Date(Date.now() + QUICK_EDIT_EXPIRY_MS).toISOString(),
             };
-            for (const [proposalId, stored] of this.quickEditProposals) {
-              if (Date.parse(stored.expiresAt) <= Date.now()) this.quickEditProposals.delete(proposalId);
-            }
             this.quickEditProposals.set(proposal.id, proposal);
             args.onEvent({ type: "edit_proposal", data: proposal });
           }
@@ -3091,27 +3091,35 @@ export class ProfessorMariWorkspaceService {
       );
     }
     const currentLabel = "name" in row && typeof row.name === "string" ? row.name : resource.kind;
-    const relatedResources = await Promise.all(
-      (context.relatedResources ?? []).map(async (candidate) => {
+    const relatedResources: Array<{ kind: string; id: string; label: string }> = [];
+    let omittedRelatedResources = 0;
+    for (const candidate of context.relatedResources ?? []) {
+      try {
         const relatedRow = await resolveResource(candidate);
         if (!relatedRow) {
-          throw new Error(
-            `The selected ${candidate.kind} ${candidate.label ? `"${candidate.label}"` : candidate.id} is no longer available. Remove it and try again.`,
-          );
+          omittedRelatedResources += 1;
+          continue;
         }
-        return {
+        relatedResources.push({
           kind: candidate.kind,
           id: candidate.id,
           label: "name" in relatedRow && typeof relatedRow.name === "string" ? relatedRow.name : candidate.kind,
-        };
-      }),
-    );
+        });
+      } catch (err) {
+        omittedRelatedResources += 1;
+        logger.warn(err, "Professor Mari: omitted a stale related handoff resource");
+      }
+    }
     const summary = {
       source: context.source,
       capability: context.capability,
       query: context.query,
       resource: { kind: resource.kind, id: resource.id, label: currentLabel },
       relatedResources: relatedResources.length > 0 ? relatedResources : undefined,
+      relatedResourcesNote:
+        omittedRelatedResources > 0
+          ? `${omittedRelatedResources} stale related resource${omittedRelatedResources === 1 ? " was" : "s were"} omitted.`
+          : undefined,
       field: context.field,
       error: context.error,
       action: context.action,

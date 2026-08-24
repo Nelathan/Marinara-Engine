@@ -147,7 +147,11 @@ import { parseCreationSeed, splitProposalWork, type CreationProposal } from "../
 import { parseChatExtraction } from "../../lib/omnibar-chat-extraction";
 import { parseGameCommand } from "../../lib/omnibar-game-commands";
 import { buildProfessorMariCommandCenterContext } from "../../lib/professor-mari-command-center-context";
-import { PROFESSOR_MARI_OPEN_EVENT, type ProfessorMariOpenDetail } from "../../lib/professor-mari-open";
+import {
+  consumeProfessorMariOpenRequest,
+  PROFESSOR_MARI_OPEN_EVENT,
+  type ProfessorMariOpenDetail,
+} from "../../lib/professor-mari-open";
 import type { ProfessorMariNavigationTarget } from "../../lib/professor-mari-navigation";
 import { executeStateNavigation } from "../../lib/state-navigation";
 import { cn } from "../../lib/utils";
@@ -1616,6 +1620,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     const openRequestedProfessorMari = (event: Event) => {
       const request = (event as CustomEvent<ProfessorMariOpenDetail>).detail;
       if ((request.destination ?? "omnibar") !== "omnibar") return;
+      consumeProfessorMariOpenRequest("omnibar");
       enterRequestedMariPane(request);
     };
     window.addEventListener(PROFESSOR_MARI_OPEN_EVENT, openRequestedProfessorMari);
