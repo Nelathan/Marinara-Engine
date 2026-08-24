@@ -339,7 +339,7 @@ function DatabaseWorkspaceApprovalCard({
             </div>
           </div>
         )}
-        <div className="mari-decision-actions mt-4 flex justify-end gap-2">
+        <div className="mari-decision-actions mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onRestore(approval.id)}
