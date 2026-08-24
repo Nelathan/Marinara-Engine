@@ -494,11 +494,27 @@ export function TacticalCombatUI({
 
   const [state, setState] = useState<TacticalCombatState | null>(initialState ?? null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  // Keep the session being replaced available if the replacement request fails.
+  // Restart clears the live state before the request returns, so state alone is
+  // otherwise insufficient for the error/retreat recovery path.
+  const restartSessionIdRef = useRef<string | null>(null);
+  const [restartRecovery, setRestartRecovery] = useState<{ replacedSessionId: string } | null>(null);
+  const restartRecoveryRef = useRef<{ replacedSessionId: string } | null>(null);
+  const restartRecoveryAttemptsRef = useRef(0);
+  const restartErrorRef = useRef<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [objectives, setObjectives] = useState<CombatObjectiveState[]>(initialObjectives);
-  const activeSessionQuery = useActiveCombatSession(chatId, "tactical", !sessionId);
+  const activeSessionQuery = useActiveCombatSession(
+    chatId,
+    "tactical",
+    !sessionId || Boolean(restartRecovery),
+  );
+  const refetchActiveSession = activeSessionQuery.refetch;
   const [starting, setStarting] = useState(!initialState);
   const [startError, setStartError] = useState<string | null>(null);
+  // An initial snapshot is usable for rendering, but its server session identity
+  // still needs to hydrate before restart can safely replace anything.
+  const [sessionHydrated, setSessionHydrated] = useState(!initialState);
   const launchRequestedForChatRef = useRef<string | null>(null);
   const hydratedSessionRevisionRef = useRef<string | null>(null);
 
@@ -584,9 +600,55 @@ export function TacticalCombatUI({
 
   useEffect(() => {
     const session = activeSessionQuery.data?.session;
+    if (
+      initialState &&
+      activeSessionQuery.isFetched &&
+      !activeSessionQuery.isFetching &&
+      !activeSessionQuery.isError &&
+      !sessionHydrated
+    ) {
+      setSessionHydrated(true);
+    }
+    // Never hydrate cached data while the active-session query is unresolved.
+    // React Query keeps the previous session in `data` during a refetch, so using
+    // it here can disable the query before the authoritative response arrives.
+    if (activeSessionQuery.isPending || activeSessionQuery.isFetching) return;
+    if (activeSessionQuery.isError) {
+      if (restartRecovery) {
+        // A lost replacement response is worth one fresh lookup. If that also
+        // fails, keep the old ID addressable for the retreat path and surface the
+        // original start error instead of adopting cached state as truth.
+        if (restartRecoveryAttemptsRef.current < 1) {
+          restartRecoveryAttemptsRef.current += 1;
+          void refetchActiveSession();
+        } else {
+          restartRecoveryRef.current = null;
+          setRestartRecovery(null);
+          setStarting(false);
+          setStartError(restartErrorRef.current ?? "Failed to start the tactical battle.");
+        }
+      }
+      return;
+    }
     // The active-session endpoint falls back to the latest completed session for
     // refresh recovery — a finished battle must never hydrate as a live one.
-    if (!session || session.style !== "tactical" || session.status !== "active") return;
+    if (!session || session.style !== "tactical" || session.status !== "active") {
+      if (restartRecovery && activeSessionQuery.isFetched && !activeSessionQuery.isFetching) {
+        restartRecoveryRef.current = null;
+        restartRecoveryAttemptsRef.current = 0;
+        restartErrorRef.current = null;
+        setRestartRecovery(null);
+        restartSessionIdRef.current = null;
+        hydratedSessionRevisionRef.current = null;
+        launchRequestedForChatRef.current = null;
+        setSessionId(null);
+        setRevision(0);
+        setState(null);
+        setStarting(true);
+        setStartError(null);
+      }
+      return;
+    }
     const hydrationKey = `${session.sessionId}:${session.revision}`;
     if (hydratedSessionRevisionRef.current === hydrationKey) return;
     hydratedSessionRevisionRef.current = hydrationKey;
@@ -603,8 +665,29 @@ export function TacticalCombatUI({
     if (session.result) terminalSummaryRef.current = session.result;
     setState(canonicalState);
     setStarting(false);
+    setStartError(null);
     persistSnapshot(canonicalState);
-  }, [activeSessionQuery.data?.session, party, persistSnapshot, playerCombatantId]);
+    if (restartRecovery) {
+      restartRecoveryRef.current = null;
+      restartRecoveryAttemptsRef.current = 0;
+      restartErrorRef.current = null;
+      setRestartRecovery(null);
+      restartSessionIdRef.current = null;
+    }
+  }, [
+    activeSessionQuery.data?.session,
+    activeSessionQuery.isFetching,
+    activeSessionQuery.isFetched,
+    activeSessionQuery.isError,
+    activeSessionQuery.isPending,
+    initialState,
+    party,
+    persistSnapshot,
+    playerCombatantId,
+    refetchActiveSession,
+    restartRecovery,
+    sessionHydrated,
+  ]);
 
   // ── Launch a fresh battle (payload build + player marking + setState/persist/SFX) ──
   // Shared by the mount effect and the restart flow. `isCancelled` lets the mount
@@ -651,6 +734,7 @@ export function TacticalCombatUI({
       if (environment) startPayload.environment = environment;
       if (formation) startPayload.formation = formation;
       if (replaceSessionId) startPayload.replaceSessionId = replaceSessionId;
+      if (replaceSessionId) restartSessionIdRef.current = replaceSessionId;
       startMut
         .mutateAsync(startPayload)
         .then((res) => {
@@ -664,17 +748,39 @@ export function TacticalCombatUI({
             ),
           };
           setSessionId(res.sessionId);
+          if (restartSessionIdRef.current === replaceSessionId) {
+            restartSessionIdRef.current = null;
+            restartRecoveryRef.current = null;
+            restartRecoveryAttemptsRef.current = 0;
+            restartErrorRef.current = null;
+            setRestartRecovery(null);
+          }
           setRevision(res.revision);
           setObjectives(res.objectives);
           setState(marked);
           setStarting(false);
+          setStartError(null);
           persistSnapshot(marked);
           playSfx(SFX.start);
         })
         .catch((err: unknown) => {
           if (isCancelled?.()) return;
-          setStarting(false);
-          setStartError(err instanceof Error ? err.message : "Failed to start the tactical battle.");
+          // Keep the replaced session addressable so Retreat can complete it (or
+          // report that a newer replacement won the race) after a failed restart.
+          if (replaceSessionId) {
+            const recovery = { replacedSessionId: replaceSessionId };
+            restartSessionIdRef.current = replaceSessionId;
+            restartRecoveryRef.current = recovery;
+            restartRecoveryAttemptsRef.current = 0;
+            restartErrorRef.current = err instanceof Error ? err.message : "Failed to start the tactical battle.";
+            setRestartRecovery(recovery);
+            setSessionId(replaceSessionId);
+            setStarting(true);
+            setStartError(null);
+          } else {
+            setStarting(false);
+            setStartError(err instanceof Error ? err.message : "Failed to start the tactical battle.");
+          }
         });
     },
     [
@@ -1118,6 +1224,24 @@ export function TacticalCombatUI({
   // battle, then re-launches with the same props. Works for snapshot-restored
   // battles too (it drives launchBattle directly, independent of `initialState`).
   const restartBattle = useCallback(() => {
+    if (
+      starting ||
+      animating ||
+      restartRecovery ||
+      (initialState &&
+        (!sessionHydrated ||
+          activeSessionQuery.isPending ||
+          activeSessionQuery.isFetching ||
+          activeSessionQuery.isError))
+    ) {
+      return;
+    }
+    const replacedSessionId = sessionId;
+    restartSessionIdRef.current = replacedSessionId;
+    restartRecoveryAttemptsRef.current = 0;
+    restartErrorRef.current = null;
+    launchRequestedForChatRef.current = null;
+    hydratedSessionRevisionRef.current = null;
     const resetObjectives = initialObjectives.map((objective) => ({
       ...objective,
       progress: 0,
@@ -1144,8 +1268,24 @@ export function TacticalCombatUI({
     setRevision(0);
     setObjectives(resetObjectives);
     setState(null);
-    launchBattle(undefined, resetObjectives, sessionId ?? undefined);
-  }, [clearTimers, resetSelection, initialObjectives, launchBattle, actionMenuX, actionMenuY, sessionId]);
+    launchBattle(undefined, resetObjectives, replacedSessionId ?? undefined);
+  }, [
+    activeSessionQuery.isError,
+    activeSessionQuery.isFetching,
+    activeSessionQuery.isPending,
+    animating,
+    clearTimers,
+    initialObjectives,
+    initialState,
+    launchBattle,
+    actionMenuX,
+    actionMenuY,
+    resetSelection,
+    restartRecovery,
+    sessionHydrated,
+    sessionId,
+    starting,
+  ]);
 
   // ── Send one action to the server ──
   const sendAction = useCallback(
@@ -1652,6 +1792,15 @@ export function TacticalCombatUI({
   const gridW = liveState?.grid.width ?? 0;
   const gridH = liveState?.grid.height ?? 0;
   const isPlayerPhaseNow = liveState?.phase === "player" && !animating;
+  const restartUnavailable =
+    starting ||
+    animating ||
+    Boolean(restartRecovery) ||
+    (Boolean(initialState) &&
+      (!sessionHydrated ||
+        activeSessionQuery.isPending ||
+        activeSessionQuery.isFetching ||
+        activeSessionQuery.isError));
 
   const renderUnits = useMemo(() => {
     if (!liveState) return [];
@@ -1710,12 +1859,13 @@ export function TacticalCombatUI({
           onClick={() => {
             // Clear any stale snapshot (e.g. the old terminal state after a failed
             // restart) so the next battle can't restore — and auto-hand-off — it.
+            const recoverySessionId = sessionId ?? restartSessionIdRef.current;
             void handoffCombatEnd({
               outcome: "flee",
               rounds: 0,
               party: [],
               enemies: [],
-              ...(sessionId ? { sessionId } : {}),
+              ...(recoverySessionId ? { sessionId: recoverySessionId } : {}),
             });
           }}
           disabled={aftermathPending}
@@ -1830,11 +1980,13 @@ export function TacticalCombatUI({
           {/* Restart is available in BOTH phases (greyed while resolving, like End Turn). */}
           <button
             type="button"
-            onClick={() => setRestartConfirm(true)}
-            disabled={animating}
+            onClick={() => {
+              if (!restartUnavailable) setRestartConfirm(true);
+            }}
+            disabled={restartUnavailable}
             className={cn(
               "flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10",
-              animating && "cursor-not-allowed opacity-40 hover:bg-white/5",
+              restartUnavailable && "cursor-not-allowed opacity-40 hover:bg-white/5",
             )}
             title={localizeUi("ui.game.tacticalcombatui.restartTheBattle")}
           >
@@ -2527,8 +2679,11 @@ export function TacticalCombatUI({
               <button
                 type="button"
                 onClick={restartBattle}
-                disabled={aftermathPending}
-                className="rounded-lg border border-[var(--primary)]/40 bg-[var(--primary)]/20 px-4 py-2 text-sm font-bold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/30"
+                disabled={aftermathPending || restartUnavailable}
+                className={cn(
+                  "rounded-lg border border-[var(--primary)]/40 bg-[var(--primary)]/20 px-4 py-2 text-sm font-bold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/30",
+                  (aftermathPending || restartUnavailable) && "cursor-not-allowed opacity-50",
+                )}
               >
                 {localizeUi("ui.game.tacticalcombatui.retryBattle")}
               </button>
@@ -2862,9 +3017,11 @@ function TileInspect({
       dragMomentum={false}
       dragElastic={0}
       dragConstraints={constraintsRef}
-      className="pointer-events-auto absolute left-2 top-2 z-20 w-44 rounded-xl border border-[var(--border)] bg-slate-900/95 p-2.5 text-xs shadow-xl backdrop-blur sm:left-4 sm:top-16"
+      // Let the battlefield receive clicks through the informational body. The
+      // header remains the interactive drag/close surface below.
+      className="pointer-events-none absolute left-2 top-2 z-20 w-44 rounded-xl border border-[var(--border)] bg-slate-900/95 p-2.5 text-xs shadow-xl backdrop-blur sm:left-4 sm:top-16"
     >
-      <div className="mb-1 flex cursor-grab items-center justify-between active:cursor-grabbing">
+      <div className="pointer-events-auto mb-1 flex cursor-grab items-center justify-between active:cursor-grabbing">
         <span className="flex items-center gap-1 font-bold text-white">
           <GripVertical className="h-3 w-3 text-white/40" />
           {info.label}

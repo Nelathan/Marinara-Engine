@@ -191,6 +191,16 @@ const combatSessionServiceSource = readFileSync(
   new URL("../../packages/server/src/services/game/combat-session.service.ts", import.meta.url),
   "utf8",
 );
+assert.match(
+  tacticalCombatUiSource,
+  /function TileInspect\([\s\S]*?className="pointer-events-none absolute left-2 top-2 z-20 w-44/,
+  "the Tactical tile inspector must let battlefield clicks pass through its informational body",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /function TileInspect\([\s\S]*?<div className="pointer-events-auto mb-1 flex cursor-grab/,
+  "the Tactical tile inspector must retain an interactive drag and close header",
+);
 assert.equal(
   (routesSource.match(/await syncCombatInventory\(/g) ?? []).length,
   2,
@@ -248,8 +258,53 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
-  /launchBattle\(undefined, resetObjectives, sessionId \?\? undefined\)/,
+  /const replacedSessionId = sessionId;[\s\S]{0,1600}launchBattle\(undefined, resetObjectives, replacedSessionId \?\? undefined\)/,
   "Tactical restart must explicitly identify the active session it intends to replace",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(replaceSessionId\) \{[\s\S]{0,700}setSessionId\(replaceSessionId\);[\s\S]{0,300}setStarting\(true\)/,
+  "a failed Tactical restart must retain the replaced session for recovery",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /sessionId \?\? restartSessionIdRef\.current/,
+  "Tactical restart recovery must include the preserved session ID when retreating",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /!sessionId \|\| Boolean\(restartRecovery\)/,
+  "Tactical restart recovery must refetch the authoritative active session after a lost replacement response",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(activeSessionQuery\.isPending \|\| activeSessionQuery\.isFetching\) return;/,
+  "Tactical hydration must ignore cached session data while any active-session lookup is refetching",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /initialState &&[\s\S]{0,260}!sessionHydrated[\s\S]{0,260}activeSessionQuery\.isFetching/,
+  "Tactical restart must wait for initial snapshot session hydration",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(activeSessionQuery\.isError\)[\s\S]{0,700}refetchActiveSession\(\)/,
+  "Tactical restart recovery must retry lookup errors without hydrating retained cache data",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /disabled=\{restartUnavailable\}/,
+  "Tactical toolbar restart must stay disabled until its session identity is safe",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /disabled=\{aftermathPending \|\| restartUnavailable\}/,
+  "Tactical defeat retry must use the same session hydration guard as toolbar restart",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /restartSessionIdRef\.current = null;[\s\S]{0,500}setSessionId\(null\);[\s\S]{0,300}setState\(null\)/,
+  "Tactical stale snapshots must clear their abandoned session before launching a fresh battle",
 );
 assert.ok(
   routesSource.indexOf("if (existing && existing.chatId !== body.chatId)") <
