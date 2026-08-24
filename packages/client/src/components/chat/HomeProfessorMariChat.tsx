@@ -4511,7 +4511,10 @@ export function HomeProfessorMariChat({
                     </MariStrip>
                   </>
                 ) : null}
-                <div className={cn("relative flex min-h-0 flex-1 flex-col", panelOpen && "sm:flex-row")}>
+                <div
+                  data-mari-panel={panelOpen ? "open" : "closed"}
+                  className={cn("relative flex min-h-0 flex-1 flex-col", panelOpen && "sm:flex-row")}
+                >
                   <motion.div
                     key="professor-mari-chat"
                     transition={PROFESSOR_MARI_PANE_TRANSITION}

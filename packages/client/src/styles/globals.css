@@ -945,6 +945,15 @@
   padding-bottom: 0.5rem;
 }
 
+/* R53: a split at 44rem gives each side 20rem, which is too narrow for a diff.
+   The shell already animates its height when she takes over; this is the same
+   motion on the other axis, and it needs no state passed up from the panel. */
+@media (min-width: 40rem) {
+  .mari-workspace-shell:has([data-mari-panel="open"]) {
+    max-width: 68rem;
+  }
+}
+
 .mari-workspace-canvas {
   background: color-mix(in srgb, var(--background) 97%, oklch(0.2 0.025 315));
 }
