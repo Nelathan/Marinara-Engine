@@ -1430,7 +1430,8 @@ function MariReasoningPanel({ thinking, live, forceOpen }: { thinking: string; l
   return (
     <details
       open={forceOpen || live || undefined}
-      className="group overflow-hidden rounded-lg border border-[var(--border)]/70 bg-[var(--muted)]/20 text-xs text-[var(--muted-foreground)]"
+      className="mari-reasoning-panel group overflow-hidden rounded-lg border border-[var(--border)]/70 bg-[var(--muted)]/20 text-xs text-[var(--muted-foreground)]"
+      data-live={live ? "true" : "false"}
     >
       <summary className="flex min-h-7 cursor-pointer list-none items-center gap-1.5 px-2 py-1.5 font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
         <Brain
@@ -1438,14 +1439,21 @@ function MariReasoningPanel({ thinking, live, forceOpen }: { thinking: string; l
           className={cn("shrink-0", live ? "text-[var(--primary)]" : "text-[var(--muted-foreground)]")}
         />
         <span className="text-[var(--foreground)]">{localizeUi("ui.chat.marireasoningpanel.reasoning")}</span>
-        <span className="rounded-full bg-[var(--background)]/70 px-1.5 py-0.5 text-[0.58rem] font-medium uppercase tracking-[0.12em] opacity-75">
-          {live
-            ? localizeUi("ui.chat.marireasoningpanel.live")
-            : localizeUi("ui.chat.marireasoningpanel.value1LineValue2", {
-                value1: lineCount,
-                value2: lineCount === 1 ? "" : localizeUi("ui.noodle.stageprofileview.s"),
-              })}
-        </span>
+        {live ? (
+          <span className="mari-reasoning-panel__live" role="status">
+            <i />
+            <i />
+            <i />
+            <span>{localizeUi("ui.chat.marireasoningpanel.live")}</span>
+          </span>
+        ) : (
+          <span className="rounded-md bg-[var(--background)]/70 px-1.5 py-0.5 text-[0.58rem] font-medium uppercase tracking-[0.12em] opacity-75">
+            {localizeUi("ui.chat.marireasoningpanel.value1LineValue2", {
+              value1: lineCount,
+              value2: lineCount === 1 ? "" : localizeUi("ui.noodle.stageprofileview.s"),
+            })}
+          </span>
+        )}
         <span className="ml-auto text-[0.65rem] opacity-60 transition-transform group-open:rotate-90">›</span>
       </summary>
       <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words border-t border-[var(--border)]/50 px-2 py-2 text-[0.6875rem] leading-relaxed text-[var(--muted-foreground)]">
@@ -1523,14 +1531,7 @@ function WorkspaceStatusEvent({ content, active }: { content: string; active?: b
     <TranscriptRow
       marker={
         <span
-          className={cn(
-            "mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border bg-[var(--card)] shadow-sm",
-            warning
-              ? "border-amber-400/35 text-amber-300"
-              : complete
-                ? "border-emerald-400/25 text-emerald-300"
-                : "border-[var(--primary)]/25 text-[var(--primary)]",
-          )}
+          className={cn("mt-1", warning ? "text-amber-300" : complete ? "text-emerald-300" : "text-[var(--primary)]")}
         >
           <Icon size="0.72rem" className={working ? "animate-spin" : undefined} />
         </span>
@@ -1539,12 +1540,8 @@ function WorkspaceStatusEvent({ content, active }: { content: string; active?: b
     >
       <span
         className={cn(
-          "inline-flex max-w-full rounded-lg border px-2 py-1 leading-5 shadow-sm",
-          warning
-            ? "border-amber-400/20 bg-amber-400/10 text-amber-100"
-            : complete
-              ? "border-emerald-400/20 bg-emerald-400/10 text-[var(--foreground)]"
-              : "border-[var(--primary)]/20 bg-[var(--primary)]/10 text-[var(--foreground)]",
+          "inline-flex max-w-full py-0.5 leading-5",
+          warning ? "text-amber-100" : complete ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]",
         )}
       >
         {content}

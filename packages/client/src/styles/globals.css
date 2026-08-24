@@ -1043,6 +1043,36 @@
   position: relative;
 }
 
+.mari-reasoning-panel[data-live="true"] {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.mari-reasoning-panel__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--primary);
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.mari-reasoning-panel__live i {
+  width: 0.2rem;
+  height: 0.2rem;
+  border-radius: 999px;
+  background: currentColor;
+  animation: mari-live-activity-dot 1.2s ease-in-out infinite;
+}
+
+.mari-reasoning-panel__live i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.mari-reasoning-panel__live i:nth-child(3) {
+  margin-right: 0.2rem;
+  animation-delay: 240ms;
+}
+
 .mari-tool-line[data-status="running"]::after {
   position: absolute;
   right: 0;
@@ -1189,6 +1219,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mari-live-activity__dots i,
+  .mari-reasoning-panel__live i,
   .mari-tool-line[data-status="running"]::after {
     animation: none;
   }
