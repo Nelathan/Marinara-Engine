@@ -1060,6 +1060,27 @@
   animation: mari-live-work-sprite 3.6s step-end infinite;
 }
 
+.mari-live-work__sprite[data-scene="detective"],
+.mari-live-work__sprite[data-scene="pixel-bug"] {
+  animation-duration: 2.8s;
+}
+
+.mari-live-work__sprite[data-scene="tea"],
+.mari-live-work__sprite[data-scene="books"],
+.mari-live-work__sprite[data-scene="yarn"] {
+  animation-duration: 4.4s;
+}
+
+.mari-live-work__sprite[data-scene="train"],
+.mari-live-work__sprite[data-scene="deep-dive"] {
+  width: 3.65rem;
+  animation-duration: 5.2s;
+}
+
+.mari-live-work__sprite[data-scene="paper-airplane"] {
+  animation-duration: 3.2s;
+}
+
 .mari-live-work__steps {
   display: grid;
   gap: 0.15rem;

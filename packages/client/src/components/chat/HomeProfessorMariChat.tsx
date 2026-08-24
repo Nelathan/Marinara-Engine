@@ -74,6 +74,7 @@ import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../lib/character-preview";
 import { buildLorebookPreviewModel, type LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { completeInline } from "../../lib/inline-completion";
+import { selectMariWorkAnimation } from "../../lib/mari-work-animations";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
 import { presetKeys, usePresets } from "../../hooks/use-presets";
@@ -147,7 +148,6 @@ import {
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
-const MARI_WORK_SPRITE_URL = "/sprites/mari/generated/professor-mari-assistant-sheet.png";
 const PROFESSOR_MARI_WELCOME_MESSAGE_ID = "__professor_mari_home_welcome__";
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const MARI_CONNECTION_STORAGE_KEY = "marinara:home-professor-mari-connection-id";
@@ -1593,6 +1593,13 @@ function WorkspaceLiveWorkCard({
   );
   const visibleSteps = [...toolItems].sort((left, right) => left.tool.updatedAt - right.tool.updatedAt).slice(-4);
   const subjectName = character?.name ?? lorebook?.name ?? null;
+  const animationSeed = toolItems[0]?.id ?? `${subjectName ?? "mari"}:${activity}`;
+  const firstToolName = toolItems[0]?.tool.name;
+  const workAnimation = selectMariWorkAnimation({
+    seed: animationSeed,
+    activity: firstToolName ?? activity,
+    toolNames: firstToolName ? [firstToolName] : [],
+  });
 
   return (
     <TranscriptRow marker={<MariAvatar active />}>
@@ -1612,7 +1619,8 @@ function WorkspaceLiveWorkCard({
           </div>
           <span
             className="mari-live-work__sprite"
-            style={{ "--mari-work-sprite": `url(${MARI_WORK_SPRITE_URL})` } as CSSProperties}
+            data-scene={workAnimation.id}
+            style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
             aria-hidden="true"
           />
         </div>
