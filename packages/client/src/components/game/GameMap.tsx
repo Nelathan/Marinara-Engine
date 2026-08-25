@@ -652,7 +652,7 @@ export function GameMapPanel({
     return (
       <div
         data-tour="game-map"
-        className={cn(GAME_MAP_PANEL_CLASS, "flex w-52 flex-col items-center justify-center gap-2 p-3")}
+        className={cn(GAME_MAP_PANEL_CLASS, "pointer-events-auto flex w-52 flex-col items-center justify-center gap-2 p-3")}
       >
         <span className="text-[0.625rem] text-[var(--marinara-chat-chrome-panel-muted)]">
           {spatialContextLoading
@@ -692,7 +692,10 @@ export function GameMapPanel({
       style={{ x, y }}
       className={cn(
         GAME_MAP_PANEL_CLASS,
-        "game-map-container flex flex-col gap-1 overflow-hidden p-2",
+        // pointer-events-auto: the GameSurface overlay wrapper is pointer-events-none
+        // (its flex box blankets the battlefield); the panel re-enables events on its
+        // own transformed root so hit-testing follows it when dragged.
+        "game-map-container pointer-events-auto flex flex-col gap-1 overflow-hidden p-2",
         effectiveMapView === "world" ? "w-80" : "w-52",
         effectiveMapView === "world" && "max-h-[min(34rem,60svh)]",
         !locked && "cursor-grab ring-1 ring-[var(--marinara-chat-chrome-focus-ring)] active:cursor-grabbing",

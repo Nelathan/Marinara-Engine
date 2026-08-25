@@ -775,6 +775,14 @@ assert.match(
   /protection \? resolvedTargetIds\?\.filter\(\(id\) => partyIds\.has\(id\)\)/,
   "generated defend and escort targets must resolve to allies, never to enemies the player is meant to kill",
 );
+// The top-left map+party overlay's flex box spans the union of both children and
+// blankets the battlefield's upper-left quadrant. If the WRAPPER hit-tests, its
+// transparent remainder silently swallows tile and unit-token clicks underneath.
+assert.match(
+  gameSurfaceSource,
+  /"pointer-events-none absolute left-3 right-14 z-20 flex min-w-0 items-start gap-2 md:right-auto"/,
+  "the map+party overlay wrapper must be pointer-events-none so empty regions cannot block combat clicks",
+);
 // An empty roster makes `every` vacuously true, so both HP sweeps must require a
 // non-empty side before they can declare the fight over.
 assert.match(

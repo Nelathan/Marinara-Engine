@@ -12757,10 +12757,13 @@ function GameSurfaceComponent({
                   />
                 ) : null}
 
-                {/* Top-left: Map + Party portraits side by side */}
+                {/* Top-left: Map + Party portraits side by side. The wrapper must stay
+                    pointer-events-none: its flex box spans the union of both children, and
+                    the transparent remainder would swallow clicks meant for whatever is
+                    underneath (tactical tiles and unit tokens sit in that region). */}
                 <div
                   className={cn(
-                    "pointer-events-auto absolute left-3 right-14 z-20 flex min-w-0 items-start gap-2 md:right-auto",
+                    "pointer-events-none absolute left-3 right-14 z-20 flex min-w-0 items-start gap-2 md:right-auto",
                     tacticalCombatActive ? "top-14" : topOverlayOffsetClass,
                     replayActive && "hidden",
                     // The package draws its own header and party bar, so the built-in ones would collide.
@@ -12770,7 +12773,7 @@ function GameSurfaceComponent({
                   )}
                 >
                   {/* Mobile: map icon button that opens modal */}
-                  <div data-tour="game-map" className="md:hidden">
+                  <div data-tour="game-map" className="pointer-events-auto md:hidden">
                     <MobileMapButton
                       chatId={activeChatId}
                       map={viewedMap}
@@ -12792,7 +12795,10 @@ function GameSurfaceComponent({
                       spatialContextLoading={activeSpatialContextLoading}
                     />
                   </div>
-                  {/* Desktop: inline minimap */}
+                  {/* Desktop: inline minimap. pointer-events-auto lives on the panel's own
+                      draggable root (GameMapPanel), not this wrapper: the wrapper keeps its
+                      layout box when the panel is dragged away, and enabling events here
+                      would leave an invisible click-blocker at the original position. */}
                   <div className="hidden md:block">
                     <GameMapPanel
                       map={viewedMap}
@@ -12819,7 +12825,7 @@ function GameSurfaceComponent({
 
                   {/* Party portraits — right of map */}
                   {partyMembers.length > 0 && (
-                    <div data-tour="game-party" className="min-w-0 flex-1 md:flex-none">
+                    <div data-tour="game-party" className="pointer-events-auto min-w-0 flex-1 md:flex-none">
                       <GamePartyBar
                         partyMembers={partyMembers}
                         partyCards={partyCards}
