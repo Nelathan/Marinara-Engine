@@ -46,6 +46,11 @@ assert.doesNotMatch(
   /mari-live-work__stop/u,
   "The work turn must not mount a second Stop control",
 );
+assert.match(
+  professorMariHomeSource,
+  /className="mari-live-work__sprite"/u,
+  "The live work card must keep its animated mini Mari scene",
+);
 assert.equal(
   professorMariHomeSource.match(/className="mari-omnibar-header-stop"/gu)?.length,
   1,

@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type ChangeEvent,
   type ReactNode,
   lazy,
@@ -70,6 +71,7 @@ import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../lib/character-preview";
 import { buildLorebookPreviewModel, type LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { completeInline } from "../../lib/inline-completion";
+import { selectMariWorkAnimation } from "../../lib/mari-work-animations";
 import { resolveStepSeconds } from "../../lib/mari-step-duration";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
@@ -1622,12 +1624,17 @@ function WorkspaceLiveWorkCard({
   const runningTool = [...toolItems].reverse().find(({ tool }) => tool.status === "running");
   const currentTool = runningTool ?? toolItems.at(-1);
   const workTitle = currentTool ? inferToolPresentation(currentTool.tool).title : activity;
+  const workAnimation = selectMariWorkAnimation({
+    seed: items[0]?.id ?? activity,
+    activity: latestNarrative?.content ?? currentTool?.tool.name ?? activity,
+    toolNames: currentTool ? [currentTool.tool.name] : [],
+  });
   const narrative = stripProfessorMariSpeakerPrefix(latestNarrative?.content ?? "").trim();
   const showNarrative = narrative.length > 0 && narrative.toLocaleLowerCase() !== workTitle.trim().toLocaleLowerCase();
   const generalActivity = !runningTool && toolItems.length > 0 && showNarrative ? narrative : null;
 
   return (
-    <TranscriptRow marker={<MariAvatar active />}>
+    <TranscriptRow marker={null} layout="document">
       <motion.section
         className="mari-live-work"
         aria-label={t("mari.workCard.label")}
@@ -1636,6 +1643,20 @@ function WorkspaceLiveWorkCard({
         transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="mari-live-work__body">
+          <div className="mari-live-work__scene" aria-hidden="true">
+            <AnimatePresence initial={false} mode="wait">
+              <motion.span
+                key={workAnimation.id}
+                className="mari-live-work__sprite"
+                data-scene={workAnimation.id}
+                style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.92, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96, y: -2 }}
+                transition={{ duration: reduceMotion ? 0 : 0.24 }}
+              />
+            </AnimatePresence>
+          </div>
           <div className="mari-live-work__content">
             <div className="mari-live-work__heading">
               <span className="mari-live-work__activity" aria-hidden="true">
@@ -5112,9 +5133,18 @@ export function HomeProfessorMariChat({
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-                            {showSuggestionPrompt && suggestionQuestion && (guidedPlanStep || messages.length > 0) ? (
+                            {showSuggestionPrompt && suggestionQuestion ? (
                               <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
-                                <CompactMarkdown content={suggestionQuestion} />
+                                <div className="mari-suggestion-surface">
+                                  <CompactMarkdown content={suggestionQuestion} />
+                                  {starterSuggestionsAvailable ? (
+                                    <MariSuggestionChips
+                                      chips={chipRowChips}
+                                      onSelect={handleSuggestionSelect}
+                                      disabled={isBusy}
+                                    />
+                                  ) : null}
+                                </div>
                               </TranscriptRow>
                             ) : null}
                           </>
@@ -5137,7 +5167,7 @@ export function HomeProfessorMariChat({
                           void handleSubmit();
                         }}
                       >
-                        {showSuggestionPrompt ? (
+                        {showSuggestionPrompt && !starterSuggestionsAvailable ? (
                           <div className="mari-workspace-answer-strip mb-2">
                             <MariSuggestionChips
                               chips={chipRowChips}
