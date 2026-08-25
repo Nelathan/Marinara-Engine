@@ -21,6 +21,7 @@ export interface OmnibarMariPaneProps {
   onAcceptProposal: (proposal: CreationProposal, options?: { assistedOnly?: boolean }) => void;
   onCancelProposal: () => void;
   mariContext: ProfessorMariAskContext | null;
+  submitDraft: boolean;
   mariOpenChatId: string | null;
   mariPendingReviewRequest: number;
   mariChatOpen: boolean;
@@ -39,6 +40,7 @@ export function OmnibarMariPane({
   onAcceptProposal,
   onCancelProposal,
   mariContext,
+  submitDraft,
   mariOpenChatId,
   mariPendingReviewRequest,
   mariChatOpen,
@@ -124,6 +126,7 @@ export function OmnibarMariPane({
             omnibarMode
             launchHidden
             initialAskContext={mariContext}
+            submitDraft={submitDraft}
             openChatId={mariOpenChatId}
             pendingReviewRequest={mariPendingReviewRequest}
             chatWindowOpen={mariChatOpen}

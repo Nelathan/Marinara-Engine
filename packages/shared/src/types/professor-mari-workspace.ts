@@ -128,6 +128,7 @@ export interface ProfessorMariHandoff {
   destination?: ProfessorMariHandoffDestination;
   draft?: string;
   context?: ProfessorMariAskContext;
+  submitDraft?: boolean;
   completion?: ProfessorMariCompletion;
 }
 

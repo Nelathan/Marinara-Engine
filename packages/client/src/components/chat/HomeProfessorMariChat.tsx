@@ -1539,6 +1539,15 @@ function WorkspaceLiveWorkCard({
   const runningTool = [...toolItems].reverse().find(({ tool }) => tool.status === "running");
   const currentTool = runningTool ?? toolItems.at(-1);
   const workTitle = currentTool ? inferToolPresentation(currentTool.tool).title : activity;
+  const completedToolCount = toolItems.filter(({ tool }) => tool.status === "done").length;
+  const workSummary = currentTool
+    ? localizeUi("ui.chat.homeprofessormarichat.workSummaryValue1", {
+        value1: inferToolPresentation(currentTool.tool).title,
+        count: completedToolCount,
+      })
+    : items.length > 0
+      ? localizeUi("ui.chat.homeprofessormarichat.recentWorkspaceUpdates", { count: items.length })
+      : localizeUi("ui.chat.homeprofessormarichat.preparingWorkspace");
   const workAnimation = selectMariWorkAnimation({
     seed: items[0]?.id ?? activity,
     activity: latestNarrative?.content ?? currentTool?.tool.name ?? activity,
@@ -1590,6 +1599,7 @@ function WorkspaceLiveWorkCard({
               )}
               <h3>{workTitle}</h3>
             </div>
+            <p className="mari-live-work__summary">{workSummary}</p>
             {showNarrative ? (
               <AnimatePresence initial={false} mode="popLayout">
                 <motion.p
@@ -2236,6 +2246,7 @@ type HomeProfessorMariChatProps = {
   omnibarMode?: boolean;
   launchHidden?: boolean;
   initialAskContext?: ProfessorMariAskContext | null;
+  submitDraft?: boolean;
   /** A past Mari conversation to open, handed in from the omnibar. */
   openChatId?: string | null;
   pendingReviewRequest?: number;
@@ -2253,6 +2264,7 @@ export function HomeProfessorMariChat({
   omnibarMode = false,
   launchHidden = false,
   initialAskContext = null,
+  submitDraft = false,
   openChatId = null,
   pendingReviewRequest = 0,
   omnibarHeaderSlot = null,
@@ -4300,6 +4312,11 @@ export function HomeProfessorMariChat({
     }
   };
 
+  useEffect(() => {
+    if (!omnibarMode || !submitDraft || !draft.trim() || isBusy) return;
+    void handleSubmit();
+  }, [draft, handleSubmit, isBusy, omnibarMode, submitDraft]);
+
   const handleSuggestionSelect = useCallback(
     (chip: MariSuggestionChip) => {
       if (chip.id === "authorization-accept") {
@@ -5022,13 +5039,22 @@ export function HomeProfessorMariChat({
                               <Sparkles size="0.7rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
                               <span className="min-w-0 truncate">
                                 {oneShotContext.resource?.label
-                                  ? `${oneShotContext.resource.label}${oneShotContext.field ? ` · ${oneShotContext.field}` : ""}`
+                                  ? oneShotContext.field
+                                    ? localizeUi("ui.chat.homeprofessormarichat.resourceContextValue1Value2", {
+                                        value1: oneShotContext.resource.label,
+                                        value2: oneShotContext.field,
+                                      })
+                                    : oneShotContext.resource.label
                                   : oneShotContext.activeChat?.label
                                     ? oneShotContext.activeChat.label
                                     : oneShotContext.settingsLocation?.tab
-                                      ? `Settings · ${oneShotContext.settingsLocation.tab}`
+                                      ? localizeUi("ui.chat.homeprofessormarichat.settingsContextValue1", {
+                                          value1: oneShotContext.settingsLocation.tab,
+                                        })
                                       : oneShotContext.query
-                                        ? `Search · ${oneShotContext.query}`
+                                        ? localizeUi("ui.chat.homeprofessormarichat.searchContextValue1", {
+                                            value1: oneShotContext.query,
+                                          })
                                         : localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}
                               </span>
                               <button

@@ -1400,6 +1400,13 @@
   line-height: 1.35;
 }
 
+.mari-live-work__summary {
+  margin-top: 0.2rem;
+  color: color-mix(in srgb, var(--mari-workspace-gold) 58%, var(--muted-foreground));
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
 .mari-live-work__activity {
   display: inline-flex;
   flex: 0 0 auto;

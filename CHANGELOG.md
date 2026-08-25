@@ -4,6 +4,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+- Pressing Enter when Mari is the only omnibar result now starts the request immediately instead of only placing the text in her composer. The empty Mari takeover has richer workspace chrome, and active work now summarizes the current task and completed steps.
 - The Home Professor tab now opens the canonical omnibar Professor Mari workspace instead of mounting a second Mari chat surface. Omnibar workspace destinations now live in a full row below Mari's identity header.
 - Omnibar Professor Mari now keeps short questions as separate transcript turns, places only their answer chips above the composer, and shows connection, context, sandbox, and review chrome in the omnibar surface.
 - Professor Mari's desktop workspace now has a Details panel for focused resources, completed result previews, and pending review diffs. The same panel overlays the transcript on smaller screens.

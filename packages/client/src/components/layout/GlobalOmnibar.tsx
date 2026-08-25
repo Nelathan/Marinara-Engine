@@ -426,6 +426,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
+  const [mariSubmitDraft, setMariSubmitDraft] = useState(false);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
   // Transient on purpose: reopening the omnibar always starts from a bare list.
   const [expandedChoiceId, setExpandedChoiceId] = useState<string | null>(null);
@@ -1561,7 +1562,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     });
   };
   /** Every route into the Work pane goes through here, so none forgets a flag. */
-  const enterMariPane = (context?: ProfessorMariAskContext) => {
+  const enterMariPane = (context?: ProfessorMariAskContext, submitDraft = false) => {
     startFieldFlight();
     if (context) {
       setMariContext(context);
@@ -1572,6 +1573,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         context: { capability: context.capability, resource: context.resource, field: context.field },
       });
     }
+    setMariSubmitDraft(submitDraft);
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
@@ -1947,6 +1949,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       if (activeResult.control?.type === "toggle") activeResult.control.onChange(activeResult.control.value !== true);
       else if (activeResult.control?.type === "choice")
         setExpandedChoiceId((current) => (current === activeResult.id ? null : activeResult.id));
+      else if (mariEnabled && activeResult.id === "ask-professor-mari") openProfessorMari(null, { submitDraft: true });
       else choose(activeResult);
     } else if (pane === "results" && event.key === "ArrowLeft" && activeResult && expandedPreviewId) {
       event.preventDefault();
@@ -2083,14 +2086,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   };
   const openProfessorMari = (
     selectedResult: RankedOmnibarResult | null = null,
-    options: { reviewPending?: boolean } = {},
+    options: { reviewPending?: boolean; submitDraft?: boolean } = {},
   ) => {
     setProposalDraft(null);
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
     rememberMariReturn(focusResult);
-    enterMariPane(buildAskContext(draft, focusResult));
+    enterMariPane(buildAskContext(draft, focusResult), options.submitDraft);
     if (options.reviewPending) setMariPendingReviewRequest((current) => current + 1);
   };
   // A handed-off task is "finished" once Mari has been seen working and then
@@ -2731,6 +2734,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 setPane("results");
               }}
               mariContext={mariContext}
+              submitDraft={mariSubmitDraft}
               mariOpenChatId={mariOpenChatId}
               mariPendingReviewRequest={mariPendingReviewRequest}
               mariChatOpen={mariChatOpen}
