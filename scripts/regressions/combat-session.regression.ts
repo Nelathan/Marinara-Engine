@@ -775,6 +775,20 @@ assert.match(
   /protection \? resolvedTargetIds\?\.filter\(\(id\) => partyIds\.has\(id\)\)/,
   "generated defend and escort targets must resolve to allies, never to enemies the player is meant to kill",
 );
+// Generated enemy stats derive from the blueprint HP pool (level = maxHp/20), so a
+// solo 650-HP "bridge boss" used to become level 33 with 75 attack against a level
+// ~17 party — mathematically unwinnable. The derived level must be capped near the
+// party average while the authored HP pool is preserved.
+assert.match(
+  gameSurfaceSource,
+  /const hpLevel = combatLevelFromHp\(maxHp, fallbackLevel\);\s*const level = partyLevelCap !== undefined \? Math\.min\(hpLevel, Math\.max\(1, partyLevelCap\)\) : hpLevel;/,
+  "generated enemy stat levels must be capped by the party-derived level cap",
+);
+assert.match(
+  gameSurfaceSource,
+  /const partyLevelCap =\s*partyCombatants\.length > 0\s*\? Math\.round\(partyCombatants\.reduce\(\(sum, member\) => sum \+ member\.level, 0\) \/ partyCombatants\.length\) \+ 3/,
+  "encounter hydration must compute the enemy level cap from the party's average level",
+);
 // The top-left map+party overlay's flex box spans the union of both children and
 // blankets the battlefield's upper-left quadrant. If the WRAPPER hit-tests, its
 // transparent remainder silently swallows tile and unit-token clicks underneath.

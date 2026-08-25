@@ -1074,10 +1074,20 @@ function hydrateCombatPartyAvatars(party: Combatant[], avatarCandidates: GamePar
   return changed ? nextParty : party;
 }
 
-export function generatedEnemyToCombatant(enemy: CombatEnemy, index: number, fallbackLevel: number): Combatant {
+export function generatedEnemyToCombatant(
+  enemy: CombatEnemy,
+  index: number,
+  fallbackLevel: number,
+  partyLevelCap?: number,
+): Combatant {
   const maxHp = Math.max(1, readCombatNumber(enemy.maxHp) ?? readCombatNumber(enemy.hp) ?? 1);
   const hp = Math.max(0, Math.min(maxHp, readCombatNumber(enemy.hp) ?? maxHp));
-  const level = combatLevelFromHp(maxHp, fallbackLevel);
+  // Level is inferred from the generated HP pool, but a solo "boss-sized" pool
+  // (600+ HP) must not cascade into boss-sized attack/defense: derived stats and
+  // the engine's ±50% level scaling are capped near the party's real strength,
+  // while the HP pool itself stays as authored (it sets fight length, not lethality).
+  const hpLevel = combatLevelFromHp(maxHp, fallbackLevel);
+  const level = partyLevelCap !== undefined ? Math.min(hpLevel, Math.max(1, partyLevelCap)) : hpLevel;
   const element = enemy.attacks?.find((attack) => attack.element)?.element;
   const combatClass = typeof enemy.class === "string" && enemy.class.trim() ? enemy.class.trim() : undefined;
   return {
@@ -8721,8 +8731,16 @@ function GameSurfaceComponent({
             ),
           )
         : [];
+      // Cap enemy stat levels near the party's average so a big generated HP pool
+      // cannot turn into an unbeatable stat wall (see generatedEnemyToCombatant).
+      const partyLevelCap =
+        partyCombatants.length > 0
+          ? Math.round(partyCombatants.reduce((sum, member) => sum + member.level, 0) / partyCombatants.length) + 3
+          : undefined;
       const enemyCombatants = Array.isArray(combatState.enemies)
-        ? combatState.enemies.map((enemy, index) => generatedEnemyToCombatant(enemy, index, fallbackLevel))
+        ? combatState.enemies.map((enemy, index) =>
+            generatedEnemyToCombatant(enemy, index, fallbackLevel, partyLevelCap),
+          )
         : [];
 
       if (partyCombatants.length === 0 || enemyCombatants.length === 0) return null;
