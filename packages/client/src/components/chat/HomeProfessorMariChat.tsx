@@ -72,6 +72,7 @@ import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../li
 import { buildLorebookPreviewModel, type LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { completeInline } from "../../lib/inline-completion";
 import { selectMariWorkAnimation } from "../../lib/mari-work-animations";
+import { resolveStepSeconds } from "../../lib/mari-step-duration";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
 import { presetKeys, usePresets } from "../../hooks/use-presets";
@@ -1679,15 +1680,13 @@ function WorkspaceLiveWorkCard({
                     const running = tool.status === "running";
                     const failed = tool.status === "error";
                     const Icon = failed ? AlertTriangle : running ? Circle : Check;
-                    // A finished step uses the server's own measurement. Only a RUNNING step is
-                    // timed locally - the card re-renders every second while `elapsedSeconds`
-                    // ticks, so it stays live without a second timer.
-                    const stepMs = running
-                      ? tool.startedAt
-                        ? Date.now() - tool.startedAt
-                        : null
-                      : (tool.durationMs ?? (tool.startedAt ? tool.updatedAt - tool.startedAt : null));
-                    const stepSeconds = stepMs === null ? null : Math.max(1, Math.round(stepMs / 1000));
+                    const stepSeconds = resolveStepSeconds({
+                      running,
+                      startedAt: tool.startedAt,
+                      durationMs: tool.durationMs,
+                      updatedAt: tool.updatedAt,
+                      now: Date.now(),
+                    });
                     return (
                       <motion.li
                         layout={!reduceMotion}

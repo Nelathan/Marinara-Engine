@@ -67,7 +67,7 @@ export function OmnibarEmptyState({
         <img src={MARI_BLINK_URL} alt="" draggable={false} data-part="blink" />
       </button>
       <p className="omnibar-mari-bubble omnibar-mari-bubble--idle z-[101]">
-        {t("omnibar.intro.line", "And this is where I live. Search for a thing, or just ask me for it.")}
+        {t("omnibar.intro.line", "Search first. When you need help or want to take action, ask Professor Mari here.")}
       </p>
 
       <div
@@ -79,7 +79,10 @@ export function OmnibarEmptyState({
           <span className="text-xs font-semibold text-white/70">
             {activeChatMode
               ? t("omnibar.emptyState.contextHint", "This chat's context is ready to search")
-              : t("omnibar.emptyState.hint", "Everything below is one keystroke away in that bar")}
+              : t(
+                  "omnibar.emptyState.hint",
+                  "Start typing to search Marinara. Use a scope when you want more control.",
+                )}
           </span>
           <ArrowUp size={16} className="omnibar-hint-arrow" aria-hidden="true" />
         </div>

@@ -1138,6 +1138,7 @@ function sanitizeTraceForStorage(trace: MariWorkspaceTraceItem[]): MariWorkspace
           status: item.tool.status,
           input: compactTraceValue(item.tool.input),
           output: item.tool.output ? compactTraceText(item.tool.output) : item.tool.output,
+          startedAt: item.tool.startedAt,
           updatedAt: item.tool.updatedAt,
         },
       };
@@ -3304,13 +3305,15 @@ export class ProfessorMariWorkspaceService {
     actionResults: MariWorkspaceActionResult[],
   ): Promise<WorkspaceCommandResult> {
     const input = command.arguments;
+    const startedAt = Date.now();
     upsertTraceTool(trace, {
       id: command.id,
       name: command.name,
       status: "running",
       input,
       output: null,
-      updatedAt: Date.now(),
+      startedAt,
+      updatedAt: startedAt,
     });
     onEvent({ type: "tool_start", data: { id: command.id, name: command.name, input } });
     try {
@@ -3325,14 +3328,25 @@ export class ProfessorMariWorkspaceService {
       const execution = isReadOnlyWorkspaceCommand(command) ? await run() : await this.serializeWorkspaceMutation(run);
       const output = typeof execution === "string" ? execution : execution.output;
       const compacted = compactOutput(output);
+      const endedAt = Date.now();
       upsertTraceTool(trace, {
         id: command.id,
         name: command.name,
         status: "done",
         output: compacted,
-        updatedAt: Date.now(),
+        startedAt,
+        updatedAt: endedAt,
       });
-      onEvent({ type: "tool_end", data: { id: command.id, name: command.name, isError: false, output: compacted } });
+      onEvent({
+        type: "tool_end",
+        data: {
+          id: command.id,
+          name: command.name,
+          isError: false,
+          output: compacted,
+          durationMs: endedAt - startedAt,
+        },
+      });
       if (typeof execution !== "string" && execution.actionResult) {
         actionResults.push(execution.actionResult);
         onEvent({ type: "metadata", data: { actionResult: execution.actionResult } });
@@ -3340,8 +3354,19 @@ export class ProfessorMariWorkspaceService {
       return { id: command.id, name: command.name, input, output: compacted, success: true };
     } catch (err) {
       const output = err instanceof Error ? err.message : String(err);
-      upsertTraceTool(trace, { id: command.id, name: command.name, status: "error", output, updatedAt: Date.now() });
-      onEvent({ type: "tool_end", data: { id: command.id, name: command.name, isError: true, output } });
+      const endedAt = Date.now();
+      upsertTraceTool(trace, {
+        id: command.id,
+        name: command.name,
+        status: "error",
+        output,
+        startedAt,
+        updatedAt: endedAt,
+      });
+      onEvent({
+        type: "tool_end",
+        data: { id: command.id, name: command.name, isError: true, output, durationMs: endedAt - startedAt },
+      });
       return { id: command.id, name: command.name, input, output, success: false };
     }
   }

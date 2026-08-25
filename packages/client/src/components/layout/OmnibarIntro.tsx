@@ -66,16 +66,22 @@ export function OmnibarIntro() {
 
   const captions = [
     {
-      text: t("omnibar.intro.step1", "Every corner of Marinara has its own button up there."),
+      text: t("omnibar.intro.step1", "Start here when you need to find something in Marinara."),
       in: FADE_MS,
       out: FIRST_FLY_MS + 200,
     },
     {
-      text: t("omnibar.intro.step2", "You no longer have to remember which one."),
+      text: t("omnibar.intro.step2", "Search across your chats, characters, lorebooks, presets, and more."),
       in: FIRST_FLY_MS + 400,
       out: LAST_LANDING_MS - 400,
     },
-    { text: t("omnibar.intro.step3", "Just start typing. This one field searches all of it."), in: LAST_LANDING_MS },
+    {
+      text: t(
+        "omnibar.intro.step3",
+        "Type what you need. Use a scope when you want more control, or ask Professor Mari.",
+      ),
+      in: LAST_LANDING_MS,
+    },
   ];
 
   return (
@@ -125,7 +131,7 @@ export function OmnibarIntro() {
         <img src={MARI_BLINK_URL} alt="" draggable={false} data-part="blink" />
       </span>
       <p className="omnibar-mari-bubble omnibar-intro__bubble">
-        {t("omnibar.intro.line", "And this is where I live. Search for a thing, or just ask me for it.")}
+        {t("omnibar.intro.line", "Search first. When you need help or want to take action, ask Professor Mari here.")}
       </p>
     </div>
   );

@@ -2537,7 +2537,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       }`}
       // An empty bar sits lower, near the middle, so the hint field below it has
       // room; it rides back up as soon as results need the space.
-      style={{ "--omnibar-top": idle ? "26vh" : "10vh" } as React.CSSProperties}
+      style={{ "--omnibar-top": idle && !mariSurface ? "26vh" : "10vh" } as React.CSSProperties}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={reduceMotion ? { duration: 0 } : { duration: 0.12, ease: "easeOut" }}

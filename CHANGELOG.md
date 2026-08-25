@@ -8,6 +8,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Professor Mari's workspace now prioritizes one live state at a time, presents completed characters and lorebooks through the shared omnibar preview, keeps approvals in one aligned transcript surface, and gives active work a larger animated stage with live reasoning and task context.
 - Professor Mari now draws from a discoverable collection of animated work scenes, including image inspection, connected-note reasoning, telescope scouting, sailing, puzzle solving, crystal spelunking, origami, constellation mapping, clockwork repair, typewriting, tiny rocket launches, and rare playful moments, while keeping one stable in-card mascot and honoring reduced-motion preferences.
 - Professor Mari's live work card now flows between narration, mascot activities, and task steps, confirms completed work, and unfolds technical evidence with restrained motion that follows reduced-motion preferences.
+- Professor Mari now records workspace tool durations on the server, so completed work-card steps keep the correct time after a reconnect or reload.
 - Professor Mari's workspace now turns the request into quiet character context, keeps Chats, Skills, Memories, and Context visible in the desktop header while mobile collapses them into the overflow menu, and presents live work in a focused task card with Mari on the right, a full resource row, progress, and technical actions.
 - Redesigned Professor Mari's live activity as one focused work card with elapsed time, progress, resource context, collapsible tool details, and an animated in-card mascot on desktop and mobile.
 - Professor Mari's suggestions now appear as answers to her question in the conversation, while the composer stays focused on attachments and writing.
@@ -15,6 +16,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Completed Professor Mari character and lorebook work now reuses the omnibar's resource identity system, including portraits and descriptive context, before flowing into review.
 - Professor Mari's full-screen mobile workspace now traps and restores focus, announces itself as a dialog, closes predictably with Escape, and honors reduced-motion preferences.
 - Finished Professor Mari runs now keep technical reasoning collapsed by default, and obsolete workspace presentation styles were removed.
+- The omnibar introduction now presents search as its primary purpose, with scopes, controls, and Professor Mari as related tools. Opening Professor Mari from an empty omnibar also moves the full workspace up so its content stays available.
 
 ### Changed
 
