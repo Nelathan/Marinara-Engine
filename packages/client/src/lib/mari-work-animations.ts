@@ -56,26 +56,79 @@ const ANIMATIONS = {
     id: "spelunking",
     src: "/sprites/mari/generated/professor-mari-work-spelunking.png",
   },
+  origami: {
+    id: "origami",
+    src: "/sprites/mari/generated/professor-mari-work-origami.png",
+  },
+  constellation: {
+    id: "constellation",
+    src: "/sprites/mari/generated/professor-mari-work-constellation.png",
+  },
+  clockwork: {
+    id: "clockwork",
+    src: "/sprites/mari/generated/professor-mari-work-clockwork.png",
+  },
+  typewriter: {
+    id: "typewriter",
+    src: "/sprites/mari/generated/professor-mari-work-typewriter.png",
+  },
+  rocket: {
+    id: "rocket",
+    src: "/sprites/mari/generated/professor-mari-work-rocket.png",
+  },
 } satisfies Record<string, MariWorkAnimation>;
 
-const GENERAL_POOL = [ANIMATIONS.assistant, ANIMATIONS.tea, ANIMATIONS.yarn, ANIMATIONS.airplane, ANIMATIONS.boat];
+const GENERAL_POOL = [
+  ANIMATIONS.assistant,
+  ANIMATIONS.tea,
+  ANIMATIONS.yarn,
+  ANIMATIONS.airplane,
+  ANIMATIONS.boat,
+  ANIMATIONS.origami,
+  ANIMATIONS.clockwork,
+  ANIMATIONS.rocket,
+];
 const RESEARCH_POOL = [
   ANIMATIONS.detective,
   ANIMATIONS.books,
   ANIMATIONS.deepDive,
   ANIMATIONS.telescope,
   ANIMATIONS.spelunking,
+  ANIMATIONS.constellation,
 ];
-const PLANNING_POOL = [ANIMATIONS.yarn, ANIMATIONS.tea, ANIMATIONS.airplane, ANIMATIONS.telescope, ANIMATIONS.puzzle];
-const FILE_POOL = [ANIMATIONS.assistant, ANIMATIONS.detective, ANIMATIONS.yarn, ANIMATIONS.airplane];
+const PLANNING_POOL = [
+  ANIMATIONS.yarn,
+  ANIMATIONS.tea,
+  ANIMATIONS.airplane,
+  ANIMATIONS.telescope,
+  ANIMATIONS.puzzle,
+  ANIMATIONS.origami,
+  ANIMATIONS.constellation,
+];
+const FILE_POOL = [
+  ANIMATIONS.assistant,
+  ANIMATIONS.detective,
+  ANIMATIONS.yarn,
+  ANIMATIONS.airplane,
+  ANIMATIONS.origami,
+  ANIMATIONS.typewriter,
+];
 const DEBUG_POOL = [
   ANIMATIONS.pixelBug,
   ANIMATIONS.detective,
   ANIMATIONS.deepDive,
   ANIMATIONS.puzzle,
   ANIMATIONS.spelunking,
+  ANIMATIONS.clockwork,
 ];
-const LONG_RUNNING_POOL = [ANIMATIONS.train, ANIMATIONS.tea, ANIMATIONS.books, ANIMATIONS.boat];
+const LONG_RUNNING_POOL = [
+  ANIMATIONS.train,
+  ANIMATIONS.tea,
+  ANIMATIONS.books,
+  ANIMATIONS.boat,
+  ANIMATIONS.clockwork,
+  ANIMATIONS.rocket,
+];
 
 function stableHash(value: string): number {
   let hash = 2_166_136_261;

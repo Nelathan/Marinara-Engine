@@ -1288,13 +1288,16 @@
 
 .mari-live-work__sprite[data-scene="detective"],
 .mari-live-work__sprite[data-scene="pixel-bug"],
-.mari-live-work__sprite[data-scene="puzzle"] {
+.mari-live-work__sprite[data-scene="puzzle"],
+.mari-live-work__sprite[data-scene="typewriter"] {
   animation-duration: 2.8s;
 }
 
 .mari-live-work__sprite[data-scene="tea"],
 .mari-live-work__sprite[data-scene="books"],
-.mari-live-work__sprite[data-scene="yarn"] {
+.mari-live-work__sprite[data-scene="yarn"],
+.mari-live-work__sprite[data-scene="origami"],
+.mari-live-work__sprite[data-scene="constellation"] {
   animation-duration: 4.4s;
 }
 
@@ -1307,7 +1310,9 @@
 }
 
 .mari-live-work__sprite[data-scene="paper-airplane"],
-.mari-live-work__sprite[data-scene="telescope"] {
+.mari-live-work__sprite[data-scene="telescope"],
+.mari-live-work__sprite[data-scene="clockwork"],
+.mari-live-work__sprite[data-scene="rocket"] {
   animation-duration: 3.2s;
 }
 
