@@ -349,8 +349,8 @@ function scoreText(query: string, values: readonly string[]) {
     if (!normalized) return best;
     if (normalized === query) return Math.max(best, 300 + normalized.length);
     if (normalized.startsWith(query)) return Math.max(best, 200 + query.length);
-    if (normalized.length >= 2 && ` ${query} `.includes(` ${normalized} `)) {
-      return Math.max(best, 150 + normalized.length);
+    if (query.length >= 2 && ` ${normalized} `.includes(` ${query} `)) {
+      return Math.max(best, 150 + query.length);
     }
     if (normalized.includes(query)) return Math.max(best, 100 + query.length);
     return Math.max(best, scoreSubsequence(query, normalized));

@@ -2450,7 +2450,8 @@ export class ProfessorMariWorkspaceService {
       if (match?.[1]) {
         try {
           const parsed: unknown = JSON.parse(match[1]);
-          const after = isRecord(parsed) && typeof parsed.after === "string" ? parsed.after : null;
+          const after =
+            isRecord(parsed) && typeof parsed.after === "string" && parsed.after.length <= 8_000 ? parsed.after : null;
           if (after !== null && after !== quickEditTarget.currentValue) {
             const proposal: ProfessorMariQuickEditProposal = {
               id: randomUUID(),

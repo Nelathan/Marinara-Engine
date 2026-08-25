@@ -173,6 +173,7 @@ interface TargetSelectionProps {
 function TargetSelection({ attackType, enemies, party, onSelect, onCancel }: TargetSelectionProps) {
   const { t: localizeUi } = useUiTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRequestPendingRef = useRef(false);
   useDialogFocusScope(true, dialogRef);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -774,15 +775,21 @@ function EncounterModalInner() {
   useDialogFocusScope(active && !showConfigModal, dialogRef);
 
   const requestCloseEncounter = useCallback(async () => {
-    if (
-      await showConfirmDialog({
-        title: localizeUi("ui.chat.encountermodalinner.endCombat"),
-        message: localizeUi("ui.chat.encountermodalinner.closeAndEndThisCombat"),
-        confirmLabel: localizeUi("ui.chat.encountermodalinner.endCombat"),
-        tone: "destructive",
-      })
-    ) {
-      closeEncounter();
+    if (closeRequestPendingRef.current) return;
+    closeRequestPendingRef.current = true;
+    try {
+      if (
+        await showConfirmDialog({
+          title: localizeUi("ui.chat.encountermodalinner.endCombat"),
+          message: localizeUi("ui.chat.encountermodalinner.closeAndEndThisCombat"),
+          confirmLabel: localizeUi("ui.chat.encountermodalinner.endCombat"),
+          tone: "destructive",
+        })
+      ) {
+        closeEncounter();
+      }
+    } finally {
+      closeRequestPendingRef.current = false;
     }
   }, [closeEncounter, localizeUi]);
 

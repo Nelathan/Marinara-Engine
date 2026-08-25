@@ -24,6 +24,10 @@ function flattenLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function escapeXmlAttribute(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
 export function renderMariSkillsPrompt(
   skills: MariWorkspaceSkillDetail[],
   diagnostics: string[] = [],
@@ -49,7 +53,7 @@ export function renderMariSkillsPrompt(
     indexChars += line.length + 1;
     // Body is prompt LEAF content and reaches the model verbatim (CONTRIBUTING.md
     // "Prompt Leaf Content Is Verbatim"); structure comes from the fixed wrapper.
-    const section = `<skill name="${flattenLine(skill.name)}" id="${flattenLine(skill.id)}">\n${body}\n</skill>`;
+    const section = `<skill name="${escapeXmlAttribute(flattenLine(skill.name))}" id="${escapeXmlAttribute(flattenLine(skill.id))}">\n${body}\n</skill>`;
     if (body.length <= maxInlineSkillChars && section.length + 1 <= inlineBudget) {
       inlineSections.push(section);
       inlineBudget -= section.length + 1;

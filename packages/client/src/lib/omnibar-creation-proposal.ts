@@ -107,7 +107,8 @@ export function parseCreationSeed(query: string): CreationProposal | null {
     );
     if (countMatch) {
       const token = countMatch[1]!.toLowerCase();
-      extraCharacterCount = NUMBER_WORDS[token] ?? Number.parseInt(token, 10) ?? 0;
+      const parsedCount = NUMBER_WORDS[token] ?? Number.parseInt(token, 10);
+      extraCharacterCount = Number.isFinite(parsedCount) ? Math.min(6, Math.max(0, parsedCount)) : 0;
     } else {
       characterNames = splitNames(withPart);
     }

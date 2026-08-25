@@ -22,13 +22,13 @@ interface Props {
 
 type PanelPosition = { top: number; right: number };
 
-const CAPABILITY_LABELS: Record<ProfessorMariAskContext["capability"], string> = {
-  explain: "Explain",
-  recommend: "Recommend",
-  create: "Create",
-  edit: "Edit",
-  repair: "Repair",
-  navigate: "Navigate",
+const CAPABILITY_LABELS: Record<ProfessorMariAskContext["capability"], { key: string; fallback: string }> = {
+  explain: { key: "mari.context.capability.explain", fallback: "Explain" },
+  recommend: { key: "mari.context.capability.recommend", fallback: "Recommend" },
+  create: { key: "mari.context.capability.create", fallback: "Create" },
+  edit: { key: "mari.context.capability.edit", fallback: "Edit" },
+  repair: { key: "mari.context.capability.repair", fallback: "Repair" },
+  navigate: { key: "mari.context.capability.navigate", fallback: "Navigate" },
 };
 
 export function ProfessorMariContextControl({
@@ -42,7 +42,9 @@ export function ProfessorMariContextControl({
 }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 639px)").matches);
+  const [mobile, setMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches,
+  );
   const [position, setPosition] = useState<PanelPosition | null>(null);
   const panelMounted = mobile || position !== null;
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -56,13 +58,16 @@ export function ProfessorMariContextControl({
       ? t("ui.chat.homeprofessormarichat.contextControlChat")
       : t("ui.chat.homeprofessormarichat.contextControlResource");
   const focusLabel = context?.resource?.label ?? context?.resource?.kind ?? context?.source;
-  const capabilityLabel = context ? CAPABILITY_LABELS[context.capability] : "";
+  const capabilityLabel = context
+    ? t(CAPABILITY_LABELS[context.capability].key, CAPABILITY_LABELS[context.capability].fallback)
+    : "";
   const showCapability = Boolean(context && (context.query || context.field || context.error || context.action));
   const relatedCount = context?.relatedResources?.length ?? 0;
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 639px)");
     const update = () => setMobile(query.matches);
+    update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);

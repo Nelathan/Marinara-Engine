@@ -2572,20 +2572,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             : addToChatAction;
           return [editAction, ...(askMariAction ? [askMariAction] : []), ...(contextAction ? [contextAction] : [])];
         }
-        if (previewResult.control?.type === "toggle") {
-          return [
-            ...mariActions,
-            {
-              label: previewResult.control.value
-                ? t("commandCenter.actions.disable", "Disable")
-                : t("commandCenter.actions.enable", "Enable"),
-              icon: ArrowRight,
-              onSelect: () => previewResult.control?.onChange(previewResult.control.value !== true),
-              disabled: resultControlPending(previewResult),
-            },
-            ...(addToChatAction ? [addToChatAction] : []),
-          ];
-        }
         if (previewResult.category === "character") {
           const characterId = getOmnibarResourceId(previewResult);
           const startChatAction = {

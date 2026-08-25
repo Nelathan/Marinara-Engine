@@ -44,6 +44,7 @@ export function MariContextChip({
   );
 
   const genericLabel = t("mari.contextChip.generic", "Ask Professor Mari");
+  const effectiveLabel = suggestion ? t(suggestion.labelKey, suggestion.label, suggestion.labelValues) : genericLabel;
 
   const handleOpen = () => {
     const context: ProfessorMariAskContext = {
@@ -68,12 +69,10 @@ export function MariContextChip({
         className ??
         "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
       }
-      title={genericLabel}
+      title={effectiveLabel}
     >
       <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-      <span className="truncate">
-        {suggestion ? t(suggestion.labelKey, suggestion.label, suggestion.labelValues) : genericLabel}
-      </span>
+      <span className="truncate">{effectiveLabel}</span>
     </button>
   );
 }

@@ -7,10 +7,8 @@ type Props = {
   lorebook: LorebookPreviewModel;
   label: string;
   compact?: boolean;
-  onRemove?: () => void;
-  removeLabel?: string;
   className?: string;
-};
+} & ({ onRemove: () => void; removeLabel: string } | { onRemove?: undefined; removeLabel?: never });
 
 export function LorebookSubject({ lorebook, label, compact = false, onRemove, removeLabel, className }: Props) {
   return (

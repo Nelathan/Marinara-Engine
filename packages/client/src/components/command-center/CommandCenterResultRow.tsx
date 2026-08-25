@@ -1,4 +1,4 @@
-import type { MouseEventHandler, ReactNode } from "react";
+import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 import { CornerDownLeft, Settings2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export interface CommandCenterResultRowProps {
   onSelect: () => void;
   mediaSrc?: string | null;
   mediaKind?: CommandCenterMediaKind;
-  avatarCropStyle?: React.CSSProperties;
+  avatarCropStyle?: CSSProperties;
   groupClassName?: string;
   accent?: string | null;
   control?: ReactNode;
@@ -35,7 +35,7 @@ export interface CommandCenterResultRowProps {
   onMouseMove?: MouseEventHandler<HTMLLIElement>;
   onMouseLeave?: MouseEventHandler<HTMLLIElement>;
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 export function CommandCenterResultRow({

@@ -63,6 +63,16 @@ export const PROFESSOR_MARI_CAPABILITY_CATALOG = {
 
 export type ProfessorMariCapability = keyof typeof PROFESSOR_MARI_CAPABILITY_CATALOG;
 
+export function isCapabilityAllowedFrom(capability: ProfessorMariCapability, source: ProfessorMariEntryPoint): boolean {
+  return (PROFESSOR_MARI_CAPABILITY_CATALOG[capability].entryPoints as readonly ProfessorMariEntryPoint[]).includes(
+    source,
+  );
+}
+
+export function completionKindFor(capability: ProfessorMariCapability): ProfessorMariCompletionKind {
+  return PROFESSOR_MARI_CAPABILITY_CATALOG[capability].completion;
+}
+
 export type ProfessorMariContextResourceKind =
   | "character"
   | "persona"
@@ -409,7 +419,9 @@ export function sanitizeMariGuidedPlan(
   if (!Array.isArray(raw)) return [];
   const maxSteps = normalizeMariCap(options.maxSteps, 8);
   const maxChipsPerStep = normalizeMariCap(options.maxChipsPerStep, 5);
+  if (maxSteps === 0) return [];
   const steps: MariGuidedPlanStep[] = [];
+  const fieldKeys = new Set<string>();
   for (const entry of raw) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
     const record = entry as Record<string, unknown>;
@@ -422,7 +434,8 @@ export function sanitizeMariGuidedPlan(
     if (chips.length === 0) continue;
     const fieldKey = truncateMariChipText(rawFieldKey, 40).replace(/\s+/g, "_");
     const question = truncateMariChipText(rawQuestion, 120);
-    if (!fieldKey || !question) continue;
+    if (!fieldKey || !question || fieldKeys.has(fieldKey)) continue;
+    fieldKeys.add(fieldKey);
     steps.push({
       fieldKey,
       question,

@@ -89,7 +89,12 @@ export function GlobalOmnibar() {
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (
+        !event.defaultPrevented &&
+        !useUIStore.getState().modal &&
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "k"
+      ) {
         event.preventDefault();
         setOpen(!useUIStore.getState().omnibarOpen);
       }

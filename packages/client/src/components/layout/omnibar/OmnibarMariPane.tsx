@@ -97,6 +97,7 @@ export function OmnibarMariPane({
             <button
               type="button"
               onClick={() => onAcceptProposal(proposalDraft, { assistedOnly: true })}
+              disabled={acceptPending}
               className="mari-chrome-control mari-chrome-control--small"
             >
               {t("commandCenter.proposal.withMari", "Build with Mari")}

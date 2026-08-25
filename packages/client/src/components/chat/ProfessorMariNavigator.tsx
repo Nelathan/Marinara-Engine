@@ -170,7 +170,6 @@ export function ProfessorMariNavigator({
   const resetTimerRef = useRef<number | null>(null);
   const pendingNavigationTargetRef = useRef<ProfessorMariNavigationTarget | null>(null);
   const onNavigateRef = useRef(onNavigate);
-  onNavigateRef.current = onNavigate;
   const focusFrameRef = useRef<number | null>(null);
   const overlayRef = useRef<HTMLElement | null>(null);
   const spriteRef = useRef<HTMLDivElement | null>(null);
@@ -198,6 +197,10 @@ export function ProfessorMariNavigator({
   const [dragging, setDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState<ProfessorAssistantPosition | null>(null);
   const [dragLayout, setDragLayout] = useState<ProfessorAssistantDragLayout | null>(null);
+
+  useEffect(() => {
+    onNavigateRef.current = onNavigate;
+  }, [onNavigate]);
 
   const clearTimers = useCallback(() => {
     if (appearanceTimerRef.current !== null) window.clearTimeout(appearanceTimerRef.current);
@@ -461,9 +464,9 @@ export function ProfessorMariNavigator({
     event.stopPropagation();
     if (event.target instanceof HTMLElement)
       event.target.closest<HTMLElement>("[role=button]")?.focus({ preventScroll: true });
-    event.currentTarget.setPointerCapture(event.pointerId);
     const spriteBounds = spriteRef.current?.getBoundingClientRect();
     if (!spriteBounds) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
       offsetX: spriteBounds.width * PROFESSOR_ASSISTANT_HOOD_GRAB_X,
@@ -561,7 +564,7 @@ export function ProfessorMariNavigator({
     rememberProfessorAssistantPosition(positionStorageKey, normalized);
   };
 
-  const renderedDragPosition = dragging ? positionRef.current : dragPosition;
+  const renderedDragPosition = dragPosition;
   const desktopSpriteStyle = useMemo<CSSProperties | undefined>(() => {
     if (!desktopDragEnabled) return undefined;
     if (!renderedDragPosition) return { visibility: "hidden" };

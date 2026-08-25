@@ -11,11 +11,15 @@ export function InlineGhostText({
   suffix,
   className,
   multiline,
+  scrollLeft = 0,
+  scrollTop = 0,
 }: {
   value: string;
   suffix: string;
   className?: string;
   multiline?: boolean;
+  scrollLeft?: number;
+  scrollTop?: number;
 }) {
   if (!suffix) return null;
   return (
@@ -27,6 +31,7 @@ export function InlineGhostText({
         multiline ? "whitespace-pre-wrap break-words" : "whitespace-pre",
         className,
       )}
+      style={multiline ? { transform: `translate(${-scrollLeft}px, ${-scrollTop}px)` } : undefined}
     >
       {value}
       <span className="text-[var(--muted-foreground)]/55">{suffix}</span>

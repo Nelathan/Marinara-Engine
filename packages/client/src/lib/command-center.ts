@@ -1,4 +1,9 @@
-import type { ProfessorMariAskContext } from "@marinara-engine/shared";
+import {
+  PROFESSOR_MARI_CAPABILITY_CATALOG,
+  type ProfessorMariAskContext,
+  type ProfessorMariCapability,
+  type ProfessorMariContextResource,
+} from "@marinara-engine/shared";
 import type { ProfessorMariNavigationTarget } from "./professor-mari-navigation";
 
 export type CommandKind = "navigation" | "chat" | "resource" | "settings" | "action";
@@ -339,12 +344,46 @@ function normalizeMariHandoff(value: unknown): CommandCenterMariHandoff | null {
   const source = value as Record<string, unknown>;
   const status = source.status;
   if (status !== "pending" && status !== "working" && status !== "finished") return null;
-  // The context only feeds `omnibarCompletionActions`, which already tolerates a
-  // missing capability, resource or field, so a shallow check is enough here.
-  const context =
+  const rawContext =
     source.context && typeof source.context === "object" && !Array.isArray(source.context)
-      ? (source.context as CommandCenterMariHandoff["context"])
+      ? (source.context as Record<string, unknown>)
       : null;
+  const capability =
+    typeof rawContext?.capability === "string" && rawContext.capability in PROFESSOR_MARI_CAPABILITY_CATALOG
+      ? (rawContext.capability as ProfessorMariCapability)
+      : null;
+  const resourceKinds = new Set<ProfessorMariContextResource["kind"]>([
+    "character",
+    "persona",
+    "lorebook",
+    "preset",
+    "connection",
+    "agent",
+    "setting",
+    "chat",
+    "game",
+  ]);
+  const rawResource =
+    rawContext?.resource && typeof rawContext.resource === "object" && !Array.isArray(rawContext.resource)
+      ? (rawContext.resource as Record<string, unknown>)
+      : null;
+  const resourceKind =
+    typeof rawResource?.kind === "string" && resourceKinds.has(rawResource.kind as ProfessorMariContextResource["kind"])
+      ? (rawResource.kind as ProfessorMariContextResource["kind"])
+      : null;
+  const resourceId = typeof rawResource?.id === "string" ? rawResource.id.trim().slice(0, 200) : "";
+  const resource =
+    resourceKind && resourceId
+      ? {
+          kind: resourceKind,
+          id: resourceId,
+          ...(typeof rawResource?.label === "string" ? { label: rawResource.label.trim().slice(0, 200) } : {}),
+        }
+      : undefined;
+  const field = typeof rawContext?.field === "string" ? rawContext.field.trim().slice(0, 200) : "";
+  const context: CommandCenterMariHandoff["context"] = capability
+    ? { capability, ...(resource ? { resource } : {}), ...(field ? { field } : {}) }
+    : null;
   return { status, context };
 }
 

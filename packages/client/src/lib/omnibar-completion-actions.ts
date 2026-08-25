@@ -1,5 +1,5 @@
 import {
-  PROFESSOR_MARI_CAPABILITY_CATALOG,
+  completionKindFor,
   type ProfessorMariAskContext,
   type ProfessorMariCapability,
   type ProfessorMariCompletionKind,
@@ -26,9 +26,7 @@ export function omnibarCompletionActions(
 ): OmnibarCompletionAction[] {
   if (!context) return [{ kind: "return" }];
   const capability = context.capability as ProfessorMariCapability | undefined;
-  const completion: ProfessorMariCompletionKind | undefined = capability
-    ? PROFESSOR_MARI_CAPABILITY_CATALOG[capability]?.completion
-    : undefined;
+  const completion: ProfessorMariCompletionKind | undefined = capability ? completionKindFor(capability) : undefined;
   const resource = context.resource;
   const field = context.field;
 

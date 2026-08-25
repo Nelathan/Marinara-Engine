@@ -550,17 +550,19 @@ export function collectMessageSearchHits(
     // Window the body around the match: a snippet cut from character 0 can miss
     // the term entirely in a long message.
     const windowStart = Math.max(0, matchIndex - 80);
+    const windowEnd = Math.min(message.content.length, windowStart + 600);
     hits.push({
       chatId: chat.id,
       chatName: chat.name,
       messageNumber,
-      content: `${windowStart > 0 ? "…" : ""}${message.content.slice(windowStart, windowStart + 600)}`,
+      content: `${windowStart > 0 ? "…" : ""}${message.content.slice(windowStart, windowEnd)}${windowEnd < message.content.length ? "…" : ""}`,
       createdAt: message.createdAt,
     });
   }
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : 20;
   return hits
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-    .slice(0, Math.max(1, Math.floor(limit)))
+    .slice(0, normalizedLimit)
     .map(({ createdAt: _createdAt, ...hit }) => hit);
 }
 

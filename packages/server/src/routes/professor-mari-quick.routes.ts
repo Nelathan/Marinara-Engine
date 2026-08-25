@@ -5,6 +5,7 @@ import { getProfessorMariWorkspaceService } from "../services/professor-mari/wor
 import { isSseReplyWritable, sendSseEvent, startSseKeepalive, startSseReply } from "./generate/sse.js";
 import { logger } from "../lib/logger.js";
 import { QuickEditConflictError } from "../services/professor-mari/quick-edit-proposal.js";
+import { isCapabilityAllowedFrom } from "@marinara-engine/shared";
 
 const quickContextSchema = z
   .object({
@@ -37,7 +38,16 @@ const quickContextSchema = z
     fieldId: z.string().min(1).max(200).optional(),
     action: z.string().max(500).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((context, issueContext) => {
+    if (!isCapabilityAllowedFrom(context.capability, context.source)) {
+      issueContext.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["capability"],
+        message: `Capability ${context.capability} is not available from ${context.source}`,
+      });
+    }
+  });
 
 export const professorMariQuickPromptSchema = z
   .object({

@@ -1375,6 +1375,7 @@ export function pickSyncedSettings(state: UIState) {
     professorMariSuggestionsEnabled: state.professorMariSuggestionsEnabled,
     professorMariNavigationEnabled: state.professorMariNavigationEnabled,
     commandCenterMariEnabled: state.commandCenterMariEnabled,
+    omnibarSuggestionsEnabled: state.omnibarSuggestionsEnabled,
     achievementsEnabled: state.achievementsEnabled,
     musicPlayerEnabled: state.musicPlayerEnabled,
     musicPlayerSource: state.musicPlayerSource,

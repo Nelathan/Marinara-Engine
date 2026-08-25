@@ -928,6 +928,7 @@ export function CharactersPanel() {
                 </button>
                 <button
                   type="button"
+                  aria-label={localizeUi("ui.panels.characterspanel.deleteTagValue1", { value1: tag })}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteTag(tag);

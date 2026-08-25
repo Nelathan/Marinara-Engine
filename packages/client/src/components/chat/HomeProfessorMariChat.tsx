@@ -84,7 +84,7 @@ import { CharacterSubject } from "../characters/CharacterSubject";
 import { LorebookSubject } from "../lorebooks/LorebookSubject";
 import { homeFeedKeys } from "../../hooks/use-home-feed";
 import { filterLanguageGenerationConnections } from "../../lib/connection-filters";
-import { api, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
+import { api, ApiError, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
 import { describeProfessorMariError } from "../../lib/professor-mari-errors";
 import { resolveProfessorMariVisualState, type ProfessorMariVisualState } from "../../lib/professor-mari-visual-state";
 import {
@@ -2272,6 +2272,16 @@ type ProfessorMariRecovery = {
 };
 
 function classifyProfessorMariFailure(error: unknown): ProfessorMariRecovery["kind"] {
+  const kinds = new Set<ProfessorMariRecovery["kind"]>(["provider", "tool", "context", "general"]);
+  const explicitKind = (value: unknown) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const kind = (value as Record<string, unknown>).kind;
+    return typeof kind === "string" && kinds.has(kind as ProfessorMariRecovery["kind"])
+      ? (kind as ProfessorMariRecovery["kind"])
+      : null;
+  };
+  const structuredKind = explicitKind(error) ?? (error instanceof ApiError ? explicitKind(error.payload) : null);
+  if (structuredKind) return structuredKind;
   const message = getPrivilegedActionErrorMessage(error, "").toLowerCase();
   if (/context|token|prompt|too large|limit/.test(message)) return "context";
   if (/tool|sandbox|capability|permission|workspace|shell|file/.test(message)) return "tool";
@@ -2487,6 +2497,7 @@ export function HomeProfessorMariChat({
     if (draftSuffix) setDraft((current) => current + draftSuffix);
   }, [draftSuffix, setDraft]);
   const [attachments, setAttachments] = useState<ProfessorMariAttachment[]>([]);
+  const [composerScroll, setComposerScroll] = useState({ left: 0, top: 0 });
   const [handoffContext, setHandoffContext] = useState<ProfessorMariAskContext | null>(null);
   const characterFallbackName = t("omnibar.categories.character", "Character");
   const focusedCharacter = resolveContextCharacter(handoffContext, characterPreviewById, characterFallbackName);
@@ -3169,7 +3180,10 @@ export function HomeProfessorMariChat({
   );
   const visiblePendingChangeReviewKey = visiblePendingChangeReviews.map((approval) => approval.id).join("|");
   const latestMessage = messages[messages.length - 1];
-  const latestActionResults = latestMessage ? getMessageWorkspaceActionResults(latestMessage) : [];
+  const latestActionResults = useMemo(
+    () => (latestMessage ? getMessageWorkspaceActionResults(latestMessage) : []),
+    [latestMessage],
+  );
   const mariPresentationState =
     recovery || workspaceStatus?.error
       ? "broken"
@@ -4376,7 +4390,7 @@ export function HomeProfessorMariChat({
         ...current,
         createLocalUserMessage(chat.id, messageText, submittedAttachments, submittedContext),
       ]);
-      if (messages.length === 0 && (chat.name ?? "") === PROFESSOR_MARI_DEFAULT_CHAT_NAME) {
+      if (messagesRef.current.length === 0 && (chat.name ?? "") === PROFESSOR_MARI_DEFAULT_CHAT_NAME) {
         const autoTitle = buildProfessorMariAutoTitle(messageText);
         if (autoTitle) {
           // Best effort: a failed rename must never block the message.
@@ -5234,6 +5248,8 @@ export function HomeProfessorMariChat({
                               value={draft}
                               suffix={draftSuffix}
                               multiline
+                              scrollLeft={composerScroll.left}
+                              scrollTop={composerScroll.top}
                               className="px-1 py-1.5 text-sm leading-normal"
                             />
                             <textarea
@@ -5243,6 +5259,12 @@ export function HomeProfessorMariChat({
                                 setDraft(event.target.value);
                                 if (mobileFocusMode) event.currentTarget.scrollIntoView({ block: "end" });
                               }}
+                              onScroll={(event) =>
+                                setComposerScroll({
+                                  left: event.currentTarget.scrollLeft,
+                                  top: event.currentTarget.scrollTop,
+                                })
+                              }
                               onKeyDown={(event) => {
                                 if (event.key === "Tab" && !event.shiftKey && draftSuffix) {
                                   event.preventDefault();

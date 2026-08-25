@@ -27,6 +27,6 @@ export function buildLorebookPreviewModel(
     isGlobal: lorebook.isGlobal,
     enabled: lorebook.enabled,
     linkedNames: [...(options.linkedNames ?? [])],
-    tags: lorebook.tags ?? [],
+    tags: [...(lorebook.tags ?? [])],
   };
 }
