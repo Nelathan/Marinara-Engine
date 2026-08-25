@@ -2490,9 +2490,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           pane === "mari"
             ? "mari-workspace-shell sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]"
             : idle
-              ? // Nothing to list: the panel is the bar and Mari's hello, so it shrinks to them
+              ? // Nothing to list: the panel is only the bar, so it shrinks to it
                 // instead of framing an empty box.
-                "sm:h-auto sm:max-h-[min(36rem,68dvh)]"
+                "sm:h-auto"
               : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"
         }`}
       >
@@ -2524,6 +2524,23 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               >
                 <ChevronLeft size={18} />
               </button>
+            ) : idle ? (
+              // Empty bar: Mari greets in person instead of a magnifier.
+              <span
+                className="mari-workspace-portrait"
+                data-size="sm"
+                data-state={mariVisualState}
+                data-conversation="true"
+                aria-hidden="true"
+              >
+                <img src={PROFESSOR_MARI_PEEK_URL} alt="" draggable={false} data-part="idle" />
+                <img
+                  src="/sprites/mari/generated/professor-mari-assistant-blink-v3.png"
+                  alt=""
+                  draggable={false}
+                  data-part="blink"
+                />
+              </span>
             ) : (
               <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
             )}
@@ -2595,10 +2612,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     spellCheck={false}
                     aria-label={t("omnibar.inputLabel", "Search Marinara")}
                     onKeyDown={onInputKeyDown}
-                    placeholder={t(
-                      "commandCenter.placeholder",
-                      "Search everything — or narrow with faq:, docs:, msg:, char:",
-                    )}
+                    placeholder={
+                      idle
+                        ? t("omnibar.hello", "Hi, I'm Mari. Type to search, or ask me for anything...")
+                        : t("commandCenter.placeholder", "Search everything — or narrow with faq:, docs:, msg:, char:")
+                    }
                     className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)] [&::-webkit-search-cancel-button]:hidden"
                   />
                 </motion.div>
@@ -2710,7 +2728,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             />
           </Suspense>
         ) : null}
-        {pane === "mari" ? null : (
+        {pane === "mari" || idle ? null : (
           <div className="flex min-h-0 flex-1">
             <div
               ref={listRef}
@@ -2719,14 +2737,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               data-component="GlobalOmnibar.Results"
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2"
             >
-              {idle ? (
-                <p
-                  data-component="GlobalOmnibar.Hello"
-                  className="px-3 py-4 text-center text-[0.8125rem] text-[var(--muted-foreground)] motion-safe:animate-fade-in-up"
-                >
-                  {t("omnibar.hello", "Hi, I'm Mari. Type to search, or ask me for anything.")}
-                </p>
-              ) : null}
               {query.trim() && loading && results.length === 0 ? (
                 <div className="flex min-h-24 items-center justify-center text-sm text-[var(--muted-foreground)]">
                   <Loader2 className="mr-2 animate-spin" size={16} />
@@ -2897,7 +2907,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {!mariSurface ? (
+        {!mariSurface && !idle ? (
           <Suspense fallback={null}>
             <OmnibarAside
               state={asideState}
@@ -2913,7 +2923,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           </Suspense>
         ) : null}
 
-        {!mariSurface ? (
+        {!mariSurface && !idle ? (
           <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
             {/* The conditional hints group to the left so the two permanent
                 hints keep their positions as rows gain and lose shortcuts. */}

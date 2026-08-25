@@ -734,6 +734,16 @@
   transform: translateY(0.15rem);
 }
 
+/* Header-row variant: fits the omnibar's 3.5rem bar where the search icon sat. */
+.mari-workspace-portrait[data-size="sm"] {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.mari-workspace-portrait[data-size="sm"] img {
+  height: 3.25rem;
+}
+
 .mari-workspace-portrait [data-part="blink"] {
   opacity: 0;
 }

@@ -992,7 +992,7 @@
   "omnibar.greeting.evening": "Good evening — what do you want to do?",
   "omnibar.greeting.hint": "Search, jump to anything, or ask Professor Mari.",
   "omnibar.greeting.morning": "Good morning — what do you want to do?",
-  "omnibar.hello": "Hi, I'm Mari. Type to search, or ask me for anything.",
+  "omnibar.hello": "Hi, I'm Mari. Type to search, or ask me for anything...",
   "omnibar.inputLabel": "Search Marinara",
   "omnibar.loading": "Loading results",
   "omnibar.noResults": "No results",
