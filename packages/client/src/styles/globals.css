@@ -1159,29 +1159,49 @@
   flex: 1;
 }
 
-.mari-omnibar-trust-chrome {
-  background: color-mix(in srgb, var(--card) 78%, var(--mari-workspace-hoodie));
+.mari-omnibar-empty-welcome {
+  max-width: 34rem;
+  margin: auto;
+  border: 1px solid color-mix(in srgb, var(--mari-workspace-blush) 28%, var(--border));
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--card) 93%, var(--mari-workspace-hoodie));
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow:
+    0 1rem 2.5rem color-mix(in srgb, var(--background) 32%, transparent),
+    inset 0 1px color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
-.mari-omnibar-trust-chrome [data-component="HomeProfessorMariChat.TrustStrip"] {
-  display: flex;
-  min-width: 0;
-  flex-wrap: nowrap;
+.mari-omnibar-empty-welcome__eyebrow {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.25rem;
-  overflow-x: auto;
-  scrollbar-width: none;
+  gap: 0.35rem;
+  color: var(--primary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.mari-omnibar-trust-chrome [data-component="HomeProfessorMariChat.TrustStrip"]::-webkit-scrollbar {
-  display: none;
+.mari-omnibar-empty-welcome h3 {
+  margin-top: 0.65rem;
+  color: var(--foreground);
+  font-size: 1.05rem;
+  font-weight: 750;
 }
 
-.mari-omnibar-trust-chrome .mari-chrome-control {
-  min-height: 1.75rem;
-  border-color: color-mix(in srgb, var(--mari-workspace-blush) 18%, var(--border));
-  background: color-mix(in srgb, var(--background) 48%, transparent);
+.mari-omnibar-empty-welcome > p {
+  max-width: 32rem;
+  margin: 0.45rem auto 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.mari-omnibar-empty-welcome .mari-suggestion-chips {
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 0;
 }
 
 .mari-omnibar-header-menu__popover [role="separator"] {

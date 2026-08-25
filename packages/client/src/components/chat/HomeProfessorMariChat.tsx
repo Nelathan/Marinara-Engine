@@ -4935,6 +4935,21 @@ export function HomeProfessorMariChat({
                         ) : (
                           <>
                             {displayMessages.map(renderDisplayMessage)}
+                            {omnibarMode && messages.length === 0 && !isBusy && loadedMessagesChatId === chatId ? (
+                              <div className="mari-omnibar-empty-welcome">
+                                <div className="mari-omnibar-empty-welcome__eyebrow">
+                                  <Sparkles size="0.8rem" aria-hidden="true" />
+                                  {localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
+                                </div>
+                                <h3>{localizeUi("ui.chat.homeprofessormarichat.emptyWelcomeTitle")}</h3>
+                                <p>{localizeUi("ui.chat.homeprofessormarichat.emptyWelcomeDescription")}</p>
+                                <MariSuggestionChips
+                                  chips={chipRowChips}
+                                  onSelect={handleSuggestionSelect}
+                                  disabled={isBusy}
+                                />
+                              </div>
+                            ) : null}
                             {showConnectionFirstHint && (
                               <p className="px-3 py-1 text-center text-xs text-[var(--muted-foreground)]">
                                 {localizeUi("ui.chat.homeprofessormarichat.selectAConnectionFirst")}
@@ -4950,7 +4965,7 @@ export function HomeProfessorMariChat({
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-                            {omnibarMode && showSuggestionPrompt && suggestionQuestion ? (
+                            {omnibarMode && messages.length > 0 && showSuggestionPrompt && suggestionQuestion ? (
                               <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
                                 <div className="mari-suggestion-question-turn">
                                   <CompactMarkdown content={suggestionQuestion} />
@@ -4964,12 +4979,6 @@ export function HomeProfessorMariChat({
                       {visiblePendingChangeReviews.length > 0 && workspaceDestination === "chat" ? (
                         <div className="mari-workspace-review-dock shrink-0 overflow-y-auto border-t border-[var(--border)]/60 px-3 py-3 sm:px-7">
                           {pendingApprovalsPanel}
-                        </div>
-                      ) : null}
-
-                      {omnibarMode ? (
-                        <div className="mari-omnibar-trust-chrome shrink-0 border-t border-[var(--border)]/45 px-3 py-1.5 sm:px-7">
-                          {trustStrip}
                         </div>
                       ) : null}
 
@@ -5039,37 +5048,39 @@ export function HomeProfessorMariChat({
                           </div>
 
                           {oneShotContext ? (
-                            <span className="mari-workspace-context-chip inline-flex min-w-0 max-w-[13rem] shrink items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/8 px-2 py-1 text-[0.6875rem] text-[var(--foreground)]">
-                              <Sparkles size="0.7rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
-                              <span className="min-w-0 truncate">
-                                {oneShotContext.resource?.label
-                                  ? oneShotContext.field
-                                    ? localizeUi("ui.chat.homeprofessormarichat.resourceContextValue1Value2", {
-                                        value1: oneShotContext.resource.label,
-                                        value2: oneShotContext.field,
-                                      })
-                                    : oneShotContext.resource.label
-                                  : oneShotContext.activeChat?.label
-                                    ? oneShotContext.activeChat.label
-                                    : oneShotContext.settingsLocation?.tab
-                                      ? localizeUi("ui.chat.homeprofessormarichat.settingsContextValue1", {
-                                          value1: oneShotContext.settingsLocation.tab,
+                            <div className="mari-omnibar-context-attachment mb-2">
+                              <span className="mari-workspace-context-chip inline-flex min-w-0 max-w-[18rem] shrink items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/8 px-2 py-1 text-[0.6875rem] text-[var(--foreground)]">
+                                <Sparkles size="0.7rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
+                                <span className="min-w-0 truncate">
+                                  {oneShotContext.resource?.label
+                                    ? oneShotContext.field
+                                      ? localizeUi("ui.chat.homeprofessormarichat.resourceContextValue1Value2", {
+                                          value1: oneShotContext.resource.label,
+                                          value2: oneShotContext.field,
                                         })
-                                      : oneShotContext.query
-                                        ? localizeUi("ui.chat.homeprofessormarichat.searchContextValue1", {
-                                            value1: oneShotContext.query,
+                                      : oneShotContext.resource.label
+                                    : oneShotContext.activeChat?.label
+                                      ? oneShotContext.activeChat.label
+                                      : oneShotContext.settingsLocation?.tab
+                                        ? localizeUi("ui.chat.homeprofessormarichat.settingsContextValue1", {
+                                            value1: oneShotContext.settingsLocation.tab,
                                           })
-                                        : localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}
+                                        : oneShotContext.query
+                                          ? localizeUi("ui.chat.homeprofessormarichat.searchContextValue1", {
+                                              value1: oneShotContext.query,
+                                            })
+                                          : localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setHandoffContext(null)}
+                                  className="inline-flex size-5 shrink-0 items-center justify-center rounded hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+                                  aria-label={localizeUi("ui.chat.homeprofessormarichat.contextControlRemoveFocus")}
+                                >
+                                  <X size="0.7rem" aria-hidden="true" />
+                                </button>
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => setHandoffContext(null)}
-                                className="inline-flex size-5 shrink-0 items-center justify-center rounded hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
-                                aria-label={localizeUi("ui.chat.homeprofessormarichat.contextControlRemoveFocus")}
-                              >
-                                <X size="0.7rem" aria-hidden="true" />
-                              </button>
-                            </span>
+                            </div>
                           ) : null}
 
                           <button

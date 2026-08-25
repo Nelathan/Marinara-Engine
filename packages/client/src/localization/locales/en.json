@@ -4037,6 +4037,8 @@
   "ui.chat.homeprofessormarichat.detailsEmpty": "Completed results and resource details will appear here.",
   "ui.chat.homeprofessormarichat.discardedProfessorMariSProposedChange": "Discarded Professor Mari's proposed change.",
   "ui.chat.homeprofessormarichat.editMessage": "Edit Message",
+  "ui.chat.homeprofessormarichat.emptyWelcomeDescription": "I can inspect your setup, explain how something works, or make a reversible change.",
+  "ui.chat.homeprofessormarichat.emptyWelcomeTitle": "What should we work on?",
   "ui.chat.homeprofessormarichat.focusedResource": "Focused resource",
   "ui.chat.homeprofessormarichat.handoffContextField": " · Field: {{field}}",
   "ui.chat.homeprofessormarichat.handoffContextTitle": "Context from your workspace",

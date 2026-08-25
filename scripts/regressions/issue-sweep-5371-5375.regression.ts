@@ -80,10 +80,10 @@ assert.match(
   /<form[\s\S]*?mari-workspace-question-dock[\s\S]*?mari-workspace-answer-strip[\s\S]*?mari-professor-composer/u,
   "Mari's question and suggestions must stay together above the composer",
 );
-assert.match(
+assert.doesNotMatch(
   professorMariHomeSource,
-  /omnibarMode \? \([\s\S]*?mari-omnibar-trust-chrome[\s\S]*?trustStrip/u,
-  "Omnibar Mari must show connection and workspace trust chrome",
+  /mari-omnibar-trust-chrome/u,
+  "Omnibar Mari must not render a separate trust toolbar above the composer",
 );
 assert.match(
   professorMariHomeSource,
