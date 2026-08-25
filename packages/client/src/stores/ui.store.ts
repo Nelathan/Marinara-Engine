@@ -73,7 +73,7 @@ export type TrackerStatDisplayMode = "bars" | "gauges";
 export type MusicPlayerSource = "spotify" | "youtube" | "custom";
 export const TRACKER_TEMPERATURE_UNITS = ["celsius", "fahrenheit"] as const;
 export type TrackerTemperatureUnit = (typeof TRACKER_TEMPERATURE_UNITS)[number];
-export const QUICK_REPLIES_SETTINGS_CONTROL_ID = "quick-replies" as const;
+export { QUICK_REPLIES_SETTINGS_CONTROL_ID } from "../lib/settings-registry";
 export const TRACKER_PANEL_SIZE_PROFILES = ["compact", "standard", "expanded"] as const;
 export type TrackerPanelSizeProfile = (typeof TRACKER_PANEL_SIZE_PROFILES)[number];
 export type TrackerDataPanelSection = "world" | "persona" | "characters" | "inventory" | "quests" | "custom";
@@ -580,6 +580,8 @@ interface UIState {
   settingsTab: string;
   /** Transient control id that the Settings panel should reveal and focus. */
   settingsTargetControlId: string | null;
+  /** A settings section to scroll to, when the jump names a section rather than one control. */
+  settingsTargetSectionId: string | null;
   modal: { type: string; props?: Record<string, unknown> } | null;
   theme: "dark" | "light";
   appBackgroundColor: string;
@@ -1018,6 +1020,7 @@ interface UIState {
   setLastAppError: (error: UIState["lastAppError"]) => void;
   setCreationSession: (session: UIState["creationSession"]) => void;
   setSettingsTargetControlId: (controlId: string | null) => void;
+  setSettingsTargetSectionId: (sectionId: string | null) => void;
   openModal: (type: string, props?: Record<string, unknown>) => void;
   closeModal: () => void;
   setTheme: (theme: "dark" | "light") => void;
@@ -1472,6 +1475,7 @@ export const useUIStore = create<UIState>()(
       lastAppError: null,
       creationSession: null,
       settingsTargetControlId: null,
+      settingsTargetSectionId: null,
       modal: null,
       theme: "dark" as const,
       appBackgroundColor: "",
@@ -1791,6 +1795,7 @@ export const useUIStore = create<UIState>()(
       setLastAppError: (error) => set({ lastAppError: error }),
       setCreationSession: (session) => set({ creationSession: session }),
       setSettingsTargetControlId: (controlId) => set({ settingsTargetControlId: controlId }),
+      setSettingsTargetSectionId: (sectionId) => set({ settingsTargetSectionId: sectionId }),
       openModal: (type, props) => set({ modal: { type, props } }),
       closeModal: () => set({ modal: null }),
       setTheme: (theme) => set({ theme }),

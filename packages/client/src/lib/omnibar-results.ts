@@ -25,7 +25,6 @@ import { isLanguageGenerationConnection, type ConnectionProviderLike } from "./c
 import type { DocsCommandSearchPassage } from "./docs-command-search";
 import type { CreationProposal } from "./omnibar-creation-proposal";
 import type { parseChatExtraction } from "./omnibar-chat-extraction";
-import type { GameCommand } from "./omnibar-game-commands";
 import type { OmnibarNamedRow, OmnibarTranslate } from "./omnibar-entity-rows";
 import {
   getUnambiguousOmnibarResult,
@@ -46,20 +45,6 @@ import type { ChatResourceDragKind } from "./chat-resource-drag";
 import { getSlashCompletions } from "./slash-commands";
 import { inferProfessorMariCommandCenterCapability } from "./professor-mari-command-center-context";
 
-const GAME_TOPIC_LABELS = {
-  party: "Change the party with Mari",
-  quests: "Review quests with Mari",
-  scene: "Change the scene with Mari",
-  encounter: "Continue the encounter with Mari",
-} as const;
-
-const EXTRACTION_LABELS = {
-  lorebook: "Create lorebook from {{chat}}",
-  characters: "Extract characters from {{chat}}",
-  locations: "Extract locations from {{chat}}",
-  campaign: "Create campaign from {{chat}}",
-} as const;
-
 /** Below this a message search matches most of the transcript. */
 export const MIN_MESSAGE_SEARCH_LENGTH = 3;
 const MAX_MESSAGE_SEARCH_RESULTS = 6;
@@ -79,27 +64,6 @@ const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
  * Everything else stays discoverable by typing "/".
  */
 const IDLE_CHAT_SLASH_COMMANDS = ["continue", "impersonate", "scene", "goto"] as const;
-/**
- * Idle suggestions per surface: what you most likely reach for from where you
- * already are. Missing ids are skipped, so this stays a hint list, not a
- * contract with the command registry.
- */
-const SURFACE_IDLE_COMMAND_IDS: Record<OmnibarSurface, readonly string[]> = {
-  home: ["chats", "character-library", "create-character"],
-  chat: [
-    "control:chat-connection",
-    "control:chat-preset",
-    "control:chat-persona",
-    "control:chat-agents",
-    "card-browser",
-    "create-lorebook",
-  ],
-  editor: ["documentation", "character-library", "import-data"],
-  settings: ["integrations", "diagnostics", "backups", "updates"],
-  library: ["create-character", "import-sillytavern", "card-browser"],
-  game: ["game-assets", "help"],
-};
-
 /** A one-line excerpt centred on the match, so the row shows why it matched. */
 function getMessageSearchSnippet(content: string, query: string): string {
   const text = content.replace(/\s+/gu, " ").trim();
@@ -128,6 +92,8 @@ export type OmnibarControlSetters = {
 };
 
 export type OmnibarControlResultsInput = {
+  /** Localizes the settings registry's English copy, as the Settings panel search does. */
+  localize: (englishText: string) => string;
   mariEnabled: boolean;
   musicPlayerEnabled: boolean;
   notificationSoundsOnlyWhenUnfocused: boolean;
@@ -201,14 +167,6 @@ export type OmnibarSlashResultsInput = {
   surface: OmnibarSurface;
 };
 
-export type OmnibarIdleResultsInput = {
-  allLocalResults: readonly OmnibarResult[];
-  recentEntries: readonly { id: string }[];
-  searchableCommandResults: readonly OmnibarResult[];
-  setupResultIds: readonly string[];
-  surface: OmnibarSurface;
-};
-
 export type OmnibarContextResultsInput = {
   activeChat: Chat | null | undefined;
   activeChatId: string | null | undefined;
@@ -240,7 +198,8 @@ export type OmnibarVerbSuggestionsInput = {
   /** Every locally known row, used to answer "enable" and "create" directly. */
   allLocalResults: readonly OmnibarResult[];
   deferredQuery: string;
-  t: OmnibarTranslate;
+  /** Gates `buildOmnibarAddSuggestions`, which is what answers a bare "add". */
+  omnibarSuggestionsEnabled: boolean;
 };
 
 export type OmnibarAddSuggestionsInput = {
@@ -275,11 +234,6 @@ export type OmnibarExtractionResultInput = {
   t: OmnibarTranslate;
 };
 
-export type OmnibarGameResultInput = {
-  gameCommand: GameCommand | null;
-  t: OmnibarTranslate;
-};
-
 export type OmnibarContinueResultInput = {
   mariEnabled: boolean;
   t: OmnibarTranslate;
@@ -289,6 +243,7 @@ export type OmnibarContinueResultInput = {
 };
 
 export function buildOmnibarControlResults({
+  localize,
   mariEnabled,
   musicPlayerEnabled,
   notificationSoundsOnlyWhenUnfocused,
@@ -352,19 +307,18 @@ export function buildOmnibarControlResults({
   ] as const;
   const settingsDestinations = getOmnibarSettingsDestinations().map((setting) => ({
     id: setting.id,
-    title: t(setting.title.key, setting.title.fallback),
+    title: localize(setting.title),
     category: "settings" as const,
-    score: 165,
-    aliases: setting.aliases.map((alias) => t(alias.key, alias.fallback)),
+    // A named control outranks the section and tab rows that contain it.
+    score: setting.controlId ? 165 : setting.sectionId ? 160 : 155,
+    aliases: setting.aliases.map(localize),
     target: {
       kind: "settings" as const,
       tab: setting.tab,
       controlId: setting.controlId,
+      sectionId: setting.sectionId,
     },
-    description: `${t(setting.sectionLabel.key, setting.sectionLabel.fallback)} · ${t(
-      setting.description.key,
-      setting.description.fallback,
-    )}`,
+    description: `${localize(setting.sectionLabel)} · ${localize(setting.description)}`,
     kind: "settings" as const,
     icon: "settings" as const,
   }));
@@ -796,36 +750,6 @@ export function buildOmnibarSlashResults({
   }));
 }
 
-export function buildOmnibarIdleResults({
-  allLocalResults,
-  recentEntries,
-  searchableCommandResults,
-  setupResultIds,
-  surface,
-}: OmnibarIdleResultsInput): OmnibarResult[] {
-  const byId = new Map(allLocalResults.map((result) => [result.id, result]));
-  const selected: OmnibarResult[] = [];
-  const add = (id: string) => {
-    const result = byId.get(id);
-    if (result && !selected.some((item) => item.id === id)) selected.push(result);
-  };
-  // Unfinished setup beats everything else: the feature you cannot use yet is
-  // the most likely reason the omnibar is open at all. Capped so a fresh
-  // install does not bury recents under every un-configured integration.
-  setupResultIds.slice(0, 2).forEach(add);
-  recentEntries.forEach((entry) => add(entry.id));
-  SURFACE_IDLE_COMMAND_IDS[surface].forEach(add);
-  ["control:theme", "control:presence", "create-character", "create-persona", "documentation"].forEach(add);
-  let searchableCommandCount = 0;
-  for (const result of searchableCommandResults) {
-    if (searchableCommandCount >= 4) break;
-    const previousLength = selected.length;
-    add(result.id);
-    if (selected.length > previousLength) searchableCommandCount += 1;
-  }
-  return selected.slice(0, 12);
-}
-
 export function buildOmnibarContextResults({
   activeChat,
   activeChatId,
@@ -1079,20 +1003,6 @@ const ADD_SUGGESTION_SCORE = 470;
  * results rather than re-deriving entities, so it inherits their media, icons
  * and matching.
  */
-/** Object kinds a bare "add"/"use" can attach, in the order they are offered. */
-const ADD_OBJECT_CATEGORIES = ["character", "persona", "lorebook", "preset", "connection", "agent"] as const;
-/** Object kinds a bare "open"/"show" can reach. Chats lead: it is the common case. */
-const OPEN_OBJECT_CATEGORIES = ["chat", "character", "persona", "lorebook", "preset", "connection", "agent"] as const;
-/** Words used in the refined query for each object kind, matching the parser's kind words. */
-const OBJECT_KIND_QUERY_WORDS: Record<string, string> = {
-  chat: "chat",
-  character: "character",
-  persona: "persona",
-  lorebook: "lorebook",
-  preset: "preset",
-  connection: "connection",
-  agent: "agent",
-};
 /** Below `ADD_SUGGESTION_SCORE`, so concrete "Add Eliza" rows lead and the kind rows follow as the fallback. */
 const VERB_SUGGESTION_SCORE = 460;
 const MAX_REMOVAL_SUGGESTIONS = 8;
@@ -1116,7 +1026,7 @@ export function buildOmnibarVerbSuggestions({
   activeChat,
   allLocalResults,
   deferredQuery,
-  t,
+  omnibarSuggestionsEnabled,
 }: OmnibarVerbSuggestionsInput): OmnibarResult[] {
   const intent = isOmnibarRefinableVerb(deferredQuery);
   if (!intent) return [];
@@ -1126,30 +1036,16 @@ export function buildOmnibarVerbSuggestions({
       score: VERB_SUGGESTION_SCORE - index,
       group: "current-work" as const,
     }));
-  const refineRows = (categories: readonly OmnibarCategory[], label: string, fallback: string) =>
-    categories.map((category, index) => ({
-      id: `verb:${intent.verb}:${category}`,
-      action: { kind: "refine-query", query: `${intent.verb} ${OBJECT_KIND_QUERY_WORDS[category]} ` } as const,
-      title: t(label, fallback, { kind: t(`commandCenter.kinds.${category}`, category) }),
-      description: t("commandCenter.verbs.refineDescription", "Choose which one next."),
-      category,
-      score: VERB_SUGGESTION_SCORE - index,
-      kind: "action" as const,
-      icon: category === "chat" ? ("chats" as const) : (category as OmnibarResult["icon"]),
-      group: "current-work" as const,
-    }));
-
   const createRows = () => allLocalResults.filter((result) => /^(?:create|import)-/.test(result.id));
-  // "add" needs somewhere to add to. With no chat open it can only mean "make a
-  // new one", which is a better answer than an empty list.
+  // "add" needs somewhere to add to. With a chat open `buildOmnibarAddSuggestions`
+  // answers it with the real attachable rows — but only when suggestions are
+  // enabled, so this still has to answer when they are off. With no chat open it
+  // can only mean "make a new one", which is better than an empty list either way.
   if (["add", "use", "activate", "set"].includes(intent.verb)) {
-    if (activeChat)
-      return refineRows([...ADD_OBJECT_CATEGORIES], "commandCenter.verbs.addKind", "Add a {{kind}} to this chat…");
-    return bounded(createRows());
+    return activeChat && omnibarSuggestionsEnabled ? [] : bounded(createRows());
   }
-  if (["open", "show", "go to"].includes(intent.verb)) {
-    return refineRows([...OPEN_OBJECT_CATEGORIES], "commandCenter.verbs.openKind", "Open a {{kind}}…");
-  }
+  // "open"/"show" is answered by the ranked entity rows themselves.
+  if (["open", "show", "go to"].includes(intent.verb)) return [];
   // Bounded verbs: list the objects themselves, because they all fit. "remove"
   // is bounded too, but `buildOmnibarRemovalSuggestions` already owns it.
   if (["create", "new", "import"].includes(intent.verb)) return bounded(createRows());
@@ -1267,28 +1163,14 @@ export function buildOmnibarExtractionResult({
   t,
 }: OmnibarExtractionResultInput): OmnibarResult | null {
   if (!chatExtraction || !activeChat) return null;
-  const label = EXTRACTION_LABELS[chatExtraction.kind];
   return {
     id: "chat-extraction",
-    title: t(`commandCenter.extract.${chatExtraction.kind}`, label, { chat: activeChat.name }),
+    title: t("commandCenter.extract.lorebook", "Create lorebook from {{chat}}", { chat: activeChat.name }),
     description: t("commandCenter.extract.description", "From {{chat}}. Mari proposes the content for review.", {
       chat: activeChat.name,
     }),
     category: "professor",
     score: 400,
-    kind: "action",
-    icon: "professor",
-  };
-}
-
-export function buildOmnibarGameResult({ gameCommand, t }: OmnibarGameResultInput): OmnibarResult | null {
-  if (!gameCommand) return null;
-  return {
-    id: "game-command",
-    title: t(`commandCenter.game.${gameCommand.topic}`, GAME_TOPIC_LABELS[gameCommand.topic]),
-    description: t("commandCenter.game.assistDescription", "Continues with Mari using the current game state."),
-    category: "professor",
-    score: 420,
     kind: "action",
     icon: "professor",
   };
@@ -1444,29 +1326,6 @@ export function buildOmnibarApprovalResults({
   return rows.filter((row) =>
     [row.title, ...(row.aliases ?? [])].some((value) => normalizeTextForMatch(value).includes(needle)),
   );
-}
-
-/**
- * The scope prefixes only ever appeared in the placeholder, where nobody reads
- * them. One row in the idle deck teaches them; activating it types the first one
- * into the box so the next keystroke shows what a scope does.
- */
-export function buildOmnibarScopeHintResult({ t }: { t: OmnibarTranslate }): OmnibarResult {
-  return {
-    id: "scope-hint",
-    title: t("commandCenter.scopeHint.title", "Narrow to one kind"),
-    description: t(
-      "commandCenter.scopeHint.description",
-      "Start with char:, msg:, lore:, faq: or set: to search only that kind.",
-    ),
-    category: "navigation" as const,
-    // Below every real row: it teaches, it is not something the user came for.
-    score: 0,
-    kind: "action" as const,
-    icon: "command" as const,
-    aliases: ["scope", "prefix", "filter", "char:", "msg:", "lore:", "faq:"],
-    action: { kind: "refine-query", query: "char: " } as const,
-  };
 }
 
 export function buildOmnibarContinueResult({

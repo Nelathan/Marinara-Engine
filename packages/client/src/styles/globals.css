@@ -1356,6 +1356,13 @@
   animation: mari-tool-progress 1.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
+.mari-live-work__step-duration {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .mari-live-work__steps li[data-status="error"] {
   color: var(--destructive);
 }
@@ -1502,7 +1509,8 @@
 @media (prefers-reduced-motion: reduce) {
   .mari-live-work__activity i,
   .mari-live-work__technical[open] > div,
-  .mari-live-work__steps li .mari-live-work__step-icon {
+  .mari-live-work__steps li .mari-live-work__step-icon,
+  .mari-live-work__steps li[data-status="running"]::after {
     animation: none;
   }
 }

@@ -17,14 +17,13 @@ Git history retains them without presenting obsolete architecture as current.
 
 ## 1. Surfaces
 
-One list, and the surfaces that take it over. The persisted `pane` holds three
+One list, and the one surface that takes it over. The persisted `pane` holds two
 values.
 
-| Surface | Purpose | Entered by |
-| --- | --- | --- |
-| `results` | The ranked result list. The default, and every open starts here. | Open, or Escape from a takeover |
-| `browse` | Grid of one category, with compare and batch attach. | A category chip with an empty query, or the Browse button |
-| `mari` | Professor Mari's work surface. | The Mari button, `⌘↵`, a row's Sparkles button, a Mari-owned row, or the Ask-Mari row |
+| Surface   | Purpose                                                          | Entered by                                                                            |
+| --------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `results` | The ranked result list. The default, and every open starts here. | Open, or Escape from a takeover                                                       |
+| `mari`    | Professor Mari's work surface.                                   | The Mari button, `⌘↵`, a row's Sparkles button, a Mari-owned row, or the Ask-Mari row |
 
 Two things render **inside** the list rather than replacing it:
 
@@ -36,9 +35,13 @@ Two things render **inside** the list rather than replacing it:
 
 Rules that must survive:
 
-- The omnibar always reopens on the list. A persisted `mari` pane is reset, and
-  a session persisted with the removed `detail` or `quick` panes falls back to
-  the list.
+- The omnibar always reopens on the list, because closing persists `results`
+  rather than whatever pane was open. A session persisted with the removed
+  `browse`, `detail` or `quick` panes also falls back to the list.
+  `normalizeCommandCenterSessionState` deliberately **preserves** a persisted
+  `mari` pane instead of resetting it: `GlobalOmnibarHost` requests Professor
+  Mari by writing that pane and then opening the omnibar, so a reset on read
+  would break every "open Mari" hand-off from Home, the FAQ and error recovery.
 - Escape collapses an expansion if one is open; otherwise it leaves a takeover;
   otherwise it closes. One level, so Escape and the back arrow always agree.
 - Escape from a takeover never cancels a running answer.
@@ -59,8 +62,8 @@ Rules that must survive:
   and plural aliases. The colon is required. Everything downstream sees only the
   text after the prefix. A bare prefix with no query lists that whole category.
 - **Inline ghost completion**: the first ranked title is completed after the
-  cursor, accepted with Tab. With a chat open, an action verb completes to the
-  whole sentence ("add el" → "add Eliza to this chat").
+  cursor, accepted with Tab. It completes the name only — the sentence
+  completion said the same thing as the add and removal suggestion rows.
 - **Intent parsing** (`lib/omnibar-search.ts`): verbs are classified as
   `navigate`, `action`, `create`, `explain`, `recommend` or `repair`, and an
   object kind in the query ("add character eliza") narrows the search to that
@@ -73,32 +76,55 @@ Rules that must survive:
 
 Every builder is pure and lives in `lib/omnibar-results.ts` unless noted.
 
-| Source | Builder | Notes |
-| --- | --- | --- |
-| Entities: chats, characters, personas, lorebooks, presets, connections, agents | `lib/omnibar-entity-rows.ts` | `preview` stays a thunk, built only for the focused row |
-| App commands and personal extensions | `data.commands` | Extension commands come from `personal-extension-contributions` |
-| Settings destinations | `lib/omnibar-settings.ts` | 6 sections and 25 named controls, each deep-linking to a tab and control id |
-| Quick controls | `buildOmnibarControlResults` | Theme and presence as choices; 9 toggles |
-| Active-chat controls | `buildOmnibarChatControlResults` | Model, preset, persona (choices, capped at 6 plus the current value) and an agents toggle. These edit the chat in place — nothing navigates away |
-| FAQ | `buildOmnibarSearchResults` | Ids are `faq:<id>`; opens the FAQ viewer modal |
-| Documentation | `useDocsCommandSearchProvider` | Passage search; opens the docs viewer at the match |
-| Messages in the open chat | `buildOmnibarMessageResults` | Client-side over the shared transcript cache; 3-character minimum, 6 results |
-| Messages in every other chat | `buildOmnibarGlobalMessageResults` | Server-backed; see section 6 |
-| Professor Mari's own conversations | `buildOmnibarMariChatResults` | They sit behind an internal marker and are absent from the chat list |
-| Slash commands | `buildOmnibarSlashResults` | Chat surface only. Choosing one types it into the chat input rather than running it, so arguments stay visible |
-| Context rows | `buildOmnibarContextResults` | "What am I on?": the open editor, the current chat and everything attached to it, the last error, an unfinished creation session |
-| Idle rows | `buildOmnibarIdleResults` | Unfinished setup first (capped at 2), then recents, then surface commands |
-| Verb, attach and detach suggestions | `buildOmnibarVerbSuggestions`, `buildOmnibarAddSuggestions`, `buildOmnibarRemovalSuggestions` | Answer a half-typed sentence |
-| Creation proposal | `lib/omnibar-creation-proposal.ts` | Nothing is created until accepted |
-| Chat-to-world extraction | `lib/omnibar-chat-extraction.ts` | Lorebook, characters, locations or campaign |
-| Game commands | `lib/omnibar-game-commands.ts` | Party, quest, scene and encounter topics go to Mari with the live game state. Dice are deliberately absent — see section 11 |
-| Choice values | `lib/omnibar-choice-rows.ts` | With a query typed, every choice control's options join the searchable set, so "gpt" reaches GPT-4 without finding the Model row first. They stay out of the idle deck. Each row carries its own `chooseValue`, so a row found by typing works when its control is nowhere on screen |
-| "Ask Professor Mari" fallback | `buildOmnibarSearchResults` | Always last unless promoted. Opens Mari's takeover. The cheap answer arrives on its own, in the aside — see section 12 |
-| "Continue with Mari" | `buildOmnibarContinueResult` | Only when Mari is active or has pending approvals |
+| Source                                                                         | Builder                                                                                       | Notes                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Entities: chats, characters, personas, lorebooks, presets, connections, agents | `lib/omnibar-entity-rows.ts`                                                                  | `preview` stays a thunk, built only for the focused row                                                                                                                                                                                                                              |
+| App commands and personal extensions                                           | `data.commands`                                                                               | Extension commands come from `personal-extension-contributions`                                                                                                                                                                                                                      |
+| Settings destinations                                                          | `lib/omnibar-settings.ts`                                                                     | Derived from `lib/settings-registry.ts`: 6 tabs, 32 sections and every searchable control, each deep-linking to a tab, a section or a control id                                                                                                                                     |
+| Quick controls                                                                 | `buildOmnibarControlResults`                                                                  | Theme and presence as choices; 9 toggles                                                                                                                                                                                                                                             |
+| Active-chat controls                                                           | `buildOmnibarChatControlResults`                                                              | Model, preset, persona (choices, capped at 6 plus the current value) and an agents toggle. These edit the chat in place — nothing navigates away                                                                                                                                     |
+| FAQ                                                                            | `buildOmnibarSearchResults`                                                                   | Ids are `faq:<id>`; opens the FAQ viewer modal                                                                                                                                                                                                                                       |
+| Documentation                                                                  | `useDocsCommandSearchProvider`                                                                | Passage search; opens the docs viewer at the match                                                                                                                                                                                                                                   |
+| Messages in the open chat                                                      | `buildOmnibarMessageResults`                                                                  | Client-side over the shared transcript cache; 3-character minimum, 6 results                                                                                                                                                                                                         |
+| Messages in every other chat                                                   | `buildOmnibarGlobalMessageResults`                                                            | Server-backed; see section 6                                                                                                                                                                                                                                                         |
+| Professor Mari's own conversations                                             | `buildOmnibarMariChatResults`                                                                 | They sit behind an internal marker and are absent from the chat list                                                                                                                                                                                                                 |
+| Slash commands                                                                 | `buildOmnibarSlashResults`                                                                    | Chat surface only. Choosing one types it into the chat input rather than running it, so arguments stay visible                                                                                                                                                                       |
+| Context rows                                                                   | `buildOmnibarContextResults`                                                                  | "What am I on?": the open editor, the current chat and everything attached to it, the last error, an unfinished creation session                                                                                                                                                     |
+| Idle rows                                                                      | `buildOmnibarIdleResults`                                                                     | Unfinished setup first (capped at 2), then recents, then surface commands                                                                                                                                                                                                            |
+| Verb, attach and detach suggestions                                            | `buildOmnibarVerbSuggestions`, `buildOmnibarAddSuggestions`, `buildOmnibarRemovalSuggestions` | Answer a half-typed sentence                                                                                                                                                                                                                                                         |
+| Creation proposal                                                              | `lib/omnibar-creation-proposal.ts`                                                            | Nothing is created until accepted                                                                                                                                                                                                                                                    |
+| Chat-to-world extraction                                                       | `lib/omnibar-chat-extraction.ts`                                                              | Lorebook only — see section 11                                                                                                                                                                                                                                                       |
+| Choice values                                                                  | `lib/omnibar-choice-rows.ts`                                                                  | With a query typed, every choice control's options join the searchable set, so "gpt" reaches GPT-4 without finding the Model row first. They stay out of the idle deck. Each row carries its own `chooseValue`, so a row found by typing works when its control is nowhere on screen |
+| "Ask Professor Mari" fallback                                                  | `buildOmnibarSearchResults`                                                                   | Always last unless promoted. Opens Mari's takeover. The cheap answer arrives on its own, in the aside — see section 12                                                                                                                                                               |
+| "Continue with Mari"                                                           | `buildOmnibarContinueResult`                                                                  | Only when Mari is active or has pending approvals                                                                                                                                                                                                                                    |
 
 De-duplication is by result id, first source wins. Message rows from the open
 chat and from the global search share an id shape on purpose, so a hit is never
 listed twice.
+
+### 3a. The settings registry
+
+`lib/settings-registry.ts` is the single source of truth for settings
+navigation: the 6 tabs, the 32 sections and every searchable control, with the
+labels, descriptions and aliases they are found by. It is plain data — no
+imports of stores, icons or components — so both the Settings panel and the
+omnibar can read it.
+
+- `omnibar-settings.ts` **derives** its rows from it and states nothing of its
+  own. It previously kept a parallel list of 25 controls; the two drifted until
+  three of those 25 pointed at control ids that no longer existed, and choosing
+  those rows opened the tab and silently failed to scroll. Of the 99 controls the
+  registry defines, 22 had a row and 77 had none.
+- `omnibar-settings.test.ts` fails if any emitted row names a tab, section or
+  control the registry does not define. That check is the reason a second list
+  cannot come back by accident.
+- Strings are English and localized by `useLocalizedUiText`, the same path the
+  Settings panel's own search uses. There are no `{ key, fallback }` pairs.
+- `SettingsPanel`'s `TABS` keeps the icons and the i18n keys, and pins its ids
+  to the registry with `satisfies`, so a renamed tab fails the build.
+- A row deep-links to a control (`settings-control:<id>`), a section
+  (`settings-section-detail:<id>`) or a tab (`settings-section:<tab>`). The tab
+  ids keep that older shape because the context bonus matches on them.
 
 ## 4. Ranking
 
@@ -133,8 +159,6 @@ without one fall through to the generic open path.
 - Attach and detach reuse the drag-and-drop payload and its block rules, so the
   omnibar can never make an assignment a drop would refuse.
 - Every navigation passes the dirty-editor confirmation.
-- Batch attach: a same-kind browse selection attaches to the active chat in one
-  payload. Compare sends 2 to 5 selected items to Mari.
 - Preview actions per category: start chat, edit, add to or remove from this
   chat, activate persona, set default preset, enable or disable, resume chat,
   open documentation, continue with Mari.
@@ -165,7 +189,8 @@ without one fall through to the generic open path.
 
 This is the part most likely to break silently. All of it must survive.
 
-- `↑`/`↓` move the selection; `Home`/`End` jump to the ends. Not in browse.
+- `↑`/`↓` move the selection; `Home`/`End` jump to the ends. No exceptions:
+  there is no surface left that opts out of the keyboard model.
 - `Enter` chooses. On a toggle row it flips the toggle; on a choice row it
   expands the row's options beneath it; on an option row it applies that value.
 - `⌘↵` / `Ctrl+↵` continues the selected result with Mari, skipping the detail
@@ -178,7 +203,6 @@ This is the part most likely to break silently. All of it must survive.
 - `Tab` accepts the ghost completion when there is one; otherwise it cycles
   focus inside the dialog (the dialog traps focus).
 - `Escape` collapses an expansion, then leaves a takeover, then closes.
-- In browse, `↓` moves focus into the grid and `Enter` activates the first cell.
 - Native browser autocomplete is off on the input, because its popup steals the
   arrow keys.
 - **Hover needs genuinely new screen coordinates.** Keyboard navigation scrolls
@@ -192,10 +216,13 @@ This is the part most likely to break silently. All of it must survive.
 
 ## 8. State and persistence
 
-- Session state (`query`, `filter`, `pane`, `activeResultId`, `browseSelectedId`,
-  `browseLimit`, `detailResultId`, `mariReturnResultId`, `mariHandoff`,
-  `mariDestination`, `mariDetailId`) survives a close and reopen, except the
-  `mari` pane reset above.
+- Session state (`query`, `filter`, `pane`, `activeResultId`,
+  `mariReturnResultId`, `mariHandoff`) survives a close and reopen. `pane` is the
+  exception, and not because the normalizer rewrites it: the omnibar's unmount
+  flush persists `results`, so the pane a session closed on is never restored
+  (section 1 explains why the normalizer must leave a persisted `mari` alone).
+  Every field here is read by something; a slot that is only ever written is a
+  bug, not a feature (see section 11).
 - Both expansions — the focused row's preview and a choice row's options — are
   component state, not session state. Every open starts from a bare list.
 - Command ranking (recency and pins) is persisted separately.
@@ -223,7 +250,7 @@ This is the part most likely to break silently. All of it must survive.
   is **not** the size printed in the build log — the same GameSurface chunk reads
   492 kB to the budget and 509 kB in the log. Debug budget failures with the
   budget's own numbers.
-- `OmnibarMariPane`, `OmnibarBrowsePane` and `OmnibarAside` are lazy and mounted
+- `OmnibarDetailPane`, `OmnibarMariPane` and `OmnibarAside` are lazy and mounted
   behind `Suspense`. So are Mari's Skills and Memories panels, which most
   sessions never open.
 
@@ -245,6 +272,38 @@ Do not "fix" these; each was a decision.
   did not. Restoring it would also restore a dynamic-import rule, because a
   static import of the game stores from here breaks the bundle budget.
 
+- **There is no return stack, and no persisted Mari destination.**
+  `returnStack`, `mariDestination` and `mariDetailId` were persisted, capped and
+  validated on read — and never read by anything. Escape steps back one level,
+  and the Mari pane owns its own destination. `mariReturnPane` went with them: it
+  could only ever hold `"results"`.
+- **The pane union is declared once**, in `lib/command-center.ts`, next to the
+  session state that persists it. `omnibar-result-view` re-exports it. Two
+  hand-synced copies of the same union is how `browse` came to need deleting
+  twice.
+- **There is no Browse pane.** A grid of one category, in a takeover, with its
+  own keyboard rules — it was the only surface that opted out of section 7. A
+  bare scope prefix (`char:`) already lists a whole category as ordinary rows,
+  with arrows, previews and Enter, and the app has real library screens for
+  browsing by face. The idle-deck category chips now type the prefix instead of
+  opening a grid, which also teaches the prefix by doing it. Compare and batch
+  attach went with it: three deliberate steps to reach something the user could
+  type.
+- **The omnibar does not parse game commands.** `parseGameCommand` matched bare
+  keywords — "map", "scene", "fight", "member", "setting" — with no verb and no
+  intent check, so ordinary searches in a game chat were hijacked into a Mari
+  handoff. The Ask-Mari row answers the same sentences without the false
+  positives. This is the dice decision again, for the same reason.
+- **A verb does not offer "kind" rows.** A bare "add" once listed "Add a
+  character to this chat…", whose action typed `add character ` back into the
+  input. A row whose action is more typing is not an answer; the add and removal
+  suggestion builders already give the real rows.
+- **Chat extraction only makes lorebooks.** Characters, locations and campaigns
+  created nothing — they handed the sentence to Mari, which is what the Ask-Mari
+  row does anyway. Only the lorebook has an empty shell worth creating up front.
+- **There is no scope-hint row.** The prefixes are taught by the category chips,
+  which type one, and by the idle-deck subtitle. A row that teaches is a row
+  that is not what the user came for.
 - **There is no detail pane.** A preview expands under its own row instead. The
   pane hid the whole list on narrow screens to show one result, and on wide
   screens the external panel already did the job without it.
@@ -277,7 +336,7 @@ The cheap answer, `hooks/use-omnibar-aside.ts` and
 - **The unasked call is a different call, not a trimmed one.**
   `buildQuickContextPayload` assembles it from scratch: the surface, the typed
   query, and the focused resource's label. It must never carry persistent
-  memories or the contents of the focused field, both of which an *asked* Quick
+  memories or the contents of the focused field, both of which an _asked_ Quick
   call does send. `quick-context-payload.test.ts` pins this.
 - Defaults to the local sidecar, so nothing is spent unasked.
 - Nothing is front-loaded into onboarding. The first answer says where it came

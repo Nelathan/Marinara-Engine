@@ -18,7 +18,8 @@ export type OmnibarScopeId =
   | "agent"
   | "settings";
 
-const SCOPE_ALIASES: Readonly<Record<OmnibarScopeId, readonly string[]>> = {
+/** First alias is the canonical prefix, so the tuple is typed non-empty. */
+const SCOPE_ALIASES: Readonly<Record<OmnibarScopeId, readonly [string, ...string[]]>> = {
   faq: ["faq", "help"],
   docs: ["docs", "doc", "documentation"],
   messages: ["msg", "message", "messages", "transcript"],
@@ -37,6 +38,14 @@ const SCOPE_BY_ALIAS = new Map<string, OmnibarScopeId>(
     aliases.map((alias) => [alias, scope as OmnibarScopeId] as const),
   ),
 );
+
+/**
+ * The prefix to type for a scope. The first alias is the canonical short form,
+ * which is what the category chips write into the input.
+ */
+export function omnibarScopePrefix(scope: OmnibarScopeId): string {
+  return `${SCOPE_ALIASES[scope][0]}: `;
+}
 
 export type OmnibarScopedQuery = { scope: OmnibarScopeId | null; query: string };
 

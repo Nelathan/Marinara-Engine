@@ -215,15 +215,9 @@ const MAX_USE_COUNT = 10_000;
 const RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** The list, or the one surface that has taken it over. */
-export type CommandCenterPane = "results" | "browse" | "mari";
+export type CommandCenterPane = "results" | "mari";
 /** Where a takeover returns to when it closes. */
 export type CommandCenterReturnPane = Exclude<CommandCenterPane, "mari">;
-export type CommandCenterMariDestination = "chat" | "chats" | "memories" | "skills" | "context";
-
-export type CommandCenterReturnTarget =
-  | { pane: "results"; resultId: string | null }
-  | { pane: "browse"; resultId: string | null }
-  | { pane: "mari"; destination: CommandCenterMariDestination; detailId: string | null };
 
 /**
  * A task handed to Professor Mari, held in session state rather than component
@@ -242,14 +236,8 @@ export interface CommandCenterSessionState {
   filter: CommandCenterCategoryFilter;
   pane: CommandCenterPane;
   activeResultId: string | null;
-  detailResultId: string | null;
-  browseSelectedId: string | null;
-  browseLimit: number;
   mariReturnResultId: string | null;
   mariHandoff: CommandCenterMariHandoff | null;
-  mariDestination: CommandCenterMariDestination;
-  mariDetailId: string | null;
-  returnStack: CommandCenterReturnTarget[];
 }
 
 export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
@@ -257,14 +245,8 @@ export const DEFAULT_COMMAND_CENTER_SESSION_STATE: CommandCenterSessionState = {
   filter: "all",
   pane: "results",
   activeResultId: null,
-  detailResultId: null,
-  browseSelectedId: null,
-  browseLimit: 48,
   mariReturnResultId: null,
   mariHandoff: null,
-  mariDestination: "chat",
-  mariDetailId: null,
-  returnStack: [],
 };
 
 function getCommandCenterSessionStorage(): CommandStorage | null {
@@ -281,55 +263,22 @@ export function normalizeCommandCenterSessionState(value: unknown): CommandCente
   const filter = COMMAND_CENTER_CATEGORY_FILTERS.includes(source.filter as CommandCenterCategoryFilter)
     ? (source.filter as CommandCenterCategoryFilter)
     : "all";
-  // A session persisted before the detail and quick panes were removed falls
-  // back to the list, which is where every open starts anyway.
-  const pane = source.pane === "browse" || source.pane === "mari" ? source.pane : "results";
+  // A session persisted before the browse, detail and quick panes were removed
+  // falls back to the list. `mari` is preserved on purpose: `GlobalOmnibarHost`
+  // requests Professor Mari by writing that pane and then opening the omnibar.
+  // The "always reopen on the list" rule is enforced where it belongs, by the
+  // omnibar persisting `results` when it closes.
+  const pane = source.pane === "mari" ? "mari" : "results";
   const stringOrNull = (next: unknown) => (typeof next === "string" && next.trim() ? next.trim() : null);
-  const browseLimit =
-    typeof source.browseLimit === "number" && Number.isFinite(source.browseLimit)
-      ? Math.max(48, Math.min(480, Math.floor(source.browseLimit)))
-      : DEFAULT_COMMAND_CENTER_SESSION_STATE.browseLimit;
 
   return {
     query: typeof source.query === "string" ? source.query.slice(0, 500) : "",
     filter,
     pane,
     activeResultId: stringOrNull(source.activeResultId),
-    detailResultId: stringOrNull(source.detailResultId),
-    browseSelectedId: stringOrNull(source.browseSelectedId),
-    browseLimit,
     mariReturnResultId: stringOrNull(source.mariReturnResultId),
     mariHandoff: normalizeMariHandoff(source.mariHandoff),
-    mariDestination: normalizeMariDestination(source.mariDestination),
-    mariDetailId: stringOrNull(source.mariDetailId),
-    returnStack: normalizeReturnStack(source.returnStack),
   };
-}
-
-function normalizeMariDestination(value: unknown): CommandCenterMariDestination {
-  return value === "chats" || value === "memories" || value === "skills" || value === "context" ? value : "chat";
-}
-
-function normalizeReturnStack(value: unknown): CommandCenterReturnTarget[] {
-  if (!Array.isArray(value)) return [];
-  const targets: CommandCenterReturnTarget[] = [];
-  for (const item of value.slice(-8)) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-    const source = item as Record<string, unknown>;
-    const resultId = typeof source.resultId === "string" ? source.resultId.slice(0, 256) : null;
-    if (source.pane === "results" || source.pane === "browse") targets.push({ pane: source.pane, resultId });
-    else if (source.pane === "detail" || source.pane === "quick") {
-      // A session persisted before the Quick pane was removed. Drop it.
-      continue;
-    } else if (source.pane === "mari") {
-      targets.push({
-        pane: "mari",
-        destination: normalizeMariDestination(source.destination),
-        detailId: typeof source.detailId === "string" ? source.detailId.slice(0, 256) : null,
-      });
-    }
-  }
-  return targets;
 }
 
 /**

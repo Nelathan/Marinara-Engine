@@ -22,6 +22,7 @@ import {
   Brain,
   Check,
   ChevronRight,
+  Circle,
   Database,
   FileText,
   ImageIcon,
@@ -503,6 +504,8 @@ type WorkspaceToolCall = {
   input?: unknown;
   detail: string | null;
   output: string | null;
+  /** First time we saw this call. Preserved across upserts so the card can show a per-step duration. */
+  startedAt: number;
   updatedAt: number;
 };
 
@@ -637,6 +640,9 @@ function timelineItemsFromTrace(trace: MariWorkspaceTraceItem[], message: Messag
           input: item.tool.input,
           detail: previewValue(item.tool.input),
           output: item.tool.output ?? null,
+          // Replayed history has one timestamp per call, not a start and an end, so there is no
+          // duration to show. 0 renders as "—" rather than a fabricated 1s.
+          startedAt: 0,
           updatedAt: item.tool.updatedAt ?? 0,
         },
       };
@@ -689,6 +695,8 @@ function upsertToolTimeline(current: WorkspaceTimelineItem[], update: WorkspaceT
         input: update.input ?? item.tool.input,
         detail: update.detail ?? item.tool.detail,
         output: update.output ?? item.tool.output,
+        // The update carries its own timestamp; the first sighting is what dates the step.
+        startedAt: item.tool.startedAt || update.startedAt,
       },
     };
   });
@@ -1661,7 +1669,12 @@ function WorkspaceLiveWorkCard({
                     const presentation = inferToolPresentation(tool);
                     const running = tool.status === "running";
                     const failed = tool.status === "error";
-                    const Icon = failed ? AlertTriangle : running ? Loader2 : Check;
+                    const Icon = failed ? AlertTriangle : running ? Circle : Check;
+                    // The card re-renders every second while `elapsedSeconds` ticks, so a running
+                    // step's duration stays live without a second timer.
+                    const stepSeconds = tool.startedAt
+                      ? Math.max(1, Math.round(((running ? Date.now() : tool.updatedAt) - tool.startedAt) / 1000))
+                      : null;
                     return (
                       <motion.li
                         layout={!reduceMotion}
@@ -1672,19 +1685,11 @@ function WorkspaceLiveWorkCard({
                         exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
                         transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
                       >
-                        <Icon
-                          size="0.75rem"
-                          className={cn(
-                            "mari-live-work__step-icon shrink-0",
-                            running && "animate-spin motion-reduce:animate-none",
-                          )}
-                        />
+                        <Icon size="0.75rem" className="mari-live-work__step-icon shrink-0" />
                         <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                        {presentation.detail ? (
-                          <code className="hidden max-w-[45%] truncate font-mono text-[0.65rem] text-[var(--muted-foreground)] sm:block">
-                            {presentation.detail}
-                          </code>
-                        ) : null}
+                        <span className="mari-live-work__step-duration">
+                          {stepSeconds === null ? "—" : t("mari.workCard.stepSeconds", { seconds: stepSeconds })}
+                        </span>
                       </motion.li>
                     );
                   })}
@@ -1698,11 +1703,9 @@ function WorkspaceLiveWorkCard({
                       exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
                       transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <Loader2
-                        size="0.75rem"
-                        className="mari-live-work__step-icon shrink-0 animate-spin motion-reduce:animate-none"
-                      />
+                      <Circle size="0.75rem" className="mari-live-work__step-icon shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{generalActivity}</span>
+                      <span className="mari-live-work__step-duration">—</span>
                     </motion.li>
                   ) : null}
                 </AnimatePresence>
@@ -4093,6 +4096,7 @@ export function HomeProfessorMariChat({
               input: data?.input,
               detail: previewValue(data?.input),
               output: null,
+              startedAt: Date.now(),
               updatedAt: Date.now(),
             };
             setWorkspaceTimeline((current) => upsertToolTimeline(current, toolCall));
@@ -4107,6 +4111,7 @@ export function HomeProfessorMariChat({
               status: "running",
               detail: null,
               output: outputValue(data?.output),
+              startedAt: Date.now(),
               updatedAt: Date.now(),
             };
             setWorkspaceTimeline((current) => upsertToolTimeline(current, toolCall));
@@ -4120,6 +4125,7 @@ export function HomeProfessorMariChat({
               status: isError ? "error" : "done",
               detail: null,
               output: outputValue(data?.output),
+              startedAt: Date.now(),
               updatedAt: Date.now(),
             };
             setWorkspaceTimeline((current) => upsertToolTimeline(current, toolCall));
@@ -4751,6 +4757,13 @@ export function HomeProfessorMariChat({
                     className="mari-workspace-focusbar relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5 sm:px-7"
                     data-state={mariPresentationState}
                   >
+                    <span
+                      className="mari-workspace-focusbar__mark"
+                      data-active={workspaceTimelineActive ? "true" : "false"}
+                      aria-hidden="true"
+                    >
+                      {workspaceTimelineActive ? <Sparkles size="0.85rem" /> : <img src={MARI_AVATAR_URL} alt="" />}
+                    </span>
                     <div className="mari-workspace-focusbar__title min-w-0 leading-tight">
                       <span className="truncate text-[0.8125rem] font-semibold text-[var(--foreground)]">
                         {localizeUi("ui.chat.homefaq.professorMari")}

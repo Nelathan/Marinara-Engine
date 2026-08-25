@@ -10,6 +10,7 @@ import type {
 
 import { useUIStore, type MariEditViewMode } from "../../stores/ui.store";
 import { MariEditEasyViewer } from "./MariEditEasyViewer";
+import { computeFieldChanges } from "../../lib/mari-edit-diff";
 import { MariPromptPreviewModal, type MariPromptRenderSide } from "./MariPromptPreviewModal";
 import { TranscriptRow } from "./MariTranscriptRow";
 import { cn } from "../../lib/utils";
@@ -28,6 +29,23 @@ function summarizeTables(tables: Record<string, number>) {
     .slice(0, 3)
     .map(([table, count]) => `${count} ${table}`)
     .join(", ");
+}
+
+/**
+ * The mockup's subtitle: `Character \u2022 Greeting`. The table names the entity; the field list
+ * comes from computeFieldChanges, which already skips noise keys, flattens nested columns and
+ * ranks the labels the way the Easy viewer shows them.
+ */
+function describeApprovalSubject(approval: MariDbPendingApproval): string {
+  const table = Object.keys(approval.affectedTables)[0] ?? approval.diffPreview[0]?.table ?? "";
+  const entity = table
+    .replace(/_/g, " ")
+    .replace(/s$/, "")
+    .replace(/^./, (first) => first.toUpperCase());
+  const labels = [
+    ...new Set(approval.diffPreview.flatMap((change) => computeFieldChanges(change).map((f) => f.label))),
+  ];
+  return [entity, labels.slice(0, 3).join(", ")].filter(Boolean).join(" \u2022 ");
 }
 
 function summarizeDeletedRow(change: MariDbPendingApproval["diffPreview"][number]) {
@@ -175,6 +193,7 @@ function DatabaseWorkspaceApprovalCard({
     const scroller = getScrollableAncestor(cardRef.current);
     if (scroller) scroller.scrollTop += delta;
   }, [viewMode]);
+  const approvalSubject = describeApprovalSubject(approval);
   const deletedRows = approval.diffPreview.filter((change) => change.action === "delete");
   const insertedRows = approval.diffPreview.filter((change) => change.action === "insert");
   // #4851: a saved memory lands disabled; offer "Keep & Enable" to keep AND switch it on.
@@ -224,6 +243,9 @@ function DatabaseWorkspaceApprovalCard({
             </button>
           </div>
         </div>
+        {approvalSubject ? (
+          <p className="mt-0.5 text-[0.6875rem] text-[var(--muted-foreground)]">{approvalSubject}</p>
+        ) : null}
         <p className="mt-1 text-[0.6875rem] text-[var(--muted-foreground)]">
           {localizeUi("ui.chat.databaseworkspaceapprovalcard.mariAlreadyAppliedThisKeepItOrRestoreThe")}
         </p>
@@ -343,6 +365,9 @@ function DatabaseWorkspaceApprovalCard({
             </div>
           </div>
         )}
+        {approval.reason ? (
+          <p className="mt-3 max-w-[70ch] text-[0.6875rem] text-[var(--muted-foreground)]">{approval.reason}</p>
+        ) : null}
         <div className="mari-decision-actions mt-4 flex flex-col gap-2 sm:flex-row sm:justify-start">
           {enableableMemoryInsert && onKeepEnable && (
             <button

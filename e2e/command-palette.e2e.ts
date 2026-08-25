@@ -45,7 +45,7 @@ test("desktop shortcut opens a focused command palette with useful initial optio
   await expect(resultRows.filter({ hasText: "Theme" })).toBeVisible();
   await expect(omnibar.locator('[data-component="GlobalOmnibar.ProfessorMariButton"]')).toBeVisible();
   await expect(omnibar.getByRole("toolbar", { name: "Result categories" })).toBeHidden();
-  await expect(omnibar.getByRole("button", { name: "Browse", exact: true })).toBeVisible();
+  await expect(omnibar.locator("[data-omnibar-scope-chip='characters']")).toBeVisible();
 });
 
 test("desktop command palette can toggle a setting without closing", async ({ page }, testInfo) => {
@@ -266,11 +266,11 @@ test("Command Center can add a character to the active chat", async ({ page, req
   }
 });
 
-test("browse detail shows the exact selected entity and returns to its browse position", async ({ page }, testInfo) => {
-  test.skip(!testInfo.project.name.includes("desktop"), "Browse detail is covered on desktop.");
+test("a category chip scopes the query and lists that whole kind", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "The idle deck is covered on desktop.");
 
-  const firstName = `Browse Alpha ${Date.now()}`;
-  const secondName = `Browse Beta ${Date.now()}`;
+  const firstName = `Scope Alpha ${Date.now()}`;
+  const secondName = `Scope Beta ${Date.now()}`;
   const firstResponse = await page.request.post("/api/characters", { data: { data: { name: firstName } } });
   const secondResponse = await page.request.post("/api/characters", { data: { data: { name: secondName } } });
   expect(firstResponse.ok()).toBeTruthy();
@@ -282,28 +282,33 @@ test("browse detail shows the exact selected entity and returns to its browse po
     await page.reload();
     await page.keyboard.press("Control+k");
     const omnibar = page.locator('[data-component="GlobalOmnibar"]');
-    await omnibar.getByRole("button", { name: "Browse", exact: true }).click();
-    const toolbar = omnibar.getByRole("toolbar", { name: "Result categories" });
-    await toolbar.getByRole("button", { name: "Characters", exact: true }).click();
-    const selectedCard = omnibar.getByRole("button", { name: new RegExp(secondName) });
-    await selectedCard.click();
+    // The chip types the scope prefix; there is no separate grid surface.
+    await omnibar.locator("[data-omnibar-scope-chip='characters']").click();
+    const input = omnibar.getByRole("searchbox", { name: "Search Marinara" });
+    await expect(input).toHaveValue("char: ");
+    await expect(input).toBeFocused();
 
-    const detail = omnibar.locator('[data-component="GlobalOmnibar.Detail"]');
-    await expect(omnibar).toBeVisible();
-    await expect(detail.getByRole("heading", { name: secondName, exact: true })).toBeVisible();
-    await expect(detail.getByRole("heading", { name: firstName, exact: true })).toHaveCount(0);
+    const rows = omnibar.locator("[data-command-center-result-row]");
+    await expect(rows.filter({ hasText: firstName })).toBeVisible();
+    await expect(rows.filter({ hasText: secondName })).toBeVisible();
 
-    await omnibar.getByRole("button", { name: "Back to browse", exact: true }).click();
-    await expect(omnibar.locator('[data-component="GlobalOmnibar.Browse"]')).toBeVisible();
-    await expect(toolbar.getByRole("button", { name: "Characters", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await expect(omnibar.getByRole("button", { name: new RegExp(secondName) })).toHaveAttribute(
-      "data-selected",
-      "true",
-    );
-    await expect(omnibar.getByRole("searchbox", { name: "Search Marinara" })).toBeFocused();
+    // The list keeps its own keyboard model: arrows move the selection, which
+    // browse never supported. Assert it actually moved, not merely that
+    // something is selected.
+    const selectedRowId = () =>
+      omnibar
+        .locator("[data-command-center-result-row]:has([data-selected='true'])")
+        .first()
+        .getAttribute("data-result-id");
+    // One movement is the whole claim, and it needs only the two rows the
+    // fixture guarantees. Asserting two movements would depend on how many
+    // characters the test database happens to hold.
+    expect(await rows.count()).toBeGreaterThanOrEqual(2);
+    const before = await selectedRowId();
+    await page.keyboard.press("ArrowDown");
+    const after = await selectedRowId();
+    expect(after).toBeTruthy();
+    expect(after).not.toBe(before);
   } finally {
     await page.request.delete(`/api/characters/${first.id}`);
     await page.request.delete(`/api/characters/${second.id}`);

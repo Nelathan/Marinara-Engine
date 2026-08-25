@@ -15,6 +15,20 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Professor Mari's full-screen mobile workspace now traps and restores focus, announces itself as a dialog, closes predictably with Escape, and honors reduced-motion preferences.
 - Finished Professor Mari runs now keep technical reasoning collapsed by default, and obsolete workspace presentation styles were removed.
 
+### Changed
+
+- Omnibar result rows no longer print a second line when there is nothing to say. A row used to fall back to a bare fact value ("Eliza · 1"), to the name of the group it already sits under ("Settings · Settings"), or to a raw JSON blob kept in an imported character's description; those rows are now single-line.
+- Professor Mari's work card now reports how long each step took instead of the raw tool argument, which stays in the collapsed technical-actions list. Her review card names the entity and fields being changed and explains why in her own words, and her portrait appears in the omnibar workspace header.
+- Omnibar settings results are now derived from a single settings registry instead of a second hand-written list. Every searchable setting is reachable from the omnibar (previously 22 of 99), a setting can be deep-linked to its section as well as its tab, and three rows that pointed at controls which no longer existed — which opened the tab and silently failed to scroll — are fixed and cannot recur.
+
+### Removed
+
+- The omnibar's idle deck: the "Find" heading, its instruction line, and the category count chips, along with the idle result list that opened onto recently-clicked menu items such as Help and Settings rather than anything you had worked on. An empty omnibar is now the search bar and a greeting from Professor Mari, and the panel shrinks to fit instead of framing an empty box. Pending decisions, the continue row and the rows describing what you are currently looking at are unchanged.
+- The omnibar's Browse grid, along with its compare and batch-attach modes. Typing a category prefix (`char:`, `preset:`) lists that whole kind as ordinary results with arrow keys, previews and Enter, which the grid did not support. The library screens remain the place to browse by artwork.
+- The omnibar's game-command shortcut, which matched bare keywords such as "map", "scene" or "fight" and diverted ordinary searches in a game chat to Professor Mari. Asking her directly still works.
+- Dead omnibar session state: a return stack, a persisted Professor Mari destination and detail id that nothing ever read, and 71 unused translation strings left behind by the Quick pane, the detail pane and the surfaces removed above.
+- Omnibar chat extraction for characters, locations and campaigns, which created nothing and only forwarded the request; extraction into a lorebook is unchanged. Also removed: the scope-hint result row and the verb rows whose only action was typing more text into the search box.
+
 ### Added
 
 - Professor Mari now keeps one integrated animated presence in the workspace header while a single live transcript row reports her current work, replacing repeated mascot artwork and the separate working card; the header foregrounds her current subject and moves Chats, Skills, Memories, Context, and Restart into one panel menu; tool activity reads as a compact running log with completed runs folded away; decisions use the companion work panel beside her explanation on desktop and as a focused sheet on mobile, show the edited character or resource directly, and keep actions reachable while reviewing; suggestions now follow a question from Mari instead of appearing as detached chrome.

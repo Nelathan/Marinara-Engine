@@ -113,8 +113,6 @@ export function GlobalOmnibar() {
         writeCommandCenterSessionState({
           ...current,
           pane: "mari",
-          mariDestination: "chat",
-          mariDetailId: null,
           mariHandoff: request.context
             ? {
                 status: "pending",

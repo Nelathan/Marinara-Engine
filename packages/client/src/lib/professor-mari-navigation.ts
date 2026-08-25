@@ -1,6 +1,9 @@
 import type { ProfessorMariContextResourceKind } from "@marinara-engine/shared";
+import type { SettingsSectionId, SettingsTabId } from "./settings-registry";
 
-export type ProfessorMariSettingsTab = "general" | "appearance" | "generations" | "addons" | "import" | "advanced";
+// The settings registry owns these. Re-exported under the old name so the many
+// existing `ProfessorMariSettingsTab` references keep working.
+export type ProfessorMariSettingsTab = SettingsTabId;
 export type ProfessorMariNavigationResourceKind = Extract<
   ProfessorMariContextResourceKind,
   "character" | "persona" | "preset" | "lorebook" | "agent"
@@ -15,7 +18,7 @@ export type ProfessorMariNavigationTarget =
       kind: "panel";
       panel: "characters" | "personas" | "lorebooks" | "presets" | "connections" | "agents" | "extensions";
     }
-  | { kind: "settings"; tab: ProfessorMariSettingsTab; controlId?: string }
+  | { kind: "settings"; tab: ProfessorMariSettingsTab; controlId?: string; sectionId?: SettingsSectionId }
   | {
       kind: "surface";
       surface: "card-downloads" | "character-library" | "persona-library" | "agent-catalog" | "game-assets";

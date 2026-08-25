@@ -42,6 +42,7 @@ export function executeStateNavigation(
   } else if (target.kind === "settings") {
     ui.setSettingsTab(target.tab);
     ui.setSettingsTargetControlId(target.controlId ?? null);
+    ui.setSettingsTargetSectionId(target.sectionId ?? null);
     ui.openRightPanel("settings");
   } else if (target.kind === "surface") {
     if (target.surface === "card-downloads") ui.openBotBrowser();

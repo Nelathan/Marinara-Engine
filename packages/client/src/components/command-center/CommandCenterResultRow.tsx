@@ -9,7 +9,7 @@ export interface CommandCenterResultRowProps {
   id?: string;
   dataResultId?: string;
   title: string;
-  metadata: string;
+  metadata: string | null;
   tertiaryMetadata?: ReactNode;
   description?: string;
   icon: LucideIcon;
@@ -99,7 +99,9 @@ export function CommandCenterResultRow({
         />
         <span className="min-w-0 leading-tight">
           <span className="block truncate text-sm font-semibold">{title}</span>
-          <span className="mt-0.5 block truncate text-xs text-[var(--muted-foreground)]">{metadata}</span>
+          {metadata ? (
+            <span className="mt-0.5 block truncate text-xs text-[var(--muted-foreground)]">{metadata}</span>
+          ) : null}
         </span>
         <span className="flex min-w-0 max-w-36 items-center justify-end gap-2 truncate text-xs text-[var(--muted-foreground)] sm:max-w-48">
           {tertiaryMetadata}

@@ -23,6 +23,11 @@ import {
 } from "../../packages/client/src/lib/omnibar-search.js";
 import { getOmnibarSettingsDestinations } from "../../packages/client/src/lib/omnibar-settings.js";
 import {
+  SETTINGS_SEARCHABLE_CONTROLS,
+  SETTINGS_SECTIONS,
+  SETTINGS_TABS,
+} from "../../packages/client/src/lib/settings-registry.js";
+import {
   getCharacterDisplayIdentity,
   parseCharacterDisplayData,
 } from "../../packages/client/src/lib/character-display.js";
@@ -431,9 +436,45 @@ assert.deepEqual(streamingSetting && { tab: streamingSetting.tab, controlId: str
   controlId: "streaming-speed",
 });
 assert.equal(settingsDestinations.find((setting) => setting.controlId === "font-family")?.sectionLabel, "Text & Scale");
+// Tab rows open the tab and nothing else. They used to scroll to a hand-picked
+// "representative" control; the 32 real section rows do that job properly now.
+const appearanceTabRow = settingsDestinations.find((setting) => setting.id === "settings-section:appearance");
+assert.ok(appearanceTabRow, "the appearance tab row exists");
+// A tab row names neither a control nor a section: it just opens the tab.
+assert.equal(appearanceTabRow.controlId, undefined);
+assert.equal(appearanceTabRow.sectionId, undefined);
+const textScaleRow = settingsDestinations.find((setting) => setting.id === "settings-section-detail:text-scale");
+assert.ok(textScaleRow, "the text-scale section row exists");
+assert.equal(textScaleRow.sectionId, "text-scale");
+assert.equal(textScaleRow.controlId, undefined);
+assert.equal(textScaleRow.tab, "appearance");
+// Derived from the registry, so every settings control is reachable, not the 22
+// that the old hand-written list happened to name. Comparing against the
+// registry rather than a fixed number keeps this true as settings are added.
 assert.equal(
-  settingsDestinations.find((setting) => setting.id === "settings-section:appearance")?.controlId,
-  "theme-mode",
+  new Set(settingsDestinations.map((setting) => setting.id)).size,
+  settingsDestinations.length,
+  "destination ids are unique",
+);
+// Identity, not just counts: every registered tab, section and control has
+// exactly one row, so a rename cannot be masked by a coincidental total.
+assert.deepEqual(
+  new Set(settingsDestinations.flatMap((setting) => (setting.controlId ? [setting.controlId] : []))),
+  new Set(SETTINGS_SEARCHABLE_CONTROLS.map((control) => control.id)),
+);
+assert.deepEqual(
+  new Set(settingsDestinations.flatMap((setting) => (setting.sectionId ? [setting.sectionId] : []))),
+  new Set(SETTINGS_SECTIONS.map((section) => section.id)),
+);
+for (const tab of SETTINGS_TABS) {
+  assert.ok(
+    settingsDestinations.some((setting) => setting.id === `settings-section:${tab.id}`),
+    `tab ${tab.id} has a row`,
+  );
+}
+assert.equal(
+  settingsDestinations.length,
+  SETTINGS_TABS.length + SETTINGS_SECTIONS.length + SETTINGS_SEARCHABLE_CONTROLS.length,
 );
 
 assert.equal(inferProfessorMariCommandCenterCapability("make Luna's greeting shorter"), "edit");
@@ -480,23 +521,24 @@ assert.deepEqual(
   },
 );
 
-// Full and Quick Mari are canonical omnibar depths and survive close/reopen.
+// The list and Mari are the only panes. A session persisted with a removed one
+// falls back to the list rather than resurrecting a surface that no longer exists.
 assert.equal(normalizeCommandCenterSessionState({ pane: "mari" }).pane, "mari");
-assert.equal(normalizeCommandCenterSessionState({ pane: "quick" }).pane, "quick");
-assert.equal(normalizeCommandCenterSessionState({ pane: "browse" }).pane, "browse");
-assert.equal(normalizeCommandCenterSessionState({ pane: "detail" }).pane, "detail");
-
+assert.equal(normalizeCommandCenterSessionState({ pane: "browse" }).pane, "results");
+assert.equal(normalizeCommandCenterSessionState({ pane: "quick" }).pane, "results");
+assert.equal(normalizeCommandCenterSessionState({ pane: "detail" }).pane, "results");
+// `returnStack`, `mariDestination` and `mariDetailId` were persisted and
+// normalized but never read: Escape steps back one level and the Mari pane owns
+// its own destination. Unknown fields are dropped rather than carried forward.
 const mariSession = normalizeCommandCenterSessionState({
   pane: "mari",
   mariDestination: "memories",
   mariDetailId: "memory-one",
-  returnStack: [
-    { pane: "results", resultId: "character:luna" },
-    { pane: "mari", destination: "memories", detailId: "memory-one" },
-  ],
+  returnStack: [{ pane: "results", resultId: "character:luna" }],
 });
-assert.equal(mariSession.mariDestination, "memories");
-assert.equal(mariSession.mariDetailId, "memory-one");
-assert.equal(mariSession.returnStack.length, 2);
+assert.equal(mariSession.pane, "mari");
+assert.ok(!("returnStack" in mariSession));
+assert.ok(!("mariDestination" in mariSession));
+assert.ok(!("mariDetailId" in mariSession));
 
 console.info("Command Center regression checks passed.");
