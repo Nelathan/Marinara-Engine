@@ -2606,6 +2606,10 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   font-weight: 600;
 }
 
+.mari-chrome-tag {
+  border-radius: 999px;
+}
+
 .mari-chat-option-field {
   border: 1px solid var(--marinara-chat-option-field-border);
   background: var(--marinara-chat-option-field-bg);

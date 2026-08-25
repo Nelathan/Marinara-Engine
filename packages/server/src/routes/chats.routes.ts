@@ -3816,6 +3816,8 @@ export async function chatsRoutes(app: FastifyInstance) {
     for (const key of ["summary", "summaryEntries", "lastAutomaticSummaryMessageId", "daySummaries", "weekSummaries"]) {
       delete settingsToKeep[key];
     }
+    delete settingsToKeep.gameNarrationIndex;
+    delete settingsToKeep.gameNarrationMessageId;
     const sourceCutoffIndex = upToMessageId ? msgs.findIndex((msg) => msg.id === upToMessageId) : msgs.length - 1;
     const sourceMessagesToCopy = msgs.slice(0, sourceCutoffIndex + 1);
     const copiedSourceMessageIds = new Set(sourceMessagesToCopy.map((msg) => msg.id));

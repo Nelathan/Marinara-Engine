@@ -3944,7 +3944,7 @@ test("Character and persona sheets persist an explicit reference choice and fall
   }
 });
 
-test("Matched full-body sprites approve a neutral anchor before using portrait references", async ({
+test("Matched full-body sprites approve a neutral anchor before sending each expression separately", async ({
   page,
   request,
 }, testInfo) => {
@@ -3977,7 +3977,7 @@ test("Matched full-body sprites approve a neutral anchor before using portrait r
   expect(characterResponse.ok()).toBeTruthy();
   const character = (await characterResponse.json()) as { id: string };
 
-  for (const expression of ["neutral", "happy"]) {
+  for (const expression of ["neutral", "happy", "sad"]) {
     const spriteResponse = await request.post(`/api/sprites/${character.id}`, {
       data: {
         expression,
@@ -4062,7 +4062,7 @@ test("Matched full-body sprites approve a neutral anchor before using portrait r
     ]);
 
     await modal.getByRole("button", { name: "Use neutral and continue" }).click();
-    await expect.poll(() => generationRequests.length).toBe(2);
+    await expect.poll(() => generationRequests.length).toBeGreaterThanOrEqual(2);
     expect(generationRequests[1]).toMatchObject({
       expressions: ["happy"],
       nativeTransparentPng: true,
@@ -4075,7 +4075,21 @@ test("Matched full-body sprites approve a neutral anchor before using portrait r
         image: expect.stringContaining(`/api/sprites/${character.id}/file/`),
       },
     ]);
+    await expect.poll(() => generationRequests.length).toBe(3);
+    expect(generationRequests[2]).toMatchObject({
+      expressions: ["sad"],
+      nativeTransparentPng: true,
+      noBackground: true,
+      neutralFullBodyReference: expect.stringMatching(/^data:image\/png;base64,/u),
+    });
+    expect(generationRequests[2]?.expressionReferences).toEqual([
+      {
+        expression: "sad",
+        image: expect.stringContaining(`/api/sprites/${character.id}/file/`),
+      },
+    ]);
     await expect(modal.locator('input[value="happy"]')).toBeVisible();
+    await expect(modal.locator('input[value="sad"]')).toBeVisible();
   } finally {
     await page.unroute("**/api/sprites/generate-sheet");
     await request.delete(`/api/characters/${character.id}`).catch(() => undefined);
@@ -7219,7 +7233,7 @@ test("chat Help overlay labels visible controls in every mode", async ({ page, r
           optionalCall.type = "button";
           optionalCall.dataset.chatHelp = "call";
           optionalCall.setAttribute("aria-label", "Optional voice call fixture");
-          optionalCall.style.cssText = "position:absolute;top:3.5rem;right:1rem;width:2rem;height:2rem";
+          optionalCall.style.cssText = "position:absolute;top:3.5rem;left:1rem;width:2rem;height:2rem";
           root.append(optionalCall);
         });
       }
@@ -7266,6 +7280,22 @@ test("chat Help overlay labels visible controls in every mode", async ({ page, r
       await expect(overlay.locator('[data-chat-help-highlight="branches"]')).toBeVisible();
       await expect(overlay.locator('[data-chat-help-highlight="settings"]')).toBeVisible();
       await expect(overlay.locator('[data-chat-help-highlight="help"]')).toBeVisible();
+
+      if (mobile) {
+        const toolbarTargets = await page
+          .locator("[data-chat-toolbar-overflow-menu] [data-chat-help]")
+          .filter({ visible: true })
+          .evaluateAll((elements) => [
+            ...new Set(elements.map((element) => element.getAttribute("data-chat-help")).filter(Boolean)),
+          ]);
+        expect(toolbarTargets.length).toBeGreaterThanOrEqual(4);
+        for (const target of toolbarTargets) {
+          const box = await overlay.locator(`[data-chat-help-highlight="${target}"]`).boundingBox();
+          expect(box).not.toBeNull();
+          expect(box!.width, `${target} highlight width`).toBe(32);
+          expect(box!.height, `${target} highlight height`).toBe(32);
+        }
+      }
 
       if (chat.mode === "conversation") {
         await expect(overlay.locator('[data-chat-help-highlight="call"]')).toBeVisible();
