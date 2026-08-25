@@ -472,6 +472,25 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
+  /if \(session\.status === "completed"\) \{[\s\S]{0,500}endedRef\.current = true;/,
+  "a recovered completed session must not auto-refire the aftermath handoff on refresh",
+);
+// A fresh page load has no local declaration id yet, so an ACTIVE session must
+// still match and hydrate (its id is adopted during hydration); only completed
+// sessions require strict declaration ownership. Without this, refreshing a live
+// battle unwound the chat to exploration and orphaned the active session.
+assert.match(
+  gameSurfaceSource,
+  /surfaceCombatSession\?\.status === "active" && combatStartMessageId === null/,
+  "an active session must hydrate on refresh even before the local declaration id is known",
+);
+assert.match(
+  gameSurfaceSource,
+  /chatMeta\.gameActiveState === "exploration" &&\s*session\?\.status === "active"/,
+  "an active session stranded behind an exploration unwind must be re-adopted",
+);
+assert.match(
+  tacticalCombatUiSource,
   /if \(!liveState \|\| liveState\.outcome \|\| animatingRef\.current \|\| restoredSessionAuthorityUnavailable\) return;/,
   "a recovered completed Tactical session must never submit another action",
 );

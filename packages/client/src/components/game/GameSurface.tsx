@@ -8544,10 +8544,13 @@ function GameSurfaceComponent({
     if (!tags.combatEncounter && tags.stateChange !== "combat") return false;
     return !hasCombatResultAfterMessage(latestAssistantMsg.id);
   })();
+  // Also enabled in exploration: a stale-state unwind can leave an ACTIVE session
+  // behind while the chat sits in exploration, and the self-heal below needs to
+  // see that session to re-adopt the battle.
   const surfaceCombatSessionQuery = useActiveCombatSession(
     activeChatId,
     undefined,
-    chatMeta.gameActiveState === "combat",
+    chatMeta.gameActiveState === "combat" || chatMeta.gameActiveState === "exploration",
   );
   const surfaceCombatSession = surfaceCombatSessionQuery.data?.session;
   const surfaceClassicStartMessageId =
@@ -8556,9 +8559,15 @@ function GameSurfaceComponent({
     surfaceCombatSession?.style === "tactical" ? surfaceCombatSession.canonicalState.startMessageId : null;
   const surfaceSessionMatchesCurrentCombat =
     surfaceCombatSession !== undefined &&
-    (surfaceCombatSession?.style === "tactical"
+    ((surfaceCombatSession?.style === "tactical"
       ? (surfaceTacticalStartMessageId ?? null) === (combatStartMessageId ?? null)
-      : (surfaceClassicStartMessageId ?? null) === (combatStartMessageId ?? null));
+      : (surfaceClassicStartMessageId ?? null) === (combatStartMessageId ?? null)) ||
+      // A fresh page load has no local declaration id yet (client state starts at
+      // null), so an ACTIVE session must match and hydrate — its declaration id is
+      // adopted during hydration. Requiring equality here unwound live battles to
+      // exploration on refresh. Completed sessions keep strict ownership so a
+      // finished battle can never replay under a different declaration.
+      (surfaceCombatSession?.status === "active" && combatStartMessageId === null));
   const surfaceSessionIsRestorable =
     surfaceSessionMatchesCurrentCombat &&
     (surfaceCombatSession?.status === "active" ||
@@ -8600,7 +8609,28 @@ function GameSurfaceComponent({
   });
   useEffect(() => {
     const session = surfaceCombatSession;
-    if (chatMeta.gameActiveState !== "combat") return;
+    if (chatMeta.gameActiveState !== "combat") {
+      // Self-heal a wedged unwind: an ACTIVE session with the chat sitting in
+      // exploration can only mean a prior stale-state unwind misfired (deliberate
+      // exits abandon the session server-side first). Re-adopt the battle rather
+      // than leaving it orphaned behind the narration view.
+      if (
+        chatMeta.gameActiveState === "exploration" &&
+        session?.status === "active" &&
+        !surfaceCombatSessionQuery.isPending &&
+        !surfaceCombatSessionQuery.isFetching &&
+        !surfaceCombatSessionQuery.isError &&
+        !combatEncounterPreparing &&
+        !combatDeclarationPending &&
+        activeChatId &&
+        !transitionGameState.isPending
+      ) {
+        setCombatStartMessageId(session.canonicalState.startMessageId ?? null);
+        useGameModeStore.getState().setGameState("combat");
+        transitionGameState.mutate({ chatId: activeChatId, newState: "combat" });
+      }
+      return;
+    }
     // Never hydrate or unwind from cached session data while the authority
     // lookup is unresolved. A transient lookup failure must preserve the
     // restored board so the mode can offer a retry instead of relaunching.

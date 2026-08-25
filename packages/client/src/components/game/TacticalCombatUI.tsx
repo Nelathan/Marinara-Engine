@@ -724,6 +724,13 @@ export function TacticalCombatUI({
     // Completed sessions are terminal display/aftermath authority, not a new
     // snapshot write. Re-persisting one here can race terminal cleanup.
     if (session.status === "active") persistSnapshot(canonicalState, session.sessionId);
+    if (session.status === "completed") {
+      // A completed session means the aftermath handoff already ran (/complete is
+      // what marks it completed). Recovery is display authority only: without this
+      // fence the terminal-mount effect re-fires handoffCombatEnd on every refresh,
+      // re-announcing the outcome to the GM. Retry/Continue stay manual paths.
+      endedRef.current = true;
+    }
     if (restartRecovery) {
       restartRecoveryRef.current = null;
       restartRecoveryAttemptsRef.current = 0;
@@ -2023,7 +2030,10 @@ export function TacticalCombatUI({
             {liveState.difficulty}
           </span>
           {objectives[0] && (
-            <span className="hidden max-w-56 truncate rounded-md border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[0.65rem] text-amber-100 md:inline">
+            <span
+              className="hidden max-w-56 truncate rounded-md border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[0.65rem] text-amber-100 md:inline lg:max-w-96"
+              title={`${objectives[0].label}: ${objectives[0].status}`}
+            >
               {objectives[0].label}: {objectives[0].status}
             </span>
           )}
