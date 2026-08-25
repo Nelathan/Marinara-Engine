@@ -243,7 +243,7 @@ const PROFESSOR_MARI_PDF_ATTACHMENT_MIME_TYPE = "application/pdf";
  * keep in step.
  */
 const MARI_PANEL_SLOT_CLASS =
-  "absolute inset-0 z-10 h-full min-h-0 min-w-0 bg-[var(--card)] sm:relative sm:inset-auto sm:z-auto sm:w-[24rem] sm:shrink-0 sm:border-l sm:border-[var(--border)]/60 sm:bg-transparent";
+  "absolute inset-0 z-10 h-full min-h-0 min-w-0 bg-[var(--card)] sm:relative sm:inset-auto sm:z-auto sm:h-full sm:w-[24rem] sm:min-w-[24rem] sm:shrink-0 sm:border-l sm:border-[var(--border)]/60 sm:bg-transparent";
 
 const PROFESSOR_MARI_PANE_TRANSITION = { duration: 0.24, ease: [0.16, 1, 0.3, 1] } as const;
 
@@ -1524,6 +1524,7 @@ function WorkspaceLiveWorkCard({
   active?: boolean;
 }) {
   const { t } = useUiTranslation();
+  const localizeUi = t;
   const reduceMotion = useReducedMotion();
   const liveElapsedSeconds = useWorkspaceElapsedSeconds(active);
   const toolItems = items.filter(
@@ -1728,7 +1729,8 @@ function MariWorkspaceActionResultRow({
   character?: CharacterPreviewModel | null;
   lorebook?: LorebookPreviewModel | null;
 }) {
-  const { t: localizeUi } = useUiTranslation();
+  const { t } = useUiTranslation();
+  const localizeUi = t;
   const characterPreview =
     result.resource.kind === "character" && character?.id === result.resource.id ? character : null;
   const lorebookPreview = result.resource.kind === "lorebook" && lorebook?.id === result.resource.id ? lorebook : null;
@@ -2701,6 +2703,7 @@ export function HomeProfessorMariChat({
   }, []);
 
   const loadSkills = useCallback(async () => {
+    if (hasLoadedSkillsRef.current && skills.length > 0) return;
     setSkillsLoading(true);
     try {
       const response = await api.get<MariWorkspaceSkillsResponse>("/professor-mari/workspace/skills");
@@ -2718,9 +2721,10 @@ export function HomeProfessorMariChat({
     } finally {
       setSkillsLoading(false);
     }
-  }, []);
+  }, [skills.length]);
 
   const loadMemories = useCallback(async () => {
+    if (hasLoadedMemoriesRef.current && memories.length > 0) return;
     const seq = ++memoriesLoadSeqRef.current;
     setMemoriesLoading(true);
     try {
@@ -2740,7 +2744,7 @@ export function HomeProfessorMariChat({
     } finally {
       if (seq === memoriesLoadSeqRef.current) setMemoriesLoading(false);
     }
-  }, []);
+  }, [memories.length]);
 
   const ensureProfessorMariChat = useCallback(
     async (connectionId: string | null) => {
