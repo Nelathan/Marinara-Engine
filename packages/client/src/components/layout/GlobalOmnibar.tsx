@@ -174,6 +174,7 @@ import {
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact } from "../command-center/command-result-preview.types";
 import { OmnibarEmptyState } from "./OmnibarEmptyState";
+import { OmnibarIntro, OMNIBAR_INTRO_DURATION_MS } from "./OmnibarIntro";
 import {
   getOmnibarResourceId,
   isRichResult,
@@ -193,6 +194,8 @@ const OmnibarAside = lazy(() => import("./omnibar/OmnibarAside").then((m) => ({ 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
 const OMNIBAR_INTRO_SEEN_KEY = "marinara:omnibar:intro-seen:v1";
+// Still under review: the intro replays on every open until this flips back on.
+const OMNIBAR_INTRO_PERSISTS = false;
 
 /** Categories whose result rows open an editor rather than the thing itself. */
 const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
@@ -411,7 +414,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
   const [introActive, setIntroActive] = useState(() => {
     try {
-      return localStorage.getItem(OMNIBAR_INTRO_SEEN_KEY) !== "true";
+      return !OMNIBAR_INTRO_PERSISTS || localStorage.getItem(OMNIBAR_INTRO_SEEN_KEY) !== "true";
     } catch {
       return false;
     }
@@ -424,6 +427,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setQuery = (value: string) => setSessionValue("query", value);
   const finishIntro = () => {
     setIntroActive(false);
+    if (!OMNIBAR_INTRO_PERSISTS) return;
     try {
       localStorage.setItem(OMNIBAR_INTRO_SEEN_KEY, "true");
     } catch {
@@ -1416,6 +1420,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [filter, deferredQuery, rankedResults, ranking],
   );
   const idle = !query.trim() && presentation.groups.length === 0;
+  const introRunning = introActive && !reduceMotion && idle && pane === "results";
   // The filter bar only renders once there is a query, so availability always comes from the results.
   const tabAvailability = presentation.categoryAvailability;
   const availableFilters = COMMAND_CENTER_CATEGORY_FILTERS.filter(
@@ -1537,7 +1542,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!introActive || reduceMotion || !idle) return;
-    const timer = window.setTimeout(finishIntro, 1500);
+    const timer = window.setTimeout(finishIntro, OMNIBAR_INTRO_DURATION_MS);
     return () => window.clearTimeout(timer);
   }, [idle, introActive, reduceMotion]);
 
@@ -2544,9 +2549,9 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           pane === "mari"
             ? "mari-workspace-shell sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]"
             : idle
-              ? "sm:h-[min(34rem,68dvh)] sm:max-h-[min(34rem,68dvh)]"
+              ? "sm:h-auto sm:max-h-none"
               : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"
-        }`}
+        } ${introRunning ? "omnibar-intro-grow" : ""}`}
       >
         <div
           aria-hidden="true"
@@ -2729,20 +2734,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {liveMessage}
         </div>
-
-        {pane === "results" && idle ? (
-          <OmnibarEmptyState
-            activeChatMode={activeChat?.mode}
-            introActive={introActive}
-            reduceMotion={Boolean(reduceMotion)}
-            onPick={(scope: OmnibarScopeId) => {
-              finishIntro();
-              setFilter("all");
-              setQuery(omnibarScopePrefix(scope));
-              requestAnimationFrame(() => inputRef.current?.focus());
-            }}
-          />
-        ) : null}
 
         {mariMounted ? (
           <Suspense fallback={null}>
@@ -2992,6 +2983,19 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           </footer>
         ) : null}
       </div>
+
+      {introRunning ? <OmnibarIntro /> : null}
+
+      {pane === "results" && idle && !introRunning ? (
+        <OmnibarEmptyState
+          activeChatMode={activeChat?.mode}
+          onPick={(scope: OmnibarScopeId) => {
+            setFilter("all");
+            setQuery(omnibarScopePrefix(scope));
+            requestAnimationFrame(() => inputRef.current?.focus());
+          }}
+        />
+      ) : null}
 
       <AnimatePresence>
         {fieldFlight ? (

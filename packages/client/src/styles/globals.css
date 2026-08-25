@@ -8620,26 +8620,209 @@ strong {
   }
 }
 
-/* Omnibar empty state: the dashed orbit breathes so the icon field reads as live
-   without pulling attention away from the input. */
-.omnibar-empty-state__orbit {
-  animation: omnibar-orbit-breathe 6s ease-in-out infinite;
+/* ---------------------------------------------------------------------------
+   Omnibar first-open intro.
+
+   The top-bar icons whirl around the screen, then get pulled into the search
+   field one by one while the field widens with every icon it swallows. Mari
+   pops out at the end to hand the bar over. All of it is CSS so the sequence
+   costs nothing per frame in React.
+
+   `--omnibar-bar-y` is the vertical centre of the search field; every piece of
+   the intro is positioned against it.
+   --------------------------------------------------------------------------- */
+.omnibar-intro {
+  --omnibar-bar-y: calc(env(safe-area-inset-top) + 2rem);
+  --omnibar-intro-r: min(38vw, 40vh, 20rem);
 }
 
-@keyframes omnibar-orbit-breathe {
+@media (min-width: 640px) {
+  .omnibar-intro {
+    --omnibar-bar-y: calc(10vh + 1.75rem);
+  }
+}
+
+.omnibar-intro__icon {
+  position: fixed;
+  left: 50%;
+  top: var(--omnibar-bar-y);
+  margin: -1.375rem 0 0 -1.375rem;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: color-mix(in srgb, var(--card) 92%, var(--primary));
+  color: var(--primary);
+  box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--primary) 14%, transparent);
+  animation:
+    omnibar-intro-whirl 1900ms cubic-bezier(0.5, 0, 0.5, 1) both,
+    omnibar-intro-ingest 620ms cubic-bezier(0.6, 0, 0.9, 0.4) calc(1900ms + var(--omnibar-intro-delay)) both;
+}
+
+/* Three turns around the screen, opening out from the bar as they spin up. */
+@keyframes omnibar-intro-whirl {
+  from {
+    opacity: 0;
+    transform: rotate(calc(var(--omnibar-intro-a) * 1deg)) translateX(0) scale(0.2);
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: rotate(calc((var(--omnibar-intro-a) + 1080) * 1deg)) translateX(var(--omnibar-intro-r)) scale(1);
+  }
+}
+
+/* Swing back in and disappear into the field. */
+@keyframes omnibar-intro-ingest {
+  from {
+    opacity: 1;
+    transform: rotate(calc(var(--omnibar-intro-a) * 1deg)) translateX(var(--omnibar-intro-r)) scale(1);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(calc((var(--omnibar-intro-a) + 90) * 1deg)) translateX(calc(var(--omnibar-intro-r) * 0.42))
+      scale(1.1);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(calc((var(--omnibar-intro-a) + 150) * 1deg)) translateX(0) scale(0.15);
+  }
+}
+
+/* One flash on the field per icon swallowed. */
+.omnibar-intro__pulse {
+  position: fixed;
+  left: 50%;
+  top: var(--omnibar-bar-y);
+  margin: -1.75rem 0 0 -1.75rem;
+  height: 3.5rem;
+  width: 3.5rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 45%, transparent), transparent 70%);
+  opacity: 0;
+  animation: omnibar-intro-pulse 320ms ease-out calc(2380ms + var(--omnibar-intro-delay)) both;
+}
+
+@keyframes omnibar-intro-pulse {
+  from {
+    opacity: 0.75;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+/* The field starts narrow and steps wider once per swallowed icon. */
+.omnibar-intro-grow {
+  animation: omnibar-intro-grow 1500ms steps(9, end) 2100ms both;
+}
+
+@keyframes omnibar-intro-grow {
+  from {
+    max-width: 19rem;
+  }
+  to {
+    max-width: 44rem;
+  }
+}
+
+/* Mari pops out beside the field once it has eaten everything. */
+.omnibar-intro__mari {
+  position: fixed;
+  left: 50%;
+  top: var(--omnibar-bar-y);
+  margin: -6.5rem 0 0 -24rem;
+  width: 8rem;
+  transform-origin: 50% 100%;
+  animation: omnibar-intro-mari 620ms cubic-bezier(0.2, 1.5, 0.4, 1) 3700ms both;
+}
+
+.omnibar-intro__mari img {
+  width: 100%;
+  filter: drop-shadow(0 0.75rem 1.5rem rgba(0, 0, 0, 0.45));
+}
+
+@keyframes omnibar-intro-mari {
+  from {
+    opacity: 0;
+    transform: translateY(2.5rem) scale(0.5) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+.omnibar-intro__bubble {
+  position: fixed;
+  left: 50%;
+  top: var(--omnibar-bar-y);
+  margin: -8.5rem 0 0 -16.5rem;
+  max-width: 17rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--foreground);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.4);
+  animation: omnibar-intro-bubble 420ms ease-out 4150ms both;
+}
+
+@keyframes omnibar-intro-bubble {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mari and her line sit off-screen on narrow viewports; the icons carry it. */
+@media (max-width: 47rem) {
+  .omnibar-intro__mari,
+  .omnibar-intro__bubble {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Omnibar idle hint field: lives under the collapsed bar, not inside it.
+   --------------------------------------------------------------------------- */
+.omnibar-hint-arrow {
+  animation: omnibar-hint-arrow 2.4s ease-in-out infinite;
+}
+
+@keyframes omnibar-hint-arrow {
   0%,
   100% {
-    opacity: 0.5;
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.35;
+    transform: translateY(0.15rem);
   }
   50% {
-    opacity: 0.85;
-    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 0.8;
+    transform: translateY(-0.15rem);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .omnibar-empty-state__orbit {
+  .omnibar-hint-arrow,
+  .omnibar-intro__icon,
+  .omnibar-intro__pulse,
+  .omnibar-intro__mari,
+  .omnibar-intro__bubble,
+  .omnibar-intro-grow {
     animation: none;
   }
 }
