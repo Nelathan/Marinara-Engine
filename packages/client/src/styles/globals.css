@@ -704,7 +704,10 @@
 }
 
 .mari-workspace-header {
+  position: relative;
+  z-index: 50;
   gap: 0.5rem;
+  overflow: visible;
   background: color-mix(in srgb, var(--card) 96%, var(--mari-workspace-hoodie));
   border-color: color-mix(in srgb, var(--mari-workspace-blush) 18%, var(--border));
 }
@@ -716,7 +719,7 @@
   }
 
   .mari-workspace-header .mari-workspace-portrait img {
-    height: 3.25rem;
+    width: 2.25rem;
   }
 }
 
@@ -732,8 +735,8 @@
   width: 3rem;
   height: 3rem;
   flex: 0 0 auto;
-  place-items: center;
-  overflow: visible;
+  place-items: start center;
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -742,14 +745,15 @@
 
 .mari-workspace-portrait img {
   position: absolute;
-  width: auto;
-  height: 3.3rem;
+  top: -0.1rem;
+  width: 3rem;
+  height: auto;
   max-width: none;
   object-fit: contain;
-  object-position: center;
+  object-position: center top;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  transform: translateY(0.05rem);
+  transform: none;
 }
 
 /* Header-row variant: fits the omnibar's 3.5rem bar where the search icon sat. */
@@ -759,22 +763,18 @@
 }
 
 .mari-workspace-portrait[data-size="sm"] img {
-  height: 2.6rem;
+  width: 2.25rem;
 }
 
 .mari-workspace-portrait [data-part="blink"] {
   opacity: 0;
 }
 
-.mari-workspace-portrait[data-conversation="false"] {
-  opacity: 0.72;
-}
-
-.mari-workspace-portrait[data-conversation="true"] [data-part="idle"] {
+.mari-workspace-portrait [data-part="idle"] {
   animation: mari-workspace-rare-idle 11s steps(1, end) infinite;
 }
 
-.mari-workspace-portrait[data-conversation="true"] [data-part="blink"] {
+.mari-workspace-portrait [data-part="blink"] {
   animation: mari-workspace-rare-blink 11s steps(1, end) infinite;
 }
 
@@ -799,7 +799,7 @@
 }
 
 .mari-workspace-portrait[data-state="shrug"] img {
-  transform: translateY(0.05rem) rotate(-2deg);
+  transform: rotate(-2deg);
 }
 
 /* Professor Mari's presence indicator: all that remains of the floating
@@ -1102,7 +1102,7 @@
 
 .mari-omnibar-header-menu__popover {
   position: absolute;
-  z-index: 60;
+  z-index: 100;
   top: calc(100% + 0.35rem);
   right: 0;
   width: 13rem;
@@ -1379,6 +1379,21 @@
 
 .mari-live-work__activity i:nth-child(3) {
   animation-delay: 240ms;
+}
+
+.mari-live-work__complete-icon {
+  flex: 0 0 auto;
+  color: oklch(0.74 0.15 154);
+  filter: drop-shadow(0 0 0.45rem color-mix(in srgb, oklch(0.74 0.15 154) 24%, transparent));
+}
+
+.mari-live-work[data-active="false"] {
+  border-color: color-mix(in srgb, oklch(0.74 0.15 154) 22%, var(--border));
+  background: color-mix(in srgb, var(--card) 97%, oklch(0.74 0.15 154));
+}
+
+.mari-live-work[data-active="false"] .mari-live-work__sprite {
+  animation: none;
 }
 
 .mari-live-work__narrative {
@@ -1728,6 +1743,42 @@
 .mari-workspace-answer-strip {
   overflow-x: auto;
   overscroll-behavior-inline: contain;
+}
+
+.mari-workspace-question-dock {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--mari-workspace-blush) 26%, var(--border));
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--card) 94%, var(--mari-workspace-hoodie));
+  box-shadow:
+    0 0.5rem 1.5rem color-mix(in srgb, var(--background) 34%, transparent),
+    inset 0 1px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.mari-workspace-question-dock__prompt {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem 0.625rem;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.mari-workspace-question-dock__prompt > svg {
+  margin-top: 0.18rem;
+  flex: 0 0 auto;
+  color: var(--primary);
+  filter: drop-shadow(0 0 0.45rem color-mix(in srgb, var(--primary) 22%, transparent));
+}
+
+.mari-workspace-question-dock .mari-workspace-answer-strip {
+  padding: 0 0.875rem 0.75rem;
+}
+
+.mari-workspace-question-dock .mari-suggestion-chips {
+  margin-bottom: 0;
 }
 
 .mari-suggestion-surface {

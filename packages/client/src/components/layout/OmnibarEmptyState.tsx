@@ -1,6 +1,9 @@
 import { Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+const MARI_IDLE_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
+const MARI_BLINK_URL = "/sprites/mari/generated/professor-mari-assistant-blink-v3.png";
+
 /**
  * The empty launcher keeps the search field primary. One quiet hint explains
  * scope syntax and one deliberate action enters Professor Mari's workspace.
@@ -23,9 +26,19 @@ export function OmnibarEmptyState({ onAskMari }: { onAskMari: () => void }) {
         type="button"
         onClick={onAskMari}
         title={t("omnibar.emptyState.askMari", "Ask Professor Mari")}
-        className="pointer-events-auto inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--primary)]/30 bg-[var(--primary)]/10 px-3.5 text-xs font-semibold text-[var(--primary)] shadow-[0_0.5rem_1.5rem_color-mix(in_srgb,var(--primary)_10%,transparent)] transition-[background-color,transform,box-shadow] hover:bg-[var(--primary)]/15 hover:shadow-[0_0.65rem_1.75rem_color-mix(in_srgb,var(--primary)_16%,transparent)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        className="pointer-events-auto inline-flex min-h-12 items-center gap-2 rounded-lg border border-[var(--primary)]/30 bg-[var(--primary)]/10 py-1 pl-1.5 pr-3.5 text-xs font-semibold text-[var(--primary)] shadow-[0_0.5rem_1.5rem_color-mix(in_srgb,var(--primary)_10%,transparent)] transition-[background-color,transform,box-shadow] hover:bg-[var(--primary)]/15 hover:shadow-[0_0.65rem_1.75rem_color-mix(in_srgb,var(--primary)_16%,transparent)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
       >
-        <Sparkles size={14} aria-hidden="true" />
+        <span
+          className="mari-workspace-portrait"
+          data-size="sm"
+          data-state="idle"
+          data-conversation="true"
+          aria-hidden="true"
+        >
+          <img src={MARI_IDLE_URL} alt="" draggable={false} data-part="idle" />
+          <img src={MARI_BLINK_URL} alt="" draggable={false} data-part="blink" />
+        </span>
+        <Sparkles size={13} aria-hidden="true" />
         {t("omnibar.emptyState.askMari", "Ask Professor Mari")}
       </button>
     </div>

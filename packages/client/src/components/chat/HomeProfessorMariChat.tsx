@@ -1491,93 +1491,6 @@ function MariReasoningPanel({ thinking, live, forceOpen }: { thinking: string; l
   );
 }
 
-function WorkspaceToolEvent({ tool }: { tool: WorkspaceToolCall }) {
-  const { t: localizeUi } = useUiTranslation();
-  const presentation = inferToolPresentation(tool);
-  const isError = tool.status === "error";
-  const running = tool.status === "running";
-
-  return (
-    <TranscriptRow
-      marker={
-        <span
-          className={cn(
-            "mt-0.5 flex h-5 w-5 items-center justify-center rounded-md",
-            isError
-              ? "bg-[var(--destructive)]/10 text-[var(--destructive)]"
-              : running
-                ? "bg-[var(--primary)]/10 text-[var(--primary)]"
-                : "text-[var(--muted-foreground)]",
-          )}
-        >
-          <ToolGlyph tool={tool} tone={presentation.tone} />
-        </span>
-      }
-    >
-      <div className="min-w-0 py-0.5">
-        <div
-          className="mari-tool-line flex min-w-0 items-baseline gap-2 text-xs leading-5"
-          data-status={tool.status}
-          title={presentation.detail ?? presentation.title}
-        >
-          <span className="shrink-0 font-semibold text-[var(--foreground)]">{presentation.title}</span>
-          {presentation.detail && (
-            <code className="min-w-0 truncate font-mono text-[0.6875rem] text-[var(--muted-foreground)]">
-              {presentation.detail}
-            </code>
-          )}
-          <span
-            className={cn(
-              "ml-auto shrink-0 text-[0.65rem] font-medium",
-              isError ? "text-[var(--destructive)]" : "text-[var(--muted-foreground)]",
-            )}
-          >
-            {isError
-              ? localizeUi("ui.chat.workspacetoolevent.needsAttention")
-              : running
-                ? localizeUi("ui.chat.workspacetoolevent.running")
-                : localizeUi("ui.chat.workspacetoolevent.done")}
-          </span>
-        </div>
-        {isError && tool.output?.trim() && (
-          <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/8 px-2.5 py-2 text-[0.6875rem] leading-relaxed text-[var(--destructive)]">
-            {tool.output.trim()}
-          </pre>
-        )}
-      </div>
-    </TranscriptRow>
-  );
-}
-
-function WorkspaceStatusEvent({ content, active }: { content: string; active?: boolean }) {
-  const lower = content.toLowerCase();
-  const warning = /\b(failed|cancelled|limit|error|attention)\b/.test(lower);
-  const complete = /\b(compacted|completed|done)\b/.test(lower) && !/\b(compacting|retrying|working)\b/.test(lower);
-  const working = active && !warning && !complete;
-  const Icon = warning ? AlertTriangle : complete ? Check : working ? Loader2 : RefreshCw;
-  return (
-    <TranscriptRow
-      marker={
-        <span
-          className={cn("mt-1", warning ? "text-amber-300" : complete ? "text-emerald-300" : "text-[var(--primary)]")}
-        >
-          <Icon size="0.72rem" className={working ? "animate-spin" : undefined} />
-        </span>
-      }
-      className="text-[0.7rem] text-[var(--muted-foreground)]"
-    >
-      <span
-        className={cn(
-          "inline-flex max-w-full py-0.5 leading-5",
-          warning ? "text-amber-100" : complete ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]",
-        )}
-      >
-        {content}
-      </span>
-    </TranscriptRow>
-  );
-}
-
 function useWorkspaceElapsedSeconds(active: boolean) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -1602,15 +1515,17 @@ function WorkspaceLiveWorkCard({
   items,
   character,
   lorebook,
+  active = true,
 }: {
   activity: string;
   items: WorkspaceTimelineItem[];
   character?: CharacterPreviewModel | null;
   lorebook?: LorebookPreviewModel | null;
+  active?: boolean;
 }) {
   const { t } = useUiTranslation();
   const reduceMotion = useReducedMotion();
-  const elapsedSeconds = useWorkspaceElapsedSeconds(true);
+  const liveElapsedSeconds = useWorkspaceElapsedSeconds(active);
   const toolItems = items.filter(
     (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
   );
@@ -1632,11 +1547,16 @@ function WorkspaceLiveWorkCard({
   const narrative = stripProfessorMariSpeakerPrefix(latestNarrative?.content ?? "").trim();
   const showNarrative = narrative.length > 0 && narrative.toLocaleLowerCase() !== workTitle.trim().toLocaleLowerCase();
   const generalActivity = !runningTool && toolItems.length > 0 && showNarrative ? narrative : null;
+  const completedSeconds = Math.round(
+    toolItems.reduce((total, { tool }) => total + Math.max(0, tool.durationMs ?? 0), 0) / 1_000,
+  );
+  const elapsedSeconds = active ? liveElapsedSeconds : completedSeconds;
 
   return (
     <TranscriptRow marker={null} layout="document">
       <motion.section
         className="mari-live-work"
+        data-active={active ? "true" : "false"}
         aria-label={t("mari.workCard.label")}
         initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1659,11 +1579,15 @@ function WorkspaceLiveWorkCard({
           </div>
           <div className="mari-live-work__content">
             <div className="mari-live-work__heading">
-              <span className="mari-live-work__activity" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
+              {active ? (
+                <span className="mari-live-work__activity" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              ) : (
+                <Check size="0.875rem" className="mari-live-work__complete-icon" aria-hidden="true" />
+              )}
               <h3>{workTitle}</h3>
             </div>
             {showNarrative ? (
@@ -1682,7 +1606,7 @@ function WorkspaceLiveWorkCard({
             ) : null}
             <div className="mari-live-work__controls">
               <span className="mari-live-work__elapsed">
-                <i aria-hidden="true" />
+                {active ? <i aria-hidden="true" /> : null}
                 {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
               </span>
             </div>
@@ -1773,146 +1697,6 @@ function WorkspaceLiveWorkCard({
         </div>
       </motion.section>
     </TranscriptRow>
-  );
-}
-
-const WorkspaceTimelineEvent = memo(function WorkspaceTimelineEvent({
-  item,
-  active,
-  forceOpenThinking,
-  messageTime,
-  dateTime,
-}: {
-  item: WorkspaceTimelineItem;
-  active: boolean;
-  forceOpenThinking?: boolean;
-  messageTime?: string | null;
-  dateTime?: string;
-}) {
-  if (item.type === "text") {
-    return (
-      <TranscriptRow marker={<MariAvatar active={active} messageTime={messageTime} dateTime={dateTime} />}>
-        <CompactMarkdown content={stripProfessorMariSpeakerPrefix(item.content)} streaming={active} />
-      </TranscriptRow>
-    );
-  }
-  if (item.type === "thinking") {
-    return (
-      <TranscriptRow marker={<Brain size="0.78rem" className="mt-1 text-[var(--primary)]" />}>
-        <MariReasoningPanel thinking={item.content} live={active} forceOpen={forceOpenThinking} />
-      </TranscriptRow>
-    );
-  }
-  if (item.type === "tool") return <WorkspaceToolEvent tool={item.tool} />;
-  return <WorkspaceStatusEvent content={item.content} active={active} />;
-});
-
-function getActiveTimelineIndex(items: WorkspaceTimelineItem[], active: boolean) {
-  if (!active) return -1;
-  for (let index = items.length - 1; index >= 0; index -= 1) {
-    const item = items[index];
-    if (item.type === "tool" && item.tool.status === "running") return index;
-    if ((item.type === "text" || item.type === "thinking") && item.content.trim()) return index;
-    if (item.type === "status" && item.content.trim()) return index;
-  }
-  return -1;
-}
-
-type WorkspaceTimelineChunk =
-  | { kind: "item"; item: WorkspaceTimelineItem; index: number }
-  | { kind: "finished-tools"; id: string; items: WorkspaceTimelineItem[] };
-
-/**
- * R36: the tool she is running now stays visible in full; a run of finished
- * tool calls folds into one summary line. Everything she said stays readable —
- * only the machinery collapses, and only once there is more than one of it.
- */
-function chunkWorkspaceTimeline(items: WorkspaceTimelineItem[], activeIndex: number): WorkspaceTimelineChunk[] {
-  const chunks: WorkspaceTimelineChunk[] = [];
-  let run: WorkspaceTimelineItem[] = [];
-  let runStart = 0;
-
-  const flushRun = () => {
-    if (run.length === 0) return;
-    if (run.length === 1) chunks.push({ kind: "item", item: run[0], index: runStart });
-    else chunks.push({ kind: "finished-tools", id: run[0].id, items: run });
-    run = [];
-  };
-
-  items.forEach((item, index) => {
-    const finishedTool = item.type === "tool" && item.tool.status !== "running" && index !== activeIndex;
-    if (finishedTool) {
-      if (run.length === 0) runStart = index;
-      run.push(item);
-      return;
-    }
-    flushRun();
-    chunks.push({ kind: "item", item, index });
-  });
-  flushRun();
-  return chunks;
-}
-
-function CollapsedToolRun({ items }: { items: WorkspaceTimelineItem[] }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <TranscriptRow marker={<Terminal size="0.8rem" className="mt-1 text-[var(--muted-foreground)]" />}>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="inline-flex min-w-0 items-center gap-1 py-0.5 text-xs text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-        >
-          <span className="truncate">
-            {t("mari.timeline.finishedTools", "ran {{count}} commands", { count: items.length })}
-          </span>
-          <ChevronRight
-            size="0.7rem"
-            className={cn("shrink-0 transition-transform", open && "rotate-90")}
-            aria-hidden="true"
-          />
-        </button>
-      </TranscriptRow>
-      {open ? items.map((item) => <WorkspaceTimelineEvent key={item.id} item={item} active={false} />) : null}
-    </>
-  );
-}
-
-function WorkspaceTimelineList({
-  items,
-  active,
-  openReasoning = true,
-  messageTime,
-  dateTime,
-}: {
-  items: WorkspaceTimelineItem[];
-  active: boolean;
-  openReasoning?: boolean;
-  messageTime?: string | null;
-  dateTime?: string;
-}) {
-  const activeIndex = getActiveTimelineIndex(items, active);
-  const chunks = chunkWorkspaceTimeline(items, activeIndex);
-  const timestampItemId = items.find((item) => item.type === "text")?.id;
-  return (
-    <>
-      {chunks.map((chunk) =>
-        chunk.kind === "item" ? (
-          <WorkspaceTimelineEvent
-            key={chunk.item.id}
-            item={chunk.item}
-            active={chunk.index === activeIndex}
-            forceOpenThinking={chunk.item.type === "thinking" && openReasoning}
-            messageTime={chunk.item.id === timestampItemId ? messageTime : null}
-            dateTime={chunk.item.id === timestampItemId ? dateTime : undefined}
-          />
-        ) : (
-          <CollapsedToolRun key={chunk.id} items={chunk.items} />
-        ),
-      )}
-    </>
   );
 }
 
@@ -2184,15 +1968,21 @@ const CompactMariMessage = memo(function CompactMariMessage({
 
   const workspaceTrace = getMessageWorkspaceTrace(message);
   if (workspaceTrace) {
+    const traceItems = timelineItemsFromTrace(workspaceTrace, message);
+    const traceActivity =
+      [...traceItems]
+        .reverse()
+        .find((item): item is Extract<WorkspaceTimelineItem, { type: "text" | "status" }> =>
+          ["text", "status"].includes(item.type),
+        )?.content ?? localizeUi("ui.chat.homeprofessormarichat.readyToHelp");
     return (
       <div className="group space-y-2">
-        <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2 ml-[2.625rem]" />
-        <WorkspaceTimelineList
-          items={timelineItemsFromTrace(workspaceTrace, message)}
+        <WorkspaceLiveWorkCard
+          activity={stripProfessorMariSpeakerPrefix(traceActivity)}
+          items={traceItems}
+          character={characterSubject}
+          lorebook={lorebookSubject}
           active={false}
-          openReasoning={false}
-          messageTime={messageTime}
-          dateTime={message.createdAt}
         />
         <div className="ml-[2.625rem] min-w-0">
           {actionResults.map((result) => (
@@ -4592,6 +4382,12 @@ export function HomeProfessorMariChat({
       label: localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
       count: persistentContextCount,
     },
+    {
+      id: "details",
+      Icon: FileText,
+      label: localizeUi("ui.chat.homeprofessormarichat.detailsDestination"),
+      count: latestActionResults.length + visiblePendingChangeReviews.length,
+    },
   ] as const satisfies ReadonlyArray<{
     id: Exclude<ProfessorMariWorkspaceDestination, "chat">;
     Icon: typeof MessageCircle;
@@ -5133,25 +4929,11 @@ export function HomeProfessorMariChat({
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-                            {showSuggestionPrompt && suggestionQuestion ? (
-                              <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
-                                <div className="mari-suggestion-surface">
-                                  <CompactMarkdown content={suggestionQuestion} />
-                                  {starterSuggestionsAvailable ? (
-                                    <MariSuggestionChips
-                                      chips={chipRowChips}
-                                      onSelect={handleSuggestionSelect}
-                                      disabled={isBusy}
-                                    />
-                                  ) : null}
-                                </div>
-                              </TranscriptRow>
-                            ) : null}
                           </>
                         )}
                       </div>
 
-                      {visiblePendingChangeReviews.length > 0 ? (
+                      {visiblePendingChangeReviews.length > 0 && workspaceDestination === "chat" ? (
                         <div className="mari-workspace-review-dock shrink-0 overflow-y-auto border-t border-[var(--border)]/60 px-3 py-3 sm:px-7">
                           {pendingApprovalsPanel}
                         </div>
@@ -5167,14 +4949,21 @@ export function HomeProfessorMariChat({
                           void handleSubmit();
                         }}
                       >
-                        {showSuggestionPrompt && !starterSuggestionsAvailable ? (
-                          <div className="mari-workspace-answer-strip mb-2">
-                            <MariSuggestionChips
-                              chips={chipRowChips}
-                              onSelect={handleSuggestionSelect}
-                              disabled={isBusy}
-                              compact
-                            />
+                        {showSuggestionPrompt && suggestionQuestion ? (
+                          <div className="mari-workspace-question-dock mb-2">
+                            <div className="mari-workspace-question-dock__prompt">
+                              <Sparkles size="0.875rem" aria-hidden="true" />
+                              <div className="min-w-0 flex-1">
+                                <CompactMarkdown content={suggestionQuestion} />
+                              </div>
+                            </div>
+                            <div className="mari-workspace-answer-strip">
+                              <MariSuggestionChips
+                                chips={chipRowChips}
+                                onSelect={handleSuggestionSelect}
+                                disabled={isBusy}
+                              />
+                            </div>
                           </div>
                         ) : null}
                         {oneShotContext ? (
@@ -5658,6 +5447,79 @@ export function HomeProfessorMariChat({
                           />
                         </Suspense>
                       </motion.div>
+                    ) : workspaceDestination === "details" ? (
+                      <motion.section
+                        key="professor-mari-details"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={paneTransition}
+                        className={cn(MARI_PANEL_SLOT_CLASS, "flex min-h-0 flex-col bg-[var(--background)]/45")}
+                      >
+                        <div className="shrink-0 border-b border-[var(--border)]/60 px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <FileText size="0.9rem" className="text-[var(--primary)]" aria-hidden="true" />
+                            <div className="min-w-0">
+                              <h3 className="truncate text-xs font-semibold text-[var(--foreground)]">
+                                {localizeUi("ui.chat.homeprofessormarichat.detailsDestination")}
+                              </h3>
+                              <p className="truncate text-[0.625rem] text-[var(--muted-foreground)]">
+                                {localizeUi("ui.chat.homeprofessormarichat.detailsDestinationHint")}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                          <div className="space-y-4">
+                            {focusedCharacter || focusedLorebook ? (
+                              <section>
+                                <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                                  {localizeUi("ui.chat.homeprofessormarichat.focusedResource")}
+                                </div>
+                                <MariResourceSubject
+                                  character={focusedCharacter}
+                                  lorebook={focusedLorebook}
+                                  compact={false}
+                                  className="w-full"
+                                />
+                              </section>
+                            ) : null}
+                            {latestActionResults.length > 0 ? (
+                              <section>
+                                <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                                  {localizeUi("ui.chat.homeprofessormarichat.completedResults")}
+                                </div>
+                                {latestActionResults.map((result) => (
+                                  <MariWorkspaceActionResultRow
+                                    key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
+                                    result={result}
+                                    onOpen={openActionResult}
+                                    onReview={reviewActionResult}
+                                    character={characterPreviewById.get(result.resource.id)}
+                                    lorebook={lorebookPreviewById.get(result.resource.id)}
+                                  />
+                                ))}
+                              </section>
+                            ) : null}
+                            {visiblePendingChangeReviews.length > 0 ? (
+                              <section>
+                                <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                                  {localizeUi("commandCenter.completion.review")}
+                                </div>
+                                {pendingApprovalsPanel}
+                              </section>
+                            ) : null}
+                            {!focusedCharacter &&
+                            !focusedLorebook &&
+                            latestActionResults.length === 0 &&
+                            visiblePendingChangeReviews.length === 0 ? (
+                              <div className="rounded-lg border border-dashed border-[var(--border)] px-3 py-8 text-center text-xs text-[var(--muted-foreground)]">
+                                {localizeUi("ui.chat.homeprofessormarichat.detailsEmpty")}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </motion.section>
                     ) : workspaceDestination === "context" ? (
                       <motion.section
                         key="professor-mari-context"

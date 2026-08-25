@@ -56,6 +56,26 @@ assert.match(
   /className="mari-live-work__sprite"/u,
   "The live work card must keep its animated mini Mari scene",
 );
+assert.match(
+  professorMariHomeSource,
+  /<WorkspaceLiveWorkCard[\s\S]*?items=\{traceItems\}[\s\S]*?active=\{false\}/u,
+  "Completed workspace traces must remain visible in the rich work card",
+);
+assert.match(
+  professorMariHomeSource,
+  /<form[\s\S]*?mari-workspace-question-dock[\s\S]*?mari-workspace-answer-strip[\s\S]*?mari-professor-composer/u,
+  "Mari's question and suggestions must stay together above the composer",
+);
+assert.match(
+  professorMariHomeSource,
+  /id: "details"[\s\S]*?detailsDestination/u,
+  "The Mari workspace must expose a desktop details destination",
+);
+assert.match(
+  professorMariHomeSource,
+  /workspaceDestination === "details"[\s\S]*?latestActionResults[\s\S]*?pendingApprovalsPanel/u,
+  "The details destination must show results and pending reviews",
+);
 assert.equal(
   professorMariHomeSource.match(/className="mari-omnibar-header-stop"/gu)?.length,
   1,
@@ -63,7 +83,7 @@ assert.equal(
 );
 assert.match(
   professorMariHomeSource,
-  /<\/div>\s*\{visiblePendingChangeReviews\.length > 0 \? \(\s*<div className="mari-workspace-review-dock[\s\S]*?<form/u,
+  /<\/div>\s*\{visiblePendingChangeReviews\.length > 0(?: && workspaceDestination === "chat")? \? \(\s*<div className="mari-workspace-review-dock[\s\S]*?<form/u,
   "Pending reviews must be pinned between the transcript scroller and composer",
 );
 assert.match(

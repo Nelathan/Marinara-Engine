@@ -2542,7 +2542,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         <h2 id="global-omnibar-title" className="sr-only">
           {mariSurface ? t("commandCenter.workTitle", "Professor Mari") : t("omnibar.title", "Search Marinara")}
         </h2>
-        <header className="shrink-0 pt-[env(safe-area-inset-top)]">
+        <header className="relative z-50 shrink-0 overflow-visible pt-[env(safe-area-inset-top)]">
           <div
             className={cn(
               "flex h-16 items-center gap-3 border-b border-[var(--border)] px-3 sm:h-14 sm:px-4",
