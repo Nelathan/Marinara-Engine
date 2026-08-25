@@ -119,7 +119,7 @@ pnpm regression:ui
 
 Regression guards:
 
-- `pnpm regression` (or `pnpm regression:node`) builds the shared package once, discovers the complete Node regression set from the filesystem, and runs it serially.
+- `pnpm regression` (or `pnpm regression:node`) builds the shared package once, discovers the complete Node regression set from the filesystem, and runs it serially. Pull requests and staging pushes run this complete lane on a hosted runner.
 - `pnpm regression:prompt` runs fast deterministic checks for prompt assembly, lorebook keyword matching, macros, summaries, and mode-specific generation gates.
 - `pnpm regression:ui` runs the Playwright browser suite across desktop Chromium, Android-sized Chromium, and iPhone-sized WebKit; `pnpm smoke:ui` remains a compatibility alias for the same full UI lane. Pull requests and staging pushes run the same projects independently on hosted runners.
   Each run clears `.tmp/playwright-data` and starts separate desktop and mobile app servers so their mutable fixtures cannot overlap. Stop any process already using the configured Playwright ports before running it; existing fixture state is disposable and the suite does not reuse a running development server.
