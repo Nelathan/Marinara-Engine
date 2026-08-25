@@ -4929,6 +4929,13 @@ export function HomeProfessorMariChat({
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
+                            {omnibarMode && showSuggestionPrompt && suggestionQuestion ? (
+                              <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
+                                <div className="mari-suggestion-question-turn">
+                                  <CompactMarkdown content={suggestionQuestion} />
+                                </div>
+                              </TranscriptRow>
+                            ) : null}
                           </>
                         )}
                       </div>
@@ -4936,6 +4943,12 @@ export function HomeProfessorMariChat({
                       {visiblePendingChangeReviews.length > 0 && workspaceDestination === "chat" ? (
                         <div className="mari-workspace-review-dock shrink-0 overflow-y-auto border-t border-[var(--border)]/60 px-3 py-3 sm:px-7">
                           {pendingApprovalsPanel}
+                        </div>
+                      ) : null}
+
+                      {omnibarMode ? (
+                        <div className="mari-omnibar-trust-chrome shrink-0 border-t border-[var(--border)]/45 px-3 py-1.5 sm:px-7">
+                          {trustStrip}
                         </div>
                       ) : null}
 
@@ -4951,12 +4964,14 @@ export function HomeProfessorMariChat({
                       >
                         {showSuggestionPrompt && suggestionQuestion ? (
                           <div className="mari-workspace-question-dock mb-2">
-                            <div className="mari-workspace-question-dock__prompt">
-                              <Sparkles size="0.875rem" aria-hidden="true" />
-                              <div className="min-w-0 flex-1">
-                                <CompactMarkdown content={suggestionQuestion} />
+                            {!omnibarMode ? (
+                              <div className="mari-workspace-question-dock__prompt">
+                                <Sparkles size="0.875rem" aria-hidden="true" />
+                                <div className="min-w-0 flex-1">
+                                  <CompactMarkdown content={suggestionQuestion} />
+                                </div>
                               </div>
-                            </div>
+                            ) : null}
                             <div className="mari-workspace-answer-strip">
                               <MariSuggestionChips
                                 chips={chipRowChips}
@@ -4964,30 +4979,6 @@ export function HomeProfessorMariChat({
                                 disabled={isBusy}
                               />
                             </div>
-                          </div>
-                        ) : null}
-                        {oneShotContext ? (
-                          <div className="mari-workspace-context-chip mb-2 flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-xs text-[var(--muted-foreground)]">
-                            <Sparkles size="0.875rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
-                            <span className="min-w-0 flex-1 truncate">
-                              {localizeUi("ui.chat.homeprofessormarichat.oneShotContextValue1", {
-                                value1:
-                                  oneShotContext.resource?.label ??
-                                  oneShotContext.activeChat?.label ??
-                                  oneShotContext.query ??
-                                  oneShotContext.field ??
-                                  oneShotContext.settingsLocation?.tab ??
-                                  localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
-                              })}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setHandoffContext(null)}
-                              className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                              aria-label={localizeUi("ui.chat.homeprofessormarichat.contextControlRemoveFocus")}
-                            >
-                              <X size="0.875rem" aria-hidden="true" />
-                            </button>
                           </div>
                         ) : null}
                         <input
@@ -5025,6 +5016,31 @@ export function HomeProfessorMariChat({
                               isReading={isReadingAttachments}
                             />
                           </div>
+
+                          {oneShotContext ? (
+                            <span className="mari-workspace-context-chip inline-flex min-w-0 max-w-[13rem] shrink items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/8 px-2 py-1 text-[0.6875rem] text-[var(--foreground)]">
+                              <Sparkles size="0.7rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
+                              <span className="min-w-0 truncate">
+                                {oneShotContext.resource?.label
+                                  ? `${oneShotContext.resource.label}${oneShotContext.field ? ` · ${oneShotContext.field}` : ""}`
+                                  : oneShotContext.activeChat?.label
+                                    ? oneShotContext.activeChat.label
+                                    : oneShotContext.settingsLocation?.tab
+                                      ? `Settings · ${oneShotContext.settingsLocation.tab}`
+                                      : oneShotContext.query
+                                        ? `Search · ${oneShotContext.query}`
+                                        : localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setHandoffContext(null)}
+                                className="inline-flex size-5 shrink-0 items-center justify-center rounded hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+                                aria-label={localizeUi("ui.chat.homeprofessormarichat.contextControlRemoveFocus")}
+                              >
+                                <X size="0.7rem" aria-hidden="true" />
+                              </button>
+                            </span>
+                          ) : null}
 
                           <button
                             ref={connectionButtonRef}

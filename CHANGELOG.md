@@ -4,6 +4,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+- The Home Professor tab now opens the canonical omnibar Professor Mari workspace instead of mounting a second Mari chat surface. Omnibar workspace destinations now live in a full row below Mari's identity header.
+- Omnibar Professor Mari now keeps short questions as separate transcript turns, places only their answer chips above the composer, and shows connection, context, sandbox, and review chrome in the omnibar surface.
 - Professor Mari's desktop workspace now has a Details panel for focused resources, completed result previews, and pending review diffs. The same panel overlays the transcript on smaller screens.
 - Professor Mari's completed work box now remains in the transcript with its result details, her current question and suggestions share one styled composer dock, header menus stay above workspace content, and the header and empty-omnibar portraits use the same animated upper-body crop.
 - The empty omnibar now keeps search primary with one quiet hint and one Ask Mari action. The long icon-flight intro, ambient orbit, floating mascot, and duplicate empty-state panels were removed. Ask Mari's workspace now moves secondary destinations into overflow until wide desktop space is available.

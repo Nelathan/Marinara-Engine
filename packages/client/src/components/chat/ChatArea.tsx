@@ -512,21 +512,7 @@ export const ChatArea = memo(function ChatArea() {
   const [illustratorPromptReview, setIllustratorPromptReview] = useState<IllustratorPromptReviewRequest | null>(null);
   const [illustratorPromptReviewSubmitting, setIllustratorPromptReviewSubmitting] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
-  const [homeProfessorChatOpen, setHomeProfessorChatOpen] = useState(false);
-  const [homeProfessorChatActive, setHomeProfessorChatActive] = useState(false);
-  const homeProfessorChatOpenRef = useRef(false);
   const queryClient = useQueryClient();
-  useEffect(() => {
-    homeProfessorChatOpenRef.current = homeProfessorChatOpen;
-  }, [homeProfessorChatOpen]);
-  const handleHomeProfessorChatOpenChange = useCallback((open: boolean) => {
-    homeProfessorChatOpenRef.current = open;
-    if (open) setHomeProfessorChatActive(true);
-    setHomeProfessorChatOpen(open);
-  }, []);
-  const handleHomeProfessorChatExitComplete = useCallback(() => {
-    if (!homeProfessorChatOpenRef.current) setHomeProfessorChatActive(false);
-  }, []);
   // Delete dialog & multi-select state
   const [deleteDialogMessageId, setDeleteDialogMessageId] = useState<string | null>(null);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
@@ -580,9 +566,6 @@ export const ChatArea = memo(function ChatArea() {
 
   useEffect(() => {
     if (!activeChatId) return;
-    homeProfessorChatOpenRef.current = false;
-    setHomeProfessorChatOpen(false);
-    setHomeProfessorChatActive(false);
   }, [activeChatId]);
   const closeFloatingChatDrawers = useCallback((event?: Event) => {
     const preservedPanel = event ? readAnnouncedChatToolbarPanelAction(event) : null;
@@ -2865,14 +2848,7 @@ export const ChatArea = memo(function ChatArea() {
     return (
       <>
         <HomeCreditsModal open={creditsOpen} onClose={() => setCreditsOpen(false)} />
-        <HomeBrowserHub
-          pageActive={isPageActive}
-          professorChatActive={homeProfessorChatActive}
-          professorChatOpen={homeProfessorChatOpen}
-          onProfessorChatOpenChange={handleHomeProfessorChatOpenChange}
-          onProfessorChatExitComplete={handleHomeProfessorChatExitComplete}
-          onOpenCredits={() => setCreditsOpen(true)}
-        />
+        <HomeBrowserHub pageActive={isPageActive} onOpenCredits={() => setCreditsOpen(true)} />
         {pendingNewChatMode && (
           <NewChatConnectionGate
             mode={pendingNewChatMode}

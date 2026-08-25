@@ -21,6 +21,20 @@ const professorMariHomeSource = readFileSync(
   new URL("../../packages/client/src/components/chat/HomeProfessorMariChat.tsx", import.meta.url),
   "utf8",
 );
+const homeBrowserHubSource = readFileSync(
+  new URL("../../packages/client/src/components/chat/HomeBrowserHub.tsx", import.meta.url),
+  "utf8",
+);
+assert.doesNotMatch(
+  homeBrowserHubSource,
+  /<HomeProfessorMariChat/u,
+  "The Home Professor tab must not mount a second Mari chat surface",
+);
+assert.match(
+  homeBrowserHubSource,
+  /tab === "professor"[\s\S]*?requestProfessorMariOpen\(\)/u,
+  "The Home Professor tab must open the canonical omnibar Mari surface",
+);
 assert.match(
   professorMariHomeSource,
   /shouldShowProfessorMariConnectionHint\(\{/u,
@@ -65,6 +79,16 @@ assert.match(
   professorMariHomeSource,
   /<form[\s\S]*?mari-workspace-question-dock[\s\S]*?mari-workspace-answer-strip[\s\S]*?mari-professor-composer/u,
   "Mari's question and suggestions must stay together above the composer",
+);
+assert.match(
+  professorMariHomeSource,
+  /omnibarMode \? \([\s\S]*?mari-omnibar-trust-chrome[\s\S]*?trustStrip/u,
+  "Omnibar Mari must show connection and workspace trust chrome",
+);
+assert.match(
+  professorMariHomeSource,
+  /className="mari-workspace-context-chip inline-flex/u,
+  "One-shot context must appear as a compact composer chip",
 );
 assert.match(
   professorMariHomeSource,

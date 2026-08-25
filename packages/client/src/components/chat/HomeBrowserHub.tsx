@@ -77,7 +77,7 @@ import { ChatModeIcon } from "./ChatModeIcon";
 import { HomeClockCalendar } from "./HomeClockCalendar";
 import { HomeFaq } from "./HomeFaq";
 import { HomeNewChatLauncher } from "./HomeNewChatLauncher";
-import { HomeProfessorMariChat, ProfessorMariPixelScene } from "./HomeProfessorMariChat";
+import { ProfessorMariPixelScene } from "./HomeProfessorMariChat";
 import { ProfessorMariNavigator } from "./ProfessorMariNavigator";
 import { RecentChats } from "./RecentChats";
 
@@ -263,10 +263,6 @@ type CharacterRow = {
 
 type HomeBrowserHubProps = {
   pageActive: boolean;
-  professorChatActive: boolean;
-  professorChatOpen: boolean;
-  onProfessorChatOpenChange: (open: boolean) => void;
-  onProfessorChatExitComplete: () => void;
   onOpenCredits: () => void;
 };
 
@@ -726,14 +722,7 @@ function ShortcutIcon({ tone, children }: { tone: string; children: ReactNode })
   );
 }
 
-export function HomeBrowserHub({
-  pageActive,
-  professorChatActive,
-  professorChatOpen,
-  onProfessorChatOpenChange,
-  onProfessorChatExitComplete,
-  onOpenCredits,
-}: HomeBrowserHubProps) {
+export function HomeBrowserHub({ pageActive, onOpenCredits }: HomeBrowserHubProps) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const customWidgetsQuery = useQuery({
@@ -811,7 +800,6 @@ export function HomeBrowserHub({
   const feedShellRef = useRef<HTMLDivElement | null>(null);
   const mobileBookmarksRef = useRef<HTMLElement | null>(null);
   const [draggedWidgetId, setDraggedWidgetId] = useState<HomeWidgetId | null>(null);
-  const pendingProfessorExitTabRef = useRef<string | null>(null);
   const draggedWidgetIdRef = useRef<HomeWidgetId | null>(null);
   const lastDragTargetRef = useRef<string | null>(null);
   const dragPreviewRef = useRef<{
@@ -971,10 +959,6 @@ export function HomeBrowserHub({
     }
   }, [activeWidgetSlots, visibleWidgets, widgetLayouts]);
 
-  useEffect(() => {
-    if (professorChatActive) setActiveTab("professor");
-  }, [professorChatActive]);
-
   const installedIds = useMemo(() => new Set((installed.data ?? []).map((item) => item.id)), [installed.data]);
   const recommendations = useMemo(
     () => (catalog.data?.packages ?? []).filter((entry) => !installedIds.has(entry.manifest.id)),
@@ -1022,29 +1006,13 @@ export function HomeBrowserHub({
   const address = `marinara/${activeTab}`;
   const selectTab = (tab: string) => {
     setMobileBookmarksOpen(false);
-    const professorSelected = tab === "professor";
-    if (professorSelected) {
-      pendingProfessorExitTabRef.current = null;
-      setActiveTab(tab);
-      onProfessorChatOpenChange(true);
-      return;
-    }
-    if (activeTab === "professor") {
-      pendingProfessorExitTabRef.current = tab;
-      onProfessorChatOpenChange(false);
+    if (tab === "professor") {
+      requestProfessorMariOpen();
       return;
     }
     setActiveTab(tab);
-    onProfessorChatOpenChange(professorSelected);
-  };
-  const completeProfessorExit = () => {
-    const target = pendingProfessorExitTabRef.current;
-    pendingProfessorExitTabRef.current = null;
-    onProfessorChatExitComplete();
-    if (target) setActiveTab(target);
   };
   const openProfessor = () => requestProfessorMariOpen();
-  const closeProfessor = () => selectTab("home");
   const moveDraggedWidget = useCallback(
     (target: { kind: "widget"; id: HomeWidgetId } | { kind: "empty"; index: number }) => {
       const source = draggedWidgetIdRef.current;
@@ -1720,19 +1688,8 @@ export function HomeBrowserHub({
               }}
             />
           ) : activeTab === "professor" ? (
-            <div className="relative h-full min-h-0 bg-[radial-gradient(circle_at_18%_14%,oklch(0.79_0.16_205/0.12),transparent_30%),radial-gradient(circle_at_82%_18%,oklch(0.73_0.21_345/0.15),transparent_32%),var(--background)] p-0 sm:p-3">
-              <HomeStarfield />
-              <div className="relative z-[1] h-full min-h-0">
-                <HomeProfessorMariChat
-                  pageActive={pageActive}
-                  attachedFooter={false}
-                  chatWindowOpen={professorChatOpen}
-                  embeddedTab
-                  launchHidden
-                  onChatWindowOpenChange={(open) => (open ? onProfessorChatOpenChange(true) : closeProfessor())}
-                  onChatWindowExitComplete={completeProfessorExit}
-                />
-              </div>
+            <div className="flex h-full items-center justify-center text-sm text-[var(--muted-foreground)]">
+              {t("home.browser.professorOpening", "Opening Professor Mari...")}
             </div>
           ) : (
             <div
@@ -2193,7 +2150,7 @@ export function HomeBrowserHub({
           )}
         </main>
       </div>
-      {!omnibarOpen && !professorChatActive && activeTab === "home" ? (
+      {!omnibarOpen && activeTab === "home" ? (
         <ProfessorMariNavigator
           pageActive={pageActive}
           enabled={professorMariNavigationEnabled || !hasCompletedOnboarding}

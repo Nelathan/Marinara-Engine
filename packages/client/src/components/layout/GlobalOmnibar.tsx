@@ -2603,7 +2603,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                             : t("commandCenter.mode.work", "Ask Mari"))}
                     </span>
                   </span>
-                  <div ref={setMariHeaderSlot} className="mari-omnibar-header-slot min-w-0 flex-1" />
                 </motion.div>
               ) : (
                 <motion.div
@@ -2689,6 +2688,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               <X size={18} />
             </button>
           </div>
+          {mariSurface ? <div ref={setMariHeaderSlot} className="mari-omnibar-header-row" /> : null}
           {query.trim() && !mariSurface ? (
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, height: 0 }}
