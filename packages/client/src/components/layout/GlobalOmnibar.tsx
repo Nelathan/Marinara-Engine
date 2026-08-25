@@ -2994,6 +2994,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       {pane === "results" && idle && !introRunning ? (
         <OmnibarEmptyState
           activeChatMode={activeChat?.mode}
+          onAskMari={() => openProfessorMari()}
           onPick={(scope: OmnibarScopeId) => {
             setFilter("all");
             setQuery(omnibarScopePrefix(scope));

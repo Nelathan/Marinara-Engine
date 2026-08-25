@@ -2,8 +2,20 @@ import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { INTRO_ICONS, MARI_BLINK_URL, MARI_PEEK_URL } from "./omnibar-empty-state-icons";
 
-/** Full run time of the sequence below, in milliseconds. */
-export const OMNIBAR_INTRO_DURATION_MS = 7600;
+/**
+ * Phase clock, in milliseconds from the first frame. The stage fades up first,
+ * so nothing moves before the user's eye has landed. `globals.css` repeats these
+ * numbers in its delays; change them together.
+ */
+const FADE_MS = 400;
+const SHAKE_MS = 1400;
+const FLY_STEP_MS = 300;
+const FLY_MS = 1500;
+const FIRST_FLY_MS = FADE_MS + SHAKE_MS;
+const LAST_LANDING_MS = FIRST_FLY_MS + (INTRO_ICONS.length - 1) * FLY_STEP_MS + FLY_MS;
+
+/** Full run time, including the pause on Mari's closing line. */
+export const OMNIBAR_INTRO_DURATION_MS = 8600;
 
 type Placement = { key: string; left: number; top: number; dx: number; dy: number };
 
@@ -38,22 +50,52 @@ function useTopbarPlacements() {
 }
 
 /**
- * First-open showpiece.
+ * First-open walkthrough.
  *
- * Every top-bar icon rattles loose where it already lives, dives below the
- * search field, and swings back up into it on a long bow. The field flashes and
- * steps wider with each one it swallows. Mari rises beside it at the halfway
- * mark and hands the finished bar over.
+ * The stage fades up, each top-bar icon names itself and rattles loose where it
+ * already sits, then dives below the search field and swings back up into it.
+ * The field steps wider with every icon it swallows. A caption explains each
+ * phase, and Mari rises beside the field to say what the bar is actually for.
  *
- * The motion is all CSS (see `globals.css`); this only measures the start and
- * end points and hands each icon its stagger.
+ * She keeps standing there afterwards: the idle state re-renders her on the same
+ * anchor, so the hand-off from intro to empty state has no gap.
  */
 export function OmnibarIntro() {
   const { t } = useTranslation();
   const placements = useTopbarPlacements();
 
+  const captions = [
+    {
+      text: t("omnibar.intro.step1", "Every corner of Marinara has its own button up there."),
+      in: FADE_MS,
+      out: FIRST_FLY_MS + 200,
+    },
+    {
+      text: t("omnibar.intro.step2", "You no longer have to remember which one."),
+      in: FIRST_FLY_MS + 400,
+      out: LAST_LANDING_MS - 400,
+    },
+    { text: t("omnibar.intro.step3", "Just start typing. This one field searches all of it."), in: LAST_LANDING_MS },
+  ];
+
   return (
     <div className="omnibar-intro pointer-events-none fixed inset-0 z-[105]" aria-hidden="true">
+      {captions.map((caption, index) => (
+        <p
+          key={caption.text}
+          className="omnibar-intro__caption"
+          data-last={index === captions.length - 1 ? "true" : "false"}
+          style={
+            {
+              "--omnibar-intro-caption-in": `${caption.in}ms`,
+              "--omnibar-intro-caption-out": `${caption.out ?? 0}ms`,
+            } as CSSProperties
+          }
+        >
+          {caption.text}
+        </p>
+      ))}
+
       {placements.map(({ key, left, top, dx, dy }, index) => {
         const icon = INTRO_ICONS.find((item) => item.key === key)!;
         const vars = {
@@ -61,26 +103,29 @@ export function OmnibarIntro() {
           top,
           "--omnibar-intro-dx": `${dx}px`,
           "--omnibar-intro-dy": `${dy}px`,
-          "--omnibar-intro-shake-delay": `${index * 40}ms`,
-          "--omnibar-intro-fly-delay": `${1200 + index * 300}ms`,
-          "--omnibar-intro-land-delay": `${2600 + index * 300}ms`,
+          "--omnibar-intro-shake-delay": `${FADE_MS + index * 40}ms`,
+          "--omnibar-intro-fly-delay": `${FIRST_FLY_MS + index * FLY_STEP_MS}ms`,
+          "--omnibar-intro-land-delay": `${FIRST_FLY_MS + index * FLY_STEP_MS + FLY_MS - 100}ms`,
         } as CSSProperties;
         return (
           <span key={key}>
             <span className="omnibar-intro__icon" style={vars}>
               <icon.icon size={19} strokeWidth={1.8} />
             </span>
+            <span className="omnibar-intro__label" style={vars}>
+              {t(icon.labelKey, icon.key)}
+            </span>
             <span className="omnibar-intro__pulse" style={vars} />
           </span>
         );
       })}
 
-      <span className="omnibar-intro__mari">
+      <span className="omnibar-mari-anchor omnibar-intro__mari">
         <img src={MARI_PEEK_URL} alt="" draggable={false} data-part="idle" />
         <img src={MARI_BLINK_URL} alt="" draggable={false} data-part="blink" />
       </span>
-      <p className="omnibar-intro__bubble">
-        {t("omnibar.intro.line", "Everything in Marinara now lives in this one bar. Ask me for any of it.")}
+      <p className="omnibar-mari-bubble omnibar-intro__bubble">
+        {t("omnibar.intro.line", "And this is where I live. Search for a thing, or just ask me for it.")}
       </p>
     </div>
   );
