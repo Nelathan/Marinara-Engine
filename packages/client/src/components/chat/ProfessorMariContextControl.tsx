@@ -5,6 +5,7 @@ import type { ProfessorMariAskContext } from "@marinara-engine/shared";
 import { useTranslation } from "react-i18next";
 import type { CharacterPreviewModel } from "../../lib/character-preview";
 import type { LorebookPreviewModel } from "../../lib/lorebook-preview";
+import { professorMariContextCount } from "../../lib/professor-mari-presentation";
 import { cn } from "../../lib/utils";
 import { CharacterSubject } from "../characters/CharacterSubject";
 import { CommandCenterMedia } from "../command-center/CommandCenterMedia";
@@ -139,7 +140,7 @@ export function ProfessorMariContextControl({
     };
   }, [open, panelMounted]);
 
-  const totalCount = attachedContextCount + (context ? 1 : 0);
+  const totalCount = professorMariContextCount(attachedContextCount, context);
   const panel = (
     <>
       {mobile && <div className="fixed inset-0 z-[209] bg-black/50" aria-hidden="true" />}

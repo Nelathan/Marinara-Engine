@@ -77,6 +77,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Professor Mari's omnibar now keeps one stable portrait, header, status, and Stop control; preserves truthful connection and Context indicators; removes repeated speaker and Thinking labels; confines starter actions to empty chats; and pins guided answers and pending reviews above the composer without disturbing transcript order.
 - Omnibar and Professor Mari handoffs now validate capability sources and bounded session context, guided plans respect zero limits and unique fields, Quick edits reject oversized replacements, contextual shortcuts and dialogs avoid competing actions, and animated composer suggestions remain aligned while scrolling.
 - Professor Mari now preserves chat-open requests made while she is working, prevents overlapping Keep/Restore approval actions, omits incomplete machine-edit markup, continues without optional skills when their index cannot load, and renders lazily loaded preview facts even when a result has no eager preview body; unhandled navigation also keeps the omnibar and its query open, while Quick assistance preferences persist across restarts.
 - Omnibar idle results now reserve their intended four slots for searchable commands regardless of preceding setup and recent items, the Create Agent command uses the agent icon, and chat-search caches participate in normal chat invalidation.

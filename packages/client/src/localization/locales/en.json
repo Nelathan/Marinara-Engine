@@ -4042,6 +4042,7 @@
   "ui.chat.homeprofessormarichat.missingConnection": "No connection",
   "ui.chat.homeprofessormarichat.nativeTools": "native tools",
   "ui.chat.homeprofessormarichat.noMatchingChats": "No Mari chats match that search.",
+  "ui.chat.homeprofessormarichat.oneShotContextValue1": "Using for this message: {{value1}}",
   "ui.chat.homeprofessormarichat.openMemories": "Open memories",
   "ui.chat.homeprofessormarichat.openResult": "Open",
   "ui.chat.homeprofessormarichat.openSkills": "Open skills",

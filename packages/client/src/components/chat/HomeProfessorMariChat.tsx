@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   type ChangeEvent,
   type ReactNode,
   lazy,
@@ -71,7 +70,6 @@ import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../lib/character-preview";
 import { buildLorebookPreviewModel, type LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { completeInline } from "../../lib/inline-completion";
-import { selectMariWorkAnimation } from "../../lib/mari-work-animations";
 import { resolveStepSeconds } from "../../lib/mari-step-duration";
 import { InlineGhostText } from "../ui/InlineGhostText";
 import { lorebookKeys, useLorebooks } from "../../hooks/use-lorebooks";
@@ -89,6 +87,14 @@ import { filterLanguageGenerationConnections } from "../../lib/connection-filter
 import { api, ApiError, getPrivilegedActionErrorMessage, StreamResumeDisconnectError } from "../../lib/api-client";
 import { describeProfessorMariError } from "../../lib/professor-mari-errors";
 import { resolveProfessorMariVisualState, type ProfessorMariVisualState } from "../../lib/professor-mari-visual-state";
+import {
+  isPersistentProfessorMariContext,
+  professorMariContextCount,
+  resolveProfessorMariPresentationState,
+  shouldOfferProfessorMariStarterSuggestions,
+  shouldShowProfessorMariConnectionHint,
+  stripProfessorMariSpeakerPrefix,
+} from "../../lib/professor-mari-presentation";
 import {
   resolveProfessorMariWorkspaceBackAction,
   type ProfessorMariWorkspaceDestination,
@@ -484,7 +490,7 @@ function resolveContextLorebook(
 function persistentResourceContext(
   context: ProfessorMariAskContext | null | undefined,
 ): ProfessorMariAskContext | null {
-  if (context?.resource?.kind !== "character" && context?.resource?.kind !== "lorebook") return null;
+  if (!context?.resource || !isPersistentProfessorMariContext(context)) return null;
   return {
     source: context.source,
     capability: "explain",
@@ -1417,16 +1423,29 @@ function ProfessorMariAttachmentPreviews({
  * sprite in the header that actually carries her state. The label mirrors the
  * "You" marker on user rows, so the two sides stay symmetric.
  */
-function MariAvatar({ active }: { active?: boolean }) {
+function MariAvatar({
+  active,
+  messageTime,
+  dateTime,
+}: {
+  active?: boolean;
+  messageTime?: string | null;
+  dateTime?: string;
+}) {
   const { t: localizeUi } = useUiTranslation();
   return (
     <span
       className={cn(
-        "pt-0.5 text-[0.6875rem] font-semibold",
+        "flex flex-col pt-0.5 text-[0.6875rem] font-semibold",
         active ? "text-[var(--primary)]" : "text-[var(--marinara-chat-chrome-panel-muted)]",
       )}
     >
-      {localizeUi("ui.chat.compactmarimessage.mari")}
+      <span>{localizeUi("ui.chat.compactmarimessage.mari")}</span>
+      {messageTime && dateTime ? (
+        <time className="mari-transcript-marker-time" dateTime={dateTime}>
+          {messageTime}
+        </time>
+      ) : null}
     </span>
   );
 }
@@ -1581,13 +1600,11 @@ function WorkspaceLiveWorkCard({
   items,
   character,
   lorebook,
-  onStop,
 }: {
   activity: string;
   items: WorkspaceTimelineItem[];
   character?: CharacterPreviewModel | null;
   lorebook?: LorebookPreviewModel | null;
-  onStop: () => void;
 }) {
   const { t } = useUiTranslation();
   const reduceMotion = useReducedMotion();
@@ -1596,7 +1613,6 @@ function WorkspaceLiveWorkCard({
     (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
   );
   const visibleSteps = [...toolItems].sort((left, right) => left.tool.updatedAt - right.tool.updatedAt).slice(-4);
-  const subjectName = character?.name ?? lorebook?.name ?? null;
   const latestNarrative = [...items]
     .reverse()
     .find(
@@ -1605,18 +1621,13 @@ function WorkspaceLiveWorkCard({
     );
   const runningTool = [...toolItems].reverse().find(({ tool }) => tool.status === "running");
   const currentTool = runningTool ?? toolItems.at(-1);
-  const phaseSignal = latestNarrative?.content ?? currentTool?.tool.name ?? activity;
   const workTitle = currentTool ? inferToolPresentation(currentTool.tool).title : activity;
-  const animationSeed = items[0]?.id ?? `${subjectName ?? "mari"}:${activity}`;
-  const workAnimation = selectMariWorkAnimation({
-    seed: animationSeed,
-    activity: phaseSignal,
-    toolNames: currentTool ? [currentTool.tool.name] : [],
-  });
-  const generalActivity = !runningTool && toolItems.length > 0 ? latestNarrative?.content.trim() : null;
+  const narrative = stripProfessorMariSpeakerPrefix(latestNarrative?.content ?? "").trim();
+  const showNarrative = narrative.length > 0 && narrative.toLocaleLowerCase() !== workTitle.trim().toLocaleLowerCase();
+  const generalActivity = !runningTool && toolItems.length > 0 && showNarrative ? narrative : null;
 
   return (
-    <TranscriptRow marker={null} layout="document">
+    <TranscriptRow marker={<MariAvatar active />}>
       <motion.section
         className="mari-live-work"
         aria-label={t("mari.workCard.label")}
@@ -1625,21 +1636,6 @@ function WorkspaceLiveWorkCard({
         transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="mari-live-work__body">
-          <div className="mari-live-work__scene">
-            <AnimatePresence initial={false} mode="wait">
-              <motion.span
-                key={workAnimation.id}
-                className="mari-live-work__sprite"
-                data-scene={workAnimation.id}
-                style={{ "--mari-work-sprite": `url(${workAnimation.src})` } as CSSProperties}
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.92, y: 4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96, y: -2 }}
-                transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
-                aria-hidden="true"
-              />
-            </AnimatePresence>
-          </div>
           <div className="mari-live-work__content">
             <div className="mari-live-work__heading">
               <span className="mari-live-work__activity" aria-hidden="true">
@@ -1649,27 +1645,25 @@ function WorkspaceLiveWorkCard({
               </span>
               <h3>{workTitle}</h3>
             </div>
-            <AnimatePresence initial={false} mode="popLayout">
-              <motion.p
-                key={latestNarrative?.id ?? activity}
-                className="mari-live-work__narrative"
-                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
-                transition={{ duration: reduceMotion ? 0 : 0.2 }}
-              >
-                {latestNarrative?.content.trim() || activity}
-              </motion.p>
-            </AnimatePresence>
+            {showNarrative ? (
+              <AnimatePresence initial={false} mode="popLayout">
+                <motion.p
+                  key={latestNarrative?.id ?? activity}
+                  className="mari-live-work__narrative"
+                  initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                >
+                  {narrative}
+                </motion.p>
+              </AnimatePresence>
+            ) : null}
             <div className="mari-live-work__controls">
               <span className="mari-live-work__elapsed">
                 <i aria-hidden="true" />
                 {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
               </span>
-              <button type="button" className="mari-live-work__stop" onClick={onStop}>
-                <Square size="0.65rem" aria-hidden="true" />
-                {t("ui.chat.summarypopover.stop")}
-              </button>
             </div>
 
             {visibleSteps.length > 0 ? (
@@ -1765,15 +1759,19 @@ const WorkspaceTimelineEvent = memo(function WorkspaceTimelineEvent({
   item,
   active,
   forceOpenThinking,
+  messageTime,
+  dateTime,
 }: {
   item: WorkspaceTimelineItem;
   active: boolean;
   forceOpenThinking?: boolean;
+  messageTime?: string | null;
+  dateTime?: string;
 }) {
   if (item.type === "text") {
     return (
-      <TranscriptRow marker={<MariAvatar active={active} />}>
-        <CompactMarkdown content={item.content} streaming={active} />
+      <TranscriptRow marker={<MariAvatar active={active} messageTime={messageTime} dateTime={dateTime} />}>
+        <CompactMarkdown content={stripProfessorMariSpeakerPrefix(item.content)} streaming={active} />
       </TranscriptRow>
     );
   }
@@ -1865,13 +1863,18 @@ function WorkspaceTimelineList({
   items,
   active,
   openReasoning = true,
+  messageTime,
+  dateTime,
 }: {
   items: WorkspaceTimelineItem[];
   active: boolean;
   openReasoning?: boolean;
+  messageTime?: string | null;
+  dateTime?: string;
 }) {
   const activeIndex = getActiveTimelineIndex(items, active);
   const chunks = chunkWorkspaceTimeline(items, activeIndex);
+  const timestampItemId = items.find((item) => item.type === "text")?.id;
   return (
     <>
       {chunks.map((chunk) =>
@@ -1881,6 +1884,8 @@ function WorkspaceTimelineList({
             item={chunk.item}
             active={chunk.index === activeIndex}
             forceOpenThinking={chunk.item.type === "thinking" && openReasoning}
+            messageTime={chunk.item.id === timestampItemId ? messageTime : null}
+            dateTime={chunk.item.id === timestampItemId ? dateTime : undefined}
           />
         ) : (
           <CollapsedToolRun key={chunk.id} items={chunk.items} />
@@ -2159,66 +2164,62 @@ const CompactMariMessage = memo(function CompactMariMessage({
   const workspaceTrace = getMessageWorkspaceTrace(message);
   if (workspaceTrace) {
     return (
-      <TranscriptRow className="group" marker={<MariAvatar />}>
-        <p className="mari-message-byline mari-message-byline--mari">
-          <strong>{localizeUi("ui.chat.homefaq.professorMari")}</strong>
-          {messageTime ? <time dateTime={message.createdAt}>{messageTime}</time> : null}
-        </p>
-        <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
+      <div className="group space-y-2">
+        <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2 ml-[2.625rem]" />
         <WorkspaceTimelineList
           items={timelineItemsFromTrace(workspaceTrace, message)}
           active={false}
           openReasoning={false}
+          messageTime={messageTime}
+          dateTime={message.createdAt}
         />
-        {actionResults.map((result) => (
-          <MariWorkspaceActionResultRow
-            key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
-            result={result}
-            onOpen={onOpenActionResult}
-            onReview={onReviewActionResult}
-            character={characterPreviews.get(result.resource.id)}
-            lorebook={lorebookPreviews.get(result.resource.id)}
-          />
-        ))}
-        {(onDelete || (onRegenerate && canRegenerate)) && (
-          <div className={MARI_MESSAGE_ACTIONS_CLASS}>
-            {onRegenerate && canRegenerate && (
-              <button
-                type="button"
-                onClick={() => onRegenerate(message.id)}
-                className={MARI_MESSAGE_ACTION_BUTTON_CLASS}
-                aria-label={localizeUi("ui.chat.chatmessage.regenerate")}
-                title={localizeUi("ui.chat.chatmessage.regenerate")}
-              >
-                <RefreshCw size="0.8rem" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(message.id)}
-                className={MARI_MESSAGE_ACTION_BUTTON_CLASS}
-                aria-label={localizeUi("lorebook.editor.batch.delete")}
-                title={localizeUi("lorebook.editor.batch.delete")}
-              >
-                <Trash2 size="0.8rem" />
-              </button>
-            )}
-          </div>
-        )}
-      </TranscriptRow>
+        <div className="ml-[2.625rem] min-w-0">
+          {actionResults.map((result) => (
+            <MariWorkspaceActionResultRow
+              key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
+              result={result}
+              onOpen={onOpenActionResult}
+              onReview={onReviewActionResult}
+              character={characterPreviews.get(result.resource.id)}
+              lorebook={lorebookPreviews.get(result.resource.id)}
+            />
+          ))}
+          {(onDelete || (onRegenerate && canRegenerate)) && (
+            <div className={MARI_MESSAGE_ACTIONS_CLASS}>
+              {onRegenerate && canRegenerate && (
+                <button
+                  type="button"
+                  onClick={() => onRegenerate(message.id)}
+                  className={MARI_MESSAGE_ACTION_BUTTON_CLASS}
+                  aria-label={localizeUi("ui.chat.chatmessage.regenerate")}
+                  title={localizeUi("ui.chat.chatmessage.regenerate")}
+                >
+                  <RefreshCw size="0.8rem" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(message.id)}
+                  className={MARI_MESSAGE_ACTION_BUTTON_CLASS}
+                  aria-label={localizeUi("lorebook.editor.batch.delete")}
+                  title={localizeUi("lorebook.editor.batch.delete")}
+                >
+                  <Trash2 size="0.8rem" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
   return (
     <>
-      <TranscriptRow className="group" marker={<MariAvatar />}>
-        <p className="mari-message-byline mari-message-byline--mari">
-          <strong>{localizeUi("ui.chat.homefaq.professorMari")}</strong>
-          {messageTime ? <time dateTime={message.createdAt}>{messageTime}</time> : null}
-        </p>
+      <TranscriptRow className="group" marker={<MariAvatar messageTime={messageTime} dateTime={message.createdAt} />}>
         <MariResourceSubject character={characterSubject} lorebook={lorebookSubject} className="mb-2" />
-        <CompactMarkdown content={content} />
+        <CompactMarkdown content={stripProfessorMariSpeakerPrefix(content)} />
         {actionResults.map((result) => (
           <MariWorkspaceActionResultRow
             key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
@@ -2427,9 +2428,10 @@ type HomeProfessorMariChatProps = {
   /** A past Mari conversation to open, handed in from the omnibar. */
   openChatId?: string | null;
   pendingReviewRequest?: number;
+  omnibarHeaderSlot?: HTMLElement | null;
   onChatWindowOpenChange?: (open: boolean) => void;
   onChatWindowExitComplete?: () => void;
-  onVisualStateChange?: (state: ProfessorMariVisualState, hasConversation: boolean) => void;
+  onVisualStateChange?: (state: ProfessorMariVisualState, hasConversation: boolean, statusLabel: string) => void;
 };
 
 export function HomeProfessorMariChat({
@@ -2442,6 +2444,7 @@ export function HomeProfessorMariChat({
   initialAskContext = null,
   openChatId = null,
   pendingReviewRequest = 0,
+  omnibarHeaderSlot = null,
   onChatWindowOpenChange,
   onChatWindowExitComplete,
   onVisualStateChange,
@@ -2575,6 +2578,7 @@ export function HomeProfessorMariChat({
   const transcriptFollowOutputRef = useRef(true);
   const connectionButtonRef = useRef<HTMLButtonElement>(null);
   const connectionMenuRef = useRef<HTMLDivElement>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
   const skillFileInputRef = useRef<HTMLInputElement>(null);
   const memoryFileInputRef = useRef<HTMLInputElement>(null);
   const lastSyncedMemoryIdRef = useRef<string | null>(null);
@@ -2719,6 +2723,8 @@ export function HomeProfessorMariChat({
   const effectiveConnection =
     selectedConnection ?? connectionOptions.find((connection) => connection.isDefault) ?? connectionOptions[0] ?? null;
   const effectiveConnectionId = effectiveConnection?.id ?? null;
+  const persistentContextCount = professorMariContextCount(attachedContext?.length ?? 0, handoffContext);
+  const oneShotContext = handoffContext && !isPersistentProfessorMariContext(handoffContext) ? handoffContext : null;
   const contextBudget = useMemo(
     () => resolveProfessorMariContextBudget(messages, workspaceStatus?.connection?.maxContext),
     [messages, workspaceStatus?.connection?.maxContext],
@@ -2728,12 +2734,18 @@ export function HomeProfessorMariChat({
     messageMutationBusyRef.current = isBusy;
   }, [isBusy]);
   const canSubmitMessage = (draft.trim().length > 0 || attachments.length > 0) && !isReadingAttachments;
+  const starterSuggestionsAvailable = shouldOfferProfessorMariStarterSuggestions({
+    chatId,
+    loadedMessagesChatId,
+    messageCount: messages.length,
+    busy: isBusy,
+  });
   const visibleSuggestionChips =
     mariChipsChatId === chatId && mariChips.some((chip) => chip.id === "authorization-accept")
       ? mariChips.filter((chip) => professorMariSuggestionsEnabled || chip.id === "authorization-accept")
       : professorMariSuggestionsEnabled && mariChipsChatId === chatId && mariChips.length > 0
         ? mariChips
-        : professorMariSuggestionsEnabled && chatId !== null && loadedMessagesChatId === chatId && !isBusy
+        : professorMariSuggestionsEnabled && starterSuggestionsAvailable
           ? MARI_STARTER_CHIPS
           : [];
   const selectedSkill = useMemo(
@@ -3199,20 +3211,16 @@ export function HomeProfessorMariChat({
     () => (latestMessage ? getMessageWorkspaceActionResults(latestMessage) : []),
     [latestMessage],
   );
-  const mariPresentationState =
-    recovery || workspaceStatus?.error
-      ? "broken"
-      : visiblePendingChangeReviews.length > 0
-        ? "waiting-approval"
-        : workspaceTimelineActive
-          ? "working"
-          : draft.trim() || attachments.length > 0
-            ? "composing"
-            : latestActionResults.length > 0
-              ? "completed"
-              : messages.length > 0
-                ? "history"
-                : "empty";
+  const mariPresentationState = resolveProfessorMariPresentationState({
+    hasRecovery: Boolean(recovery),
+    hasWorkspaceError: Boolean(workspaceStatus?.error),
+    pendingReviewCount: visiblePendingChangeReviews.length,
+    working: workspaceTimelineActive,
+    hasDraft: Boolean(draft.trim()),
+    attachmentCount: attachments.length,
+    hasActionResult: latestActionResults.length > 0,
+    messageCount: messages.length,
+  });
   const mariVisualState = resolveProfessorMariVisualState({
     busy: isBusy,
     hasActionResult: latestActionResults.length > 0,
@@ -3220,11 +3228,22 @@ export function HomeProfessorMariChat({
     hasConversation: messages.length > 0,
     needsAttention: Boolean(recovery) || visiblePendingChangeReviews.length > 0,
   });
+  const mariStatusLabel = workspaceTimelineActive
+    ? focusedCharacter || focusedLorebook
+      ? localizeUi("ui.chat.homeprofessormarichat.workingOnValue1", {
+          value1: focusedCharacter?.name ?? focusedLorebook?.name ?? "",
+        })
+      : localizeUi("ui.chat.homeprofessormarichat.workingOnIt")
+    : focusedCharacter
+      ? localizeUi("ui.chat.homeprofessormarichat.aboutCharacterValue1", { value1: focusedCharacter.name })
+      : focusedLorebook
+        ? localizeUi("ui.chat.homeprofessormarichat.aboutLorebookValue1", { value1: focusedLorebook.name })
+        : localizeUi("ui.chat.homeprofessormarichat.readyToHelp");
 
   useEffect(() => {
     if (!omnibarMode) return;
-    onVisualStateChange?.(mariVisualState, messages.length > 0);
-  }, [mariVisualState, messages.length, omnibarMode, onVisualStateChange]);
+    onVisualStateChange?.(mariVisualState, messages.length > 0, mariStatusLabel);
+  }, [mariStatusLabel, mariVisualState, messages.length, omnibarMode, onVisualStateChange]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -3238,11 +3257,12 @@ export function HomeProfessorMariChat({
   }, []);
 
   const displayMessages = messages;
-  const showConnectionFirstHint =
-    chatId !== null &&
-    loadedMessagesChatId === chatId &&
-    !sending &&
-    !messages.some((message) => message.role === "user");
+  const showConnectionFirstHint = shouldShowProfessorMariConnectionHint({
+    chatId,
+    loadedMessagesChatId,
+    sending,
+    effectiveConnectionId,
+  });
 
   useEffect(() => {
     if (!mobileFocusMode) return;
@@ -3274,6 +3294,19 @@ export function HomeProfessorMariChat({
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [connectionMenuOpen]);
+
+  useEffect(() => {
+    if (!panelMenuOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (event.target instanceof Node && !headerMenuRef.current?.contains(event.target)) setPanelMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [panelMenuOpen]);
+
+  useEffect(() => {
+    if (!omnibarHeaderSlot) setPanelMenuOpen(false);
+  }, [omnibarHeaderSlot]);
 
   const persistLatestConnectionSelection = useCallback(() => {
     if (connectionPersistInFlightRef.current) return;
@@ -4518,6 +4551,127 @@ export function HomeProfessorMariChat({
       onRenderPrompt={renderWorkspacePrompt}
     />
   ));
+  const headerDestinations = [
+    { id: "chats", Icon: MessageCircle, label: localizeUi("navigation.common.chats"), count: 0 },
+    {
+      id: "skills",
+      Icon: Brain,
+      label: localizeUi("ui.chat.homeprofessormarichat.skills"),
+      count: activeSkillCount,
+    },
+    {
+      id: "memories",
+      Icon: BookOpen,
+      label: localizeUi("ui.chat.homeprofessormarichat.memories"),
+      count: activeMemoryCount,
+    },
+    {
+      id: "context",
+      Icon: Database,
+      label: localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
+      count: persistentContextCount,
+    },
+  ] as const satisfies ReadonlyArray<{
+    id: Exclude<ProfessorMariWorkspaceDestination, "chat">;
+    Icon: typeof MessageCircle;
+    label: string;
+    count: number;
+  }>;
+
+  const selectHeaderDestination = (destination: Exclude<ProfessorMariWorkspaceDestination, "chat">) => {
+    setWorkspaceDestination(workspaceDestination === destination ? "chat" : destination);
+    setPanelMenuOpen(false);
+  };
+
+  const omnibarHeaderChrome =
+    omnibarMode && omnibarHeaderSlot
+      ? createPortal(
+          <div className="mari-omnibar-header-controls">
+            <nav
+              className="mari-omnibar-header-destinations"
+              aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
+            >
+              {headerDestinations.map(({ id, Icon, label, count }) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={workspaceDestination === id}
+                  onClick={() => selectHeaderDestination(id)}
+                  disabled={id === "chats" && isBusy}
+                  data-active={workspaceDestination === id ? "true" : "false"}
+                >
+                  <Icon size="0.8rem" aria-hidden="true" />
+                  <span>{label}</span>
+                  {count > 0 ? <b>{count}</b> : null}
+                </button>
+              ))}
+            </nav>
+            {workspaceTimelineActive ? (
+              <button
+                type="button"
+                onClick={() => void stopWorkspace()}
+                className="mari-omnibar-header-stop"
+                aria-label={localizeUi("ui.chat.homeprofessormarichat.stopProfessorMariWorkspaceAgent")}
+                title={localizeUi("ui.chat.homeprofessormarichat.stopProfessorMariWorkspaceAgent")}
+              >
+                <Square size="0.75rem" aria-hidden="true" />
+              </button>
+            ) : null}
+            <div
+              ref={headerMenuRef}
+              className="mari-omnibar-header-menu"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.stopPropagation();
+                setPanelMenuOpen(false);
+                event.currentTarget.querySelector<HTMLButtonElement>(".mari-omnibar-header-menu__trigger")?.focus();
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setPanelMenuOpen((open) => !open)}
+                className="mari-omnibar-header-menu__trigger"
+                aria-expanded={panelMenuOpen}
+                aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
+              >
+                <EllipsisVertical size="0.9rem" aria-hidden="true" />
+              </button>
+              {panelMenuOpen ? (
+                <div className="mari-omnibar-header-menu__popover">
+                  <div className="mari-omnibar-header-menu__destinations">
+                    {headerDestinations.map(({ id, Icon, label, count }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => selectHeaderDestination(id)}
+                        disabled={id === "chats" && isBusy}
+                        aria-pressed={workspaceDestination === id}
+                      >
+                        <Icon size="0.875rem" aria-hidden="true" />
+                        <span>{label}</span>
+                        {count > 0 ? <b>{count}</b> : null}
+                      </button>
+                    ))}
+                    <div role="separator" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPanelMenuOpen(false);
+                      void runRestart();
+                    }}
+                    disabled={isBusy}
+                  >
+                    <RefreshCw size="0.875rem" aria-hidden="true" />
+                    <span>{localizeUi("ui.chat.homeprofessormarichat.restart")}</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>,
+          omnibarHeaderSlot,
+        )
+      : null;
 
   useEffect(() => {
     if (visiblePendingChangeReviewKey && visiblePendingChangeReviewKey !== lastAutoOpenedApprovalKeyRef.current) {
@@ -4648,6 +4802,7 @@ export function HomeProfessorMariChat({
   return (
     <>
       {attachModals}
+      {omnibarHeaderChrome}
       {!launchHidden && (
         <div
           className={cn(
@@ -4765,178 +4920,6 @@ export function HomeProfessorMariChat({
                   setWorkspaceDestination("chat");
                 }}
               >
-                {omnibarMode ? (
-                  <div
-                    className="mari-workspace-focusbar relative z-20 flex min-h-12 shrink-0 items-center gap-2 border-b border-[var(--border)]/45 px-3 py-1.5 sm:px-7"
-                    data-state={mariPresentationState}
-                  >
-                    <span
-                      className="mari-workspace-focusbar__mark"
-                      data-active={workspaceTimelineActive ? "true" : "false"}
-                      aria-hidden="true"
-                    >
-                      {workspaceTimelineActive ? <Sparkles size="0.85rem" /> : <img src={MARI_AVATAR_URL} alt="" />}
-                    </span>
-                    <div className="mari-workspace-focusbar__title min-w-0 leading-tight">
-                      <span className="truncate text-[0.8125rem] font-semibold text-[var(--foreground)]">
-                        {localizeUi("ui.chat.homefaq.professorMari")}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span className="truncate text-[0.75rem] text-[var(--muted-foreground)]">
-                        {workspaceTimelineActive
-                          ? focusedCharacter || focusedLorebook
-                            ? localizeUi("ui.chat.homeprofessormarichat.workingOnValue1", {
-                                value1: focusedCharacter?.name ?? focusedLorebook?.name ?? "",
-                              })
-                            : (workspaceActivity ?? localizeUi("ui.chat.homeprofessormarichat.workingOnIt"))
-                          : focusedCharacter
-                            ? localizeUi("ui.chat.homeprofessormarichat.aboutCharacterValue1", {
-                                value1: focusedCharacter.name,
-                              })
-                            : focusedLorebook
-                              ? localizeUi("ui.chat.homeprofessormarichat.aboutLorebookValue1", {
-                                  value1: focusedLorebook.name,
-                                })
-                              : localizeUi("ui.chat.homeprofessormarichat.readyToHelp")}
-                      </span>
-                    </div>
-                    <nav
-                      className="mari-workspace-focusbar__nav"
-                      aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
-                    >
-                      {(
-                        [
-                          ["chats", MessageCircle, localizeUi("navigation.common.chats"), 0],
-                          ["skills", Brain, localizeUi("ui.chat.homeprofessormarichat.skills"), activeSkillCount],
-                          [
-                            "memories",
-                            BookOpen,
-                            localizeUi("ui.chat.homeprofessormarichat.memories"),
-                            activeMemoryCount,
-                          ],
-                          [
-                            "context",
-                            Database,
-                            localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
-                            (attachedContext?.length ?? 0) + (handoffContext ? 1 : 0),
-                          ],
-                        ] as const
-                      ).map(([destination, Icon, label, count]) => (
-                        <button
-                          key={destination}
-                          type="button"
-                          aria-pressed={workspaceDestination === destination}
-                          onClick={() =>
-                            setWorkspaceDestination(workspaceDestination === destination ? "chat" : destination)
-                          }
-                          disabled={destination === "chats" && isBusy}
-                          data-active={workspaceDestination === destination ? "true" : "false"}
-                        >
-                          <Icon size="0.8rem" aria-hidden="true" />
-                          <span>{label}</span>
-                          {count > 0 ? <b>{count}</b> : null}
-                        </button>
-                      ))}
-                    </nav>
-                    {visiblePendingChangeReviews.length > 0 ? (
-                      <button
-                        type="button"
-                        onClick={openPendingApprovals}
-                        className="mari-chrome-control mari-chrome-control--compact font-semibold"
-                      >
-                        <ShieldAlert size="0.75rem" />
-                        <span>{localizeUi("commandCenter.completion.review")}</span>
-                        <span className="mari-chrome-muted-badge px-1.5 py-0.5 text-[0.625rem]">
-                          {visiblePendingChangeReviews.length}
-                        </span>
-                      </button>
-                    ) : null}
-                    {(workspaceActive || hasActiveGeneration) && (
-                      <button
-                        type="button"
-                        onClick={() => void stopWorkspace()}
-                        className="mari-chrome-control mari-chrome-control--compact text-[var(--destructive)]"
-                        title={localizeUi("ui.chat.homeprofessormarichat.stopProfessorMariWorkspaceAgent")}
-                      >
-                        <Square size="0.7rem" />
-                        <span>{localizeUi("ui.chat.summarypopover.stop")}</span>
-                      </button>
-                    )}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setPanelMenuOpen((open) => !open)}
-                        className="mari-chrome-control mari-chrome-control--compact"
-                        aria-expanded={panelMenuOpen}
-                      >
-                        <EllipsisVertical size="0.8rem" />
-                        <span className="sr-only">
-                          {localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
-                        </span>
-                      </button>
-                      {panelMenuOpen ? (
-                        <div className="absolute right-0 top-full mt-1 w-52 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 shadow-xl">
-                          {(
-                            [
-                              ["chats", BookOpen, localizeUi("navigation.common.chats"), 0],
-                              [
-                                "skills",
-                                ArrowDown,
-                                localizeUi("ui.chat.homeprofessormarichat.skills"),
-                                activeSkillCount,
-                              ],
-                              [
-                                "memories",
-                                Brain,
-                                localizeUi("ui.chat.homeprofessormarichat.memories"),
-                                activeMemoryCount,
-                              ],
-                              [
-                                "context",
-                                Sparkles,
-                                localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
-                                (attachedContext?.length ?? 0) + (handoffContext ? 1 : 0),
-                              ],
-                            ] as const
-                          ).map(([destination, Icon, label, count]) => (
-                            <button
-                              key={destination}
-                              type="button"
-                              onClick={() => {
-                                setWorkspaceDestination(destination);
-                                setPanelMenuOpen(false);
-                              }}
-                              disabled={destination === "chats" && isBusy}
-                              className={cn(
-                                "flex min-h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-[0.8125rem] text-[var(--foreground)] hover:bg-[var(--accent)] disabled:opacity-45",
-                                workspaceDestination === destination && "bg-[var(--accent)]",
-                              )}
-                            >
-                              <Icon size="0.875rem" className="text-[var(--muted-foreground)]" />
-                              <span className="min-w-0 flex-1 truncate">{label}</span>
-                              {count > 0 ? (
-                                <span className="text-[0.75rem] text-[var(--muted-foreground)]">{count}</span>
-                              ) : null}
-                            </button>
-                          ))}
-                          <div className="my-1 border-t border-[var(--border)]/60" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPanelMenuOpen(false);
-                              void runRestart();
-                            }}
-                            disabled={isBusy}
-                            className="flex min-h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-[0.8125rem] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:opacity-45"
-                          >
-                            <RefreshCw size="0.875rem" />
-                            {localizeUi("ui.chat.homeprofessormarichat.restart")}
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
                 <div
                   data-mari-panel={panelOpen ? "open" : "closed"}
                   data-mari-state={mariPresentationState}
@@ -5125,26 +5108,24 @@ export function HomeProfessorMariChat({
                                 items={workspaceTimeline}
                                 character={focusedCharacter}
                                 lorebook={focusedLorebook}
-                                onStop={() => void stopWorkspace()}
                               />
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
-                            {showSuggestionPrompt && suggestionQuestion ? (
+                            {showSuggestionPrompt && suggestionQuestion && (guidedPlanStep || messages.length > 0) ? (
                               <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
                                 <CompactMarkdown content={suggestionQuestion} />
-                                <MariSuggestionChips
-                                  chips={chipRowChips}
-                                  onSelect={handleSuggestionSelect}
-                                  disabled={isBusy}
-                                  compact
-                                />
                               </TranscriptRow>
                             ) : null}
-                            {visiblePendingChangeReviews.length > 0 ? pendingApprovalsPanel : null}
                           </>
                         )}
                       </div>
+
+                      {visiblePendingChangeReviews.length > 0 ? (
+                        <div className="mari-workspace-review-dock shrink-0 overflow-y-auto border-t border-[var(--border)]/60 px-3 py-3 sm:px-7">
+                          {pendingApprovalsPanel}
+                        </div>
+                      ) : null}
 
                       <form
                         className={cn(
@@ -5156,6 +5137,40 @@ export function HomeProfessorMariChat({
                           void handleSubmit();
                         }}
                       >
+                        {showSuggestionPrompt ? (
+                          <div className="mari-workspace-answer-strip mb-2">
+                            <MariSuggestionChips
+                              chips={chipRowChips}
+                              onSelect={handleSuggestionSelect}
+                              disabled={isBusy}
+                              compact
+                            />
+                          </div>
+                        ) : null}
+                        {oneShotContext ? (
+                          <div className="mari-workspace-context-chip mb-2 flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-xs text-[var(--muted-foreground)]">
+                            <Sparkles size="0.875rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
+                            <span className="min-w-0 flex-1 truncate">
+                              {localizeUi("ui.chat.homeprofessormarichat.oneShotContextValue1", {
+                                value1:
+                                  oneShotContext.resource?.label ??
+                                  oneShotContext.activeChat?.label ??
+                                  oneShotContext.query ??
+                                  oneShotContext.field ??
+                                  oneShotContext.settingsLocation?.tab ??
+                                  localizeUi("ui.chat.homeprofessormarichat.contextControlLabel"),
+                              })}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setHandoffContext(null)}
+                              className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                              aria-label={localizeUi("ui.chat.homeprofessormarichat.contextControlRemoveFocus")}
+                            >
+                              <X size="0.875rem" aria-hidden="true" />
+                            </button>
+                          </div>
+                        ) : null}
                         <input
                           ref={attachmentInputRef}
                           type="file"
@@ -5203,6 +5218,13 @@ export function HomeProfessorMariChat({
                                 ? "bg-foreground/10 text-foreground/75"
                                 : "text-foreground/40 hover:bg-foreground/10 hover:text-foreground/70",
                             )}
+                            aria-label={
+                              effectiveConnection?.name
+                                ? localizeUi("ui.chat.homeprofessormarichat.connectionValue1", {
+                                    value1: effectiveConnection.name,
+                                  })
+                                : localizeUi("ui.chat.homeprofessormarichat.selectConnection")
+                            }
                             title={
                               effectiveConnection?.name
                                 ? localizeUi("ui.chat.homeprofessormarichat.connectionValue1", {

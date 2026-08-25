@@ -27,7 +27,8 @@ export interface OmnibarMariPaneProps {
   onChatWindowOpenChange: (open: boolean) => void;
   completionActions: readonly OmnibarCompletionAction[];
   onCompletionAction: (action: OmnibarCompletionAction) => void;
-  onVisualStateChange: (state: ProfessorMariVisualState, hasConversation: boolean) => void;
+  omnibarHeaderSlot: HTMLElement | null;
+  onVisualStateChange: (state: ProfessorMariVisualState, hasConversation: boolean, statusLabel: string) => void;
 }
 
 export function OmnibarMariPane({
@@ -44,6 +45,7 @@ export function OmnibarMariPane({
   onChatWindowOpenChange,
   completionActions,
   onCompletionAction,
+  omnibarHeaderSlot,
   onVisualStateChange,
 }: OmnibarMariPaneProps) {
   const { t } = useTranslation();
@@ -125,6 +127,7 @@ export function OmnibarMariPane({
             openChatId={mariOpenChatId}
             pendingReviewRequest={mariPendingReviewRequest}
             chatWindowOpen={mariChatOpen}
+            omnibarHeaderSlot={omnibarHeaderSlot}
             onChatWindowOpenChange={onChatWindowOpenChange}
             onVisualStateChange={onVisualStateChange}
           />

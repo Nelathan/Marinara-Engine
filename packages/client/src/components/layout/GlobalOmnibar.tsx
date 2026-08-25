@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  useCallback,
   useDeferredValue,
   useEffect,
   useEffectEvent,
@@ -471,6 +472,16 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   } | null>(null);
   const [mariVisualState, setMariVisualState] = useState<ProfessorMariVisualState>("idle");
   const [mariHasConversation, setMariHasConversation] = useState(false);
+  const [mariStatusLabel, setMariStatusLabel] = useState("");
+  const [mariHeaderSlot, setMariHeaderSlot] = useState<HTMLDivElement | null>(null);
+  const handleMariVisualStateChange = useCallback(
+    (state: ProfessorMariVisualState, hasConversation: boolean, statusLabel: string) => {
+      setMariVisualState(state);
+      setMariHasConversation(hasConversation);
+      setMariStatusLabel(statusLabel);
+    },
+    [],
+  );
   // When set, the Work pane shows the creation proposal for review instead of
   // the Mari transcript. Nothing is created until the user accepts.
   const [proposalDraft, setProposalDraft] = useState<CreationProposal | null>(null);
@@ -2597,7 +2608,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={reduceMotion ? undefined : { opacity: 0, x: -10 }}
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
-                  className="flex min-w-0 flex-1 items-center gap-3"
+                  className="flex min-w-0 flex-1 items-center gap-2"
                 >
                   <span
                     className="mari-workspace-portrait"
@@ -2613,18 +2624,20 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                       data-part="blink"
                     />
                   </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold leading-tight text-[var(--foreground)]">
+                  <span className="mari-omnibar-header-copy min-w-0 shrink-0">
+                    <span className="block text-sm font-semibold leading-tight text-[var(--foreground)]">
                       {t("omnibar.categories.professor", "Professor Mari")}
                     </span>
-                    <span className="block truncate text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
-                      {mariVisualState === "thinking"
-                        ? t("ui.chat.homeprofessormarichat.workingOnIt", "Working on it...")
-                        : mariVisualState === "warning"
-                          ? t("mari.presence.needsYou", "Professor Mari needs your answer")
-                          : t("commandCenter.mode.work", "Ask Mari")}
+                    <span className="block text-[0.6875rem] font-medium leading-tight text-[var(--muted-foreground)]">
+                      {mariStatusLabel ||
+                        (mariVisualState === "thinking"
+                          ? t("ui.chat.homeprofessormarichat.workingOnIt", "Working on it...")
+                          : mariVisualState === "warning"
+                            ? t("mari.presence.needsYou", "Professor Mari needs your answer")
+                            : t("commandCenter.mode.work", "Ask Mari"))}
                     </span>
                   </span>
+                  <div ref={setMariHeaderSlot} className="mari-omnibar-header-slot min-w-0 flex-1" />
                 </motion.div>
               ) : (
                 <motion.div
@@ -2767,10 +2780,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               }}
               completionActions={completionActions}
               onCompletionAction={runCompletionAction}
-              onVisualStateChange={(state, hasConversation) => {
-                setMariVisualState(state);
-                setMariHasConversation(hasConversation);
-              }}
+              omnibarHeaderSlot={mariHeaderSlot}
+              onVisualStateChange={handleMariVisualStateChange}
             />
           </Suspense>
         ) : null}

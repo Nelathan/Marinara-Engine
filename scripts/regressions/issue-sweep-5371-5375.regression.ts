@@ -23,8 +23,8 @@ const professorMariHomeSource = readFileSync(
 );
 assert.match(
   professorMariHomeSource,
-  /const showConnectionFirstHint =\s*chatId !== null &&\s*loadedMessagesChatId === chatId &&\s*!sending &&\s*!messages\.some\(\(message\) => message\.role === "user"\);/u,
-  "Professor Mari's connection guidance must wait for the active chat history and remain visible until the first user message",
+  /shouldShowProfessorMariConnectionHint\(\{/u,
+  "Professor Mari's connection guidance must use the shared presentation contract",
 );
 assert.match(
   professorMariHomeSource,
@@ -33,8 +33,124 @@ assert.match(
 );
 assert.equal(
   professorMariHomeSource.match(/showConnectionFirstHint &&/gu)?.length,
+  1,
+  "The mounted Professor Mari transcript must render one connection guidance note",
+);
+assert.doesNotMatch(
+  professorMariHomeSource,
+  /mari-workspace-focusbar/u,
+  "The omnibar must not mount a second Mari header",
+);
+assert.doesNotMatch(
+  professorMariHomeSource,
+  /mari-live-work__stop/u,
+  "The work turn must not mount a second Stop control",
+);
+assert.equal(
+  professorMariHomeSource.match(/className="mari-omnibar-header-stop"/gu)?.length,
+  1,
+  "The omnibar header must own the only active-work Stop control",
+);
+assert.match(
+  professorMariHomeSource,
+  /<\/div>\s*\{visiblePendingChangeReviews\.length > 0 \? \(\s*<div className="mari-workspace-review-dock[\s\S]*?<form/u,
+  "Pending reviews must be pinned between the transcript scroller and composer",
+);
+assert.match(
+  professorMariHomeSource,
+  /<form[\s\S]*?mari-workspace-answer-strip[\s\S]*?mari-professor-composer/u,
+  "Suggestion answers must stay in the composer dock instead of inside transcript turns",
+);
+
+const presentation = await import("../../packages/client/src/lib/professor-mari-presentation.js");
+const presentationDefaults = {
+  hasRecovery: false,
+  hasWorkspaceError: false,
+  pendingReviewCount: 0,
+  working: false,
+  hasDraft: false,
+  attachmentCount: 0,
+  hasActionResult: false,
+  messageCount: 0,
+};
+assert.equal(presentation.resolveProfessorMariPresentationState(presentationDefaults), "empty");
+assert.equal(presentation.resolveProfessorMariPresentationState({ ...presentationDefaults, working: true }), "working");
+assert.equal(
+  presentation.resolveProfessorMariPresentationState({ ...presentationDefaults, hasDraft: true }),
+  "composing",
+);
+assert.equal(
+  presentation.resolveProfessorMariPresentationState({ ...presentationDefaults, messageCount: 1 }),
+  "history",
+);
+assert.equal(
+  presentation.resolveProfessorMariPresentationState({ ...presentationDefaults, hasActionResult: true }),
+  "completed",
+);
+assert.equal(
+  presentation.resolveProfessorMariPresentationState({ ...presentationDefaults, pendingReviewCount: 1 }),
+  "waiting-approval",
+);
+assert.equal(
+  presentation.resolveProfessorMariPresentationState({
+    ...presentationDefaults,
+    hasRecovery: true,
+    pendingReviewCount: 1,
+    working: true,
+  }),
+  "broken",
+  "Recovery and workspace errors must win over every lower-priority presentation state",
+);
+assert.equal(
+  presentation.shouldShowProfessorMariConnectionHint({
+    chatId: "chat-1",
+    loadedMessagesChatId: "chat-1",
+    sending: false,
+    effectiveConnectionId: "connection-1",
+  }),
+  false,
+  "Connected empty chats must not show connection guidance",
+);
+assert.equal(
+  presentation.shouldShowProfessorMariConnectionHint({
+    chatId: "chat-1",
+    loadedMessagesChatId: "chat-1",
+    sending: false,
+    effectiveConnectionId: null,
+  }),
+  true,
+  "Disconnected loaded chats must show connection guidance",
+);
+assert.equal(
+  presentation.shouldOfferProfessorMariStarterSuggestions({
+    chatId: "chat-1",
+    loadedMessagesChatId: "chat-1",
+    messageCount: 1,
+    busy: false,
+  }),
+  false,
+  "Starter suggestions must not return after a conversation has begun",
+);
+assert.equal(presentation.stripProfessorMariSpeakerPrefix("Professor Mari: Hello"), "Hello");
+assert.equal(presentation.stripProfessorMariSpeakerPrefix("Mari: Hello"), "Hello");
+assert.equal(presentation.stripProfessorMariSpeakerPrefix("Mari thinks this through."), "Mari thinks this through.");
+assert.equal(
+  presentation.professorMariContextCount(1, {
+    source: "character-card",
+    capability: "edit",
+    resource: { kind: "character", id: "character-1", label: "Jenni" },
+  }),
   2,
-  "Both Professor Mari transcript layouts must show the fresh-chat connection guidance",
+  "Persistent character focus contributes to the Context badge",
+);
+assert.equal(
+  presentation.professorMariContextCount(1, {
+    source: "omnibar",
+    capability: "navigate",
+    settingsLocation: { tab: "settings" },
+  }),
+  1,
+  "One-shot page context must remain a composer chip instead of inflating the persistent Context badge",
 );
 
 const englishLocale = JSON.parse(

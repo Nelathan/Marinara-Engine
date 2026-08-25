@@ -14615,7 +14615,7 @@ test("Professor Mari follows an open conversation across chats and mobile naviga
   }
 });
 
-test("Professor Mari suggestions stay visible after chat history loads", async ({ page }) => {
+test("Professor Mari starter suggestions stay confined to an empty chat", async ({ page }) => {
   const chatResponse = await page.request.get("/api/chats/internal/professor-mari");
   expect(chatResponse.ok()).toBeTruthy();
   const chat = (await chatResponse.json()) as { id: string };
@@ -14662,9 +14662,7 @@ test("Professor Mari suggestions stay visible after chat history loads", async (
     const window = page.locator('[data-component="HomeProfessorMariChat.Window"]');
     await expect(window.getByText(messageContent, { exact: true })).toBeVisible();
 
-    const suggestions = window.getByRole("group", { name: "Suggested replies" });
-    await expect(suggestions).toBeVisible();
-    await expect(suggestions.getByRole("button", { name: "Create a character" })).toBeVisible();
+    await expect(window.getByRole("button", { name: "Create a character" })).toHaveCount(0);
     const configuredChromeTextColor = await page.evaluate(() =>
       document.documentElement.style.getPropertyValue("--marinara-chat-chrome-text").trim(),
     );
@@ -14672,10 +14670,57 @@ test("Professor Mari suggestions stay visible after chat history loads", async (
     expect(configuredChromeTextColor).toBe("#14b8a6");
     await expect(window.getByText("You", { exact: true }).last()).toHaveCSS("color", chromeMutedColor);
     await expect(window.getByRole("button", { name: "Edit Message" }).last()).toHaveCSS("color", chromeMutedColor);
-    await expect(window.getByText("Suggestions only. Pick one, or type your own.", { exact: true })).toHaveCSS(
-      "color",
-      chromeMutedColor,
+  } finally {
+    await Promise.all(
+      createdMessageIds.map((id) => bestEffortDelete(page.request, `/api/chats/${chat.id}/messages/${id}`)),
     );
+  }
+});
+
+test("Professor Mari transcript preserves server message order after reload", async ({ page }) => {
+  const chatResponse = await page.request.get("/api/chats/internal/professor-mari");
+  expect(chatResponse.ok()).toBeTruthy();
+  const chat = (await chatResponse.json()) as { id: string };
+  const nonce = Date.now();
+  const turns = [
+    { role: "user", content: `Mari order user A ${nonce}` },
+    { role: "assistant", characterId: "__professor_mari__", content: `Mari order assistant A ${nonce}` },
+    { role: "user", content: `Mari order user B ${nonce}` },
+    { role: "assistant", characterId: "__professor_mari__", content: `Mari order assistant B ${nonce}` },
+  ] as const;
+  const createdMessageIds: string[] = [];
+
+  const assertTurnOrder = async () => {
+    const transcript = page.locator('[data-component="HomeProfessorMariChat.Transcript"]');
+    const offsets = await Promise.all(
+      turns.map(async ({ content }) => {
+        const message = transcript.getByText(content, { exact: true });
+        await expect(message).toBeVisible();
+        return message.evaluate((node) => {
+          let index = 0;
+          let cursor: Node | null = node;
+          while ((cursor = cursor.previousSibling)) index += 1;
+          return node.getBoundingClientRect().top + index / 1_000;
+        });
+      }),
+    );
+    expect(offsets).toEqual([...offsets].sort((left, right) => left - right));
+  };
+
+  try {
+    for (const turn of turns) {
+      const response = await page.request.post(`/api/chats/${chat.id}/messages`, { data: turn });
+      expect(response.ok()).toBeTruthy();
+      const message = (await response.json()) as { id: string };
+      createdMessageIds.push(message.id);
+    }
+
+    await page.goto("/");
+    await page.getByRole("tab", { name: "Professor", exact: true }).click();
+    await assertTurnOrder();
+    await page.reload();
+    await page.getByRole("tab", { name: "Professor", exact: true }).click();
+    await assertTurnOrder();
   } finally {
     await Promise.all(
       createdMessageIds.map((id) => bestEffortDelete(page.request, `/api/chats/${chat.id}/messages/${id}`)),
