@@ -703,6 +703,63 @@
   border-color: color-mix(in srgb, var(--mari-workspace-blush) 24%, var(--border));
 }
 
+/* The empty omnibar uses the spare panel space to show searchable surfaces. */
+.omnibar-empty-state__core {
+  animation: omnibar-empty-core-breathe 4.5s ease-in-out infinite;
+}
+
+.omnibar-empty-state__orbit {
+  animation: omnibar-empty-orbit 18s linear infinite;
+}
+
+.omnibar-empty-state__node {
+  animation: omnibar-empty-node-float 5s ease-in-out infinite;
+}
+
+.omnibar-empty-state__nodes > :nth-child(2n) .omnibar-empty-state__node {
+  animation-delay: -1.7s;
+  animation-duration: 6.5s;
+}
+
+.omnibar-empty-state__nodes > :nth-child(3n) .omnibar-empty-state__node {
+  animation-delay: -3.2s;
+  animation-duration: 7.25s;
+}
+
+@keyframes omnibar-empty-core-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 2rem color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 3rem color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+}
+
+@keyframes omnibar-empty-orbit {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes omnibar-empty-node-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.2rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omnibar-empty-state__core,
+  .omnibar-empty-state__orbit,
+  .omnibar-empty-state__node {
+    animation: none;
+  }
+}
+
 .mari-workspace-header {
   background: color-mix(in srgb, var(--card) 96%, var(--mari-workspace-hoodie));
   border-color: color-mix(in srgb, var(--mari-workspace-blush) 18%, var(--border));
@@ -8560,5 +8617,29 @@ strong {
   82% {
     transform: translateY(0.16rem);
     background: #151a22;
+  }
+}
+
+/* Omnibar empty state: the dashed orbit breathes so the icon field reads as live
+   without pulling attention away from the input. */
+.omnibar-empty-state__orbit {
+  animation: omnibar-orbit-breathe 6s ease-in-out infinite;
+}
+
+@keyframes omnibar-orbit-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omnibar-empty-state__orbit {
+    animation: none;
   }
 }

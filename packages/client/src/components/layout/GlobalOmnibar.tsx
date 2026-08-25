@@ -123,7 +123,12 @@ import {
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
 } from "../../lib/omnibar-results";
-import { matchesOmnibarScope, parseOmnibarScope } from "../../lib/omnibar-scope";
+import {
+  matchesOmnibarScope,
+  omnibarScopePrefix,
+  parseOmnibarScope,
+  type OmnibarScopeId,
+} from "../../lib/omnibar-scope";
 import {
   buildOmnibarAgentRows,
   buildOmnibarCharacterRows,
@@ -168,6 +173,7 @@ import {
   type CommandCenterChatModeLabels,
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact } from "../command-center/command-result-preview.types";
+import { OmnibarEmptyState } from "./OmnibarEmptyState";
 import {
   getOmnibarResourceId,
   isRichResult,
@@ -186,6 +192,7 @@ const OmnibarAside = lazy(() => import("./omnibar/OmnibarAside").then((m) => ({ 
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
+const OMNIBAR_INTRO_SEEN_KEY = "marinara:omnibar:intro-seen:v1";
 
 /** Categories whose result rows open an editor rather than the thing itself. */
 const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
@@ -402,12 +409,27 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // because `GlobalOmnibarHost` hands off an "open Professor Mari" request by
   // writing that pane and then opening; resetting it on read would kill that.
   const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
+  const [introActive, setIntroActive] = useState(() => {
+    try {
+      return localStorage.getItem(OMNIBAR_INTRO_SEEN_KEY) !== "true";
+    } catch {
+      return false;
+    }
+  });
   const initialQueryRef = useRef(session.query);
   const { query, filter, pane, activeResultId, mariReturnResultId, mariHandoff } = session;
   const mariFinished = mariHandoff?.status === "finished";
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));
   const setQuery = (value: string) => setSessionValue("query", value);
+  const finishIntro = () => {
+    setIntroActive(false);
+    try {
+      localStorage.setItem(OMNIBAR_INTRO_SEEN_KEY, "true");
+    } catch {
+      // Private browsing can deny local storage. The in-memory state still skips this open.
+    }
+  };
   // Keep typing responsive: the heavy search/rank/present pipeline reruns against
   // the deferred query so keystrokes paint immediately on large libraries.
   const rawDeferredQuery = useDeferredValue(query);
@@ -1514,6 +1536,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   }, []);
 
   useEffect(() => {
+    if (!introActive || reduceMotion || !idle) return;
+    const timer = window.setTimeout(finishIntro, 1500);
+    return () => window.clearTimeout(timer);
+  }, [idle, introActive, reduceMotion]);
+
+  useEffect(() => {
     if (!activeResultId || pane !== "results") return;
     listRef.current
       ?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(activeResultId)}"]`)
@@ -2516,9 +2544,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           pane === "mari"
             ? "mari-workspace-shell sm:h-[min(44rem,80dvh)] sm:max-h-[min(44rem,80dvh)]"
             : idle
-              ? // Nothing to list: the panel is only the bar, so it shrinks to it
-                // instead of framing an empty box.
-                "sm:h-auto"
+              ? "sm:h-[min(34rem,68dvh)] sm:max-h-[min(34rem,68dvh)]"
               : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"
         }`}
       >
@@ -2608,6 +2634,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     ref={inputRef}
                     value={query}
                     onChange={(event) => {
+                      finishIntro();
                       setQuery(event.target.value);
                       setFilter("all");
                       setPane("results");
@@ -2702,6 +2729,20 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {liveMessage}
         </div>
+
+        {pane === "results" && idle ? (
+          <OmnibarEmptyState
+            activeChatMode={activeChat?.mode}
+            introActive={introActive}
+            reduceMotion={Boolean(reduceMotion)}
+            onPick={(scope: OmnibarScopeId) => {
+              finishIntro();
+              setFilter("all");
+              setQuery(omnibarScopePrefix(scope));
+              requestAnimationFrame(() => inputRef.current?.focus());
+            }}
+          />
+        ) : null}
 
         {mariMounted ? (
           <Suspense fallback={null}>
