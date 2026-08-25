@@ -87,6 +87,11 @@ assert.doesNotMatch(
 );
 assert.match(
   professorMariHomeSource,
+  /mari-omnibar-empty-welcome[\s\S]*?chips=\{chipRowChips\}/u,
+  "Empty omnibar Mari must show a styled welcome with starter actions",
+);
+assert.match(
+  professorMariHomeSource,
   /className="mari-workspace-context-chip inline-flex/u,
   "One-shot context must appear as a compact composer chip",
 );

@@ -4992,7 +4992,7 @@ export function HomeProfessorMariChat({
                           void handleSubmit();
                         }}
                       >
-                        {showSuggestionPrompt && suggestionQuestion ? (
+                        {showSuggestionPrompt && suggestionQuestion && (!omnibarMode || messages.length > 0) ? (
                           <div className="mari-workspace-question-dock mb-2">
                             {!omnibarMode ? (
                               <div className="mari-workspace-question-dock__prompt">
