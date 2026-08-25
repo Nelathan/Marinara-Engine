@@ -49,7 +49,7 @@ export function OmnibarEmptyState({
   return (
     <div
       data-component="GlobalOmnibar.EmptyState"
-      className="pointer-events-none fixed left-1/2 top-[calc(10vh+5.5rem)] z-[101] hidden w-[min(52rem,92vw)] -translate-x-1/2 flex-col items-center gap-3 text-center sm:flex"
+      className="pointer-events-none fixed left-1/2 top-[calc(var(--omnibar-top,10vh)+5rem)] z-[101] hidden w-[min(52rem,92vw)] -translate-x-1/2 flex-col items-center gap-3 text-center sm:flex"
     >
       <div className="flex items-center gap-2 text-[var(--primary)]">
         <ArrowUp size={16} className="omnibar-hint-arrow" aria-hidden="true" />

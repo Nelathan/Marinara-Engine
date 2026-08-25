@@ -504,8 +504,10 @@ type WorkspaceToolCall = {
   input?: unknown;
   detail: string | null;
   output: string | null;
-  /** First time we saw this call. Preserved across upserts so the card can show a per-step duration. */
+  /** First time we saw this call. Preserved across upserts so a RUNNING step can tick live. */
   startedAt: number;
+  /** Server-measured wall time of a finished call. Authoritative - it survives a reload. */
+  durationMs?: number;
   updatedAt: number;
 };
 
@@ -640,9 +642,14 @@ function timelineItemsFromTrace(trace: MariWorkspaceTraceItem[], message: Messag
           input: item.tool.input,
           detail: previewValue(item.tool.input),
           output: item.tool.output ?? null,
-          // Replayed history has one timestamp per call, not a start and an end, so there is no
-          // duration to show. 0 renders as "—" rather than a fabricated 1s.
+          // A replayed step never ticks, so it has no local anchor. Its duration comes from the
+          // server-stamped pair; a trace written before those existed stays "—" rather than
+          // showing a fabricated 1s.
           startedAt: 0,
+          durationMs:
+            item.tool.startedAt && item.tool.updatedAt
+              ? Math.max(0, item.tool.updatedAt - item.tool.startedAt)
+              : undefined,
           updatedAt: item.tool.updatedAt ?? 0,
         },
       };
@@ -697,6 +704,8 @@ function upsertToolTimeline(current: WorkspaceTimelineItem[], update: WorkspaceT
         output: update.output ?? item.tool.output,
         // The update carries its own timestamp; the first sighting is what dates the step.
         startedAt: item.tool.startedAt || update.startedAt,
+        // A later event without a duration must not erase one we already have.
+        durationMs: update.durationMs ?? item.tool.durationMs,
       },
     };
   });
@@ -1670,11 +1679,15 @@ function WorkspaceLiveWorkCard({
                     const running = tool.status === "running";
                     const failed = tool.status === "error";
                     const Icon = failed ? AlertTriangle : running ? Circle : Check;
-                    // The card re-renders every second while `elapsedSeconds` ticks, so a running
-                    // step's duration stays live without a second timer.
-                    const stepSeconds = tool.startedAt
-                      ? Math.max(1, Math.round(((running ? Date.now() : tool.updatedAt) - tool.startedAt) / 1000))
-                      : null;
+                    // A finished step uses the server's own measurement. Only a RUNNING step is
+                    // timed locally - the card re-renders every second while `elapsedSeconds`
+                    // ticks, so it stays live without a second timer.
+                    const stepMs = running
+                      ? tool.startedAt
+                        ? Date.now() - tool.startedAt
+                        : null
+                      : (tool.durationMs ?? (tool.startedAt ? tool.updatedAt - tool.startedAt : null));
+                    const stepSeconds = stepMs === null ? null : Math.max(1, Math.round(stepMs / 1000));
                     return (
                       <motion.li
                         layout={!reduceMotion}
@@ -4126,6 +4139,7 @@ export function HomeProfessorMariChat({
               detail: null,
               output: outputValue(data?.output),
               startedAt: Date.now(),
+              durationMs: typeof data?.durationMs === "number" ? data.durationMs : undefined,
               updatedAt: Date.now(),
             };
             setWorkspaceTimeline((current) => upsertToolTimeline(current, toolCall));

@@ -2532,7 +2532,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       data-component="GlobalOmnibar"
       data-pane={pane}
       data-mode={pane === "mari" ? "work" : "find"}
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm sm:px-6 sm:pt-[10vh]"
+      className={`fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm motion-safe:transition-[padding] motion-safe:duration-300 sm:px-6 sm:pt-[var(--omnibar-top)] ${
+        introRunning ? "omnibar-intro-veil" : ""
+      }`}
+      // An empty bar sits lower, near the middle, so the hint field below it has
+      // room; it rides back up as soon as results need the space.
+      style={{ "--omnibar-top": idle ? "26vh" : "10vh" } as React.CSSProperties}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={reduceMotion ? { duration: 0 } : { duration: 0.12, ease: "easeOut" }}
