@@ -522,6 +522,9 @@ export function TacticalCombatUI({
   // An initial snapshot is usable for rendering, but its server session identity
   // still needs to hydrate before restart can safely replace anything.
   const [sessionHydrated, setSessionHydrated] = useState(!restorableInitialState);
+  // A browser snapshot is display-only until the server identifies its owning
+  // session. This blocks sessionless actions during both lookup and retry.
+  const restoredSessionAuthorityUnavailable = Boolean(restorableInitialState) && !sessionId;
   const launchRequestedForChatRef = useRef<string | null>(null);
   const hydratedSessionRevisionRef = useRef<string | null>(null);
 
@@ -642,6 +645,12 @@ export function TacticalCombatUI({
 
   useEffect(() => {
     const session = activeSessionQuery.data?.session;
+    const sessionMatchesDeclaration =
+      session?.style === "tactical" &&
+      (session.canonicalState.startMessageId ?? null) === (startMessageId ?? null);
+    const sessionIsRestorable =
+      sessionMatchesDeclaration &&
+      (session.status === "active" || (session.status === "completed" && Boolean(session.canonicalState.outcome)));
     if (
       restorableInitialState &&
       activeSessionQuery.isFetched &&
@@ -672,9 +681,11 @@ export function TacticalCombatUI({
       }
       return;
     }
-    // The active-session endpoint falls back to the latest completed session for
-    // refresh recovery — a finished battle must never hydrate as a live one.
-    if (!session || session.style !== "tactical" || session.status !== "active") {
+    // The active-session endpoint falls back to the latest completed session. It
+    // is valid authority only when it belongs to this declaration and contains a
+    // terminal canonical outcome; abandoned, stale, and foreign sessions must
+    // never take over the currently declared battle.
+    if (!sessionIsRestorable) {
       if (restartRecovery && activeSessionQuery.isFetched && !activeSessionQuery.isFetching) {
         restartRecoveryRef.current = null;
         restartRecoveryAttemptsRef.current = 0;
@@ -710,7 +721,9 @@ export function TacticalCombatUI({
     setState(canonicalState);
     setStarting(false);
     setStartError(null);
-    persistSnapshot(canonicalState, session.sessionId);
+    // Completed sessions are terminal display/aftermath authority, not a new
+    // snapshot write. Re-persisting one here can race terminal cleanup.
+    if (session.status === "active") persistSnapshot(canonicalState, session.sessionId);
     if (restartRecovery) {
       restartRecoveryRef.current = null;
       restartRecoveryAttemptsRef.current = 0;
@@ -725,6 +738,7 @@ export function TacticalCombatUI({
     activeSessionQuery.isError,
     activeSessionQuery.isPending,
     restorableInitialState,
+    startMessageId,
     party,
     persistSnapshot,
     playerCombatantId,
@@ -858,6 +872,7 @@ export function TacticalCombatUI({
       sessionId ||
       activeSessionQuery.isPending ||
       activeSessionQuery.isFetching ||
+      activeSessionQuery.isError ||
       (!activeSessionQuery.isError && activeSessionQuery.data?.session?.status === "active") ||
       launchRequestedForChatRef.current === chatId
     ) {
@@ -889,6 +904,7 @@ export function TacticalCombatUI({
       !restorableInitialState ||
       !activeSessionQuery.isFetched ||
       activeSessionQuery.isFetching ||
+      activeSessionQuery.isError ||
       activeSessionQuery.data?.session?.status === "active" ||
       sessionId ||
       launchRequestedForChatRef.current === chatId
@@ -906,6 +922,7 @@ export function TacticalCombatUI({
     activeSessionQuery.data?.session,
     activeSessionQuery.isFetched,
     activeSessionQuery.isFetching,
+    activeSessionQuery.isError,
     chatId,
     restorableInitialState,
     launchBattle,
@@ -1153,7 +1170,9 @@ export function TacticalCombatUI({
   // ── End-of-battle handoff ──
   const maybeEnd = useCallback(
     (s: TacticalCombatState) => {
-      const sessionAuthorityUnavailable = !sessionId && (!activeSessionQuery.isFetched || activeSessionQuery.isError);
+      const sessionAuthorityUnavailable =
+        (Boolean(restorableInitialState) && !sessionId) ||
+        (!sessionId && (!activeSessionQuery.isFetched || activeSessionQuery.isError));
       if (!s.outcome || endedRef.current || aftermathPending || aftermathFailed || sessionAuthorityUnavailable) return;
       endedRef.current = true;
       // Terminal snapshots stay persisted (not cleared here) so a refresh mid-flight
@@ -1182,6 +1201,7 @@ export function TacticalCombatUI({
       aftermathPending,
       handoffCombatEnd,
       objectives,
+      restorableInitialState,
       sessionId,
     ],
   );
@@ -1345,7 +1365,7 @@ export function TacticalCombatUI({
   // ── Send one action to the server ──
   const sendAction = useCallback(
     (action: TacticalAction, onSettled?: (final: TacticalCombatState, events: TacticalEvent[]) => void) => {
-      if (!liveState || animatingRef.current) return;
+      if (!liveState || liveState.outcome || animatingRef.current || restoredSessionAuthorityUnavailable) return;
       const preState = liveState;
       // Lock SYNCHRONOUSLY — before the request leaves — so the network-flight
       // window is guarded too. Without this, a second click during flight posts
@@ -1430,6 +1450,7 @@ export function TacticalCombatUI({
       playEvents,
       persistSnapshot,
       resetSelection,
+      restoredSessionAuthorityUnavailable,
     ],
   );
 
@@ -1437,7 +1458,7 @@ export function TacticalCombatUI({
 
   const onTileClick = useCallback(
     (x: number, y: number) => {
-      if (!liveState || animating) return;
+      if (!liveState || animating || restoredSessionAuthorityUnavailable) return;
       setInspectTile({ x, y });
       const key = `${x},${y}`;
 
@@ -1454,12 +1475,12 @@ export function TacticalCombatUI({
         return;
       }
     },
-    [liveState, animating, ui, selectedUnit, movementKeys, playSfx],
+    [liveState, animating, restoredSessionAuthorityUnavailable, ui, selectedUnit, movementKeys, playSfx],
   );
 
   const onTokenClick = useCallback(
     (unit: TacticalUnit) => {
-      if (!liveState || animating) return;
+      if (!liveState || animating || restoredSessionAuthorityUnavailable) return;
 
       const isLivingPartyUnit = unit.side === "party" && unit.hp > 0 && liveState.phase === "player";
       const isDifferentPartyUnit = isLivingPartyUnit && unit.id !== selectedUnitId;
@@ -1505,7 +1526,7 @@ export function TacticalCombatUI({
       // Otherwise just inspect (enemy or acted unit).
       resetSelection();
     },
-    [liveState, animating, selectedUnitId, ui, targetIds, playSfx, resetSelection],
+    [liveState, animating, restoredSessionAuthorityUnavailable, selectedUnitId, ui, targetIds, playSfx, resetSelection],
   );
 
   // ── Commit a pure move, then re-select the same unit so it can still act. ──
@@ -1662,6 +1683,7 @@ export function TacticalCombatUI({
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if (restoredSessionAuthorityUnavailable) return;
       if (event.key === "Escape") {
         resetSelection();
         return;
@@ -1678,12 +1700,12 @@ export function TacticalCombatUI({
       else return;
       event.preventDefault();
     },
-    [resetSelection, selectedUnit, ui.kind, animating, chooseAction],
+    [restoredSessionAuthorityUnavailable, resetSelection, selectedUnit, ui.kind, animating, chooseAction],
   );
 
   const moveControllerCursor = useCallback(
     (deltaX: number, deltaY: number) => {
-      if (!liveState || liveState.outcome || animating) return;
+      if (!liveState || liveState.outcome || animating || restoredSessionAuthorityUnavailable) return;
       setInspectTile((current) => {
         const fallbackUnit = selectedUnit ?? liveState.units.find((unit) => unit.side === "party" && unit.hp > 0);
         const origin =
@@ -1694,11 +1716,19 @@ export function TacticalCombatUI({
         };
       });
     },
-    [liveState, selectedUnit, stagedMove, animating],
+    [liveState, selectedUnit, stagedMove, animating, restoredSessionAuthorityUnavailable],
   );
 
   const confirmControllerSelection = useCallback(() => {
-    if (!liveState || liveState.outcome || liveState.phase !== "player" || animating) return;
+    if (
+      !liveState ||
+      liveState.outcome ||
+      liveState.phase !== "player" ||
+      animating ||
+      restoredSessionAuthorityUnavailable
+    ) {
+      return;
+    }
     if (fleeConfirm || restartConfirm || logOpen) return;
 
     const fallbackUnit = selectedUnit ?? liveState.units.find((unit) => unit.side === "party" && unit.hp > 0);
@@ -1730,6 +1760,7 @@ export function TacticalCombatUI({
   }, [
     liveState,
     animating,
+    restoredSessionAuthorityUnavailable,
     fleeConfirm,
     restartConfirm,
     logOpen,
@@ -2784,6 +2815,28 @@ export function TacticalCombatUI({
           ) : (
             <p className="text-sm text-white/60">{localizeUi("ui.game.tacticalcombatui.returningToTheStory")}</p>
           )}
+        </div>
+      )}
+
+      {restoredSessionAuthorityUnavailable && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/65 p-6 text-center backdrop-blur-sm">
+          <div className="flex max-w-sm flex-col items-center gap-3 rounded-lg border border-white/15 bg-slate-950/95 p-5 shadow-2xl">
+            <RotateCcw className={cn("h-7 w-7 text-[var(--primary)]", !activeSessionQuery.isError && "animate-spin")} />
+            <p className="text-sm text-white/80">
+              {activeSessionQuery.isError
+                ? localizeUi("ui.game.tacticalcombatui.restoredSessionVerificationFailed")
+                : localizeUi("ui.game.tacticalcombatui.verifyingRestoredSession")}
+            </p>
+            {activeSessionQuery.isError && (
+              <button
+                type="button"
+                onClick={() => void refetchActiveSession()}
+                className="rounded-lg border border-[var(--primary)]/40 bg-[var(--primary)]/20 px-4 py-2 text-sm font-bold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/30"
+              >
+                {localizeUi("capabilities.actions.tryAgain")}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

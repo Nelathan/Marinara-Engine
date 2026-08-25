@@ -346,6 +346,21 @@ assert.match(
   /restartSessionIdRef\.current = null;[\s\S]{0,500}setSessionId\(null\);[\s\S]{0,300}setState\(null\)/,
   "Tactical stale snapshots must clear their abandoned session before launching a fresh battle",
 );
+assert.match(
+  tacticalCombatUiSource,
+  /const restoredSessionAuthorityUnavailable = Boolean\(restorableInitialState\) && !sessionId;/,
+  "Restored Tactical snapshots must remain read-only until their server session is verified",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /onClick=\{\(\) => void refetchActiveSession\(\)\}/,
+  "A failed restored-session lookup must offer an explicit retry without discarding the battlefield",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(!liveState \|\| liveState\.outcome \|\| animatingRef\.current \|\| restoredSessionAuthorityUnavailable\) return;/,
+  "Tactical actions must not be submitted before restored-session authority is verified",
+);
 assertBefore(
   routesSource,
   "if (existing && existing.chatId !== body.chatId)",
@@ -442,8 +457,23 @@ assert.doesNotMatch(
 // corpse as a live fight, or the next encounter replays the previous result.
 assert.match(
   tacticalCombatUiSource,
-  /session\.style !== "tactical" \|\| session\.status !== "active"/,
-  "a completed session must never hydrate the Tactical battle component as a live fight",
+  /const sessionMatchesDeclaration =[\s\S]{0,240}\(session\.canonicalState\.startMessageId \?\? null\) === \(startMessageId \?\? null\)/,
+  "Tactical recovery must only accept authority for the current declaration",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /session\.status === "active" \|\| \(session\.status === "completed" && Boolean\(session\.canonicalState\.outcome\)\)/,
+  "a completed Tactical session must be terminal before it can restore",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(session\.status === "active"\) persistSnapshot\(canonicalState, session\.sessionId\);/,
+  "completed Tactical recovery must not re-persist a terminal snapshot",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /if \(!liveState \|\| liveState\.outcome \|\| animatingRef\.current \|\| restoredSessionAuthorityUnavailable\) return;/,
+  "a recovered completed Tactical session must never submit another action",
 );
 assert.match(
   tacticalCombatUiSource,
@@ -452,8 +482,8 @@ assert.match(
 );
 assert.match(
   tacticalCombatUiSource,
-  /!activeSessionQuery\.isError && activeSessionQuery\.data\?\.session\?\.status === "active"/,
-  "a failed active-session lookup must not let retained cached data block a fresh Tactical launch",
+  /activeSessionQuery\.isFetching \|\|\s*activeSessionQuery\.isError \|\|\s*\(!activeSessionQuery\.isError && activeSessionQuery\.data\?\.session\?\.status === "active"\)/,
+  "a failed authority lookup must not launch a second Tactical battle",
 );
 assert.match(
   tacticalCombatUiSource,
@@ -482,8 +512,13 @@ assert.doesNotMatch(
 );
 assert.match(
   gameCombatUiSource,
-  /session\.style !== "classic" \|\| session\.status !== "active"/,
-  "a completed session must never hydrate the Classic battle component as a live fight",
+  /if \(session\.status !== "active" && !isTerminalRecovery\) return;/,
+  "Classic recovery must accept only active sessions or completed canonical outcomes",
+);
+assert.match(
+  gameCombatUiSource,
+  /if \(isTerminalRecovery && outcome\) \{[\s\S]{0,1300}setPhase\(outcome\);\s*return;/,
+  "a completed Classic session must hydrate as a terminal overlay before playable-turn selection",
 );
 assert.match(
   gameCombatUiSource,
@@ -517,18 +552,18 @@ assert.match(
 );
 assert.match(
   gameSurfaceSource,
-  /surfaceCombatSessionQuery\.isFetched && !surfaceCombatSessionQuery\.isFetching && recoveringLegacySnapshot/,
+  /surfaceCombatSessionQuery\.isFetched[\s\S]{0,100}!surfaceCombatSessionQuery\.isFetching[\s\S]{0,100}!surfaceCombatSessionQuery\.isError[\s\S]{0,100}recoveringLegacySnapshot/,
   "legacy snapshot style fallback must wait for the authoritative active-session refetch to settle",
 );
 assert.match(
   gameSurfaceSource,
-  /surfaceTacticalStartMessageId[\s\S]{0,500}surfaceSessionMatchesCurrentCombat/,
-  "completed Tactical sessions must be matched to the current combat declaration",
+  /\(surfaceTacticalStartMessageId \?\? null\) === \(combatStartMessageId \?\? null\)/,
+  "Tactical session recovery must use exact normalized declaration ownership",
 );
 assert.match(
   gameSurfaceSource,
-  /surfaceTacticalStartMessageId === combatStartMessageId[\s\S]{0,180}surfaceCombatSession\.status !== "active"/,
-  "legacy completed Tactical sessions without a declaration id must still unwind cleanly",
+  /surfaceCombatSession\?\.status === "active"[\s\S]{0,220}surfaceCombatSession\?\.status === "completed"[\s\S]{0,130}canonicalState\.outcome/,
+  "only active and completed Tactical sessions with an outcome may recover",
 );
 assert.match(
   gameSurfaceSource,
@@ -566,8 +601,8 @@ assert.match(
 );
 assertBefore(
   gameSurfaceSource,
-  'if (session.status !== "active")',
-  "if ((combatParty || combatEnemies) && !recoveringLegacySnapshot) return",
+  "if (!surfaceSessionIsRestorable)",
+  "if (!surfaceSessionIsTerminalRecovery && (combatParty || combatEnemies) && !recoveringLegacySnapshot) return",
   "a completed authoritative session must win over an already styled local snapshot",
 );
 assert.match(
@@ -717,8 +752,8 @@ assert.match(
 );
 assert.match(
   gameSurfaceSource,
-  /const restorableTacticalInitialState =\s*tacticalInitialState && \(tacticalInitialState\.startMessageId \?\? null\) === \(combatStartMessageId \?\? null\)/,
-  "Tactical snapshot restoration must require the current combat declaration identity",
+  /const restorableTacticalInitialState =[\s\S]{0,500}surfaceSessionIsRestorable[\s\S]{0,280}tacticalInitialState && \(tacticalInitialState\.startMessageId \?\? null\) === \(combatStartMessageId \?\? null\)/,
+  "Tactical recovery must prefer matching canonical authority and fence metadata fallback by declaration identity",
 );
 assert.match(
   tacticalCombatUiSource,

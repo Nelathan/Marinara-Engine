@@ -9653,6 +9653,7 @@ export async function gameRoutes(app: FastifyInstance) {
       ),
       round: z.number().int().min(1),
       sessionId: z.string().min(1).optional(),
+      startMessageId: z.string().min(1).nullable().optional(),
       expectedRevision: z.number().int().min(0).optional(),
       actionId: z.string().min(1).max(200).optional(),
       inventory: z
@@ -9744,6 +9745,7 @@ export async function gameRoutes(app: FastifyInstance) {
       combatants,
       round,
       sessionId,
+      startMessageId,
       expectedRevision,
       actionId,
       inventory,
@@ -9778,6 +9780,19 @@ export async function gameRoutes(app: FastifyInstance) {
         .status(403)
         .send({ error: "Combat session does not belong to this chat", code: "COMBAT_WRONG_CHAT" });
     }
+    // A declaration can start while a stale client still has no session id.
+    // Never let that request take over an active Classic battle from another
+    // Game Mode combat declaration.
+    if (
+      !sessionId &&
+      session &&
+      (startMessageId ?? null) !== (session.canonicalState.startMessageId ?? null)
+    ) {
+      return reply.status(409).send({
+        error: "Classic combat request does not belong to the active battle",
+        code: "COMBAT_SNAPSHOT_INVALID",
+      });
+    }
     if (!session) {
       try {
         session = await sessions.create({
@@ -9791,7 +9806,7 @@ export async function gameRoutes(app: FastifyInstance) {
             itemEffects: (itemEffects ?? []) as unknown as NonNullable<CombatSessionStartInput["itemEffects"]>,
             mechanics: mechanics ?? [],
             dialogueCues: [],
-            startMessageId: null,
+            startMessageId: startMessageId ?? null,
             round,
             difficulty,
             elementPreset,

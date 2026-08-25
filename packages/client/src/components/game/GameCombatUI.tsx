@@ -501,7 +501,8 @@ interface GameCombatUIProps {
   onSpriteSuggestionChange?: (suggestion: { name: string; pose: string } | null) => void;
   /** Whether we're waiting for a GM response. */
   isStreaming?: boolean;
-  restoreSession?: boolean;
+  /** Game Mode combat declaration that owns this battle. */
+  startMessageId?: string | null;
   /** Reports the server-owned combat session so the surface can scope snapshots. */
   onCombatSessionIdChange?: (sessionId: string | null) => void;
 }
@@ -723,6 +724,7 @@ export function GameCombatUI({
   combatControlsSlot,
   onSpriteSuggestionChange,
   isStreaming,
+  startMessageId,
   onCombatSessionIdChange,
 }: GameCombatUIProps) {
   const { t: localizeUi } = useUiTranslation();
@@ -753,18 +755,26 @@ export function GameCombatUI({
     if (activeSessionQuery.isPending || activeSessionQuery.isFetching || activeSessionQuery.isError) return;
     // The active-session endpoint falls back to the latest completed session for
     // refresh recovery — a finished battle must never hydrate as a live one.
-    if (!session || session.style !== "classic" || session.status !== "active") return;
+    if (!session || session.style !== "classic") return;
+    // The active-session endpoint also returns a completed session for refresh
+    // recovery. It must belong to this exact declaration, including null for
+    // legacy declarations, before it can become UI authority.
+    if ((session.canonicalState.startMessageId ?? null) !== (startMessageId ?? null)) return;
+    const outcome = session.canonicalState.outcome;
+    const isTerminalRecovery = session.status === "completed";
+    // The endpoint can return a completed session on refresh. It is terminal
+    // display authority only and must never resume as a playable turn.
+    if (session.status !== "active" && !isTerminalRecovery) return;
+    if (isTerminalRecovery && !outcome) return;
     setCombatSessionId(session.sessionId);
     setCombatRevision(session.revision);
     setObjectives(session.objectives);
     setParty(session.canonicalState.party);
     setEnemies(session.canonicalState.enemies);
-    setActivePlayerIndex(firstLivingPartyIndex(session.canonicalState.party));
     onCombatantsChange?.(session.canonicalState.party, session.canonicalState.enemies);
     onInventoryChange?.(session.canonicalState.inventory ?? []);
     setRound(session.canonicalState.round ?? 1);
-    const outcome = session.canonicalState.outcome;
-    if (outcome) {
+    if (isTerminalRecovery && outcome) {
       const summary: CombatSummary = session.result ?? {
         sessionId: session.sessionId,
         outcome,
@@ -791,7 +801,9 @@ export function GameCombatUI({
       };
       terminalSummaryRef.current = summary;
       setPhase(outcome);
+      return;
     }
+    setActivePlayerIndex(firstLivingPartyIndex(session.canonicalState.party));
   }, [
     activeSessionQuery.data?.session,
     activeSessionQuery.isError,
@@ -799,6 +811,7 @@ export function GameCombatUI({
     activeSessionQuery.isPending,
     onCombatantsChange,
     onInventoryChange,
+    startMessageId,
   ]);
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
@@ -1656,6 +1669,7 @@ export function GameCombatUI({
           combatants: allCombatants.filter((c) => c.hp > 0).map((c) => sanitizeCombatantForRound(c)),
           round,
           ...(combatSessionId ? { sessionId: combatSessionId } : {}),
+          ...(combatSessionId ? {} : { startMessageId }),
           expectedRevision: combatRevision,
           actionId: generateClientId(),
           inventory: inventoryItems,
@@ -1756,6 +1770,7 @@ export function GameCombatUI({
       combatSessionId,
       combatRevision,
       combatRound,
+      startMessageId,
       combatMechanics,
       onInventoryItemUsed,
       onInventoryChange,

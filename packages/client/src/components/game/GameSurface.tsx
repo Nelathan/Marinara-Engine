@@ -2780,7 +2780,7 @@ function GameSurfaceComponent({
       }
       return result;
     },
-    [generateGameAudioAsset, generateGameSoundEffects],
+    [generateGameAudioAsset, generateGameMusic, generateGameSoundEffects],
   );
 
   /** Direct scoring+play for combat (#5161): no scene-analysis pass runs
@@ -8545,16 +8545,21 @@ function GameSurfaceComponent({
   const surfaceTacticalStartMessageId =
     surfaceCombatSession?.style === "tactical" ? surfaceCombatSession.canonicalState.startMessageId : null;
   const surfaceSessionMatchesCurrentCombat =
-    !combatStartMessageId ||
+    surfaceCombatSession !== undefined &&
     (surfaceCombatSession?.style === "tactical"
-      ? surfaceTacticalStartMessageId === combatStartMessageId ||
-        (surfaceCombatSession.status !== "active" && !surfaceTacticalStartMessageId)
-      : !surfaceClassicStartMessageId || surfaceClassicStartMessageId === combatStartMessageId);
+      ? (surfaceTacticalStartMessageId ?? null) === (combatStartMessageId ?? null)
+      : (surfaceClassicStartMessageId ?? null) === (combatStartMessageId ?? null));
+  const surfaceSessionIsRestorable =
+    surfaceSessionMatchesCurrentCombat &&
+    (surfaceCombatSession?.status === "active" ||
+      (surfaceCombatSession?.status === "completed" && Boolean(surfaceCombatSession.canonicalState.outcome)));
+  const surfaceSessionIsTerminalRecovery =
+    surfaceSessionIsRestorable && surfaceCombatSession?.status === "completed";
   const combatAuthoritySettled = surfaceCombatSessionQuery.isFetched && !surfaceCombatSessionQuery.isFetching;
   const completedAuthorityBlocksCombat =
     surfaceCombatSession?.status !== undefined &&
     surfaceCombatSession.status !== "active" &&
-    surfaceSessionMatchesCurrentCombat &&
+    !surfaceSessionIsRestorable &&
     !combatEncounterPreparing &&
     !combatDeclarationPending;
   const combatUiActive =
@@ -8566,13 +8571,14 @@ function GameSurfaceComponent({
     !completedAuthorityBlocksCombat;
   const tacticalInitialState =
     (chatMeta.gameTacticalCombatSnapshot as TacticalCombatState | null | undefined) ?? null;
-  // Snapshots are durable chat metadata, so a completed prior battle can still
-  // be present while the next declaration starts. Restore only the snapshot
-  // owned by this declaration; matching absent IDs retain legacy refresh recovery.
+  // Prefer the server-owned canonical session over a potentially stale metadata
+  // snapshot. Metadata remains a compatibility fallback for legacy active battles.
   const restorableTacticalInitialState =
-    tacticalInitialState && (tacticalInitialState.startMessageId ?? null) === (combatStartMessageId ?? null)
-      ? tacticalInitialState
-      : null;
+    surfaceSessionIsRestorable && surfaceCombatSession?.style === "tactical"
+      ? surfaceCombatSession.canonicalState
+      : tacticalInitialState && (tacticalInitialState.startMessageId ?? null) === (combatStartMessageId ?? null)
+        ? tacticalInitialState
+        : null;
   // Keep package callbacks tied to the current surface state. Experiences may
   // retain a requestCombat callback across renders, so reading this ref avoids
   // stale combat/replay/concluded flags during sequential battles.
@@ -8585,32 +8591,43 @@ function GameSurfaceComponent({
   useEffect(() => {
     const session = surfaceCombatSession;
     if (chatMeta.gameActiveState !== "combat") return;
+    // Never hydrate or unwind from cached session data while the authority
+    // lookup is unresolved. A transient lookup failure must preserve the
+    // restored board so the mode can offer a retry instead of relaunching.
+    if (surfaceCombatSessionQuery.isPending || surfaceCombatSessionQuery.isFetching || surfaceCombatSessionQuery.isError) {
+      return;
+    }
     const recoveringLegacySnapshot = !!combatParty && !!combatEnemies && activeCombatStyle === null;
     const configuredStyle =
       (chatMeta.gameCombatStyle as GameCombatStyle | undefined) ??
       ((chatMeta.gameSetupConfig as Record<string, unknown> | undefined)?.combatStyle as GameCombatStyle | undefined) ??
       "classic";
     if (!session) {
-      if (surfaceCombatSessionQuery.isFetched && !surfaceCombatSessionQuery.isFetching && recoveringLegacySnapshot) {
+      if (
+        surfaceCombatSessionQuery.isFetched &&
+        !surfaceCombatSessionQuery.isFetching &&
+        !surfaceCombatSessionQuery.isError &&
+        recoveringLegacySnapshot
+      ) {
         setActiveCombatStyle(configuredStyle);
       }
       return;
     }
-    if (session.status !== "active") {
+    if (!surfaceSessionIsRestorable) {
       // The active-session endpoint falls back to the latest COMPLETED session so a
       // refresh interrupted mid-aftermath can still recover. Hydrating that corpse
       // state as a live battle would instantly re-resolve it as a win, so never
       // mount it. If nothing is preparing a new encounter, the "combat" flag is
       // stale — unwind it; otherwise the in-flight encounter owns the state and
       // will start its own session.
-      if (!surfaceSessionMatchesCurrentCombat || combatEncounterPreparing || combatDeclarationPending) return;
+      if (combatEncounterPreparing || combatDeclarationPending) return;
       if (activeChatId && !transitionGameState.isPending) {
         useGameModeStore.getState().setGameState("exploration");
         transitionGameState.mutate({ chatId: activeChatId, newState: "exploration" });
       }
       return;
     }
-    if ((combatParty || combatEnemies) && !recoveringLegacySnapshot) return;
+    if (!surfaceSessionIsTerminalRecovery && (combatParty || combatEnemies) && !recoveringLegacySnapshot) return;
     if (session.style === "classic") {
       setActiveCombatStyle("classic");
       setCombatParty(session.canonicalState.party);
@@ -8651,8 +8668,11 @@ function GameSurfaceComponent({
     combatParty,
     surfaceCombatSession,
     surfaceCombatSessionQuery.isFetched,
+    surfaceCombatSessionQuery.isError,
     surfaceCombatSessionQuery.isFetching,
-    surfaceSessionMatchesCurrentCombat,
+    surfaceCombatSessionQuery.isPending,
+    surfaceSessionIsRestorable,
+    surfaceSessionIsTerminalRecovery,
     transitionGameState,
   ]);
   const tacticalCombatActive = combatUiActive && effectiveCombatStyle === "tactical";
@@ -13124,7 +13144,7 @@ function GameSurfaceComponent({
                               onCustomInstruction={handleCombatCustomInstruction}
                               onSpriteSuggestionChange={setCombatSpriteSuggestion}
                               isStreaming={isStreaming}
-                              restoreSession={Boolean(chatMeta.gameCombatState)}
+                              startMessageId={combatStartMessageId}
                               narration="Battle starts."
                               combatDialogue={combatDialogueLines}
                               combatDialogueCues={combatDialogueCues}

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { api, isJsonRepairApiError } from "../lib/api-client";
+import { ApiError, api, isJsonRepairApiError } from "../lib/api-client";
 import { chatKeys } from "./use-chats";
 import { lorebookKeys } from "./use-lorebooks";
 import {
@@ -818,6 +818,8 @@ export function useCombatRound() {
       sessionId?: string;
       expectedRevision?: number;
       actionId?: string;
+      /** Game Mode combat declaration that owns a newly created Classic session. */
+      startMessageId?: string | null;
       playerAction?: CombatPlayerAction;
       mechanics?: import("@marinara-engine/shared").CombatMechanic[];
       inventory?: Array<{ name: string; quantity: number }>;
@@ -864,7 +866,11 @@ export function useActiveCombatSession(chatId: string, style: "classic" | "tacti
     enabled: enabled && Boolean(chatId),
     staleTime: 0,
     refetchOnMount: "always",
-    retry: false,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
+      return failureCount < 2;
+    },
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 5_000),
   });
 }
 
