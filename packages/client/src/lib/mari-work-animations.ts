@@ -76,6 +76,14 @@ const ANIMATIONS = {
     id: "rocket",
     src: "/sprites/mari/generated/professor-mari-work-rocket.png",
   },
+  images: {
+    id: "images",
+    src: "/sprites/mari/generated/professor-mari-work-images.png",
+  },
+  thinkingNotes: {
+    id: "thinking-notes",
+    src: "/sprites/mari/generated/professor-mari-work-thinking-notes.png",
+  },
 } satisfies Record<string, MariWorkAnimation>;
 
 const GENERAL_POOL = [
@@ -87,6 +95,7 @@ const GENERAL_POOL = [
   ANIMATIONS.origami,
   ANIMATIONS.clockwork,
   ANIMATIONS.rocket,
+  ANIMATIONS.thinkingNotes,
 ];
 const RESEARCH_POOL = [
   ANIMATIONS.detective,
@@ -95,6 +104,7 @@ const RESEARCH_POOL = [
   ANIMATIONS.telescope,
   ANIMATIONS.spelunking,
   ANIMATIONS.constellation,
+  ANIMATIONS.thinkingNotes,
 ];
 const PLANNING_POOL = [
   ANIMATIONS.yarn,
@@ -130,6 +140,8 @@ const LONG_RUNNING_POOL = [
   ANIMATIONS.rocket,
 ];
 
+const IMAGE_POOL = [ANIMATIONS.images];
+
 function stableHash(value: string): number {
   let hash = 2_166_136_261;
   for (let index = 0; index < value.length; index += 1) {
@@ -151,9 +163,10 @@ export function selectMariWorkAnimation({
   const signal = `${activity} ${toolNames.join(" ")}`.toLowerCase();
   let pool = GENERAL_POOL;
 
-  if (/error|fail|debug|repair|fix|diagnos|test/.test(signal)) pool = DEBUG_POOL;
+  if (/image|picture|portrait|sprite|thumbnail|gallery|illustrat|crop|visual/.test(signal)) pool = IMAGE_POOL;
+  else if (/error|fail|debug|repair|fix|diagnos|test/.test(signal)) pool = DEBUG_POOL;
   else if (/search|research|read|fetch|browse|wiki|inspect|find|grep/.test(signal)) pool = RESEARCH_POOL;
-  else if (/plan|reason|think|map|decide|compare|analy/.test(signal)) pool = PLANNING_POOL;
+  else if (/plan|reason|think|map|decid|compar|analy/.test(signal)) pool = PLANNING_POOL;
   else if (/write|edit|patch|create|update|remove|file/.test(signal)) pool = FILE_POOL;
   else if (/install|build|compile|command|shell|bash|terminal|wait/.test(signal)) pool = LONG_RUNNING_POOL;
 

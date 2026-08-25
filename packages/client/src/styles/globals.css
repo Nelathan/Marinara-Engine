@@ -1297,7 +1297,9 @@
 .mari-live-work__sprite[data-scene="books"],
 .mari-live-work__sprite[data-scene="yarn"],
 .mari-live-work__sprite[data-scene="origami"],
-.mari-live-work__sprite[data-scene="constellation"] {
+.mari-live-work__sprite[data-scene="constellation"],
+.mari-live-work__sprite[data-scene="images"],
+.mari-live-work__sprite[data-scene="thinking-notes"] {
   animation-duration: 4.4s;
 }
 
