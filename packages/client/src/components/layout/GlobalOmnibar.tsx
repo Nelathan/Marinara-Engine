@@ -522,6 +522,32 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const agentCatalogOpen = useUIStore((state) => state.agentCatalogOpen);
   const editorDirty = useUIStore((state) => state.editorDirty);
 
+  const idleGreeting = useMemo(() => {
+    if (!activeChat) return t("omnibar.hello", "Hi, I'm Mari. Type to search, or ask me for anything...");
+
+    const greetings =
+      activeChat.mode === "roleplay"
+        ? [
+            t("omnibar.greetings.roleplay.one", "A roleplay chat. What should we look into?"),
+            t("omnibar.greetings.roleplay.two", "Oh, a scene in progress. Need a hand?"),
+            t("omnibar.greetings.roleplay.three", "This story is open. What would you like to find?"),
+          ]
+        : activeChat.mode === "conversation"
+          ? [
+              t("omnibar.greetings.conversation.one", "A conversation. What should we look into?"),
+              t("omnibar.greetings.conversation.two", "I found your chat. What do you need?"),
+              t("omnibar.greetings.conversation.three", "This chat is open. What would you like to find?"),
+            ]
+          : [
+              t("omnibar.greetings.chat.one", "Oh, a chat. What should we look into?"),
+              t("omnibar.greetings.chat.two", "Your chat is open. What do you need?"),
+              t("omnibar.greetings.chat.three", "A chat is open. What would you like to find?"),
+            ];
+
+    const seed = activeChatId ? [...activeChatId].reduce((sum, character) => sum + character.charCodeAt(0), 0) : 0;
+    return greetings[seed % greetings.length];
+  }, [activeChat, activeChatId, t]);
+
   const categoryLabels = useMemo<CommandCenterCategoryLabels>(
     () => ({
       navigation: t("omnibar.categories.navigation", "Navigation"),
@@ -2524,23 +2550,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               >
                 <ChevronLeft size={18} />
               </button>
-            ) : idle ? (
-              // Empty bar: Mari greets in person instead of a magnifier.
-              <span
-                className="mari-workspace-portrait"
-                data-size="sm"
-                data-state={mariVisualState}
-                data-conversation="true"
-                aria-hidden="true"
-              >
-                <img src={PROFESSOR_MARI_PEEK_URL} alt="" draggable={false} data-part="idle" />
-                <img
-                  src="/sprites/mari/generated/professor-mari-assistant-blink-v3.png"
-                  alt=""
-                  draggable={false}
-                  data-part="blink"
-                />
-              </span>
             ) : (
               <Search size={19} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
             )}
@@ -2614,7 +2623,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     onKeyDown={onInputKeyDown}
                     placeholder={
                       idle
-                        ? t("omnibar.hello", "Hi, I'm Mari. Type to search, or ask me for anything...")
+                        ? idleGreeting
                         : t("commandCenter.placeholder", "Search everything — or narrow with faq:, docs:, msg:, char:")
                     }
                     className="min-w-0 flex-1 bg-transparent text-base font-medium text-[var(--foreground)] outline-none placeholder:font-normal placeholder:text-[var(--muted-foreground)] [&::-webkit-search-cancel-button]:hidden"
