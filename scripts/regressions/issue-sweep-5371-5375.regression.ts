@@ -43,6 +43,11 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(
   professorMariHomeSource,
+  /OmnibarIntro/u,
+  "The empty omnibar must not mount the long first-open intro",
+);
+assert.doesNotMatch(
+  professorMariHomeSource,
   /mari-live-work__stop/u,
   "The work turn must not mount a second Stop control",
 );

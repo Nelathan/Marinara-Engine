@@ -124,12 +124,7 @@ import {
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
 } from "../../lib/omnibar-results";
-import {
-  matchesOmnibarScope,
-  omnibarScopePrefix,
-  parseOmnibarScope,
-  type OmnibarScopeId,
-} from "../../lib/omnibar-scope";
+import { matchesOmnibarScope, parseOmnibarScope } from "../../lib/omnibar-scope";
 import {
   buildOmnibarAgentRows,
   buildOmnibarCharacterRows,
@@ -175,7 +170,6 @@ import {
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact } from "../command-center/command-result-preview.types";
 import { OmnibarEmptyState } from "./OmnibarEmptyState";
-import { OmnibarIntro, OMNIBAR_INTRO_DURATION_MS } from "./OmnibarIntro";
 import {
   getOmnibarResourceId,
   isRichResult,
@@ -194,9 +188,6 @@ const OmnibarAside = lazy(() => import("./omnibar/OmnibarAside").then((m) => ({ 
 
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const PROFESSOR_MARI_PEEK_URL = "/sprites/mari/generated/professor-mari-assistant-idle.png";
-const OMNIBAR_INTRO_SEEN_KEY = "marinara:omnibar:intro-seen:v1";
-// Still under review: the intro replays on every open until this flips back on.
-const OMNIBAR_INTRO_PERSISTS = false;
 
 /** Categories whose result rows open an editor rather than the thing itself. */
 const EDITOR_CATEGORIES = new Set<OmnibarCategory>([
@@ -413,28 +404,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // because `GlobalOmnibarHost` hands off an "open Professor Mari" request by
   // writing that pane and then opening; resetting it on read would kill that.
   const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
-  const [introActive, setIntroActive] = useState(() => {
-    try {
-      return !OMNIBAR_INTRO_PERSISTS || localStorage.getItem(OMNIBAR_INTRO_SEEN_KEY) !== "true";
-    } catch {
-      return false;
-    }
-  });
   const initialQueryRef = useRef(session.query);
   const { query, filter, pane, activeResultId, mariReturnResultId, mariHandoff } = session;
   const mariFinished = mariHandoff?.status === "finished";
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));
   const setQuery = (value: string) => setSessionValue("query", value);
-  const finishIntro = () => {
-    setIntroActive(false);
-    if (!OMNIBAR_INTRO_PERSISTS) return;
-    try {
-      localStorage.setItem(OMNIBAR_INTRO_SEEN_KEY, "true");
-    } catch {
-      // Private browsing can deny local storage. The in-memory state still skips this open.
-    }
-  };
   // Keep typing responsive: the heavy search/rank/present pipeline reruns against
   // the deferred query so keystrokes paint immediately on large libraries.
   const rawDeferredQuery = useDeferredValue(query);
@@ -1431,7 +1406,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [filter, deferredQuery, rankedResults, ranking],
   );
   const idle = !query.trim() && presentation.groups.length === 0;
-  const introRunning = introActive && !reduceMotion && idle && pane === "results";
   // The filter bar only renders once there is a query, so availability always comes from the results.
   const tabAvailability = presentation.categoryAvailability;
   const availableFilters = COMMAND_CENTER_CATEGORY_FILTERS.filter(
@@ -1550,12 +1524,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     });
     return () => restoreRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    if (!introActive || reduceMotion || !idle) return;
-    const timer = window.setTimeout(finishIntro, OMNIBAR_INTRO_DURATION_MS);
-    return () => window.clearTimeout(timer);
-  }, [idle, introActive, reduceMotion]);
 
   useEffect(() => {
     if (!activeResultId || pane !== "results") return;
@@ -2543,9 +2511,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       data-component="GlobalOmnibar"
       data-pane={pane}
       data-mode={pane === "mari" ? "work" : "find"}
-      className={`fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm motion-safe:transition-[padding] motion-safe:duration-300 sm:px-6 sm:pt-[var(--omnibar-top)] ${
-        introRunning ? "omnibar-intro-veil" : ""
-      }`}
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 backdrop-blur-sm motion-safe:transition-[padding] motion-safe:duration-300 sm:px-6 sm:pt-[var(--omnibar-top)]"
       // An empty bar sits lower, near the middle, so the hint field below it has
       // room; it rides back up as soon as results need the space.
       style={{ "--omnibar-top": idle && !mariSurface ? "26vh" : "10vh" } as React.CSSProperties}
@@ -2567,7 +2533,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             : idle
               ? "sm:h-auto sm:max-h-none"
               : "sm:h-[min(36rem,68dvh)] sm:max-h-[min(36rem,68dvh)]"
-        } ${introRunning ? "omnibar-intro-grow" : ""}`}
+        }`}
       >
         <div
           aria-hidden="true"
@@ -2657,7 +2623,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                     ref={inputRef}
                     value={query}
                     onChange={(event) => {
-                      finishIntro();
                       setQuery(event.target.value);
                       setFilter("all");
                       setPane("results");
@@ -3000,19 +2965,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : null}
       </div>
 
-      {introRunning ? <OmnibarIntro /> : null}
-
-      {pane === "results" && idle && !introRunning ? (
-        <OmnibarEmptyState
-          activeChatMode={activeChat?.mode}
-          onAskMari={() => openProfessorMari()}
-          onPick={(scope: OmnibarScopeId) => {
-            setFilter("all");
-            setQuery(omnibarScopePrefix(scope));
-            requestAnimationFrame(() => inputRef.current?.focus());
-          }}
-        />
-      ) : null}
+      {pane === "results" && idle ? <OmnibarEmptyState onAskMari={() => openProfessorMari()} /> : null}
 
       <AnimatePresence>
         {fieldFlight ? (

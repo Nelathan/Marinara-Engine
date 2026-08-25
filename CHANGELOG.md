@@ -4,6 +4,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+- The empty omnibar now keeps search primary with one quiet hint and one Ask Mari action. The long icon-flight intro, ambient orbit, floating mascot, and duplicate empty-state panels were removed. Ask Mari's workspace now moves secondary destinations into overflow until wide desktop space is available.
 - The empty omnibar now keeps the search icon and changes Mari's greeting to match the open chat mode.
 - Professor Mari's workspace now prioritizes one live state at a time, presents completed characters and lorebooks through the shared omnibar preview, keeps approvals in one aligned transcript surface, and gives active work a larger animated stage with live reasoning and task context.
 - Professor Mari now draws from a discoverable collection of animated work scenes, including image inspection, connected-note reasoning, telescope scouting, sailing, puzzle solving, crystal spelunking, origami, constellation mapping, clockwork repair, typewriting, tiny rocket launches, and rare playful moments, while keeping one stable in-card mascot and honoring reduced-motion preferences.
