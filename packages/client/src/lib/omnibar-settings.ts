@@ -4,12 +4,12 @@ type SettingsTab = Extract<ProfessorMariNavigationTarget, { kind: "settings" }>[
 
 export type OmnibarSettingsDestination = {
   id: string;
-  title: string;
-  description: string;
-  aliases: readonly string[];
+  title: { key: string; fallback: string };
+  description: { key: string; fallback: string };
+  aliases: readonly { key: string; fallback: string }[];
   tab: SettingsTab;
   section: string;
-  sectionLabel: string;
+  sectionLabel: { key: string; fallback: string };
   controlId?: string;
 };
 
@@ -266,24 +266,33 @@ export function getOmnibarSettingsDestinations(): OmnibarSettingsDestination[] {
   for (const [tab, title, description, controlId, aliases] of sections) {
     result.push({
       id: `settings-section:${tab}`,
-      title,
-      description,
-      aliases,
+      title: { key: `commandCenter.settings.sections.${tab}.title`, fallback: title },
+      description: { key: `commandCenter.settings.sections.${tab}.description`, fallback: description },
+      aliases: aliases.map((alias, index) => ({
+        key: `commandCenter.settings.sections.${tab}.alias.${index}`,
+        fallback: alias,
+      })),
       tab,
       section: tab,
-      sectionLabel: title,
+      sectionLabel: { key: `commandCenter.settings.sections.${tab}.title`, fallback: title },
       controlId,
     });
   }
   for (const [controlId, title, sectionLabel, description, tab, aliases] of controls) {
     result.push({
       id: `settings-control:${controlId}`,
-      title,
-      description,
-      aliases: [...aliases, sectionLabel],
+      title: { key: `commandCenter.settings.controls.${controlId}.title`, fallback: title },
+      description: { key: `commandCenter.settings.controls.${controlId}.description`, fallback: description },
+      aliases: [...aliases, sectionLabel].map((alias, index) => ({
+        key: `commandCenter.settings.controls.${controlId}.alias.${index}`,
+        fallback: alias,
+      })),
       tab,
-      section: sectionLabel,
-      sectionLabel,
+      section: controlId,
+      sectionLabel: {
+        key: `commandCenter.settings.controls.${controlId}.section`,
+        fallback: sectionLabel,
+      },
       controlId,
     });
   }

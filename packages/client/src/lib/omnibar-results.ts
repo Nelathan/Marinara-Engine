@@ -303,45 +303,68 @@ export function buildOmnibarControlResults({
   theme,
   userStatus,
 }: OmnibarControlResultsInput): OmnibarResult[] {
-  const set = () => setters;
   const toggleRows = [
-    ["commandCenterMariEnabled", "commandCenter.controls.mariAssist", mariEnabled, set().setCommandCenterMariEnabled],
+    [
+      "commandCenterMariEnabled",
+      "commandCenter.controls.mariAssist",
+      "Mari assistance",
+      mariEnabled,
+      setters.setCommandCenterMariEnabled,
+    ],
     [
       "omnibarSuggestionsEnabled",
       "commandCenter.controls.omnibarSuggestions",
+      "Omnibar suggestions",
       omnibarSuggestionsEnabled,
-      set().setOmnibarSuggestionsEnabled,
+      setters.setOmnibarSuggestionsEnabled,
     ],
     [
       "reduceAmbientEffects",
       "commandCenter.controls.reducedEffects",
+      "Reduced effects",
       reduceAmbientEffects,
-      set().setReduceAmbientEffects,
+      setters.setReduceAmbientEffects,
     ],
-    ["musicPlayerEnabled", "commandCenter.controls.musicPlayer", musicPlayerEnabled, set().setMusicPlayerEnabled],
-    ["speechToTextEnabled", "commandCenter.controls.speechToText", speechToTextEnabled, set().setSpeechToTextEnabled],
+    [
+      "musicPlayerEnabled",
+      "commandCenter.controls.musicPlayer",
+      "Music player",
+      musicPlayerEnabled,
+      setters.setMusicPlayerEnabled,
+    ],
+    [
+      "speechToTextEnabled",
+      "commandCenter.controls.speechToText",
+      "Speech to text",
+      speechToTextEnabled,
+      setters.setSpeechToTextEnabled,
+    ],
     [
       "notificationSoundsOnlyWhenUnfocused",
       "commandCenter.controls.unfocusedSounds",
+      "Sounds only when unfocused",
       notificationSoundsOnlyWhenUnfocused,
-      set().setNotificationSoundsOnlyWhenUnfocused,
+      setters.setNotificationSoundsOnlyWhenUnfocused,
     ],
-    ["showTimestamps", "commandCenter.controls.timestamps", showTimestamps, set().setShowTimestamps],
-    ["showModelName", "commandCenter.controls.modelName", showModelName, set().setShowModelName],
-    ["showTokenUsage", "commandCenter.controls.tokenUsage", showTokenUsage, set().setShowTokenUsage],
+    ["showTimestamps", "commandCenter.controls.timestamps", "Timestamps", showTimestamps, setters.setShowTimestamps],
+    ["showModelName", "commandCenter.controls.modelName", "Model name", showModelName, setters.setShowModelName],
+    ["showTokenUsage", "commandCenter.controls.tokenUsage", "Token usage", showTokenUsage, setters.setShowTokenUsage],
   ] as const;
   const settingsDestinations = getOmnibarSettingsDestinations().map((setting) => ({
     id: setting.id,
-    title: setting.title,
+    title: t(setting.title.key, setting.title.fallback),
     category: "settings" as const,
     score: 165,
-    aliases: setting.aliases,
+    aliases: setting.aliases.map((alias) => t(alias.key, alias.fallback)),
     target: {
       kind: "settings" as const,
       tab: setting.tab,
       controlId: setting.controlId,
     },
-    description: `${setting.sectionLabel} · ${setting.description}`,
+    description: `${t(setting.sectionLabel.key, setting.sectionLabel.fallback)} · ${t(
+      setting.description.key,
+      setting.description.fallback,
+    )}`,
     kind: "settings" as const,
     icon: "settings" as const,
   }));
@@ -360,7 +383,7 @@ export function buildOmnibarControlResults({
           { value: "dark", label: t("commandCenter.values.dark", "Dark") },
           { value: "light", label: t("commandCenter.values.light", "Light") },
         ],
-        onChange: (value) => set().setTheme(String(value) as "dark" | "light"),
+        onChange: (value) => setters.setTheme(String(value) as "dark" | "light"),
       },
     },
     {
@@ -376,17 +399,17 @@ export function buildOmnibarControlResults({
           value,
           label: t(`commandCenter.presence.${value}`, value),
         })),
-        onChange: (value) => set().setUserStatusManual(String(value) as typeof userStatus),
+        onChange: (value) => setters.setUserStatusManual(String(value) as typeof userStatus),
       },
     },
-    ...toggleRows.map(([id, key, value, onChange]) => ({
+    ...toggleRows.map(([id, key, fallback, value, onChange]) => ({
       id: `control:${id}`,
-      title: t(key, id),
+      title: t(key, fallback),
       category: "settings" as const,
       score: 170,
       control: {
         type: "toggle" as const,
-        label: t(key, id),
+        label: t(key, fallback),
         value,
         onChange: (nextValue: string | boolean) => onChange(nextValue === true),
       },
@@ -695,9 +718,10 @@ export function buildOmnibarMessageResults({
   const normalized = normalizeTextForMatch(messageSearchQuery);
   if (!activeChatId || normalized.length < MIN_MESSAGE_SEARCH_LENGTH) return [];
   const out: OmnibarResult[] = [];
-  messageSearchIndex.forEach(({ message, haystack }, index) => {
-    if (out.length >= MAX_MESSAGE_SEARCH_RESULTS) return;
-    if (haystack === null || !haystack.includes(normalized)) return;
+  for (let index = 0; index < messageSearchIndex.length; index += 1) {
+    if (out.length >= MAX_MESSAGE_SEARCH_RESULTS) break;
+    const { message, haystack } = messageSearchIndex[index]!;
+    if (haystack === null || !haystack.includes(normalized)) continue;
     out.push({
       id: `message:${activeChatId}:${index + 1}`,
       action: { kind: "goto-message", chatId: activeChatId, messageNumber: index + 1 },
@@ -709,7 +733,7 @@ export function buildOmnibarMessageResults({
       kind: "action",
       icon: "chats",
     });
-  });
+  }
   return out;
 }
 

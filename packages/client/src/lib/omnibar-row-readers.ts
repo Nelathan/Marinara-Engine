@@ -13,9 +13,9 @@ export function readString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+const MEDIUM_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+
 export function formatDate(value: unknown) {
   const date = typeof value === "string" ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime())
-    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)
-    : undefined;
+  return date && !Number.isNaN(date.getTime()) ? MEDIUM_DATE_FORMATTER.format(date) : undefined;
 }

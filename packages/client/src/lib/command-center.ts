@@ -200,6 +200,14 @@ export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGrou
   "docs",
   "professor-fallback",
 ];
+const COMMAND_CENTER_EMPTY_GROUP_ORDER = [
+  "current-work",
+  "continue",
+  "pinned",
+  "recent",
+  "quick-controls",
+  "create-navigation",
+] as const satisfies readonly CommandCenterResultGroupId[];
 const MAX_PINNED_COMMANDS = 50;
 const MAX_RECENT_COMMANDS = 100;
 const MAX_COMMAND_ID_LENGTH = 256;
@@ -610,18 +618,14 @@ export function presentCommandCenterResults<T extends CommandCenterPresentableRe
       else if (result.control) addToGroup("quick-controls", result);
       else addToGroup("create-navigation", result);
     }
-    const visibleResults = (
-      ["current-work", "continue", "pinned", "recent", "quick-controls", "create-navigation"] as const
-    ).flatMap((id) => groups.get(id) ?? []);
+    const presentedGroups = COMMAND_CENTER_EMPTY_GROUP_ORDER.flatMap((id) => {
+      const groupResults = groups.get(id);
+      return groupResults ? [{ id, results: groupResults }] : [];
+    });
     return {
       filter,
-      results: visibleResults,
-      groups: (
-        ["current-work", "continue", "pinned", "recent", "quick-controls", "create-navigation"] as const
-      ).flatMap((id) => {
-        const groupResults = groups.get(id);
-        return groupResults ? [{ id, results: groupResults }] : [];
-      }),
+      results: presentedGroups.flatMap((group) => group.results),
+      groups: presentedGroups,
       categoryAvailability,
     };
   }

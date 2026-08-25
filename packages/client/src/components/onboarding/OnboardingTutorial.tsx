@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────────
 // Onboarding Tutorial — first-time guided tour
 // ──────────────────────────────────────────────
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUIStore, type ChatModeShortcut } from "../../stores/ui.store";
 import { useChatStore } from "../../stores/chat.store";
@@ -47,6 +47,10 @@ interface TourStep {
   docsLanguagePicker?: boolean;
   /** Professor Mari sprite to display */
   sprite?: { src: string; flip?: boolean };
+}
+
+function resolveTourStepTitle(step: TourStep, localizeUi: (key: string) => string, localize: (text: string) => string) {
+  return step.titleKey ? localizeUi(step.titleKey) : localize(step.title ?? "");
 }
 
 const STEPS: TourStep[] = [
@@ -450,7 +454,7 @@ function TourCardContent({
   const { t: localizeUi } = useUiTranslation();
   const localize = useLocalizedUiText();
   const localizedBody = currentStep.bodyKey ? localizeUi(currentStep.bodyKey) : localize(currentStep.body ?? "");
-  const localizedTitle = currentStep.titleKey ? localizeUi(currentStep.titleKey) : localize(currentStep.title ?? "");
+  const localizedTitle = resolveTourStepTitle(currentStep, localizeUi, localize);
   return (
     <>
       {/* Professor Mari sprite */}
@@ -687,14 +691,13 @@ function OnboardingTutorialInner() {
     trackAchievement.mutate("tutorial_completed");
   }, [setCompleted, trackAchievement]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+  const handleTutorialKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>) => {
       if (event.key !== "Escape" || event.defaultPrevented || useUIStore.getState().modal) return;
       finish();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [finish]);
+    },
+    [finish],
+  );
 
   // "Get Started" on the final step commits the docs-language pick; Skip never does.
   const next = useCallback(() => {
@@ -709,7 +712,7 @@ function OnboardingTutorialInner() {
   const isCentered = isMobileViewport || currentStep.centerCard || !currentStep.target || !targetRect;
   const centeredTopOffset = getTutorialTopOffset();
   const centeredCardMaxHeight = Math.max(220, getViewportHeight() - centeredTopOffset - 16);
-  const dialogLabel = currentStep.titleKey ? localizeUi(currentStep.titleKey) : localize(currentStep.title ?? "");
+  const dialogLabel = resolveTourStepTitle(currentStep, localizeUi, localize);
 
   const pickerSlot = currentStep.docsLanguagePicker ? (
     <div className="mb-4 flex flex-col gap-3 text-left">
@@ -780,6 +783,7 @@ function OnboardingTutorialInner() {
               className={TUTORIAL_CARD_CLASS}
               ref={cardRef}
               role="dialog"
+              onKeyDown={handleTutorialKeyDown}
               aria-label={dialogLabel}
               data-component="OnboardingTutorial.Card"
               style={{ width: Math.min(380, getViewportWidth() - 32), maxHeight: centeredCardMaxHeight }}
@@ -806,6 +810,7 @@ function OnboardingTutorialInner() {
             className={TUTORIAL_CARD_CLASS}
             ref={cardRef}
             role="dialog"
+            onKeyDown={handleTutorialKeyDown}
             aria-label={dialogLabel}
             data-component="OnboardingTutorial.Card"
             style={computeTooltipStyle(targetRect!, currentStep)}

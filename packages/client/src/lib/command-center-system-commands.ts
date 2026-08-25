@@ -7,7 +7,7 @@ import {
 
 const AVAILABLE = { status: "available" } as const;
 
-export function createPhase4CommandDefinitions(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
+export function createResourceCommandDefinitions(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
   const title = resolveCommandCenterTitles(source);
 
   return [
@@ -131,7 +131,7 @@ export function createPhase4CommandDefinitions(source: CommandCenterTitleSource)
   ];
 }
 
-export function createPhase5SystemCommands(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
+export function createSettingsCommandDefinitions(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
   const title = resolveCommandCenterTitles(source);
 
   return [
@@ -185,7 +185,7 @@ export function createPhase5SystemCommands(source: CommandCenterTitleSource): De
       title: title.packages,
       kind: "resource",
       icon: "package",
-      aliases: ["capability packages", "agent packages", "catalog"],
+      aliases: ["capability packages", "catalog"],
       availability: AVAILABLE,
       action: { kind: "navigate", target: { kind: "surface", surface: "agent-catalog" } },
     }),
@@ -247,5 +247,5 @@ export function createPhase5SystemCommands(source: CommandCenterTitleSource): De
 }
 
 export function createSystemCommandDefinitions(source: CommandCenterTitleSource): DeclarativeCommandDefinition[] {
-  return [...createPhase4CommandDefinitions(source), ...createPhase5SystemCommands(source)];
+  return [...createResourceCommandDefinitions(source), ...createSettingsCommandDefinitions(source)];
 }

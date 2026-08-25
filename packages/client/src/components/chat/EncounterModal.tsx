@@ -173,7 +173,6 @@ interface TargetSelectionProps {
 function TargetSelection({ attackType, enemies, party, onSelect, onCancel }: TargetSelectionProps) {
   const { t: localizeUi } = useUiTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeRequestPendingRef = useRef(false);
   useDialogFocusScope(true, dialogRef);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -772,6 +771,7 @@ function EncounterModalInner() {
   const { sendAction, concludeEncounter, closeEncounter, initEncounter } = useEncounter();
   const settings = useEncounterStore((s) => s.settings);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRequestPendingRef = useRef(false);
   useDialogFocusScope(active && !showConfigModal, dialogRef);
 
   const requestCloseEncounter = useCallback(async () => {
