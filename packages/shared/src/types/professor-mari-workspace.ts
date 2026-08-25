@@ -452,6 +452,8 @@ export interface MariWorkspaceToolTrace {
   status: "running" | "done" | "error";
   input?: unknown;
   output?: string | null;
+  /** Server clock at the first sighting of the call, so a replayed trace still has a duration. */
+  startedAt?: number;
   updatedAt?: number;
 }
 
@@ -698,7 +700,13 @@ export type MariWorkspacePromptEvent =
     }
   | { type: "tool_start"; data: { id?: string; name: string; input?: unknown } }
   | { type: "tool_update"; data: { id?: string; name?: string; output?: string } }
-  | { type: "tool_end"; data: { id?: string; name?: string; isError?: boolean; output?: string } }
+  // `durationMs` is measured on the server, so it survives a reload and does not depend on the
+  // two clocks agreeing. A running step still ticks from the client's own start, which needs no
+  // comparison. Optional, so an older server just falls back to the client measurement.
+  | {
+      type: "tool_end";
+      data: { id?: string; name?: string; isError?: boolean; output?: string; durationMs?: number };
+    }
   | { type: "approval_pending"; data: MariWorkspacePendingApproval }
   | {
       type: "metadata";
