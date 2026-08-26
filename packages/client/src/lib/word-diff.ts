@@ -90,6 +90,9 @@ export interface DiffHunk {
 
 const DEFAULT_CONTEXT_LINES = 3;
 
+/** Below this share of unchanged text, a removed/added pair is two lines, not one edit. */
+const MIN_PAIRED_LINE_SIMILARITY = 0.3;
+
 /** LCS over whole lines. Returns lines in reading order; no intra-line detail yet. */
 function lcsLines(a: string[], b: string[]): DiffLine[] {
   const m = a.length;
@@ -122,15 +125,14 @@ function lcsLines(a: string[], b: string[]): DiffLine[] {
   return out;
 }
 
-/** Share of tokens the two lines have in common — used to decide if they are a rewrite of each other. */
-function similarity(before: string, after: string): number {
-  const segments = diffWords(before, after);
+/** Share of the two lines' text that is unchanged — how much of a rewrite this is. */
+function equalShare(segments: readonly DiffSegment[]): number {
   let equal = 0;
   let total = 0;
   for (const seg of segments) {
-    const len = seg.value.trim().length;
-    total += len;
-    if (seg.type === "equal") equal += len;
+    const length = seg.value.trim().length;
+    total += length;
+    if (seg.type === "equal") equal += length;
   }
   return total === 0 ? 1 : equal / total;
 }
@@ -148,10 +150,12 @@ function refineBlock(lines: DiffLine[], start: number, end: number): void {
   }
   if (removed.length !== added.length) return;
   for (let k = 0; k < removed.length; k++) {
-    if (similarity(removed[k].text, added[k].text) < 0.3) continue;
     const segments = diffWords(removed[k].text, added[k].text);
-    removed[k].segments = segments.filter((s) => s.type !== "added");
-    added[k].segments = segments.filter((s) => s.type !== "removed");
+    // Two unrelated lines that happen to sit next to each other are not an edit
+    // of one another; highlighting scattered shared words would invent a link.
+    if (equalShare(segments) < MIN_PAIRED_LINE_SIMILARITY) continue;
+    removed[k].segments = segments.filter((segment) => segment.type !== "added");
+    added[k].segments = segments.filter((segment) => segment.type !== "removed");
   }
 }
 

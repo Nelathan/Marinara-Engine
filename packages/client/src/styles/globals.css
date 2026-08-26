@@ -8881,6 +8881,14 @@ strong {
   color: var(--foreground);
 }
 
+.omnibar-settings-menu__trigger:focus-visible,
+.omnibar-settings-menu__row input[type="checkbox"]:focus-visible,
+.omnibar-settings-menu__pack input[type="checkbox"]:focus-visible,
+.omnibar-settings-menu__segmented button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .omnibar-settings-menu__popover {
   position: absolute;
   right: 0;

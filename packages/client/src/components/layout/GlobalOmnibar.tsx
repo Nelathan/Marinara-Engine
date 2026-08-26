@@ -404,7 +404,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   // writing that pane and then opening; resetting it on read would kill that.
   const [session, setSession] = useState<CommandCenterSessionState>(() => readCommandCenterSessionState());
   const initialQueryRef = useRef(session.query);
-  const { query, filter, pane, activeResultId, mariReturnResultId, mariHandoff } = session;
+  const mariEnabled = useUIStore((state) => state.commandCenterMariEnabled);
+  const { query, filter, activeResultId, mariReturnResultId, mariHandoff } = session;
+  // Mari can be switched off from the omnibar's settings menu, the Settings panel
+  // or a result row, and the first of those is reachable from inside her own pane.
+  // Reading the pane through the flag strands nobody: the persisted `mari` pane
+  // resolves to the list until Mari is switched back on. Derived rather than an
+  // effect, so there is no frame where the disabled pane is still on screen.
+  const pane = !mariEnabled && session.pane === "mari" ? "results" : session.pane;
   const mariFinished = mariHandoff?.status === "finished";
   const setSessionValue = <K extends keyof CommandCenterSessionState>(key: K, value: CommandCenterSessionState[K]) =>
     setSession((current) => ({ ...current, [key]: value }));
@@ -494,7 +501,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const reduceMotion = useReducedMotion();
   const reduceAmbientEffects = useUIStore((state) => state.reduceAmbientEffects);
   const musicPlayerEnabled = useUIStore((state) => state.musicPlayerEnabled);
-  const mariEnabled = useUIStore((state) => state.commandCenterMariEnabled);
   const omnibarSuggestionsEnabled = useUIStore((state) => state.omnibarSuggestionsEnabled);
   const mariWorkspaceStatus = useProfessorMariWorkspaceStatus();
   const asideDisclosed = useUIStore((state) => state.omnibarAsideDisclosed);

@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { cn } from "../../lib/utils";
 import { diffLines, type DiffSegment } from "../../lib/word-diff";
 import { useTranslation as useUiTranslation } from "react-i18next";
@@ -26,7 +28,9 @@ function DiffSegments({ segments, text }: { segments: DiffSegment[] | undefined;
 
 export function UnifiedLineDiff({ before, after, className }: { before: string; after: string; className?: string }) {
   const { t: localizeUi } = useUiTranslation();
-  const hunks = diffLines(before, after);
+  // The line LCS is O(m*n); a whole assembled prompt must not re-run it on an
+  // unrelated re-render (a collapse toggle, a sibling card streaming).
+  const hunks = useMemo(() => diffLines(before, after), [before, after]);
   return (
     <div
       className={cn(
