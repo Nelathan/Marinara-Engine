@@ -898,6 +898,8 @@
   "mari.context.capability.recommend": "Recommend",
   "mari.context.capability.repair": "Repair",
   "mari.contextChip.generic": "Ask Professor Mari",
+  "mari.diff.addedLine": "Added:",
+  "mari.diff.removedLine": "Removed:",
   "mari.errors.beforeAnswer": "The request failed before Professor Mari could answer. This message will stay visible long enough to screenshot for troubleshooting.",
   "mari.errors.withDetails": "{{message}} This message will stay visible long enough to screenshot for troubleshooting.",
   "mari.fieldSuggestion.askAbout": "Ask about {{subject}}",

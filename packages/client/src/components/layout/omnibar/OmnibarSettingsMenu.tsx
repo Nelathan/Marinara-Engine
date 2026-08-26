@@ -99,15 +99,21 @@ export function OmnibarSettingsMenu() {
   const editViewMode = useUIStore((state) => state.mariEditViewMode);
   const setEditViewMode = useUIStore((state) => state.setMariEditViewMode);
 
-  // The omnibar closes on Escape, so this must swallow its own Escape first, and a click outside
-  // the popover must not fall through to a result row underneath it.
+  // The omnibar closes on Escape, so this must swallow its own Escape first (see
+  // onKeyDown below). Dismissal listens for `click`, not `pointerdown`, because
+  // result rows activate on click: closing on pointerdown left the click itself to
+  // land on whatever sat under the popover, so dismissing the menu also opened a
+  // character. Swallowing it here costs one click, which is what every menu does.
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    const onClickOutside = (event: MouseEvent) => {
+      if (containerRef.current?.contains(event.target as Node)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
     };
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("click", onClickOutside, true);
+    return () => document.removeEventListener("click", onClickOutside, true);
   }, [open]);
 
   return (

@@ -55,6 +55,11 @@ export function UnifiedLineDiff({ before, after, className }: { before: string; 
                 line.type === "removed" && "bg-[var(--destructive)]/15",
               )}
             >
+              {line.type === "equal" ? null : (
+                <span className="sr-only">
+                  {localizeUi(line.type === "added" ? "mari.diff.addedLine" : "mari.diff.removedLine")}
+                </span>
+              )}
               <span
                 aria-hidden
                 className={cn(

@@ -1799,14 +1799,19 @@ export const useUIStore = create<UIState>()(
       setOmnibarAsideConnectionId: (id) => set({ omnibarAsideConnectionId: id }),
       setOmnibarAsideDisclosed: (disclosed) => set({ omnibarAsideDisclosed: disclosed }),
       setMariEditViewMode: (mode) => set({ mariEditViewMode: mode }),
-      toggleMariAnimationPack: (packId, enabled) =>
+      toggleMariAnimationPack: (packId, enabled) => {
+        // `core` holds the fallback sprite every pool lands on, so it is locked in
+        // the UI. Refuse it here too: the store is what persists, and a stale or
+        // hand-edited entry would otherwise survive the toggle being un-renderable.
+        if (packId === "core") return;
         set((state) => ({
           disabledMariAnimationPacks: enabled
             ? state.disabledMariAnimationPacks.filter((id) => id !== packId)
             : state.disabledMariAnimationPacks.includes(packId)
               ? state.disabledMariAnimationPacks
               : [...state.disabledMariAnimationPacks, packId],
-        })),
+        }));
+      },
       setChatBackground: (url) => set({ chatBackground: url }),
       setDefaultRoleplayBackground: (url) =>
         set({ defaultRoleplayBackground: normalizeDefaultRoleplayBackground(url) }),

@@ -4347,8 +4347,18 @@ export function HomeProfessorMariChat({
     }
   };
 
+  // `submitDraft` is a level, not an edge: the omnibar sets it when it hands a
+  // query over and never clears it. Without this latch the effect re-fires on
+  // every `draft` change for the rest of the session, so the first character the
+  // user typed into the composer afterwards was sent on its own.
+  const autoSubmittedDraftRef = useRef(false);
   useEffect(() => {
-    if (!omnibarMode || !submitDraft || !draft.trim() || isBusy) return;
+    if (!submitDraft) {
+      autoSubmittedDraftRef.current = false;
+      return;
+    }
+    if (!omnibarMode || autoSubmittedDraftRef.current || !draft.trim() || isBusy) return;
+    autoSubmittedDraftRef.current = true;
     void handleSubmit();
   }, [draft, handleSubmit, isBusy, omnibarMode, submitDraft]);
 
