@@ -25,12 +25,10 @@ import {
   Circle,
   Database,
   FileText,
-  ImageIcon,
   Link,
   Loader2,
   MessageCircle,
   EllipsisVertical,
-  Palette,
   Pencil,
   RefreshCw,
   Search,
@@ -40,7 +38,6 @@ import {
   Square,
   Terminal,
   Trash2,
-  Wrench,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -1148,6 +1145,8 @@ function summarizeShellCommand(command: string) {
 
 function inferToolPresentation(tool: WorkspaceToolCall): ToolPresentation {
   const name = formatToolName(tool.name);
+  const input = asRecord(tool.input);
+  const appDataAction = typeof input?.action === "string" ? input.action : null;
   const command = getBashCommand(tool);
   const mariDb = command ? extractMariDbCommand(command) : null;
   const mariCode = command ? extractMariCodeCommand(command) : null;
@@ -1222,10 +1221,24 @@ function inferToolPresentation(tool: WorkspaceToolCall): ToolPresentation {
     };
   }
 
+  if (appDataAction && /app[ _-]?data/i.test(name)) {
+    const actionTitles: Record<string, string> = {
+      "chat.get": "Reading chat",
+      "chat.messages": "Reading recent messages",
+      "character.get": "Reading character",
+      "instruction.get": "Reading instruction",
+    };
+    return {
+      eyebrow: "App data",
+      title: actionTitles[appDataAction] ?? `Reading ${appDataAction.replaceAll(".", " ")}`,
+      detail: null,
+      tone: "db",
+    };
+  }
+
   const skillPresentation = getSkillReadPresentation(tool);
   if (skillPresentation) return skillPresentation;
 
-  const input = asRecord(tool.input);
   const detail = previewValue(
     input?.path ?? input?.pattern ?? input?.query ?? input?.url ?? input?.command ?? tool.detail,
     90,
@@ -1248,19 +1261,6 @@ function inferToolPresentation(tool: WorkspaceToolCall): ToolPresentation {
     return { eyebrow: "Files", title: "Listing folder", detail, tone: "file" };
   }
   return { eyebrow: "Tool", title: name, detail, tone: "generic" };
-}
-
-function ToolGlyph({ tool, tone }: { tool: WorkspaceToolCall; tone: ToolTone }) {
-  if (tool.status === "running") return <Loader2 size="0.72rem" className="animate-spin" />;
-  if (tool.status === "error") return <AlertTriangle size="0.72rem" />;
-  if (tone === "db") return <Database size="0.72rem" />;
-  if (tone === "theme") return <Palette size="0.72rem" />;
-  if (tone === "image") return <ImageIcon size="0.72rem" />;
-  if (tone === "wiki" || tone === "skill") return <BookOpen size="0.72rem" />;
-  if (tone === "search") return <Search size="0.72rem" />;
-  if (tone === "shell") return <Terminal size="0.72rem" />;
-  if (tone === "file" || tone === "write") return <FileText size="0.72rem" />;
-  return <Wrench size="0.72rem" />;
 }
 
 function renderCompactInline(text: string, keyPrefix: string): ReactNode[] {
@@ -1649,11 +1649,31 @@ function WorkspaceLiveWorkCard({
                         exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
                         transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
                       >
-                        <Icon size="0.75rem" className="mari-live-work__step-icon shrink-0" />
-                        <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                        <span className="mari-live-work__step-duration">
-                          {stepSeconds === null ? "—" : t("mari.workCard.stepSeconds", { seconds: stepSeconds })}
-                        </span>
+                        <details className="mari-live-work__step-details group">
+                          <summary>
+                            <Icon size="0.75rem" className="mari-live-work__step-icon shrink-0" aria-hidden="true" />
+                            <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                            <span className="mari-live-work__step-duration">
+                              {stepSeconds === null ? "—" : t("mari.workCard.stepSeconds", { seconds: stepSeconds })}
+                            </span>
+                            <ChevronRight
+                              size="0.7rem"
+                              className="mari-live-work__step-chevron shrink-0"
+                              aria-hidden="true"
+                            />
+                          </summary>
+                          <div className="mari-live-work__step-details-body">
+                            <div className="mari-live-work__step-details-label">
+                              <Terminal size="0.7rem" aria-hidden="true" />
+                              {t("mari.workCard.technicalDetails")}
+                            </div>
+                            <code>{formatToolName(tool.name)}</code>
+                            {tool.input !== undefined ? <pre>{previewValue(tool.input, 240)}</pre> : null}
+                            {tool.output !== null && tool.output !== undefined ? (
+                              <pre>{previewValue(tool.output, 320)}</pre>
+                            ) : null}
+                          </div>
+                        </details>
                       </motion.li>
                     );
                   })}
@@ -1682,58 +1702,9 @@ function WorkspaceLiveWorkCard({
             />
 
             {toolItems.length > 0 ? (
-              <div className="mari-live-work__technical" aria-label={t("mari.workCard.progress")}>
-                <div className="mari-live-work__technical-heading">
-                  <Check size="0.75rem" aria-hidden="true" />
-                  <span>{t("mari.workCard.completedSteps", { count: completedToolCount })}</span>
-                </div>
-                <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
-                  {toolItems.map(({ id, tool }) => {
-                    const presentation = inferToolPresentation(tool);
-                    const stepSeconds = resolveStepSeconds({
-                      running: tool.status === "running",
-                      startedAt: tool.startedAt,
-                      durationMs: tool.durationMs,
-                      updatedAt: tool.updatedAt,
-                      now: Date.now(),
-                    });
-                    return (
-                      <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
-                        <ToolGlyph tool={tool} tone={presentation.tone} />
-                        <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                        <span className="mari-live-work__step-duration">
-                          {tool.status === "error"
-                            ? t("mari.workCard.failed")
-                            : stepSeconds === null
-                              ? "—"
-                              : t("mari.workCard.stepSeconds", { seconds: stepSeconds })}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <details className="mari-live-work__technical-details group">
-                  <summary>
-                    <Terminal size="0.7rem" aria-hidden="true" />
-                    <span>{t("mari.workCard.showTechnicalDetails")}</span>
-                    <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
-                  </summary>
-                  <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
-                    {toolItems.map(({ id, tool }) => {
-                      const presentation = inferToolPresentation(tool);
-                      return (
-                        <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
-                          <ToolGlyph tool={tool} tone={presentation.tone} />
-                          <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                          {presentation.detail ? (
-                            <code className="max-w-[45%] truncate">{presentation.detail}</code>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
-              </div>
+              <p className="mari-live-work__technical-count">
+                {t("mari.workCard.completedSteps", { count: completedToolCount })}
+              </p>
             ) : null}
           </div>
         </div>
@@ -5836,7 +5807,12 @@ export function HomeProfessorMariChat({
                       </motion.section>
                     ) : null}
                   </AnimatePresence>
-                  <aside className="hidden h-full min-h-0 w-80 min-w-80 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45 lg:flex">
+                  <aside
+                    className={cn(
+                      "hidden h-full min-h-0 w-80 min-w-80 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45",
+                      workspaceDestination === "chat" ? "lg:flex" : "lg:hidden",
+                    )}
+                  >
                     {detailsPanel}
                   </aside>
                 </div>

@@ -931,6 +931,7 @@
   "mari.workCard.stepSeconds": "{{seconds}}s",
   "mari.workCard.technicalActions_one": "{{count}} technical action",
   "mari.workCard.technicalActions_other": "{{count}} technical actions",
+  "mari.workCard.technicalDetails": "Technical details",
   "mari.workCard.working": "Professor Mari is working",
   "mari.workCard.workingWith": "Working with {{name}}",
   "navigation.chatSidebar.empty.filtered.conversation": "No conversations match the current filters",

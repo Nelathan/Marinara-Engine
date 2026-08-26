@@ -1603,6 +1603,72 @@
   animation: mari-live-work-confirm 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.mari-live-work__step-details {
+  width: 100%;
+  min-width: 0;
+}
+
+.mari-live-work__step-details > summary {
+  display: flex;
+  min-height: 1.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.25rem;
+  color: inherit;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mari-live-work__step-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mari-live-work__step-details > summary:hover {
+  color: var(--foreground);
+}
+
+.mari-live-work__step-chevron {
+  transition: transform 0.16s ease;
+}
+
+.mari-live-work__step-details[open] .mari-live-work__step-chevron {
+  transform: rotate(90deg);
+}
+
+.mari-live-work__step-details-body {
+  margin: 0.1rem 0.25rem 0.35rem 1.25rem;
+  overflow: hidden;
+  border-left: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  padding: 0.45rem 0.6rem;
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+}
+
+.mari-live-work__step-details-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+  font-weight: 650;
+}
+
+.mari-live-work__step-details-body code,
+.mari-live-work__step-details-body pre {
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: color-mix(in srgb, var(--foreground) 78%, var(--muted-foreground));
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  line-height: 1.45;
+}
+
+.mari-live-work__step-details-body pre {
+  margin-top: 0.35rem;
+}
+
 .mari-live-work__technical {
   overflow: hidden;
   border-top: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
