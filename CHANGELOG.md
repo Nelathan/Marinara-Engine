@@ -7,10 +7,34 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 ### Added
 
 - Character cards now support editable metadata summaries, AI-generated summary drafts, and Character Library previews that use the saved summary when available.
+- Added server-owned Game Mode combat sessions shared by Classic and Tactical battles, with deterministic seeds, revision checks, duplicate-action replay protection, bounded action history, objective tracking, boss-phase telegraphs, refresh recovery, and chat cleanup.
+- Added mechanically resolved combat maneuvers to both combat styles. The GM now returns a constrained proposal, while the seeded resolver owns the actual outcome and validates every damage, healing, status, movement, terrain, and objective effect before the GM narrates it.
+- Added Tactical line-of-sight, opportunity attacks, Overwatch, terrain interactions, real inventory effects, skill-aware forecasts, projected skill threats, animation-speed controls, reduced-motion defaults, keyboard shortcuts, and standard gamepad navigation.
+- Added HP/round boss phases with telegraphs, counterplay, terrain/status mechanics, and bounded reinforcement waves, plus session-backed combat event history in the in-game combat log.
+- Added deterministic victory loot and objective outcomes to the authoritative combat aftermath, including direct inventory persistence before the GM narrates the result.
+
+### Changed
+
+- Increased the adjudication budget for combat maneuvers and made the GM's maneuver instructions more explicit about acceptable target formats, unit reach, and terrain rules, so fewer proposals need repair or fallback.
+- Moved Classic and Tactical action resolution onto canonical server state while keeping their separate cinematic and grid interfaces. Difficulty now scales enemy damage rather than indiscriminately multiplying both sides, restored battles rehydrate from the active server session, and combat aftermath writes every matched party member's HP, MP, statuses, and consumed inventory back to Game state.
+- Changed Classic invalid targets, unavailable skills, insufficient MP, cooldown violations, and invalid item targets from silent fallbacks into explicit rejected actions.
 
 ### Fixed
 
 - Permanent Delete now preserves Marinara's stock Universal Preset and its prompt structure while removing editable presets (#5568).
+- Streamed the large Game Mode combat blueprint initialization response so slow LLM providers can send headers before the transport timeout instead of surfacing a generic combat-generation failure.
+- Fixed Special/Maneuver actions in Classic and Tactical combat producing no effect when the GM's proposal was malformed: the resolver now salvages what it can, asks the GM once to repair an unusable proposal, and falls back to a deterministic reading of the player's own instruction so a maneuver always produces a result, and the combat log now explains when part of a maneuver could not take effect.
+- Fixed Tactical combat using a hard-coded Potion, ignoring frozen/stunned/imprisoned and zero-Speed turn skips, previewing attack skills as basic attacks, accepting blocked ranged attacks, and losing authoritative HP/MP/status/inventory changes across refreshes.
+- Fixed concurrent tabs and repeated combat clicks resolving the same state twice, unseeded Classic rolls changing after refresh, Classic session adapters dropping initiative/status/reaction animation data, and stale combat sessions surviving chat deletion or an explicit return to the pre-combat turn.
+- Fixed combat state leaking across chat switches, duplicate replays rewinding durable inventory, Tactical restoration replacing a canonical session, terminal maneuvers racing the aftermath handoff, completed combat logs disappearing, and duplicate-name party sheets missing aftermath updates.
+- Fixed boss telegraphs resolving damage before the player could react, recurring round mechanics firing only once, hostile reinforcements escaping all-enemy objectives, and conditional or escape objectives completing without their required interaction or exit.
+- Combat sessions now reject stale explicit IDs instead of rebuilding from client state, survive file-storage downgrade recovery, retain their active style when chat settings change, cancel abandoned Classic animation timers, and keep every aftermath outcome retryable after a failed save. Tactical criticals and counters now trigger on-hit boss phases, partial control maneuvers slow without deleting a turn, and Overwatch resolves against the destination tile.
+- New Game Mode combat encounters now initialize party members at their configured max HP, and Tactical retries revive a defeated snapshot before starting a fresh battlefield instead of leaving the party invisible and unable to act.
+- Tactical combat now lets players select living party members after they have acted for inspection, disables spent-turn actions clearly, and discards orphaned snapshots that could leave only one character selectable after a refresh.
+- The Game Mode map-and-party overlay no longer blocks clicks on the battlefield beneath its empty regions: unit tokens and tiles in the upper-left quadrant of Tactical combat stay selectable, and the map panel keeps working after being dragged. Tactical combat's tile inspector no longer blocks battlefield tiles or party-unit selection; its header remains draggable and closable. Restart and Retry now wait for session hydration, recover a replacement battle after a lost response, and preserve a restored battlefield behind a read-only reconnect prompt when session verification fails.
+- Combat mode now clears terminal snapshots before the next battle can restore them, binds Tactical sessions to their declaring turn, and waits for authoritative Classic/Tactical session hydration so sequential fights cannot replay an earlier outcome. Refreshing after a finished battle now restores the completed result screen in both Classic and Tactical modes — display-only, owned by the same combat declaration — instead of relaunching the fight or replaying it as live, and sessionless Classic actions from a stale battle are rejected before they can hijack the active session.
+- Generated combat enemies no longer inherit boss-sized attack and defense from a large HP pool: their derived stat level is capped near the party's average level (HP stays as generated), so a lone high-HP encounter is a longer fight instead of an unwinnable one.
+- Refreshing a live combat no longer unwinds the chat to exploration before the client learns which declaration owns the battle; a battle already stranded that way is re-adopted automatically. Recovering an already-completed battle no longer re-announces its outcome to the GM on every refresh, and the tactical objective banner shows its full text on hover and widens on large screens.
 
 ## [2.4.4]
 
