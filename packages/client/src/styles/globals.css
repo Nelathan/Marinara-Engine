@@ -1609,6 +1609,35 @@
   margin-top: 0.65rem;
 }
 
+.mari-live-work__technical-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.mari-live-work__technical-details {
+  margin-top: 0.35rem;
+}
+
+.mari-live-work__technical-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 0.625rem;
+}
+
+.mari-live-work__technical-details > summary:hover {
+  color: var(--foreground);
+}
+
 .mari-live-work__technical > summary {
   display: flex;
   min-height: 2.25rem;

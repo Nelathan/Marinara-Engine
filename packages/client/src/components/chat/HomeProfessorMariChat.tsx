@@ -1565,9 +1565,6 @@ function WorkspaceLiveWorkCard({
     toolNames: currentTool ? [currentTool.tool.name] : [],
     disabledPacks: disabledAnimationPacks,
   });
-  const narrative = stripProfessorMariSpeakerPrefix(latestNarrative?.content ?? "").trim();
-  const showNarrative = narrative.length > 0 && narrative.toLocaleLowerCase() !== workTitle.trim().toLocaleLowerCase();
-  const generalActivity = !runningTool && toolItems.length > 0 && showNarrative ? narrative : null;
   const elapsedSeconds = active ? liveElapsedSeconds : resolveRunSeconds(toolItems.map((i) => i.tool));
   // A finished run that still holds a failed step is not a success, whatever the last step was.
   const failed = !active && toolItems.some(({ tool }) => tool.status === "error");
@@ -1614,20 +1611,6 @@ function WorkspaceLiveWorkCard({
               <h3>{workTitle}</h3>
             </div>
             <p className="mari-live-work__summary">{workSummary}</p>
-            {showNarrative ? (
-              <AnimatePresence initial={false} mode="popLayout">
-                <motion.p
-                  key={latestNarrative?.id ?? activity}
-                  className="mari-live-work__narrative"
-                  initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
-                  transition={{ duration: reduceMotion ? 0 : 0.2 }}
-                >
-                  {narrative}
-                </motion.p>
-              </AnimatePresence>
-            ) : null}
             <div className="mari-live-work__controls">
               <span className="mari-live-work__elapsed">
                 {active ? <i aria-hidden="true" /> : null}
@@ -1687,21 +1670,6 @@ function WorkspaceLiveWorkCard({
                       </span>
                     </motion.li>
                   ) : null}
-                  {generalActivity ? (
-                    <motion.li
-                      layout={!reduceMotion}
-                      key={`activity:${latestNarrative?.id ?? generalActivity}`}
-                      data-status="running"
-                      initial={reduceMotion ? false : { opacity: 0, x: -8, height: 0 }}
-                      animate={{ opacity: 1, x: 0, height: "auto" }}
-                      exit={reduceMotion ? undefined : { opacity: 0, x: 6, height: 0 }}
-                      transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      <Circle size="0.75rem" className="mari-live-work__step-icon shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{generalActivity}</span>
-                      <span className="mari-live-work__step-duration">—</span>
-                    </motion.li>
-                  ) : null}
                 </AnimatePresence>
               </ol>
             ) : null}
@@ -1714,27 +1682,58 @@ function WorkspaceLiveWorkCard({
             />
 
             {toolItems.length > 0 ? (
-              <details className="mari-live-work__technical group">
-                <summary>
-                  <Terminal size="0.75rem" aria-hidden="true" />
-                  <span>{t("mari.workCard.technicalActions", { count: toolItems.length })}</span>
-                  <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
-                </summary>
+              <div className="mari-live-work__technical" aria-label={t("mari.workCard.progress")}>
+                <div className="mari-live-work__technical-heading">
+                  <Check size="0.75rem" aria-hidden="true" />
+                  <span>{t("mari.workCard.completedSteps", { count: completedToolCount })}</span>
+                </div>
                 <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
                   {toolItems.map(({ id, tool }) => {
                     const presentation = inferToolPresentation(tool);
+                    const stepSeconds = resolveStepSeconds({
+                      running: tool.status === "running",
+                      startedAt: tool.startedAt,
+                      durationMs: tool.durationMs,
+                      updatedAt: tool.updatedAt,
+                      now: Date.now(),
+                    });
                     return (
                       <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
                         <ToolGlyph tool={tool} tone={presentation.tone} />
                         <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
-                        {presentation.detail ? (
-                          <code className="max-w-[45%] truncate">{presentation.detail}</code>
-                        ) : null}
+                        <span className="mari-live-work__step-duration">
+                          {tool.status === "error"
+                            ? t("mari.workCard.failed")
+                            : stepSeconds === null
+                              ? "—"
+                              : t("mari.workCard.stepSeconds", { seconds: stepSeconds })}
+                        </span>
                       </div>
                     );
                   })}
                 </div>
-              </details>
+                <details className="mari-live-work__technical-details group">
+                  <summary>
+                    <Terminal size="0.7rem" aria-hidden="true" />
+                    <span>{t("mari.workCard.showTechnicalDetails")}</span>
+                    <ChevronRight size="0.7rem" className="ml-auto transition-transform group-open:rotate-90" />
+                  </summary>
+                  <div className="divide-y divide-[var(--border)]/50 border-t border-[var(--border)]/60 px-2 py-1">
+                    {toolItems.map(({ id, tool }) => {
+                      const presentation = inferToolPresentation(tool);
+                      return (
+                        <div key={id} className="mari-live-work__technical-row" data-status={tool.status}>
+                          <ToolGlyph tool={tool} tone={presentation.tone} />
+                          <span className="min-w-0 flex-1 truncate">{presentation.title}</span>
+                          {presentation.detail ? (
+                            <code className="max-w-[45%] truncate">{presentation.detail}</code>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              </div>
             ) : null}
           </div>
         </div>
@@ -4691,10 +4690,33 @@ export function HomeProfessorMariChat({
           !focusedLorebook &&
           latestActionResults.length === 0 &&
           visiblePendingChangeReviews.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--border)] px-3 py-8 text-center text-xs text-[var(--muted-foreground)]">
-              {localizeUi("ui.chat.homeprofessormarichat.detailsEmpty")}
+            <div className="mari-details-empty rounded-xl border border-dashed border-[var(--mari-workspace-blush)]/30 bg-[var(--mari-workspace-blush)]/5 px-3 py-6 text-center">
+              <Sparkles size="1rem" className="mx-auto mb-2 text-[var(--mari-workspace-blush)]" aria-hidden="true" />
+              <p className="text-xs font-semibold text-[var(--foreground)]">
+                {localizeUi("ui.chat.homeprofessormarichat.detailsEmptyTitle", "Nothing to review yet")}
+              </p>
+              <p className="mt-1 text-[0.6875rem] leading-relaxed text-[var(--muted-foreground)]">
+                {localizeUi("ui.chat.homeprofessormarichat.detailsEmpty")}
+              </p>
             </div>
           ) : null}
+          <section className="border-t border-[var(--border)]/50 pt-3">
+            <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+              {localizeUi("ui.chat.homeprofessormarichat.workspaceStatus", "Workspace")}
+            </div>
+            <div className="space-y-1 text-[0.6875rem] text-[var(--muted-foreground)]">
+              <div className="flex items-center justify-between gap-2">
+                <span>{localizeUi("ui.chat.homeprofessormarichat.connection", "Connection")}</span>
+                <span className="max-w-[10rem] truncate text-[var(--foreground)]">
+                  {effectiveConnection?.name ?? localizeUi("ui.chat.homeprofessormarichat.missingConnection")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span>{localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}</span>
+                <span className="text-[var(--foreground)]">{attachedContext?.length ?? 0}</span>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </>
