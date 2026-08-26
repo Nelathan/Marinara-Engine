@@ -10557,6 +10557,21 @@ function GameSurfaceComponent({
         // a newer battle's HP, inventory, or character cards.
         if (combatChatId && combatSessionId) {
           await api.post(`/game/combat/session/${combatSessionId}/complete`, { chatId: combatChatId });
+          // The cached active-session lookups still say "active" until a refetch
+          // lands. The exploration self-heal reads that cache and would re-adopt
+          // the session we just completed, dragging the chat back into combat.
+          // Stamp the terminal status synchronously, then refetch the truth.
+          queryClient.setQueriesData(
+            { queryKey: [...gameKeys.all, "combat-session", "active", combatChatId] },
+            (old: unknown) => {
+              const cached = old as { session?: { sessionId?: string; status?: string } | null } | undefined;
+              if (!cached?.session || cached.session.sessionId !== combatSessionId) return old;
+              return { ...cached, session: { ...cached.session, status: "completed" } };
+            },
+          );
+          await queryClient.invalidateQueries({
+            queryKey: [...gameKeys.all, "combat-session", "active", combatChatId],
+          });
         }
         // Leave combat server-side before anything can refetch chat metadata: a
         // still-"combat" gameActiveState re-arms the surface from the completed

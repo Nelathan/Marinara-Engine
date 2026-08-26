@@ -527,6 +527,11 @@ assert.match(
 );
 assert.match(
   gameSurfaceSource,
+  /setQueriesData\(\s*\{ queryKey: \[\.\.\.gameKeys\.all, "combat-session", "active", combatChatId\] \}/,
+  "completing a session must stamp the cached active-session lookups so the self-heal cannot re-adopt it",
+);
+assert.match(
+  gameSurfaceSource,
   /if \(combatAftermathPendingRef\.current\) return;\s*\n\s*if \(chatMeta\.gameActiveState !== "combat"\)/,
   "combat hydration must stand down while the aftermath handoff is completing the session",
 );
