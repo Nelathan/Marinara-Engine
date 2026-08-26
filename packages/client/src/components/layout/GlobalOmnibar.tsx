@@ -122,7 +122,7 @@ import {
   buildOmnibarSearchResults,
   buildOmnibarSlashResults,
 } from "../../lib/omnibar-results";
-import { matchesOmnibarScope, parseOmnibarScope } from "../../lib/omnibar-scope";
+import { matchesOmnibarScope, omnibarScopePrefix, parseOmnibarScope } from "../../lib/omnibar-scope";
 import {
   buildOmnibarAgentRows,
   buildOmnibarCharacterRows,
@@ -170,6 +170,8 @@ import { OmnibarSettingsMenu } from "./omnibar/OmnibarSettingsMenu";
 import {
   getOmnibarResourceId,
   isRichResult,
+  FILTER_CATEGORY,
+  OMNIBAR_SCOPE_CHIP_FILTERS,
   readNamedRow,
   resultMetadata,
   type OmnibarPane,
@@ -2583,6 +2585,34 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             </button>
           </div>
           {mariSurface ? <div ref={setMariHeaderSlot} className="mari-omnibar-header-row" /> : null}
+          {!query.trim() && !mariSurface ? (
+            <div
+              role="toolbar"
+              aria-label={t("commandCenter.scopeChips.label", "Search a category")}
+              data-component="GlobalOmnibar.ScopeChips"
+              className="scrollbar-hide flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
+            >
+              {OMNIBAR_SCOPE_CHIP_FILTERS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  data-omnibar-scope-chip={chip}
+                  onClick={() => {
+                    const scope = FILTER_CATEGORY[chip];
+                    if (!scope) return;
+                    // Write the prefix rather than setting hidden state, so the
+                    // syntax is visible in the field the moment it is used.
+                    setQuery(omnibarScopePrefix(scope));
+                    setFilter("all");
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }}
+                  className="min-h-8 shrink-0 rounded-md px-2.5 text-xs font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                >
+                  {filterLabels[chip]}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {query.trim() && !mariSurface ? (
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, height: 0 }}
@@ -2843,6 +2873,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
               ) : mariEnabled && pane === "results" && activeResult ? (
                 <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
+              ) : null}
+              {pane === "results" && activeResult && isRichResult(activeResult) ? (
+                <span>
+                  {expandedPreviewId === activeResult.id
+                    ? t("commandCenter.keyboard.closePreview", "← Close preview")
+                    : t("commandCenter.keyboard.preview", "→ Preview")}
+                </span>
               ) : null}
               {pane === "results" && activeResult ? (
                 <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>

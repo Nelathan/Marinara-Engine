@@ -1,5 +1,6 @@
 import type { CommandCenterCategoryFilter } from "../../../lib/command-center";
 import type { OmnibarCategory, OmnibarResult } from "../../../lib/omnibar-search";
+import type { OmnibarScopeId } from "../../../lib/omnibar-scope";
 import type { RichCommandResult } from "../../command-center/command-result-preview.types";
 export { formatDate, readNamedRow, readString } from "../../../lib/omnibar-row-readers";
 
@@ -9,7 +10,9 @@ export type RankedOmnibarResult = OmnibarResult & {
   command: RichCommandResult["command"];
 };
 
-export const FILTER_CATEGORY: Partial<Record<CommandCenterCategoryFilter, OmnibarCategory>> = {
+// Every category a filter maps to is also a typed scope prefix, so the chips can
+// derive their scope from this map instead of restating the pairing.
+export const FILTER_CATEGORY: Partial<Record<CommandCenterCategoryFilter, OmnibarCategory & OmnibarScopeId>> = {
   chats: "chat",
   characters: "character",
   personas: "persona",
@@ -20,6 +23,24 @@ export const FILTER_CATEGORY: Partial<Record<CommandCenterCategoryFilter, Omniba
   settings: "settings",
   docs: "docs",
 };
+
+/**
+ * The categories offered as chips on the empty omnibar, in the order the filter
+ * bar uses. Each chip's scope comes from FILTER_CATEGORY, so the plural label and
+ * the singular scope cannot drift apart.
+ *
+ * Chips exist because a typed prefix is otherwise undiscoverable: nothing tells a
+ * first-time user that `char:` is a thing. Clicking one writes the prefix into the
+ * input, so the syntax is learned by watching it appear.
+ */
+export const OMNIBAR_SCOPE_CHIP_FILTERS: readonly CommandCenterCategoryFilter[] = [
+  "chats",
+  "characters",
+  "personas",
+  "lorebooks",
+  "presets",
+  "settings",
+];
 
 export function isRichResult(result: RankedOmnibarResult, preview = result.preview?.()) {
   return Boolean(
