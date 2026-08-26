@@ -93,6 +93,11 @@ const DEFAULT_CONTEXT_LINES = 3;
 /** Below this share of unchanged text, a removed/added pair is two lines, not one edit. */
 const MIN_PAIRED_LINE_SIMILARITY = 0.3;
 
+/** "" is no lines at all, not one empty line — otherwise a create shows a phantom blank removal. */
+function toLines(text: string): string[] {
+  return text ? text.split("\n") : [];
+}
+
 /** LCS over whole lines. Returns lines in reading order; no intra-line detail yet. */
 function lcsLines(a: string[], b: string[]): DiffLine[] {
   const m = a.length;
@@ -165,8 +170,8 @@ function refineBlock(lines: DiffLine[], start: number, end: number): void {
  */
 export function diffLines(before: string, after: string, contextLines = DEFAULT_CONTEXT_LINES): DiffHunk[] {
   if (before === after)
-    return before ? [{ skipped: 0, lines: before.split("\n").map((text) => ({ type: "equal" as const, text })) }] : [];
-  const lines = lcsLines(before.split("\n"), after.split("\n"));
+    return before ? [{ skipped: 0, lines: toLines(before).map((text) => ({ type: "equal" as const, text })) }] : [];
+  const lines = lcsLines(toLines(before), toLines(after));
 
   // Word-refine each contiguous run of changed lines.
   for (let i = 0; i < lines.length; ) {

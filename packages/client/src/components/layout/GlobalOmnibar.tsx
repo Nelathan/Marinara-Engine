@@ -432,7 +432,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const [mariChatOpen, setMariChatOpen] = useState(() => session.pane === "mari");
   const [mariMounted, setMariMounted] = useState(() => session.pane === "mari");
   const [mariContext, setMariContext] = useState<ProfessorMariAskContext | null>(null);
-  const [mariSubmitDraft, setMariSubmitDraft] = useState(false);
+  // A counter, not a flag: the same handoff can happen twice with a new query, and
+  // a boolean that is already true delivers no change for the child to react to.
+  // Matches mariPendingReviewRequest, which solved the same problem.
+  const [mariSubmitDraftRequest, setMariSubmitDraftRequest] = useState(0);
   const [mariPendingReviewRequest, setMariPendingReviewRequest] = useState(0);
   // Transient on purpose: reopening the omnibar always starts from a bare list.
   const [expandedChoiceId, setExpandedChoiceId] = useState<string | null>(null);
@@ -1559,7 +1562,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         context: { capability: context.capability, resource: context.resource, field: context.field },
       });
     }
-    setMariSubmitDraft(submitDraft);
+    if (submitDraft) setMariSubmitDraftRequest((current) => current + 1);
     setMariChatOpen(true);
     setMariMounted(true);
     setPane("mari");
@@ -2654,7 +2657,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               active={pane === "mari"}
               reduceMotion={reduceMotion}
               mariContext={mariContext}
-              submitDraft={mariSubmitDraft}
+              submitDraftRequest={mariSubmitDraftRequest}
               mariOpenChatId={mariOpenChatId}
               mariPendingReviewRequest={mariPendingReviewRequest}
               mariChatOpen={mariChatOpen}

@@ -2279,7 +2279,8 @@ type HomeProfessorMariChatProps = {
   omnibarMode?: boolean;
   launchHidden?: boolean;
   initialAskContext?: ProfessorMariAskContext | null;
-  submitDraft?: boolean;
+  /** Increments on every omnibar handoff that should send its query at once. */
+  submitDraftRequest?: number;
   /** A past Mari conversation to open, handed in from the omnibar. */
   openChatId?: string | null;
   pendingReviewRequest?: number;
@@ -2297,7 +2298,7 @@ export function HomeProfessorMariChat({
   omnibarMode = false,
   launchHidden = false,
   initialAskContext = null,
-  submitDraft = false,
+  submitDraftRequest = 0,
   openChatId = null,
   pendingReviewRequest = 0,
   omnibarHeaderSlot = null,
@@ -4347,20 +4348,18 @@ export function HomeProfessorMariChat({
     }
   };
 
-  // `submitDraft` is a level, not an edge: the omnibar sets it when it hands a
-  // query over and never clears it. Without this latch the effect re-fires on
-  // every `draft` change for the rest of the session, so the first character the
-  // user typed into the composer afterwards was sent on its own.
-  const autoSubmittedDraftRef = useRef(false);
+  // Each handoff is one request id, sent once. The effect also depends on `draft`,
+  // so a flag that stayed true would re-fire on every keystroke and send whatever
+  // the user had typed so far; a flag that was already true would deliver no change
+  // at all on the next handoff, and that query would silently never send.
+  const handledSubmitRequestRef = useRef(0);
   useEffect(() => {
-    if (!submitDraft) {
-      autoSubmittedDraftRef.current = false;
-      return;
-    }
-    if (!omnibarMode || autoSubmittedDraftRef.current || !draft.trim() || isBusy) return;
-    autoSubmittedDraftRef.current = true;
+    if (!omnibarMode || !submitDraftRequest || handledSubmitRequestRef.current === submitDraftRequest) return;
+    // Not marked handled yet: an empty or still-busy moment must retry, not drop it.
+    if (!draft.trim() || isBusy) return;
+    handledSubmitRequestRef.current = submitDraftRequest;
     void handleSubmit();
-  }, [draft, handleSubmit, isBusy, omnibarMode, submitDraft]);
+  }, [draft, handleSubmit, isBusy, omnibarMode, submitDraftRequest]);
 
   const handleSuggestionSelect = useCallback(
     (chip: MariSuggestionChip) => {

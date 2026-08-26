@@ -16,7 +16,8 @@ export interface OmnibarMariPaneProps {
   active: boolean;
   reduceMotion: boolean | null;
   mariContext: ProfessorMariAskContext | null;
-  submitDraft: boolean;
+  /** Increments on every handoff that should send its query at once. */
+  submitDraftRequest: number;
   mariOpenChatId: string | null;
   mariPendingReviewRequest: number;
   mariChatOpen: boolean;
@@ -31,7 +32,7 @@ export function OmnibarMariPane({
   active,
   reduceMotion,
   mariContext,
-  submitDraft,
+  submitDraftRequest,
   mariOpenChatId,
   mariPendingReviewRequest,
   mariChatOpen,
@@ -67,7 +68,7 @@ export function OmnibarMariPane({
           omnibarMode
           launchHidden
           initialAskContext={mariContext}
-          submitDraft={submitDraft}
+          submitDraftRequest={submitDraftRequest}
           openChatId={mariOpenChatId}
           pendingReviewRequest={mariPendingReviewRequest}
           chatWindowOpen={mariChatOpen}

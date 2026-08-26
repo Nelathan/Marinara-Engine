@@ -30,4 +30,20 @@ assert(
 
 assert(diffLines("same", "same")[0].lines.every((l) => l.type === "equal"), "identical text is all context");
 
+// An empty side is no lines, not one blank line: creating a value must not show a
+// phantom blank removal above the new text.
+const created = diffLines("", "first\nsecond");
+const createdLines = created.flatMap((hunk) => hunk.lines);
+assert(createdLines.length === 2, "an empty before contributes no lines");
+assert(
+  createdLines.every((line) => line.type === "added"),
+  "creating a value is all additions",
+);
+const cleared = diffLines("first\nsecond", "");
+assert(
+  cleared.flatMap((hunk) => hunk.lines).every((line) => line.type === "removed"),
+  "clearing a value is all removals",
+);
+assert(diffLines("", "").length === 0, "empty to empty has nothing to show");
+
 console.log("word-diff: ok");
