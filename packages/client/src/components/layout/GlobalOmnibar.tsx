@@ -97,6 +97,7 @@ import { createSystemCommandDefinitions } from "../../lib/command-center-system-
 import { getCommandIcon } from "../../lib/command-icons";
 import {
   createOmnibarContext,
+  filterOmnibarFuzzyFallback,
   getOmnibarActiveChatContextResultIds,
   isDirectActiveChatAction,
   parseOmnibarIntent,
@@ -1351,9 +1352,10 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     () => (queryScope ? rawResults.filter((result) => matchesOmnibarScope(result, queryScope)) : rawResults),
     [queryScope, rawResults],
   );
+  const relevanceFilteredResults = useMemo(() => filterOmnibarFuzzyFallback(scopedRawResults), [scopedRawResults]);
   const rankedResults = useMemo<RankedOmnibarResult[]>(() => {
     const sourceById = new Map<string, OmnibarResult>();
-    for (const result of scopedRawResults) {
+    for (const result of relevanceFilteredResults) {
       if (!sourceById.has(result.id)) sourceById.set(result.id, result);
     }
     const uniqueRawResults = [...sourceById.values()];
@@ -1385,7 +1387,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })),
       searchRanking,
     ).map(({ result }) => ({ ...sourceById.get(result.command.id)!, command: result.command }));
-  }, [deferredQuery, ranking, scopedRawResults]);
+  }, [deferredQuery, ranking, relevanceFilteredResults]);
   const presentation = useMemo(
     () =>
       presentCommandCenterResults(rankedResults, {
@@ -1517,10 +1519,13 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!activeResultId || pane !== "results") return;
-    listRef.current
-      ?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(activeResultId)}"]`)
-      ?.scrollIntoView({ block: "nearest" });
-  }, [activeResultId, pane]);
+    const frame = requestAnimationFrame(() => {
+      listRef.current
+        ?.querySelector<HTMLElement>(`[data-result-id="${CSS.escape(activeResultId)}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeResultId, expandedPreviewId, pane]);
 
   // Returning from Mari puts focus back on the row that opened her, so the
   // keyboard position survives the round trip; the input is the fallback.
@@ -2572,14 +2577,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 aria-label={t("commandCenter.openWork", "Ask Professor Mari")}
                 title={t("commandCenter.openWork", "Ask Professor Mari")}
                 data-component="GlobalOmnibar.ProfessorMariButton"
-                className="group relative -mb-px flex h-14 w-[4.25rem] shrink-0 self-end items-end justify-end overflow-hidden pb-2 pl-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+                className="group relative -mb-px flex h-14 w-[4.25rem] shrink-0 self-end items-end justify-end overflow-hidden pb-2 pl-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)] max-[30rem]:w-11 max-[30rem]:pl-0"
               >
                 <img
                   src={PROFESSOR_MARI_PEEK_URL}
                   alt=""
                   aria-hidden="true"
                   draggable={false}
-                  className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none"
+                  className="absolute left-1/2 top-0 h-[6.5rem] w-auto max-w-none -translate-x-1/2 object-contain object-top transition-transform duration-200 ease-out group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transition-none max-[30rem]:h-20"
                 />
               </button>
             ) : null}
@@ -2599,7 +2604,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               role="toolbar"
               aria-label={t("commandCenter.scopeChips.label", "Search a category")}
               data-component="GlobalOmnibar.ScopeChips"
-              className="scrollbar-hide flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
+              className="omnibar-horizontal-strip scrollbar-hide flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] py-1.5 pl-3 pr-6 overscroll-x-contain sm:min-h-10"
             >
               {OMNIBAR_SCOPE_CHIP_FILTERS.map((chip) => (
                 <button
@@ -2630,7 +2635,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               role="toolbar"
               aria-label={t("commandCenter.filters.label", "Result categories")}
               data-component="GlobalOmnibar.Filters"
-              className="scrollbar-hide flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] px-2 py-1.5 overscroll-x-contain sm:min-h-10"
+              className="omnibar-horizontal-strip scrollbar-hide flex min-h-11 items-center gap-1 overflow-x-auto border-b border-[var(--border)] py-1.5 pl-3 pr-6 overscroll-x-contain sm:min-h-10"
             >
               {availableFilters.map((item) => (
                 <button
@@ -2647,9 +2652,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           ) : null}
         </header>
 
-        <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {liveMessage}
-        </div>
+        {pane === "results" ? (
+          <div data-component="GlobalOmnibar.LiveResults" className="sr-only" aria-live="polite" aria-atomic="true">
+            {liveMessage}
+          </div>
+        ) : null}
 
         {mariMounted ? (
           <Suspense fallback={null}>
@@ -2676,6 +2683,23 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               onVisualStateChange={handleMariVisualStateChange}
             />
           </Suspense>
+        ) : null}
+        {pane !== "mari" && idle ? (
+          <div
+            data-component="GlobalOmnibar.Empty"
+            className="flex min-h-40 flex-1 flex-col items-center justify-center px-6 py-8 text-center sm:min-h-32"
+          >
+            <Search size={20} aria-hidden="true" className="mb-2 text-[var(--primary)]" />
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              {t("commandCenter.empty.title", "Search across Marinara")}
+            </p>
+            <p className="mt-1 max-w-[32rem] text-xs leading-relaxed text-[var(--muted-foreground)]">
+              {t(
+                "commandCenter.empty.description",
+                "Try a chat, character, setting, or message. Use the category shortcuts above to browse.",
+              )}
+            </p>
+          </div>
         ) : null}
         {pane === "mari" || idle ? null : (
           <div className="flex min-h-0 flex-1">
@@ -2752,7 +2776,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                                 ? preview?.metadataLine
                                 : (preview?.status?.label ?? preview?.badges?.[0] ?? preview?.metadataLine)
                             }
-                            description={result.description ?? preview?.description}
                             icon={resultIcon(result)}
                             selected={selected}
                             onSelect={() => selectResult(result)}
@@ -2881,7 +2904,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               {inlineSuffix ? (
                 <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
               ) : mariEnabled && pane === "results" && activeResult ? (
-                <span>{t("commandCenter.keyboard.continueMari", "⌘↵ Continue with Mari")}</span>
+                <span>{t("commandCenter.keyboard.continueMari", "Ctrl/⌘+Enter Continue with Mari")}</span>
               ) : null}
               {pane === "results" && activeResult && isRichResult(activeResult) ? (
                 <span>
@@ -2894,7 +2917,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
               ) : null}
             </span>
-            <span>{t("commandCenter.keyboard.escape", "Esc back")}</span>
+            <span>{t("commandCenter.keyboard.escape", "Esc close")}</span>
           </footer>
         ) : null}
       </div>

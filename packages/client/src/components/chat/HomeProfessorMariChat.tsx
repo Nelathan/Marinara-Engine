@@ -157,6 +157,7 @@ import {
 
 const MARI_AVATAR_URL = "/sprites/mari/Mari_profile.png";
 const MARI_CHIBI_URL = "/sprites/mari/chibi-professor-mari.png";
+const PROFESSOR_MARI_BOOTSTRAP_ERROR_TOAST_ID = "professor-mari-bootstrap-error";
 const PROFESSOR_MARI_DRAFT_KEY = "__home_professor_mari__";
 const MARI_CONNECTION_STORAGE_KEY = "marinara:home-professor-mari-connection-id";
 const PROFESSOR_MARI_ERROR_TOAST_DURATION_MS = 120_000;
@@ -2451,7 +2452,6 @@ export function HomeProfessorMariChat({
   const workspaceRunIdRef = useRef(0);
   const pendingWorkspaceTextRef = useRef("");
   const handledWorkspaceRefreshIdsRef = useRef<Set<string>>(new Set());
-  const workspaceStatusErrorToastShownRef = useRef(false);
   const latestConnectionSelectionRef = useRef<string | null>(selectedConnectionId);
   const pendingConnectionPersistRef = useRef<string | null>(null);
   const connectionPersistInFlightRef = useRef(false);
@@ -2827,7 +2827,6 @@ export function HomeProfessorMariChat({
       const status = await api.get<MariWorkspaceStatus>(`/professor-mari/workspace/status${query ? `?${query}` : ""}`);
       if (shouldApply?.() === false) return status;
       setWorkspaceStatus(status);
-      workspaceStatusErrorToastShownRef.current = false;
       return status;
     },
     [effectiveConnectionId],
@@ -2938,15 +2937,16 @@ export function HomeProfessorMariChat({
 
   useEffect(() => {
     if (!pageActive) return;
-    void refreshWorkspaceStatus().catch(() => {
+    void refreshWorkspaceStatus().catch((error) => {
       setWorkspaceStatus((current) => current && { ...current, error: "Workspace status unavailable" });
-      if (!workspaceStatusErrorToastShownRef.current) {
-        workspaceStatusErrorToastShownRef.current = true;
-        toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceStatusIsUnavailable"), {
-          description: localizeUi("ui.chat.homeprofessormarichat.workspaceImportsAndChangesMayNotShowLiveProgress"),
-          duration: 12_000,
-        });
-      }
+      toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceToolsAreUnavailable"), {
+        id: PROFESSOR_MARI_BOOTSTRAP_ERROR_TOAST_ID,
+        description:
+          error instanceof ApiError && (error.status === 401 || error.status === 403)
+            ? localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceToolsNeedAdminAccess")
+            : localizeUi("ui.chat.homeprofessormarichat.workspaceImportsAndChangesMayNotShowLiveProgress"),
+        duration: 12_000,
+      });
     });
     const refreshVisibleWorkspaceStatus = () => {
       if (document.hidden) return;
@@ -2964,8 +2964,12 @@ export function HomeProfessorMariChat({
     void loadSkills().catch((error) => {
       console.error("[Professor Mari] Failed to load skills", error);
       setSkillsDiagnostics(["Professor Mari skills unavailable"]);
-      toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariSkillsAreUnavailable"), {
-        description: describeProfessorMariError(error),
+      toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceToolsAreUnavailable"), {
+        id: PROFESSOR_MARI_BOOTSTRAP_ERROR_TOAST_ID,
+        description:
+          error instanceof ApiError && (error.status === 401 || error.status === 403)
+            ? localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceToolsNeedAdminAccess")
+            : describeProfessorMariError(error),
         duration: 12_000,
       });
     });
@@ -3009,8 +3013,12 @@ export function HomeProfessorMariChat({
   useEffect(() => {
     void loadMemories().catch((error) => {
       console.error("[Professor Mari] Failed to load memories", error);
-      toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariMemoriesAreUnavailable"), {
-        description: describeProfessorMariError(error),
+      toast.error(localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceToolsAreUnavailable"), {
+        id: PROFESSOR_MARI_BOOTSTRAP_ERROR_TOAST_ID,
+        description:
+          error instanceof ApiError && (error.status === 401 || error.status === 403)
+            ? localizeUi("ui.chat.homeprofessormarichat.professorMariWorkspaceToolsNeedAdminAccess")
+            : describeProfessorMariError(error),
         duration: 12_000,
       });
     });
@@ -5089,7 +5097,7 @@ export function HomeProfessorMariChat({
                           </div>
 
                           {oneShotContext ? (
-                            <div className="mari-omnibar-context-attachment mb-2">
+                            <div className="mari-omnibar-context-attachment min-w-0">
                               <span className="mari-workspace-context-chip inline-flex min-w-0 max-w-[18rem] shrink items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/8 px-2 py-1 text-[0.6875rem] text-[var(--foreground)]">
                                 <Sparkles size="0.7rem" className="shrink-0 text-[var(--primary)]" aria-hidden="true" />
                                 <span className="min-w-0 truncate">

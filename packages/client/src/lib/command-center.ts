@@ -187,7 +187,6 @@ export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGrou
   // outranked them.
   "current-work",
   "professor-suggested",
-  "messages",
   "navigation",
   "chats",
   "characters",
@@ -196,6 +195,7 @@ export const COMMAND_CENTER_SEARCH_GROUP_ORDER: readonly CommandCenterResultGrou
   "presets",
   "connections",
   "agents",
+  "messages",
   "settings",
   "docs",
   "professor-fallback",

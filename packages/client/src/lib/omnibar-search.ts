@@ -61,6 +61,8 @@ export type OmnibarResult = {
   path?: string;
   line?: number | null;
   contextLabel?: string;
+  /** Internal search tier used to discard fuzzy rows once a literal match exists. */
+  matchKind?: "literal" | "fuzzy";
   control?: {
     type: "toggle" | "choice";
     label: string;
@@ -397,6 +399,18 @@ function finishResult(result: OmnibarResult, intent: OmnibarIntent | null, data:
   };
 }
 
+/** Keep typo recovery as a fallback, never as noise beside a literal result. */
+export function filterOmnibarFuzzyFallback<T extends Pick<OmnibarResult, "id" | "matchKind" | "score">>(
+  results: readonly T[],
+): T[] {
+  const hasLiteralMatch = results.some(
+    (result) =>
+      result.matchKind === "literal" ||
+      (result.matchKind === undefined && result.id !== "ask-professor-mari" && result.score >= 100),
+  );
+  return hasLiteralMatch ? results.filter((result) => result.matchKind !== "fuzzy") : [...results];
+}
+
 export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarResult[] {
   const normalized = normalizeProfessorMariNavigationQuery(query);
   if (!normalized) return [];
@@ -415,7 +429,8 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
       scoreText(searchQuery, [control.title, ...(control.aliases ?? [])]),
       scoreText(fullQuery, [control.title, ...(control.aliases ?? [])]),
     );
-    if (score >= 0) results.push(finishResult({ ...control, score }, intent, data));
+    if (score >= 0)
+      results.push(finishResult({ ...control, score, matchKind: score < 100 ? "fuzzy" : "literal" }, intent, data));
   }
   for (const command of data.commands) {
     const score = Math.max(
@@ -435,6 +450,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
             icon: command.icon,
             availability: command.availability,
             score: contextualRepair ? Math.max(score, 80) : score,
+            matchKind: score >= 0 ? (score < 100 ? "fuzzy" : "literal") : undefined,
           },
           intent,
           data,
@@ -452,6 +468,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
             category: "chat",
             target: { kind: "chat", chatId: chat.id },
             score,
+            matchKind: score < 100 ? "fuzzy" : "literal",
             description: chat.description,
             preview: chat.preview,
             kind: "chat",
@@ -477,6 +494,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
             category: resource.kind,
             target: { kind: "resource", resource: resource.kind, id: resource.id },
             score,
+            matchKind: score < 100 ? "fuzzy" : "literal",
             description: resource.description,
             preview: resource.preview,
             kind: "resource",
@@ -499,6 +517,7 @@ export function searchOmnibar(query: string, data: OmnibarSearchData): OmnibarRe
             category: "connection",
             target: { kind: "panel", panel: "connections" },
             score,
+            matchKind: score < 100 ? "fuzzy" : "literal",
             preview: connection.preview,
             kind: "settings",
             icon: "connection",

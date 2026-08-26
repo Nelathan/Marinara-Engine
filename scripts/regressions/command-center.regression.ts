@@ -15,6 +15,7 @@ import {
 import { createSystemCommandDefinitions } from "../../packages/client/src/lib/command-center-system-commands.js";
 import {
   createOmnibarContext,
+  filterOmnibarFuzzyFallback,
   getOmnibarActiveChatContextResultIds,
   getUnambiguousOmnibarResult,
   isDirectActiveChatAction,
@@ -189,6 +190,41 @@ const searchPresentation = presentCommandCenterResults(
 assert.deepEqual(
   searchPresentation.groups.map((group) => group.id),
   ["chats", "characters", "personas", "docs", "professor-fallback"],
+);
+
+const resourceBeforeMessage = presentCommandCenterResults(
+  [
+    { id: "message:one:1", category: "chat", group: "messages" },
+    { id: "chat:mira", category: "chat" },
+    { id: "character:mira", category: "character" },
+  ],
+  { query: "mira" },
+);
+assert.deepEqual(
+  resourceBeforeMessage.results.map((result) => result.id),
+  ["chat:mira", "character:mira", "message:one:1"],
+);
+
+const fuzzyFallbackResults = searchOmnibar("mira", {
+  commands: [],
+  chats: [{ id: "mira", name: "Mira" }],
+  resources: [{ id: "archive", kind: "character", name: "My interesting roleplay archive" }],
+  connections: [],
+});
+assert.deepEqual(
+  filterOmnibarFuzzyFallback(fuzzyFallbackResults).map((result) => result.id),
+  ["chat:mira", "ask-professor-mari"],
+);
+const typoFallbackResults = searchOmnibar("mra", {
+  commands: [],
+  chats: [{ id: "mira", name: "Mira" }],
+  resources: [],
+  connections: [],
+});
+assert.equal(
+  filterOmnibarFuzzyFallback(typoFallbackResults)[0]?.id,
+  "chat:mira",
+  "a fuzzy match remains when no literal result exists",
 );
 
 const filteredPresentation = presentCommandCenterResults(searchPresentation.results, {

@@ -314,3 +314,115 @@ test("a category chip scopes the query and lists that whole kind", async ({ page
     await page.request.delete(`/api/characters/${second.id}`);
   }
 });
+
+test("expanded results stay reachable and expose concise accessible names", async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Inline preview geometry is covered on desktop.");
+
+  const suffix = Date.now().toString(36);
+  const created: string[] = [];
+  try {
+    for (let index = 0; index < 6; index += 1) {
+      const response = await request.post("/api/characters", {
+        data: {
+          data: {
+            name: `Preview Reachability ${suffix} ${index}`,
+            description: `Long private description marker ${suffix} ${"detail ".repeat(40)}`,
+          },
+        },
+      });
+      expect(response.ok()).toBeTruthy();
+      created.push(((await response.json()) as { id: string }).id);
+    }
+
+    await page.reload();
+    await page.keyboard.press("Control+k");
+    const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+    const input = omnibar.getByRole("searchbox", { name: "Search Marinara" });
+    await input.fill(`char: Preview Reachability ${suffix}`);
+    await page.keyboard.press("End");
+    const selectedRow = omnibar.locator("[data-command-center-result-row]:has([data-selected='true'])");
+    await expect(selectedRow).toBeVisible();
+    const accessibleName = await selectedRow.locator(":scope > button").getAttribute("aria-label");
+    expect(accessibleName).not.toContain("Long private description marker");
+
+    await page.keyboard.press("ArrowRight");
+    const detail = selectedRow.locator('[data-component="GlobalOmnibar.Detail"]');
+    await expect(detail).toBeVisible();
+    const resultsPane = omnibar.locator('[data-component="GlobalOmnibar.Results"]');
+    await expect
+      .poll(async () => {
+        const [detailBox, paneBox] = await Promise.all([detail.boundingBox(), resultsPane.boundingBox()]);
+        return Boolean(detailBox && paneBox && detailBox.y + detailBox.height <= paneBox.y + paneBox.height + 1);
+      })
+      .toBe(true);
+
+    await expect(omnibar.getByText("Ctrl/⌘+Enter Continue with Mari", { exact: true })).toBeVisible();
+    await expect(omnibar.getByText("Esc close", { exact: true })).toBeVisible();
+    await omnibar.locator('[data-component="GlobalOmnibar.ProfessorMariButton"]').click();
+    await expect(omnibar.locator('[data-component="GlobalOmnibar.Mari"]')).toBeVisible();
+    await expect(omnibar.locator('[data-component="GlobalOmnibar.LiveResults"]')).toHaveCount(0);
+  } finally {
+    await Promise.all(created.map((id) => request.delete(`/api/characters/${id}`).catch(() => undefined)));
+  }
+});
+
+test("mobile preserves search and composer space when handing context to Mari", async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Mobile composer geometry is covered on mobile.");
+
+  const name = `Mobile Mari Context ${Date.now().toString(36)}`;
+  const response = await request.post("/api/characters", { data: { data: { name } } });
+  expect(response.ok()).toBeTruthy();
+  const character = (await response.json()) as { id: string };
+  try {
+    await page.reload();
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+    const input = omnibar.getByRole("searchbox", { name: "Search Marinara" });
+    const mariButton = omnibar.locator('[data-component="GlobalOmnibar.ProfessorMariButton"]');
+    const [inputBox, mariButtonBox] = await Promise.all([input.boundingBox(), mariButton.boundingBox()]);
+    expect(inputBox).not.toBeNull();
+    expect(mariButtonBox).not.toBeNull();
+    expect(inputBox!.width).toBeGreaterThanOrEqual(128);
+    expect(inputBox!.x + inputBox!.width).toBeLessThanOrEqual(mariButtonBox!.x + 1);
+
+    await input.fill(name);
+    const row = omnibar.locator("[data-command-center-result-row]").filter({ hasText: name }).first();
+    await expect(row).toBeVisible();
+    await row.getByRole("button", { name: "Continue with Mari", exact: true }).click();
+
+    const textarea = omnibar.locator(".mari-workspace-composer textarea");
+    const context = omnibar.locator(".mari-omnibar-context-attachment");
+    const attach = omnibar.locator(".mari-workspace-composer__attach");
+    await expect(textarea).toBeVisible();
+    await expect(context).toBeVisible();
+    const [textareaBox, contextBox, attachBox] = await Promise.all([
+      textarea.boundingBox(),
+      context.boundingBox(),
+      attach.boundingBox(),
+    ]);
+    expect(textareaBox).not.toBeNull();
+    expect(contextBox).not.toBeNull();
+    expect(attachBox).not.toBeNull();
+    expect(textareaBox!.width).toBeGreaterThanOrEqual(128);
+    expect(contextBox!.y + contextBox!.height).toBeLessThanOrEqual(attachBox!.y + 1);
+  } finally {
+    await request.delete(`/api/characters/${character.id}`).catch(() => undefined);
+  }
+});
+
+test("Professor Mari consolidates privileged bootstrap failures", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Bootstrap error consolidation is covered on desktop.");
+
+  await page.route(/\/api\/professor-mari\/workspace\/(?:status|skills|instructions)(?:\?.*)?$/, async (route) => {
+    await route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "Forbidden" }) });
+  });
+  await page.keyboard.press("Control+k");
+  const omnibar = page.locator('[data-component="GlobalOmnibar"]');
+  await omnibar.locator('[data-component="GlobalOmnibar.ProfessorMariButton"]').click();
+
+  const bootstrapToasts = page.locator("[data-sonner-toast]").filter({
+    hasText: "Some of Professor Mari's workspace tools are unavailable.",
+  });
+  await expect(bootstrapToasts).toHaveCount(1);
+  await expect(bootstrapToasts).toContainText("Settings → Advanced → Admin Access");
+});

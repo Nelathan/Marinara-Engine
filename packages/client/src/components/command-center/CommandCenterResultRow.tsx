@@ -11,7 +11,6 @@ export interface CommandCenterResultRowProps {
   title: string;
   metadata: string | null;
   tertiaryMetadata?: ReactNode;
-  description?: string;
   icon: LucideIcon;
   selected: boolean;
   onSelect: () => void;
@@ -44,7 +43,6 @@ export function CommandCenterResultRow({
   title,
   metadata,
   tertiaryMetadata,
-  description,
   icon,
   selected,
   onSelect,
@@ -86,7 +84,7 @@ export function CommandCenterResultRow({
         type="button"
         data-selected={selected || undefined}
         onClick={onSelect}
-        title={description}
+        aria-label={[title, metadata].filter(Boolean).join(" ")}
         className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 text-left text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
       >
         <CommandCenterMedia

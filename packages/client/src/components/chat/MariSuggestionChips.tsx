@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import {
   BookOpen,
   Bot,
@@ -59,11 +60,17 @@ export function MariSuggestionChips({ chips, onSelect, disabled = false, compact
   const { t: localizeUi } = useUiTranslation();
   const reducedMotion = useReducedMotion();
   const setKey = chips.map((chip) => chip.id).join("|");
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (stripRef.current) stripRef.current.scrollLeft = 0;
+  }, [setKey]);
 
   return (
     <AnimatePresence initial={false}>
       {chips.length > 0 && (
         <motion.div
+          ref={stripRef}
           key={setKey}
           role="group"
           aria-label={localizeUi("ui.chat.marisuggestionchips.suggestedReplies")}
