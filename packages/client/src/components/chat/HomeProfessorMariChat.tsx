@@ -5810,7 +5810,7 @@ export function HomeProfessorMariChat({
                   <aside
                     className={cn(
                       "hidden h-full min-h-0 w-96 min-w-96 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45",
-                      workspaceDestination === "chat" ? "lg:flex" : "lg:hidden",
+                      workspaceDestination === "chat" ? "sm:flex" : "sm:hidden",
                     )}
                   >
                     {detailsPanel}
