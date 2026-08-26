@@ -8609,6 +8609,10 @@ function GameSurfaceComponent({
   });
   useEffect(() => {
     const session = surfaceCombatSession;
+    // While the aftermath handoff is completing the session and unwinding state,
+    // any hydration from the (now completed) session would re-arm the dead battle
+    // mid-cleanup. The handoff owns every state transition until it settles.
+    if (combatAftermathPendingRef.current) return;
     if (chatMeta.gameActiveState !== "combat") {
       // Self-heal a wedged unwind: an ACTIVE session with the chat sitting in
       // exploration can only mean a prior stale-state unwind misfired (deliberate
@@ -10554,6 +10558,14 @@ function GameSurfaceComponent({
         if (combatChatId && combatSessionId) {
           await api.post(`/game/combat/session/${combatSessionId}/complete`, { chatId: combatChatId });
         }
+        // Leave combat server-side before anything can refetch chat metadata: a
+        // still-"combat" gameActiveState re-arms the surface from the completed
+        // session while the GM's aftermath reply is in flight, relaunching a
+        // fresh battle against the dead declaration.
+        if (combatChatId) {
+          useGameModeStore.getState().setGameState("exploration");
+          await transitionGameState.mutateAsync({ chatId: combatChatId, newState: "exploration" });
+        }
         const playerCombatantId = combatParty?.find((member) => member.isPlayer)?.id ?? combatParty?.[0]?.id;
         const playerResult =
           (playerCombatantId ? summary.party.find((result) => result.id === playerCombatantId) : undefined) ??
@@ -10881,6 +10893,7 @@ function GameSurfaceComponent({
       clearCombatSnapshot,
       localizeUi,
       queryClient,
+      transitionGameState,
       updateChatMetadata,
     ],
   );

@@ -870,6 +870,21 @@ export function TacticalCombatUI({
     ],
   );
 
+  // A completed session that belongs to THIS declaration is terminal authority:
+  // its battle already finished, so no automatic path may start a replacement
+  // over it. Without this fence, the aftermath handoff window (completed session
+  // + remount) relaunches a fresh battle against the dead declaration. New
+  // declarations carry a different startMessageId and launch normally.
+  const terminalSessionOwnsDeclaration = (() => {
+    const session = activeSessionQuery.data?.session;
+    return (
+      session?.style === "tactical" &&
+      (session.canonicalState.startMessageId ?? null) === (startMessageId ?? null) &&
+      session.status === "completed" &&
+      Boolean(session.canonicalState.outcome)
+    );
+  })();
+
   // ── Start a fresh battle (unless restoring) ──
   useEffect(() => {
     if (restorableInitialState) return; // restored — do not re-create
@@ -881,6 +896,7 @@ export function TacticalCombatUI({
       activeSessionQuery.isFetching ||
       activeSessionQuery.isError ||
       (!activeSessionQuery.isError && activeSessionQuery.data?.session?.status === "active") ||
+      terminalSessionOwnsDeclaration ||
       launchRequestedForChatRef.current === chatId
     ) {
       return;
@@ -900,6 +916,7 @@ export function TacticalCombatUI({
     restorableInitialState,
     launchBattle,
     sessionId,
+    terminalSessionOwnsDeclaration,
   ]);
 
   // ── Derived: units currently rendered (anim positions during playback) ──
@@ -913,6 +930,7 @@ export function TacticalCombatUI({
       activeSessionQuery.isFetching ||
       activeSessionQuery.isError ||
       activeSessionQuery.data?.session?.status === "active" ||
+      terminalSessionOwnsDeclaration ||
       sessionId ||
       launchRequestedForChatRef.current === chatId
     ) {
@@ -934,6 +952,7 @@ export function TacticalCombatUI({
     restorableInitialState,
     launchBattle,
     sessionId,
+    terminalSessionOwnsDeclaration,
   ]);
 
   const liveState = state;

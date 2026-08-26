@@ -504,6 +504,32 @@ assert.match(
   /activeSessionQuery\.isFetching \|\|\s*activeSessionQuery\.isError \|\|\s*\(!activeSessionQuery\.isError && activeSessionQuery\.data\?\.session\?\.status === "active"\)/,
   "a failed authority lookup must not launch a second Tactical battle",
 );
+// Clicking Continue after a defeat completes the session, but the chat metadata
+// still said "combat" and the remounting surface auto-started a fresh battle
+// against the finished declaration (revived party vs the wounded enemy). A
+// terminal session that owns the current declaration must suppress every
+// automatic launch path, and the aftermath must move the server game state out
+// of combat before anything can refetch it.
+assert.match(
+  tacticalCombatUiSource,
+  /const terminalSessionOwnsDeclaration =[\s\S]{0,400}session\.status === "completed" &&\s*Boolean\(session\.canonicalState\.outcome\)/,
+  "a completed session owned by the current declaration must be recognized as terminal",
+);
+assert.equal(
+  (tacticalCombatUiSource.match(/terminalSessionOwnsDeclaration \|\|/g) ?? []).length,
+  2,
+  "both automatic Tactical launch paths must refuse to replace a terminal owned session",
+);
+assert.match(
+  gameSurfaceSource,
+  /await transitionGameState\.mutateAsync\(\{ chatId: combatChatId, newState: "exploration" \}\)/,
+  "the combat aftermath must leave combat server-side before chat metadata can re-arm the surface",
+);
+assert.match(
+  gameSurfaceSource,
+  /if \(combatAftermathPendingRef\.current\) return;\s*\n\s*if \(chatMeta\.gameActiveState !== "combat"\)/,
+  "combat hydration must stand down while the aftermath handoff is completing the session",
+);
 assert.match(
   tacticalCombatUiSource,
   /if \(d > 1 && !hasLineOfSight\(stagedState\.grid, from, \{ x: u\.x, y: u\.y \}\)\) continue;/,
