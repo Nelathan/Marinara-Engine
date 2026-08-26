@@ -46,7 +46,6 @@ import {
   useChatMessageSearchSource,
   useGlobalMessageSearch,
   useProfessorMariChats,
-  useCreateChat,
   useUpdateChat,
   useUpdateChatMetadata,
 } from "../../hooks/use-chats";
@@ -116,7 +115,6 @@ import {
   buildOmnibarGlobalMessageResults,
   buildOmnibarMariChatResults,
   buildOmnibarMessageResults,
-  buildOmnibarProposalResult,
   buildOmnibarAddSuggestions,
   buildOmnibarVerbSuggestions,
   CHAT_CONTEXT_MAX_RESULTS,
@@ -140,7 +138,6 @@ import {
   usePersonalExtensionCommands,
 } from "../../lib/personal-extension-contributions";
 import { omnibarCompletionActions, type OmnibarCompletionAction } from "../../lib/omnibar-completion-actions";
-import { parseCreationSeed, splitProposalWork, type CreationProposal } from "../../lib/omnibar-creation-proposal";
 import { parseChatExtraction } from "../../lib/omnibar-chat-extraction";
 import { buildProfessorMariCommandCenterContext } from "../../lib/professor-mari-command-center-context";
 import {
@@ -169,7 +166,6 @@ import {
   type CommandCenterChatModeLabels,
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact } from "../command-center/command-result-preview.types";
-import { OmnibarEmptyState } from "./OmnibarEmptyState";
 import { OmnibarSettingsMenu } from "./omnibar/OmnibarSettingsMenu";
 import {
   getOmnibarResourceId,
@@ -459,9 +455,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     },
     [],
   );
-  // When set, the Work pane shows the creation proposal for review instead of
-  // the Mari transcript. Nothing is created until the user accepts.
-  const [proposalDraft, setProposalDraft] = useState<CreationProposal | null>(null);
   const mariReturnResultIdRef = useRef<string | null>(mariReturnResultId);
   const [ranking, setRanking] = useState<CommandRankingState>(() => readCommandRankingState());
   const chats = useChats();
@@ -492,7 +485,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const setDefaultPreset = useSetDefaultPreset();
   const updateChat = useUpdateChat();
   const updateChatMetadata = useUpdateChatMetadata();
-  const createChat = useCreateChat();
   const createLorebook = useCreateLorebook();
   const extensionCommands = usePersonalExtensionCommands();
   const docs = useDocsCommandSearchProvider(query, { enabled: true });
@@ -518,7 +510,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const openCharacterId = useUIStore((state) => state.characterDetailId);
   const activeEditorField = useUIStore((state) => state.activeEditorField);
   const lastAppError = useUIStore((state) => state.lastAppError);
-  const creationSession = useUIStore((state) => state.creationSession);
   const openPersonaId = useUIStore((state) => state.personaDetailId);
   const openLorebookId = useUIStore((state) => state.lorebookDetailId);
   const openPresetId = useUIStore((state) => state.presetDetailId);
@@ -653,11 +644,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         }),
       ),
     [characters.data],
-  );
-  // Reverse lookup so a creation seed can resolve the names the user typed.
-  const characterIdByName = useMemo(
-    () => new Map([...characterNameById].map(([id, name]) => [String(name).toLowerCase(), id])),
-    [characterNameById],
   );
   const personaById = useMemo(() => new Map((personas.data ?? []).map((item) => [item.id, item])), [personas.data]);
   const connectionById = useMemo(
@@ -1154,7 +1140,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         allLocalResults,
         characterNameById,
         connectionById,
-        creationSession,
         lastAppError,
         lorebooks: lorebooks.data,
         mariEnabled,
@@ -1179,7 +1164,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       agents.data,
       characterNameById,
       connectionById,
-      creationSession,
       lastAppError,
       lorebooks.data,
       mariEnabled,
@@ -1254,8 +1238,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     [activeChat, attachableFallback, attachedResultIds, deferredQuery, omnibarSuggestionsEnabled, searchResults, t],
   );
   const verbSuggestions = useMemo<OmnibarResult[]>(
-    () => buildOmnibarVerbSuggestions({ activeChat, allLocalResults, deferredQuery, omnibarSuggestionsEnabled }),
-    [activeChat, allLocalResults, deferredQuery, omnibarSuggestionsEnabled],
+    () => buildOmnibarVerbSuggestions({ allLocalResults, deferredQuery }),
+    [allLocalResults, deferredQuery],
   );
   const addedResultIds = useMemo(
     () => new Set(addSuggestions.map((item) => item.id.replace("action:add-to-chat:", ""))),
@@ -1267,11 +1251,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   const removedResultIds = useMemo(
     () => new Set(removalSuggestions.map((item) => item.id.replace("action:detach-from-chat:", ""))),
     [removalSuggestions],
-  );
-  const creationProposal = useMemo(() => parseCreationSeed(deferredQuery), [deferredQuery]);
-  const proposalResult = useMemo<OmnibarResult | null>(
-    () => buildOmnibarProposalResult({ creationProposal, t }),
-    [creationProposal, t],
   );
   const chatExtraction = useMemo(
     () => (activeChat ? parseChatExtraction(deferredQuery) : null),
@@ -1320,7 +1299,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
               ...addSuggestions,
               ...removalSuggestions,
               ...approvalResults,
-              ...(proposalResult ? [proposalResult] : []),
               ...(extractionResult ? [extractionResult] : []),
               ...messageResults,
               ...globalMessageResults,
@@ -1352,7 +1330,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       globalMessageResults,
       mariChatResults,
       messageResults,
-      proposalResult,
       searchResults,
       removalSuggestions,
       slashResults,
@@ -1796,23 +1773,8 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       onClose();
       return;
     }
-    if (result.id === "creation-proposal" && creationProposal) {
-      setProposalDraft(creationProposal);
-      mariReturnResultIdRef.current = result.id;
-      setMariMounted(true);
-      setPane("mari");
-      return;
-    }
     if (result.id === "chat-extraction") {
       void runChatExtraction();
-      return;
-    }
-    if (result.id === "resume-creation-session") {
-      const session = ui().creationSession;
-      if (session?.createdChatId && navigate({ kind: "chat", chatId: session.createdChatId })) {
-        ui().setCreationSession(null);
-        onClose();
-      }
       return;
     }
     // A dependency install or a sensitive file write executes on approval, so the
@@ -1823,11 +1785,14 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     }
     if (result.id === "ask-professor-mari") {
       if (result.group === "continue") {
+        // The continue row resumes existing work, so there is nothing to submit.
         openProfessorMari(null, {
           reviewPending: (mariWorkspaceStatus.data?.pendingApprovals.length ?? 0) > 0,
         });
       } else {
-        openProfessorMari(null);
+        // The row reads "Ask Mari: <your query>", so it sends. Enter always did;
+        // click used to open with the text unsent, which no title promised.
+        openProfessorMari(null, { submitDraft: true });
       }
       return;
     }
@@ -2089,7 +2054,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
     selectedResult: RankedOmnibarResult | null = null,
     options: { reviewPending?: boolean; submitDraft?: boolean } = {},
   ) => {
-    setProposalDraft(null);
     const draft = query.trim();
     if (draft) useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
     const focusResult = selectedResult ?? contextResults[0] ?? null;
@@ -2135,60 +2099,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
   };
 
   /**
-   * Accepts a proposal: the app creates what it can name for certain (the chat
-   * and any character the user already has), then hands the creative remainder
-   * to Mari. The user always ends up with a usable chat, even if Mari is slow
-   * or the creative half is abandoned.
-   */
-  const acceptProposal = async (proposal: CreationProposal, options: { assistedOnly?: boolean } = {}) => {
-    const { direct, assisted } = splitProposalWork(proposal, (name) => characterIdByName.get(name.toLowerCase()));
-    let createdChatId: string | undefined;
-    if (!options.assistedOnly) {
-      const characterIds = direct.flatMap((item) => (item.kind === "character" && item.id ? [item.id] : []));
-      try {
-        const chat = await createChat.mutateAsync({
-          name: proposal.title,
-          mode: proposal.goal === "campaign" ? "game" : "roleplay",
-          characterIds,
-        });
-        createdChatId = chat.id;
-      } catch (error) {
-        // Keep the user in the flow: Mari can still do the creative half.
-        ui().setLastAppError({
-          message: error instanceof Error ? error.message : String(error),
-          action: t("commandCenter.proposal.createChatAction", "Create chat"),
-        });
-      }
-    }
-    ui().setCreationSession(
-      assisted.length > 0 && createdChatId
-        ? {
-            id: `creation-${Date.now()}`,
-            seed: proposal.seed,
-            title: proposal.title,
-            ...(createdChatId ? { createdChatId } : {}),
-            createdAt: Date.now(),
-          }
-        : null,
-    );
-    setProposalDraft(null);
-    // Hand the remainder to Mari with the seed and what is still missing.
-    const remaining = assisted.map((item) => `${item.kind}: ${item.label}`).join(", ");
-    const draft = remaining
-      ? t("commandCenter.proposal.mariDraft", "{{seed}}. Still needed: {{remaining}}.", {
-          seed: proposal.seed,
-          remaining,
-        })
-      : proposal.seed;
-    useChatStore.getState().setInputDraft(PROFESSOR_MARI_DRAFT_KEY, draft);
-    enterMariPane(
-      buildProfessorMariCommandCenterContext(draft, null, [], undefined, {
-        ...(createdChatId ? { activeChat: { id: createdChatId, label: proposal.title } } : {}),
-      }),
-    );
-  };
-
-  /**
    * Turns the active chat into reusable world material. A lorebook gets an empty
    * shell up front so Mari has somewhere to write; the other kinds need Mari to
    * decide what already exists first. Mari receives a typed chat reference, not
@@ -2196,7 +2106,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
    */
   const runChatExtraction = async () => {
     if (!chatExtraction || !activeChat) return;
-    setProposalDraft(null);
     let lorebookId: string | undefined;
     try {
       const lorebook = await createLorebook.mutateAsync({ name: activeChat.name });
@@ -2462,26 +2371,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
       })()
     : [];
 
-  // The side panel only earns its space when the result carries more than a
-  // title: media, prose, facts, an inline control, or lazily fetched detail.
-  const previewIsRich = (() => {
-    if (!previewResult) return false;
-    if (previewResult.control) return true;
-    if (previewDetail.detail || previewDetail.detailLoading || previewDetail.extraFacts.length) return true;
-    const preview = previewResult.preview?.();
-    if (!preview) return false;
-    return Boolean(
-      preview.media ||
-      preview.description ||
-      preview.supportingInfo ||
-      preview.metadataLine ||
-      preview.status ||
-      preview.facts?.length ||
-      preview.badges?.length ||
-      preview.tags?.length,
-    );
-  })();
-
   // One preview body shared by both detail surfaces (inline under the row,
   // and the external xl panel) so they never drift apart.
   const renderResultPreview = () =>
@@ -2728,13 +2617,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
             <OmnibarMariPane
               active={pane === "mari"}
               reduceMotion={reduceMotion}
-              proposalDraft={proposalDraft}
-              acceptPending={createChat.isPending}
-              onAcceptProposal={(proposal, options) => void acceptProposal(proposal, options)}
-              onCancelProposal={() => {
-                setProposalDraft(null);
-                setPane("results");
-              }}
               mariContext={mariContext}
               submitDraft={mariSubmitDraft}
               mariOpenChatId={mariOpenChatId}
@@ -2971,8 +2853,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
         ) : null}
       </div>
 
-      {pane === "results" && idle ? <OmnibarEmptyState onAskMari={() => openProfessorMari()} /> : null}
-
       <AnimatePresence>
         {fieldFlight ? (
           <motion.div
@@ -2987,30 +2867,6 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           />
         ) : null}
       </AnimatePresence>
-
-      {pane === "results" && previewResult && previewIsRich ? (
-        <motion.aside
-          data-component="GlobalOmnibar.ExternalDetail"
-          initial={reduceMotion ? false : { opacity: 0, x: -18 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={reduceMotion ? undefined : { opacity: 0, x: -18 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
-          className="fixed left-[calc(50%+23rem)] top-[10vh] hidden h-[min(36rem,68dvh)] w-[20rem] overflow-hidden rounded-2xl bg-[var(--card)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-[var(--border)]/60 min-[88rem]:block"
-        >
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={previewResult.id}
-              className="h-full"
-              initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={reduceMotion ? undefined : { opacity: 0, x: -8 }}
-              transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: "easeOut" }}
-            >
-              {renderResultPreview()}
-            </motion.div>
-          </AnimatePresence>
-        </motion.aside>
-      ) : null}
     </motion.div>,
     document.body,
   );

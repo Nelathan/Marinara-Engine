@@ -23,7 +23,6 @@ import { deriveActiveLorebookViews, getChatActiveLorebookIds, getChatExcludedLor
 import { getChatCharacterIds } from "./chat-macros";
 import { isLanguageGenerationConnection, type ConnectionProviderLike } from "./connection-filters";
 import type { DocsCommandSearchPassage } from "./docs-command-search";
-import type { CreationProposal } from "./omnibar-creation-proposal";
 import type { parseChatExtraction } from "./omnibar-chat-extraction";
 import type { OmnibarNamedRow, OmnibarTranslate } from "./omnibar-entity-rows";
 import {
@@ -57,8 +56,6 @@ const MAX_GLOBAL_MESSAGE_SEARCH_RESULTS = 6;
  */
 export const CHAT_CONTEXT_MAX_RESULTS = 8;
 const MAX_SLASH_RESULTS = 8;
-/** A resumable creation session goes stale after a day. */
-const CREATION_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /**
  * Slash commands worth offering before anything is typed while a chat is open.
  * Everything else stays discoverable by typing "/".
@@ -175,7 +172,6 @@ export type OmnibarContextResultsInput = {
   allLocalResults: readonly OmnibarResult[];
   characterNameById: ReadonlyMap<string, string>;
   connectionById: ReadonlyMap<string, OmnibarNamedRow>;
-  creationSession: { createdAt: number; title: string; seed: string } | null | undefined;
   lastAppError: { message: string; action?: string; retry?: { id: string } | null } | null | undefined;
   lorebooks: Lorebook[] | undefined;
   mariEnabled: boolean;
@@ -194,12 +190,9 @@ export type OmnibarContextResultsInput = {
 };
 
 export type OmnibarVerbSuggestionsInput = {
-  activeChat: Chat | null | undefined;
   /** Every locally known row, used to answer "enable" and "create" directly. */
   allLocalResults: readonly OmnibarResult[];
   deferredQuery: string;
-  /** Gates `buildOmnibarAddSuggestions`, which is what answers a bare "add". */
-  omnibarSuggestionsEnabled: boolean;
 };
 
 export type OmnibarAddSuggestionsInput = {
@@ -220,11 +213,6 @@ export type OmnibarRemovalSuggestionsInput = {
   contextResults: readonly OmnibarResult[];
   deferredQuery: string;
   omnibarSuggestionsEnabled: boolean;
-  t: OmnibarTranslate;
-};
-
-export type OmnibarProposalResultInput = {
-  creationProposal: CreationProposal | null;
   t: OmnibarTranslate;
 };
 
@@ -758,7 +746,6 @@ export function buildOmnibarContextResults({
   allLocalResults,
   characterNameById,
   connectionById,
-  creationSession,
   lastAppError,
   lorebooks,
   mariEnabled,
@@ -803,20 +790,6 @@ export function buildOmnibarContextResults({
       category: "connection",
       score: 0,
       icon: "connection",
-    });
-  }
-
-  // A creation session is persisted, so without an age limit "Continue
-  // building X" would lead the idle list forever.
-  if (creationSession && Date.now() - creationSession.createdAt < CREATION_SESSION_MAX_AGE_MS) {
-    push({
-      id: "resume-creation-session",
-      title: t("commandCenter.proposal.resume", "Continue building {{title}}", { title: creationSession.title }),
-      description: creationSession.seed,
-      category: "professor",
-      score: 0,
-      group: "current-work",
-      icon: "professor",
     });
   }
 
@@ -1023,10 +996,8 @@ const REMOVAL_SUGGESTION_SCORE = 470;
  * here.
  */
 export function buildOmnibarVerbSuggestions({
-  activeChat,
   allLocalResults,
   deferredQuery,
-  omnibarSuggestionsEnabled,
 }: OmnibarVerbSuggestionsInput): OmnibarResult[] {
   const intent = isOmnibarRefinableVerb(deferredQuery);
   if (!intent) return [];
@@ -1037,13 +1008,6 @@ export function buildOmnibarVerbSuggestions({
       group: "current-work" as const,
     }));
   const createRows = () => allLocalResults.filter((result) => /^(?:create|import)-/.test(result.id));
-  // "add" needs somewhere to add to. With a chat open `buildOmnibarAddSuggestions`
-  // answers it with the real attachable rows — but only when suggestions are
-  // enabled, so this still has to answer when they are off. With no chat open it
-  // can only mean "make a new one", which is better than an empty list either way.
-  if (["add", "use", "activate", "set"].includes(intent.verb)) {
-    return activeChat && omnibarSuggestionsEnabled ? [] : bounded(createRows());
-  }
   // "open"/"show" is answered by the ranked entity rows themselves.
   if (["open", "show", "go to"].includes(intent.verb)) return [];
   // Bounded verbs: list the objects themselves, because they all fit. "remove"
@@ -1139,22 +1103,6 @@ export function buildOmnibarRemovalSuggestions({
     });
   }
   return out;
-}
-
-export function buildOmnibarProposalResult({ creationProposal, t }: OmnibarProposalResultInput): OmnibarResult | null {
-  if (!creationProposal) return null;
-  const created = creationProposal.items.filter((item) => item.status === "missing").length;
-  return {
-    id: "creation-proposal",
-    title: t("commandCenter.proposal.title", "Set up {{title}}", { title: creationProposal.title }),
-    description: t("commandCenter.proposal.description", "Creates {{count}} things. Review before anything is made.", {
-      count: created,
-    }),
-    category: "professor",
-    score: 400,
-    kind: "action",
-    icon: "professor",
-  };
 }
 
 export function buildOmnibarExtractionResult({

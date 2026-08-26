@@ -626,18 +626,6 @@ interface UIState {
   /** The primary field currently focused in an open editor, for Mari omnibar handoff. Transient, never persisted. */
   activeEditorField: { id: string; label: string } | null;
   /**
-   * An in-progress omnibar creation session ("create a campaign about a haunted
-   * train"). Persisted so "continue building X" works after the omnibar closes.
-   */
-  creationSession: {
-    id: string;
-    seed: string;
-    title: string;
-    /** Ids created so far, so a resumed session does not duplicate work. */
-    createdChatId?: string;
-    createdAt: number;
-  } | null;
-  /**
    * The most recent recoverable app failure, so the omnibar can answer "fix this".
    * `retry` is a serializable target the omnibar maps to a real action, never a
    * captured callback. Transient, never persisted.
@@ -1020,7 +1008,6 @@ interface UIState {
   setSettingsTab: (tab: string) => void;
   setActiveEditorField: (field: { id: string; label: string } | null) => void;
   setLastAppError: (error: UIState["lastAppError"]) => void;
-  setCreationSession: (session: UIState["creationSession"]) => void;
   setSettingsTargetControlId: (controlId: string | null) => void;
   setSettingsTargetSectionId: (sectionId: string | null) => void;
   openModal: (type: string, props?: Record<string, unknown>) => void;
@@ -1476,7 +1463,6 @@ export const useUIStore = create<UIState>()(
       settingsTab: "general",
       activeEditorField: null,
       lastAppError: null,
-      creationSession: null,
       settingsTargetControlId: null,
       settingsTargetSectionId: null,
       modal: null,
@@ -1797,7 +1783,6 @@ export const useUIStore = create<UIState>()(
       setSettingsTab: (tab) => set({ settingsTab: tab }),
       setActiveEditorField: (field) => set({ activeEditorField: field }),
       setLastAppError: (error) => set({ lastAppError: error }),
-      setCreationSession: (session) => set({ creationSession: session }),
       setSettingsTargetControlId: (controlId) => set({ settingsTargetControlId: controlId }),
       setSettingsTargetSectionId: (sectionId) => set({ settingsTargetSectionId: sectionId }),
       openModal: (type, props) => set({ modal: { type, props } }),
@@ -3292,7 +3277,6 @@ export const useUIStore = create<UIState>()(
         rightPanelWidth: state.rightPanelWidth,
         rightPanel: state.rightPanel,
         settingsTab: state.settingsTab,
-        creationSession: state.creationSession,
         characterDetailId: state.characterDetailId,
         lorebookDetailId: state.lorebookDetailId,
         presetDetailId: state.presetDetailId,
