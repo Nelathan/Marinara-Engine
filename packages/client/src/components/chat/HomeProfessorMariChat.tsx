@@ -5809,7 +5809,7 @@ export function HomeProfessorMariChat({
                   </AnimatePresence>
                   <aside
                     className={cn(
-                      "hidden h-full min-h-0 w-80 min-w-80 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45",
+                      "hidden h-full min-h-0 w-96 min-w-96 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45",
                       workspaceDestination === "chat" ? "lg:flex" : "lg:hidden",
                     )}
                   >
