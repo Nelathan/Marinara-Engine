@@ -2588,7 +2588,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 />
               </button>
             ) : null}
-            <OmnibarSettingsMenu />
+            {mariSurface ? <OmnibarSettingsMenu /> : null}
             <button
               type="button"
               onClick={onClose}
@@ -2895,11 +2895,11 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
           </Suspense>
         ) : null}
 
-        {!mariSurface && !idle ? (
-          <footer className="hidden min-h-9 shrink-0 items-center justify-between border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)] sm:flex">
+        {!mariSurface ? (
+          <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-[var(--border)] px-3 text-[0.6875rem] text-[var(--muted-foreground)]">
             {/* The conditional hints group to the left so the two permanent
                 hints keep their positions as rows gain and lose shortcuts. */}
-            <span className="flex items-center gap-4">
+            <span className="hidden items-center gap-4 sm:flex">
               <span>{t("commandCenter.keyboard.move", "Arrow keys move")}</span>
               {inlineSuffix ? (
                 <span>{t("commandCenter.keyboard.complete", "⇥ Complete")}</span>
@@ -2917,7 +2917,12 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 <span>{t("commandCenter.keyboard.pin", "Cmd/Ctrl+P pin")}</span>
               ) : null}
             </span>
-            <span>{t("commandCenter.keyboard.escape", "Esc close")}</span>
+            <span className="flex min-w-0 items-center gap-3">
+              {!idle ? (
+                <span className="hidden sm:inline">{t("commandCenter.keyboard.escape", "Esc close")}</span>
+              ) : null}
+              <OmnibarSettingsMenu />
+            </span>
           </footer>
         ) : null}
       </div>

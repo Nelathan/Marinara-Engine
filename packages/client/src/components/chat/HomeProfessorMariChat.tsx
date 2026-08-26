@@ -4484,6 +4484,7 @@ export function HomeProfessorMariChat({
                   aria-pressed={workspaceDestination === id}
                   onClick={() => selectHeaderDestination(id)}
                   disabled={id === "chats" && isBusy}
+                  data-destination={id}
                   data-active={workspaceDestination === id ? "true" : "false"}
                 >
                   <Icon size="0.8rem" aria-hidden="true" />
@@ -4503,6 +4504,16 @@ export function HomeProfessorMariChat({
                 <Square size="0.75rem" aria-hidden="true" />
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => void runRestart()}
+              disabled={isBusy}
+              className="mari-omnibar-header-menu__trigger"
+              aria-label={localizeUi("ui.chat.homeprofessormarichat.restart")}
+              title={localizeUi("ui.chat.homeprofessormarichat.restart")}
+            >
+              <RefreshCw size="0.85rem" aria-hidden="true" />
+            </button>
             <div
               ref={headerMenuRef}
               className="mari-omnibar-header-menu"
@@ -4518,7 +4529,7 @@ export function HomeProfessorMariChat({
                 onClick={() => setPanelMenuOpen((open) => !open)}
                 className="mari-omnibar-header-menu__trigger"
                 aria-expanded={panelMenuOpen}
-                aria-label={localizeUi("ui.chat.homeprofessormarichat.workspaceDestinations")}
+                aria-label={localizeUi("ui.chat.homeprofessormarichat.moreMariActions", "More Professor Mari actions")}
               >
                 <EllipsisVertical size="0.9rem" aria-hidden="true" />
               </button>
@@ -4532,25 +4543,14 @@ export function HomeProfessorMariChat({
                         onClick={() => selectHeaderDestination(id)}
                         disabled={id === "chats" && isBusy}
                         aria-pressed={workspaceDestination === id}
+                        data-destination={id}
                       >
                         <Icon size="0.875rem" aria-hidden="true" />
                         <span>{label}</span>
                         {count > 0 ? <b>{count}</b> : null}
                       </button>
                     ))}
-                    <div role="separator" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPanelMenuOpen(false);
-                      void runRestart();
-                    }}
-                    disabled={isBusy}
-                  >
-                    <RefreshCw size="0.875rem" aria-hidden="true" />
-                    <span>{localizeUi("ui.chat.homeprofessormarichat.restart")}</span>
-                  </button>
                 </div>
               ) : null}
             </div>
@@ -4630,6 +4630,74 @@ export function HomeProfessorMariChat({
       setWorkspaceDestination("chat");
     },
     [refreshWorkspaceStatus],
+  );
+
+  const detailsPanel = (
+    <>
+      <div className="shrink-0 border-b border-[var(--border)]/60 px-3 py-3">
+        <div className="flex items-center gap-2">
+          <FileText size="0.9rem" className="text-[var(--primary)]" aria-hidden="true" />
+          <div className="min-w-0">
+            <h3 className="truncate text-xs font-semibold text-[var(--foreground)]">
+              {localizeUi("ui.chat.homeprofessormarichat.detailsDestination")}
+            </h3>
+            <p className="truncate text-[0.625rem] text-[var(--muted-foreground)]">
+              {localizeUi("ui.chat.homeprofessormarichat.detailsDestinationHint")}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="space-y-4">
+          {focusedCharacter || focusedLorebook ? (
+            <section>
+              <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                {localizeUi("ui.chat.homeprofessormarichat.focusedResource")}
+              </div>
+              <MariResourceSubject
+                character={focusedCharacter}
+                lorebook={focusedLorebook}
+                compact={false}
+                className="w-full"
+              />
+            </section>
+          ) : null}
+          {latestActionResults.length > 0 ? (
+            <section>
+              <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                {localizeUi("ui.chat.homeprofessormarichat.completedResults")}
+              </div>
+              {latestActionResults.map((result) => (
+                <MariWorkspaceActionResultRow
+                  key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
+                  result={result}
+                  onOpen={openActionResult}
+                  onReview={reviewActionResult}
+                  character={characterPreviewById.get(result.resource.id)}
+                  lorebook={lorebookPreviewById.get(result.resource.id)}
+                />
+              ))}
+            </section>
+          ) : null}
+          {visiblePendingChangeReviews.length > 0 ? (
+            <section>
+              <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                {localizeUi("commandCenter.completion.review")}
+              </div>
+              {pendingApprovalsPanel}
+            </section>
+          ) : null}
+          {!focusedCharacter &&
+          !focusedLorebook &&
+          latestActionResults.length === 0 &&
+          visiblePendingChangeReviews.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-[var(--border)] px-3 py-8 text-center text-xs text-[var(--muted-foreground)]">
+              {localizeUi("ui.chat.homeprofessormarichat.detailsEmpty")}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </>
   );
 
   useEffect(() => {
@@ -4809,7 +4877,7 @@ export function HomeProfessorMariChat({
                 <div
                   data-mari-panel={panelOpen ? "open" : "closed"}
                   data-mari-state={mariPresentationState}
-                  className={cn("relative flex min-h-0 flex-1 flex-col", panelOpen && "sm:flex-row")}
+                  className="relative flex min-h-0 flex-1 flex-col sm:flex-row"
                 >
                   <motion.div
                     key="professor-mari-chat"
@@ -5560,7 +5628,10 @@ export function HomeProfessorMariChat({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
                         transition={paneTransition}
-                        className={cn(MARI_PANEL_SLOT_CLASS, "flex min-h-0 flex-col bg-[var(--background)]/45")}
+                        className={cn(
+                          MARI_PANEL_SLOT_CLASS,
+                          "flex min-h-0 flex-col bg-[var(--background)]/45 lg:hidden",
+                        )}
                       >
                         <div className="shrink-0 border-b border-[var(--border)]/60 px-3 py-3">
                           <div className="flex items-center gap-2">
@@ -5743,6 +5814,9 @@ export function HomeProfessorMariChat({
                       </motion.section>
                     ) : null}
                   </AnimatePresence>
+                  <aside className="hidden h-full min-h-0 w-80 min-w-80 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45 lg:flex">
+                    {detailsPanel}
+                  </aside>
                 </div>
               </div>
             </motion.div>

@@ -4,6 +4,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
+- The omnibar settings menu now lives in the footer, while Professor Mari keeps her workspace settings in the Mari header. Restart is visible in the Mari workspace, and desktop Mari opens with Details available beside the conversation.
 - The omnibar now prioritizes named resources over transcript matches, keeps expanded previews visible, restores useful guidance when no suggestions are available, and improves mobile space, horizontal scrolling, keyboard hints, accessibility announcements, and Professor Mari workspace error handling.
 - Omnibar Mari's empty transcript now has a styled welcome surface with starter actions. One-shot context appears as a separate attachment row, not inside the text input controls, and the obsolete trust toolbar is gone.
 - Pressing Enter when Mari is the only omnibar result now starts the request immediately instead of only placing the text in her composer. The empty Mari takeover has richer workspace chrome, and active work now summarizes the current task and completed steps.

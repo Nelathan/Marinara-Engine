@@ -1218,6 +1218,10 @@
   .mari-omnibar-header-menu__destinations {
     display: none;
   }
+
+  .mari-omnibar-header-destinations button[data-destination="details"] {
+    display: none;
+  }
 }
 
 @media (min-width: 40rem) {
@@ -8891,6 +8895,11 @@ strong {
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
+}
+
+footer .omnibar-settings-menu__popover {
+  top: auto;
+  bottom: calc(100% + 0.4rem);
 }
 
 .omnibar-settings-menu__trigger:hover,

@@ -4055,6 +4055,7 @@
   "ui.chat.homeprofessormarichat.loadingChats": "Loading chats...",
   "ui.chat.homeprofessormarichat.memories": "Memories",
   "ui.chat.homeprofessormarichat.missingConnection": "No connection",
+  "ui.chat.homeprofessormarichat.moreMariActions": "More Professor Mari actions",
   "ui.chat.homeprofessormarichat.nativeTools": "native tools",
   "ui.chat.homeprofessormarichat.noMatchingChats": "No Mari chats match that search.",
   "ui.chat.homeprofessormarichat.oneShotContextValue1": "Using for this message: {{value1}}",
