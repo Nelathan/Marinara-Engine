@@ -18,6 +18,7 @@ import {
   type LorebookVectorStatus,
 } from "../../lib/mari-edit-diff";
 import { diffWords } from "../../lib/word-diff";
+import { UnifiedLineDiff } from "./MariUnifiedDiff";
 import type { MariDbPendingApproval, MariDbRowChange } from "@marinara-engine/shared";
 import {
   BookOpen,
@@ -100,27 +101,29 @@ function EmptyValue() {
 function ProseChangeView({ change }: { change: FieldChange }) {
   const { t: localizeUi } = useUiTranslation();
   const [showDiff, setShowDiff] = useState(false);
-  if (showDiff) {
-    return (
-      <p className="max-h-40 overflow-auto rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
-        <InlineTextDiff before={change.before} after={change.after} />
-      </p>
-    );
-  }
   return (
     <>
-      <p className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--background)]/40 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--muted-foreground)]">
-        {change.before || <EmptyValue />}
-      </p>
-      <p className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
-        {change.after || <EmptyValue />}
-      </p>
+      {showDiff ? (
+        <UnifiedLineDiff before={change.before} after={change.after} />
+      ) : (
+        <>
+          <p className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--background)]/40 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--muted-foreground)]">
+            {change.before || <EmptyValue />}
+          </p>
+          <p className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
+            {change.after || <EmptyValue />}
+          </p>
+        </>
+      )}
       <button
         type="button"
-        onClick={() => setShowDiff(true)}
+        onClick={() => setShowDiff((prev) => !prev)}
+        aria-pressed={showDiff}
         className="mt-0.5 text-[0.625rem] text-[var(--muted-foreground)] underline-offset-2 hover:underline"
       >
-        {localizeUi("ui.chat.mariediteasyviewer.showExactChanges")}
+        {localizeUi(
+          showDiff ? "ui.chat.mariediteasyviewer.showFullText" : "ui.chat.mariediteasyviewer.showExactChanges",
+        )}
       </button>
     </>
   );
@@ -135,9 +138,7 @@ function FieldChangeView({ change }: { change: FieldChange }) {
       {change.kind === "changed" && isProseField(change.path) ? (
         <ProseChangeView change={change} />
       ) : change.kind === "changed" ? (
-        <p className="max-h-40 overflow-auto rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
-          <InlineTextDiff before={change.before} after={change.after} />
-        </p>
+        <UnifiedLineDiff before={change.before} after={change.after} />
       ) : change.kind === "added" ? (
         <p className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-emerald-500/10 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
           {change.after || <EmptyValue />}
@@ -420,9 +421,7 @@ function LorebookEntryDiff({ change, collapsed }: { change: MariDbRowChange; col
               <div className="mb-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                 {localizeUi("ui.chat.mariediteasyviewer.content")}
               </div>
-              <p className="max-h-40 overflow-auto rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
-                <InlineTextDiff before={contentBefore} after={contentAfter} />
-              </p>
+              <UnifiedLineDiff before={contentBefore} after={contentAfter} />
             </div>
           )}
 
@@ -431,9 +430,7 @@ function LorebookEntryDiff({ change, collapsed }: { change: MariDbRowChange; col
               <div className="mb-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                 {localizeUi("ui.chat.mariediteasyviewer.description")}
               </div>
-              <p className="max-h-40 overflow-auto rounded-md bg-[var(--background)]/70 p-1.5 text-[0.6875rem] leading-relaxed text-[var(--foreground)]">
-                <InlineTextDiff before={descBefore} after={descAfter} />
-              </p>
+              <UnifiedLineDiff before={descBefore} after={descAfter} />
             </div>
           )}
 

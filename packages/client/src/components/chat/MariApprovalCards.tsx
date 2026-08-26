@@ -169,6 +169,9 @@ function DatabaseWorkspaceApprovalCard({
   // #4931: which rows are collapsed (folded to their name + status summary). Reversible — unlike the
   // old one-way Dismiss.
   const [collapsedRows, setCollapsedRows] = useState<Set<string>>(() => new Set());
+  // The raw view lists the first few deleted/created rows; the rest are one click away rather than
+  // permanently hidden.
+  const [showAllRawRows, setShowAllRawRows] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const toggleAnchorRef = useRef<number | null>(null);
   // Keep this card anchored in the scroll viewport across a height change so the toggle doesn't
@@ -263,7 +266,7 @@ function DatabaseWorkspaceApprovalCard({
             {approval.affectedRows === 1 ? "" : localizeUi("ui.noodle.stageprofileview.s")}
           </span>
         </div>
-        {viewMode === "raw" && approval.diffTruncated && (
+        {approval.diffTruncated && (
           <p className="mt-1 text-[0.625rem] text-[var(--muted-foreground)]">
             {localizeUi("ui.chat.databaseworkspaceapprovalcard.thisPreviewMayNotShowEveryAffectedRow")}
           </p>
@@ -311,7 +314,7 @@ function DatabaseWorkspaceApprovalCard({
               {localizeUi("ui.chat.databaseworkspaceapprovalcard.restoreWillPutTheSavedRowSnapshotBack")}
             </p>
             <div className="mt-2 space-y-2">
-              {deletedRows.slice(0, 3).map((change, index) => (
+              {(showAllRawRows ? deletedRows : deletedRows.slice(0, 3)).map((change, index) => (
                 <details
                   key={`${change.table}:${change.id}:${index}`}
                   className="rounded-md bg-[var(--background)]/80 p-2"
@@ -324,12 +327,14 @@ function DatabaseWorkspaceApprovalCard({
                   </pre>
                 </details>
               ))}
-              {deletedRows.length > 3 && (
-                <p className="text-[0.625rem] text-[var(--muted-foreground)]">
-                  {deletedRows.length - 3} {localizeUi("ui.chat.databaseworkspaceapprovalcard.moreDelete")}
-                  {deletedRows.length - 3 === 1 ? "" : localizeUi("ui.noodle.stageprofileview.s")}{" "}
-                  {localizeUi("ui.chat.databaseworkspaceapprovalcard.hiddenInThisPreview")}
-                </p>
+              {!showAllRawRows && deletedRows.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllRawRows(true)}
+                  className="text-[0.625rem] text-[var(--muted-foreground)] underline-offset-2 hover:underline"
+                >
+                  {localizeUi("ui.chat.databaseworkspaceapprovalcard.showAllRows", { total: deletedRows.length })}
+                </button>
               )}
             </div>
           </div>
@@ -344,7 +349,7 @@ function DatabaseWorkspaceApprovalCard({
               {localizeUi("ui.chat.databaseworkspaceapprovalcard.keepSavesThemToYourLibraryRestoreRemovesEverything")}
             </p>
             <div className="mt-2 space-y-2">
-              {insertedRows.slice(0, 3).map((change, index) => (
+              {(showAllRawRows ? insertedRows : insertedRows.slice(0, 3)).map((change, index) => (
                 <details
                   key={`${change.table}:${change.id}:${index}`}
                   className="rounded-md bg-[var(--background)]/80 p-2"
@@ -357,10 +362,14 @@ function DatabaseWorkspaceApprovalCard({
                   </pre>
                 </details>
               ))}
-              {insertedRows.length > 3 && (
-                <p className="text-[0.625rem] text-[var(--muted-foreground)]">
-                  {localizeUi("ui.chat.databaseworkspaceapprovalcard.moreNewItemsAreHiddenInThisPreview")}
-                </p>
+              {!showAllRawRows && insertedRows.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllRawRows(true)}
+                  className="text-[0.625rem] text-[var(--muted-foreground)] underline-offset-2 hover:underline"
+                >
+                  {localizeUi("ui.chat.databaseworkspaceapprovalcard.showAllRows", { total: insertedRows.length })}
+                </button>
               )}
             </div>
           </div>
