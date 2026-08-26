@@ -151,6 +151,7 @@ import {
   resolvePromptLastGenerationType,
   resolvePromptMessageMacros,
   scopePromptMacroContextToCharacter,
+  setLorebookEntryCounts,
   type AssemblerInput,
 } from "../services/prompt/index.js";
 import { wrapContent } from "../services/prompt/format-engine.js";
@@ -234,6 +235,7 @@ import {
 import {
   finalizeCapabilityAgentResults,
   prepareCapabilityAgentContexts,
+  shouldDeferCapabilityAgentResult,
 } from "../services/capability-packages/capability-agent-runtime.service.js";
 import { newId } from "../utils/id-generator.js";
 import {
@@ -2220,6 +2222,11 @@ export async function generateRoutes(app: FastifyInstance) {
           lastGenerationType: promptLastGenerationType,
           idleDuration: promptIdleDuration,
           timeZone: promptTimeZone,
+          macroSources: [
+            activeChatSummary ?? "",
+            ...currentInputMessages().map((message) => message.content),
+            ...pipelineConfiguredPromptAgents.map((agent) => JSON.stringify(agent.settings)),
+          ],
         });
         const conversationMacroFieldsByCharacterId = new Map<string, NonNullable<MacroContext["convoFields"]>>();
         const historyMacroProfilesById = (await resolveCharacterMacroData(app.db, allCharacterIds)).profilesById;
@@ -2239,12 +2246,17 @@ export async function generateRoutes(app: FastifyInstance) {
         };
         const resolvePromptMacrosWithoutVariableWrites = (value: string) =>
           resolveMacrosForPreview(value, promptMacroContext, { trimResult: false });
-        const resolvePromptMacrosForLorebook = (value: string) =>
-          resolveMacrosWithVariableSnapshot(
+        const resolvePromptMacrosForLorebook = (
+          value: string,
+          lorebookEntryCounts?: Readonly<Record<string, number>>,
+        ) => {
+          setLorebookEntryCounts(promptMacroContext, lorebookEntryCounts);
+          return resolveMacrosWithVariableSnapshot(
             value,
             promptMacroContext,
             deferCharacterMacros ? { deferCharacterMacros: "names" } : undefined,
           );
+        };
         let promptRegexScripts: Awaited<ReturnType<typeof regexScriptsStore.list>> | null = null;
         const getPromptRegexScripts = async () => {
           promptRegexScripts ??= await regexScriptsStore.list();
@@ -4768,6 +4780,7 @@ export async function generateRoutes(app: FastifyInstance) {
         let deferParallelAgentEvents = false;
         let parallelAgentStartPending = false;
         const sendAgentEventAfterMainStream = (result: AgentResult, options?: { finalized?: boolean }) => {
+          if (shouldDeferCapabilityAgentResult(result.agentType, options?.finalized)) return;
           if (deferParallelAgentEvents) {
             deferredParallelAgentEvents.push({ result, options });
             return;
@@ -4782,7 +4795,7 @@ export async function generateRoutes(app: FastifyInstance) {
           if (deferredParallelAgentEvents.length === 0) return;
           const events = deferredParallelAgentEvents.splice(0);
           for (const event of events) {
-            sendAgentEvent(event.result, event.options);
+            sendAgentEventAfterMainStream(event.result, event.options);
           }
         };
 
@@ -8391,7 +8404,9 @@ export async function generateRoutes(app: FastifyInstance) {
                   retryCtx,
                 );
                 const finalizedRetry = finalizedRetryResults[0] ?? retried;
-                sendAgentEvent(finalizedRetry, { finalized: finalizedRetry.agentType === "spotify" });
+                sendAgentEventAfterMainStream(finalizedRetry, {
+                  finalized: finalizedRetry.agentType === "spotify",
+                });
                 retryResults.push(finalizedRetry);
               } catch {
                 retryResults.push(failed);
@@ -8426,6 +8441,11 @@ export async function generateRoutes(app: FastifyInstance) {
             resolvedAgents,
             preparedCapabilityPostContext ?? postAgentContext,
           );
+          for (const result of postResults) {
+            if (shouldDeferCapabilityAgentResult(result.agentType)) {
+              sendAgentEvent(result, { finalized: true });
+            }
+          }
 
           // Finalize expression results before streaming/persisting them so
           // required persona/character entries are visible immediately.

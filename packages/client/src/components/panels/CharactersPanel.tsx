@@ -1274,7 +1274,7 @@ export function CharactersPanel() {
                               </span>
                             ))}
                             {memberTags.length > 3 && (
-                              <span className="rounded-full bg-[var(--secondary)] px-1.5 py-px text-[0.5rem] text-[var(--muted-foreground)]">
+                              <span className="mari-chrome-tag bg-[var(--secondary)] px-1.5 py-px text-[0.5rem] text-[var(--muted-foreground)]">
                                 +{memberTags.length - 3}
                               </span>
                             )}
@@ -1607,7 +1607,7 @@ export function CharactersPanel() {
                       </span>
                     ))}
                     {charTags.length > 3 && (
-                      <span className="rounded-full bg-[var(--secondary)] px-1.5 py-px text-[0.5rem] text-[var(--muted-foreground)]">
+                      <span className="mari-chrome-tag bg-[var(--secondary)] px-1.5 py-px text-[0.5rem] text-[var(--muted-foreground)]">
                         +{charTags.length - 3}
                       </span>
                     )}

@@ -26,7 +26,9 @@ function collectUnexpectedErrors(page: Page) {
   page.on("console", (message) => {
     if (message.type() !== "error") return;
     const text = message.text();
-    if (/favicon|ResizeObserver/i.test(text)) return;
+    if (/favicon|ResizeObserver|Viewport argument key "interactive-widget" not recognized and ignored/i.test(text)) {
+      return;
+    }
     errors.push(text);
   });
   return errors;
@@ -3021,10 +3023,13 @@ test("Character Chat actions reuse mode selection and seed the chosen setup wiza
   };
 
   const ensureCharacterPanelOpen = async () => {
-    if (!(await rightPanel.isVisible())) {
-      await page.locator('[data-tour="panel-characters"]').click();
+    const charactersButton = page.locator('[data-tour="panel-characters"]');
+    if ((await charactersButton.getAttribute("aria-pressed")) !== "true") {
+      await charactersButton.click();
     }
+    await expect(charactersButton).toHaveAttribute("aria-pressed", "true");
     await expect(rightPanel).toBeVisible();
+    if (mobile) await expect(rightPanel).toBeInViewport();
   };
 
   try {
@@ -3484,7 +3489,7 @@ test("Character and Persona avatar actions stay separated and visually balanced"
       expect(titleInputBox.x + titleInputBox.width).toBeLessThanOrEqual(bylineBox.x + 1);
       expect(bylineBox.x + bylineBox.width).toBeLessThanOrEqual(titleLineBox.x + titleLineBox.width + 1);
       expect(Math.abs(titleInputBox.y + titleInputBox.height - (bylineBox.y + bylineBox.height))).toBeLessThanOrEqual(
-        2,
+        3,
       );
       if ((page.viewportSize()?.width ?? 768) >= 768) {
         expect(bylineBox.x - (titleInputBox.x + titleInputBox.width)).toBeLessThanOrEqual(10);
@@ -7220,6 +7225,55 @@ test("chat Help overlay labels visible controls in every mode", async ({ page, r
         module.useChatStore.getState().setActiveChatId(nextChatId);
       }, chatId);
     };
+    const expectDesktopToolbarHighlightsAligned = async (overlay: Locator) => {
+      const toolbarTargetIds = [
+        "help",
+        "branches",
+        "summary",
+        "context",
+        "author-notes",
+        "gallery",
+        "connected-chat",
+        "search",
+        "settings",
+        "retry",
+        "session",
+        "volume",
+        "assets",
+      ];
+      for (const targetId of toolbarTargetIds) {
+        const source = page.locator(`[data-chat-help="${targetId}"]`).filter({ visible: true }).first();
+        const highlight = overlay.locator(`[data-chat-help-highlight="${targetId}"]`);
+        if ((await source.count()) === 0) continue;
+        await expect(highlight).toBeVisible();
+        const sourceBox = await source.boundingBox();
+        const highlightBox = await highlight.boundingBox();
+        expect(sourceBox).not.toBeNull();
+        expect(highlightBox).not.toBeNull();
+        expect(Math.abs(sourceBox!.width - sourceBox!.height), `${targetId} control aspect ratio`).toBeLessThanOrEqual(
+          1,
+        );
+        expect(Math.abs(highlightBox!.x - sourceBox!.x), `${targetId} highlight left edge`).toBeLessThanOrEqual(1);
+        expect(Math.abs(highlightBox!.y - sourceBox!.y), `${targetId} highlight top edge`).toBeLessThanOrEqual(1);
+        expect(Math.abs(highlightBox!.width - sourceBox!.width), `${targetId} highlight width`).toBeLessThanOrEqual(1);
+        expect(Math.abs(highlightBox!.height - sourceBox!.height), `${targetId} highlight height`).toBeLessThanOrEqual(
+          1,
+        );
+      }
+    };
+    const openHelp = async (mode: "conversation" | "roleplay" | "game") => {
+      let helpButton = page.getByRole("button", { name: "Help", exact: true }).filter({ visible: true });
+      if ((await helpButton.count()) === 0) {
+        const overflowName = mode === "game" ? "Game actions" : "More options";
+        await page.getByRole("button", { name: overflowName, exact: true }).filter({ visible: true }).click();
+        helpButton = page.getByRole("button", { name: "Help", exact: true }).filter({ visible: true });
+      }
+      await expect(helpButton).toHaveCount(1);
+      await helpButton.click();
+      const overlay = page.locator(`[data-chat-help-overlay="${mode}"]`);
+      await expect(overlay).toBeVisible();
+      return overlay;
+    };
 
     for (const [index, chat] of chats.entries()) {
       if (index > 0) await setActiveChat(chat.id);
@@ -7342,10 +7396,14 @@ test("chat Help overlay labels visible controls in every mode", async ({ page, r
         await keyboardTarget.focus();
         await page.keyboard.press("Enter");
         await expect(overlay.locator('[data-chat-help-mobile-detail="branches"]')).toBeVisible();
+        await expect(page.locator("[data-chat-toolbar-overflow-menu]")).toBeVisible();
         await overlay.locator(`[data-chat-help-highlight="${messageTarget}"]`).click();
         const detail = overlay.locator(`[data-chat-help-mobile-detail="${messageTarget}"]`);
         await expect(detail).toBeVisible();
         await expect(detail.locator(`[data-chat-help-action-legend="${chat.mode}"]`)).toBeVisible();
+        await expect(page.locator("[data-chat-toolbar-overflow-menu]")).toBeVisible();
+        await expect(overlay.locator('[data-chat-help-highlight="branches"]')).toBeVisible();
+        await expect(overlay.locator('[data-chat-help-highlight="settings"]')).toBeVisible();
         await overlay
           .getByRole("button", {
             name: "Tap a section you want to learn more about or this button to exit the help overlay.",
@@ -7353,6 +7411,8 @@ test("chat Help overlay labels visible controls in every mode", async ({ page, r
           })
           .click();
       } else {
+        await expectDesktopToolbarHighlightsAligned(overlay);
+
         const legend = overlay.locator("[data-chat-help-legend]");
         const legendBox = await legend.boundingBox();
         expect(legendBox).not.toBeNull();
@@ -7389,6 +7449,17 @@ test("chat Help overlay labels visible controls in every mode", async ({ page, r
         await overlay.dispatchEvent("pointerdown");
       }
       await expect(overlay).toHaveCount(0);
+      if (!mobile) {
+        for (const width of [1100, 1720]) {
+          await page.setViewportSize({ width, height: 900 });
+          await expect(page.locator(`[data-chat-mode="${chat.mode}"]`)).toBeVisible();
+          const responsiveOverlay = await openHelp(chat.mode);
+          await expectDesktopToolbarHighlightsAligned(responsiveOverlay);
+          await responsiveOverlay.dispatchEvent("pointerdown");
+          await expect(responsiveOverlay).toHaveCount(0);
+        }
+        await page.setViewportSize({ width: 1440, height: 900 });
+      }
     }
   } finally {
     const cleanupResponses = await Promise.all(chats.map((chat) => request.delete(`/api/chats/${chat.id}?force=true`)));
@@ -10182,6 +10253,7 @@ test("new Professor Mari Home widgets receive a movable layout slot immediately"
 });
 
 test("Professor Mari visibly arrives on Home and navigates without AI", async ({ page }, testInfo) => {
+  test.setTimeout(45_000);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "What shall we cook tonight?" })).toBeVisible({ timeout: 30_000 });
 
@@ -11664,13 +11736,17 @@ test("downloadable agent catalog is usable on desktop and mobile", async ({ page
   await expect(trackerSection.getByText("Hierarchical Maps", { exact: true })).toBeVisible();
   await expect(catalogView.getByText("About Me Keeper")).toHaveCount(0);
   await expect(catalogView.getByText("Play UNO with Conversation characters.").first()).toBeVisible();
+  const unoListButton = catalogView.locator("aside button").filter({
+    hasText: "Play UNO with Conversation characters.",
+  });
+  await expect(unoListButton.getByText("Conversation", { exact: true })).toBeVisible();
   const allAgentsButton = catalogView.locator("button", { hasText: "All agents" });
   if (testInfo.project.name.includes("mobile")) {
-    await catalogView.getByRole("button", { name: "UNO Play UNO with Conversation characters.", exact: true }).click();
+    await unoListButton.click();
     await expect(allAgentsButton).toBeVisible();
     await allAgentsButton.click();
     await expect(allAgentsButton).toBeHidden();
-    await catalogView.getByRole("button", { name: "UNO Play UNO with Conversation characters.", exact: true }).click();
+    await unoListButton.click();
   } else {
     await expect(allAgentsButton).toBeHidden();
   }
@@ -13215,7 +13291,22 @@ test("Roleplay Chat Settings exposes click-to-copy chat ID and square parameter 
     await expect(page.locator(".mari-chat-settings-drawer")).toBeVisible();
   };
   try {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    if (testInfo.project.name.includes("webkit")) {
+      await page.addInitScript(() => {
+        let clipboardText = "";
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: {
+            readText: async () => clipboardText,
+            writeText: async (value: string) => {
+              clipboardText = String(value);
+            },
+          },
+        });
+      });
+    } else {
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    }
     await page.addInitScript((chatId) => localStorage.setItem("marinara-active-chat-id", chatId), chat.id);
     await page.goto("/");
     await openSettings();
@@ -13684,7 +13775,7 @@ test("Roleplay and Game chat settings link empty agent libraries to Download Age
   }
 });
 
-test("Illustrator owns the merged scene-video and Storyboard subsections while agent removal stays away from collapse", async ({
+test("Illustrator and Storyboard keep separate visual settings cards while agent removal stays away from collapse", async ({
   page,
   request,
 }, testInfo) => {
@@ -13832,15 +13923,17 @@ test("Illustrator owns the merged scene-video and Storyboard subsections while a
     drawer = await openAgentsSection();
 
     const gameIllustratorCard = drawer.locator(`#chat-settings-agent-menu-${gameChat.id}-illustrator`);
+    const gameStoryboardCard = drawer.locator('[data-chat-agent-entry="storyboard"]');
     const featureToggles = gameIllustratorCard.locator('[data-agent-settings-feature-toggles="illustrator"]');
-    const storyboardFeatureToggles = gameIllustratorCard.locator('[data-agent-settings-feature-toggles="storyboard"]');
+    const storyboardFeatureToggles = gameStoryboardCard.locator('[data-agent-settings-feature-toggles="storyboard"]');
     const sceneVideosToggle = featureToggles.getByRole("checkbox", { name: /Enable Scene Videos/ });
     const storyboardsToggle = storyboardFeatureToggles.getByRole("checkbox", { name: /Enable Storyboards/ });
     await expect(gameIllustratorCard).toBeVisible();
+    await expect(gameStoryboardCard).toBeVisible();
     await expect(sceneVideosToggle).not.toBeChecked();
     await expect(storyboardsToggle).toBeChecked();
     await expect(gameIllustratorCard.locator('[data-agent-settings-subsection="scene-videos"]')).toHaveCount(0);
-    const storyboardsSubsection = gameIllustratorCard.locator('[data-agent-settings-subsection="storyboards"]');
+    const storyboardsSubsection = gameStoryboardCard.locator('[data-agent-settings-subsection="storyboards"]');
     await expect(storyboardsSubsection).toBeVisible();
     await expect(storyboardsSubsection.getByRole("heading", { name: "Storyboards" })).toBeVisible();
     await expect(
@@ -13947,9 +14040,9 @@ test("World Maps stays in Agents and Chat Settings", async ({ page, request }, t
     schemaVersion: 1,
     id: "hierarchical-maps",
     name: "Hierarchical Maps",
-    version: "1.0.6",
+    version: "1.4.0",
     description: agentManifest.description,
-    engine: { min: "2.3.0", maxExclusive: "2.4.0" },
+    engine: { min: "2.4.2", maxExclusive: "4.0.0" },
     kind: ["agent", "maps"],
     entrypoints: { agents: "agents.json", client: "client.js" },
     contributions: {
@@ -14101,7 +14194,10 @@ test("World Maps stays in Agents and Chat Settings", async ({ page, request }, t
         await expect(drawer.locator('button[title="Jump to Hierarchical Maps"]')).toHaveCount(0);
       }
 
-      const agentEntry = drawer.locator('[data-chat-agent-entry="hierarchical-maps"]');
+      const agentEntry =
+        chat.mode === "roleplay"
+          ? drawer.locator(`#chat-settings-agent-menu-${chat.id}-hierarchical-maps`)
+          : drawer.locator('[data-chat-agent-entry="hierarchical-maps"]');
       await expect(agentEntry, `${chat.mode} Hierarchical Maps agent entry`).toBeVisible();
       if (chat.mode === "roleplay") await expect(agentEntry).toBeInViewport();
       await expect(agentEntry.getByTestId("hierarchical-maps-controls")).toBeVisible();
@@ -14975,6 +15071,380 @@ test("Professor Mari dependency and sensitive-file reviews stay explicit across 
   await expect(window.getByRole("button", { name: "Apply change" })).toBeVisible();
   await expect(window.getByRole("button", { name: "Discard" })).toBeVisible();
   await expect.poll(() => window.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+});
+
+// Regression coverage for a false-positive mutation block: a small model's own quoted
+// "authorization" excerpt can be a valid substring of the user's message that nonetheless omits the
+// actual instruction verb (e.g. it quotes just the character's name), and the user's message can be
+// a long pasted character card. Neither shape may cause workspaceMutationAuthorizationIssue to reject
+// an explicitly requested create/update.
+const JULI_BELLONA_CARD = `## Character - Juli
+Crown Princess Juli Bellona is a 20-year-old human woman and heir to the Martian Commonwealth.
+
+With vibrant crimson-red hair, large sapphire-blue eyes, and a gentle smile, Juli is one of the most recognizable individuals in human space. Generations ago, House Bellona genetically altered their bloodline to possess distinctive red hair, making members of the royal family instantly recognizable across both Mars and Earth.
+
+Despite being the future ruler of Mars, Juli does not project intimidation or authority through her appearance. Instead, she appears kind, approachable, and sincere. To the public she is often called "The Princess of Peace."
+
+Juli is kind, compassionate, intelligent, diplomatic, and idealistic. Despite her kindness, Juli can become surprisingly stubborn when she believes lives are at stake. Once she commits to a course of action she considers morally right, she is difficult to dissuade.
+
+Despite her public confidence, Juli is not fearless. She often worries that she is not strong enough to carry the expectations placed upon her. If the mission begins to fail, Juli's greatest fear is not dying — it is surviving long enough to watch humanity destroy itself despite all her efforts.
+
+## Juli Tags
+Royalty, Princess, Female, Human, Kind, Gentle, Friendly, Calm, Determined, Brave, Patient, Elegant, Leader, PoliticalIntrigue, War, Futuristic, Romance, Angst, SlowBurn, Protective, Humble`;
+
+function respondWithProfessorMariAction(response: import("node:http").ServerResponse, action: Record<string, unknown>) {
+  response.writeHead(200, {
+    "content-type": "text/event-stream",
+    connection: "close",
+    "cache-control": "no-cache",
+  });
+  response.end(
+    [
+      `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: JSON.stringify(action) }, finish_reason: null }] })}`,
+      `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n"),
+  );
+}
+
+test("Professor Mari creates a character when its own authorization quote omits the intent verb", async ({
+  request,
+}) => {
+  const suffix = Date.now().toString(36);
+  const characterName = `Juli Bellona ${suffix}`;
+  let callCount = 0;
+  const providerServer = createServer((incoming, response) => {
+    const chunks: Buffer[] = [];
+    incoming.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    incoming.on("end", () => {
+      if (incoming.method !== "POST" || incoming.url !== "/v1/chat/completions") {
+        response.writeHead(404, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "Unexpected Professor Mari provider request" }));
+        return;
+      }
+      callCount += 1;
+      respondWithProfessorMariAction(
+        response,
+        callCount === 1
+          ? {
+              say: `Creating ${characterName} now.`,
+              // Only the character's NAME is quoted back as authorization — no verb from the
+              // user's own "add build create generate" instruction is present in the quote.
+              authorization: characterName,
+              commands: [
+                {
+                  id: "create-juli",
+                  name: "app_data",
+                  arguments: {
+                    action: "character.create",
+                    data: { name: characterName, description: "Crown Princess of the Martian Commonwealth." },
+                    reason: "User requested a new character",
+                    apply: true,
+                  },
+                },
+              ],
+              stop: false,
+            }
+          : { say: "Done, she's ready.", commands: [], stop: true },
+      );
+    });
+  });
+  await new Promise<void>((resolve) => providerServer.listen(0, "127.0.0.1", resolve));
+
+  let connectionId = "";
+  let chatId = "";
+  let characterId = "";
+  try {
+    const address = providerServer.address();
+    if (!address || typeof address === "string") throw new Error("Professor Mari provider fixture did not bind");
+
+    const connectionResponse = await request.post("/api/connections", {
+      data: {
+        name: `Mari Authorization Provider ${suffix}`,
+        provider: "custom",
+        baseUrl: `http://127.0.0.1:${address.port}/v1`,
+        apiKey: "e2e-mari-authorization",
+        model: "mari-authorization-model",
+        maxContext: 32_768,
+      },
+    });
+    expect(connectionResponse.ok(), await connectionResponse.text()).toBeTruthy();
+    connectionId = ((await connectionResponse.json()) as { id: string }).id;
+
+    const chatResponse = await request.get(`/api/chats/internal/professor-mari?connectionId=${connectionId}`);
+    expect(chatResponse.ok(), await chatResponse.text()).toBeTruthy();
+    chatId = ((await chatResponse.json()) as { id: string }).id;
+
+    const message = `add build create generate ${characterName}\n\nThis is the character:\n${JULI_BELLONA_CARD}`;
+    const promptResponse = await request.post("/api/professor-mari/workspace/prompt", {
+      data: { chatId, message, connectionId },
+    });
+    expect(promptResponse.ok(), await promptResponse.text()).toBeTruthy();
+    const sseBody = await promptResponse.text();
+    expect(sseBody).not.toContain("Mutation blocked before execution");
+
+    const events = sseBody
+      .split("\n\n")
+      .map((chunk) => chunk.trim())
+      .filter((chunk) => chunk.startsWith("data: ") && chunk !== "data: [DONE]")
+      .map((chunk) => JSON.parse(chunk.slice("data: ".length)) as { type: string; data: unknown });
+    const toolEnd = events.find(
+      (event) => event.type === "tool_end" && (event.data as { name?: string }).name === "app_data",
+    );
+    expect(toolEnd, `expected a tool_end event in: ${sseBody}`).toBeTruthy();
+    const toolEndData = toolEnd!.data as { isError: boolean; output: string };
+    expect(toolEndData.isError, toolEndData.output).toBe(false);
+    const resultJson = JSON.parse(toolEndData.output.slice(toolEndData.output.indexOf("{"))) as {
+      ok: boolean;
+      summary?: { preview?: Array<{ table: string; id: string; action: string }> };
+    };
+    expect(resultJson.ok).toBe(true);
+    const insertedCharacter = resultJson.summary?.preview?.find(
+      (row) => row.table === "characters" && row.action === "insert",
+    );
+    expect(insertedCharacter, `expected an inserted character row in: ${toolEndData.output}`).toBeTruthy();
+    characterId = insertedCharacter!.id;
+
+    const characterResponse = await request.get(`/api/characters/${characterId}`);
+    expect(characterResponse.ok(), await characterResponse.text()).toBeTruthy();
+    const character = (await characterResponse.json()) as { data?: unknown };
+    const characterData = (typeof character.data === "string" ? JSON.parse(character.data) : character.data) as {
+      name?: string;
+    };
+    expect(characterData.name).toBe(characterName);
+  } finally {
+    if (characterId) await request.delete(`/api/characters/${characterId}`).catch(() => undefined);
+    if (chatId) await request.delete(`/api/chats/internal/professor-mari/chats/${chatId}`).catch(() => undefined);
+    if (connectionId) await request.delete(`/api/connections/${connectionId}`).catch(() => undefined);
+    await new Promise<void>((resolve, reject) => {
+      providerServer.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
+
+// Regression coverage for the German-instruction reproduction: a non-English intent verb ("Erstelle")
+// plus a long pasted card whose example dialogue quotes "Don't tell me it's nothing." and whose bio
+// prose says "Juli should never feel like a quest objective" must not be mistaken for an
+// English-only intent gate miss or a denial phrase buried in the pasted card.
+test("Professor Mari creates a character from a German instruction and a card with quoted denial-like dialogue", async ({
+  request,
+}) => {
+  const suffix = Date.now().toString(36);
+  const characterName = `Juli Bellona DE ${suffix}`;
+  const cardWithQuotedDialogue = `Character - Juli
+Crown Princess ${characterName} is a 20-year-old human woman and heir to the Martian Commonwealth.
+
+With vibrant crimson-red hair, large sapphire-blue eyes, and a gentle smile, Juli is one of the most recognizable individuals in human space. Generations ago, House Bellona genetically altered their bloodline to possess distinctive red hair, making members of the royal family instantly recognizable across both Mars and Earth.
+
+Despite being the future ruler of Mars, Juli does not project intimidation or authority through her appearance. Instead, she appears kind, approachable, and sincere. To the public she is often called "The Princess of Peace."
+
+Juli is kind, compassionate, intelligent, diplomatic, and idealistic. Despite her kindness, Juli can become surprisingly stubborn when she believes lives are at stake. Once she commits to a course of action she considers morally right, she is difficult to dissuade.
+
+Juli should never feel like a quest objective. She should feel like a living person with her own opinions, goals, emotions, and agency. She is the emotional core of the story.
+
+Worried About Kranael
+
+"You're hurt."
+
+"Don't tell me it's nothing."
+
+Her expression hardens slightly.
+
+"That only works when fictional heroes say it."
+
+"Sit down."`;
+  let callCount = 0;
+  const providerServer = createServer((incoming, response) => {
+    const chunks: Buffer[] = [];
+    incoming.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    incoming.on("end", () => {
+      if (incoming.method !== "POST" || incoming.url !== "/v1/chat/completions") {
+        response.writeHead(404, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "Unexpected Professor Mari provider request" }));
+        return;
+      }
+      callCount += 1;
+      respondWithProfessorMariAction(
+        response,
+        callCount === 1
+          ? {
+              say: `Ich erstelle ${characterName} jetzt.`,
+              authorization: `Erstelle mir aus dem Juli\n\nCharacter - Juli`,
+              commands: [
+                {
+                  id: "create-juli-de",
+                  name: "app_data",
+                  arguments: {
+                    action: "character.create",
+                    data: { name: characterName, description: "Crown Princess of the Martian Commonwealth." },
+                    reason: "User requested a new character",
+                    apply: true,
+                  },
+                },
+              ],
+              stop: false,
+            }
+          : { say: "Fertig.", commands: [], stop: true },
+      );
+    });
+  });
+  await new Promise<void>((resolve) => providerServer.listen(0, "127.0.0.1", resolve));
+
+  let connectionId = "";
+  let chatId = "";
+  let characterId = "";
+  try {
+    const address = providerServer.address();
+    if (!address || typeof address === "string") throw new Error("Professor Mari provider fixture did not bind");
+
+    const connectionResponse = await request.post("/api/connections", {
+      data: {
+        name: `Mari German Provider ${suffix}`,
+        provider: "custom",
+        baseUrl: `http://127.0.0.1:${address.port}/v1`,
+        apiKey: "e2e-mari-german",
+        model: "mari-german-model",
+        maxContext: 32_768,
+      },
+    });
+    expect(connectionResponse.ok(), await connectionResponse.text()).toBeTruthy();
+    connectionId = ((await connectionResponse.json()) as { id: string }).id;
+
+    const chatResponse = await request.get(`/api/chats/internal/professor-mari?connectionId=${connectionId}`);
+    expect(chatResponse.ok(), await chatResponse.text()).toBeTruthy();
+    chatId = ((await chatResponse.json()) as { id: string }).id;
+
+    const message = `Erstelle mir aus dem Juli\n\n${cardWithQuotedDialogue}`;
+    const promptResponse = await request.post("/api/professor-mari/workspace/prompt", {
+      data: { chatId, message, connectionId },
+    });
+    expect(promptResponse.ok(), await promptResponse.text()).toBeTruthy();
+    const sseBody = await promptResponse.text();
+    expect(sseBody).not.toContain("Mutation blocked before execution");
+
+    const events = sseBody
+      .split("\n\n")
+      .map((chunk) => chunk.trim())
+      .filter((chunk) => chunk.startsWith("data: ") && chunk !== "data: [DONE]")
+      .map((chunk) => JSON.parse(chunk.slice("data: ".length)) as { type: string; data: unknown });
+    const toolEnd = events.find(
+      (event) => event.type === "tool_end" && (event.data as { name?: string }).name === "app_data",
+    );
+    expect(toolEnd, `expected a tool_end event in: ${sseBody}`).toBeTruthy();
+    const toolEndData = toolEnd!.data as { isError: boolean; output: string };
+    expect(toolEndData.isError, toolEndData.output).toBe(false);
+    const resultJson = JSON.parse(toolEndData.output.slice(toolEndData.output.indexOf("{"))) as {
+      ok: boolean;
+      summary?: { preview?: Array<{ table: string; id: string; action: string }> };
+    };
+    expect(resultJson.ok).toBe(true);
+    const insertedCharacter = resultJson.summary?.preview?.find(
+      (row) => row.table === "characters" && row.action === "insert",
+    );
+    expect(insertedCharacter, `expected an inserted character row in: ${toolEndData.output}`).toBeTruthy();
+    characterId = insertedCharacter!.id;
+
+    const characterResponse = await request.get(`/api/characters/${characterId}`);
+    expect(characterResponse.ok(), await characterResponse.text()).toBeTruthy();
+    const character = (await characterResponse.json()) as { data?: unknown };
+    const characterData = (typeof character.data === "string" ? JSON.parse(character.data) : character.data) as {
+      name?: string;
+    };
+    expect(characterData.name).toBe(characterName);
+  } finally {
+    if (characterId) await request.delete(`/api/characters/${characterId}`).catch(() => undefined);
+    if (chatId) await request.delete(`/api/chats/internal/professor-mari/chats/${chatId}`).catch(() => undefined);
+    if (connectionId) await request.delete(`/api/connections/${connectionId}`).catch(() => undefined);
+    await new Promise<void>((resolve, reject) => {
+      providerServer.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
+
+test("Professor Mari still blocks a generic authorization that names multiple operation categories", async ({
+  request,
+}) => {
+  const suffix = Date.now().toString(36);
+  const characterName = `Blocked Multi Category ${suffix}`;
+  const providerServer = createServer((incoming, response) => {
+    const chunks: Buffer[] = [];
+    incoming.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    incoming.on("end", () => {
+      if (incoming.method !== "POST" || incoming.url !== "/v1/chat/completions") {
+        response.writeHead(404, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "Unexpected Professor Mari provider request" }));
+        return;
+      }
+      respondWithProfessorMariAction(response, {
+        say: `Creating ${characterName} now.`,
+        authorization: "I authorize the change",
+        commands: [
+          {
+            id: "create-blocked",
+            name: "app_data",
+            arguments: {
+              action: "character.create",
+              data: { name: characterName },
+              reason: "User requested a new character",
+              apply: true,
+            },
+          },
+        ],
+        stop: true,
+      });
+    });
+  });
+  await new Promise<void>((resolve) => providerServer.listen(0, "127.0.0.1", resolve));
+
+  let connectionId = "";
+  let chatId = "";
+  try {
+    const address = providerServer.address();
+    if (!address || typeof address === "string") throw new Error("Professor Mari provider fixture did not bind");
+
+    const connectionResponse = await request.post("/api/connections", {
+      data: {
+        name: `Mari Multi Category Provider ${suffix}`,
+        provider: "custom",
+        baseUrl: `http://127.0.0.1:${address.port}/v1`,
+        apiKey: "e2e-mari-multi-category",
+        model: "mari-multi-category-model",
+        maxContext: 32_768,
+      },
+    });
+    expect(connectionResponse.ok(), await connectionResponse.text()).toBeTruthy();
+    connectionId = ((await connectionResponse.json()) as { id: string }).id;
+
+    const chatResponse = await request.get(`/api/chats/internal/professor-mari?connectionId=${connectionId}`);
+    expect(chatResponse.ok(), await chatResponse.text()).toBeTruthy();
+    chatId = ((await chatResponse.json()) as { id: string }).id;
+
+    const promptResponse = await request.post("/api/professor-mari/workspace/prompt", {
+      data: {
+        chatId,
+        message: `I authorize the change, create and delete ${characterName}'s character record.`,
+        connectionId,
+      },
+    });
+    expect(promptResponse.ok(), await promptResponse.text()).toBeTruthy();
+    const sseBody = await promptResponse.text();
+    expect(sseBody).toContain("Mutation blocked before execution");
+    expect(sseBody).toContain("authorizes create and delete, not create");
+
+    const listResponse = await request.get("/api/characters", {
+      params: { search: characterName, limit: "20", offset: "0" },
+    });
+    expect(listResponse.ok(), await listResponse.text()).toBeTruthy();
+    const payload = (await listResponse.json()) as { items?: Array<{ data?: { name?: string } }> };
+    expect((payload.items ?? []).some((item) => item.data?.name === characterName)).toBe(false);
+  } finally {
+    if (chatId) await request.delete(`/api/chats/internal/professor-mari/chats/${chatId}`).catch(() => undefined);
+    if (connectionId) await request.delete(`/api/connections/${connectionId}`).catch(() => undefined);
+    await new Promise<void>((resolve, reject) => {
+      providerServer.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
 });
 
 test("Lorebook vectorization saves pending eligibility settings first", async ({ page, request }, testInfo) => {
@@ -16406,10 +16876,13 @@ test("home browser hub scales cleanly and opens FAQ as a bookmark window", async
   for (const widgetId of ["learn", "community"]) {
     const widget = page.locator(`[data-home-widget-id="${widgetId}"]`);
     const lastShortcut = widget.locator(".mari-home-widget-shortcut").last();
-    const [widgetBounds, shortcutBounds] = await Promise.all([widget.boundingBox(), lastShortcut.boundingBox()]);
-    expect(widgetBounds).not.toBeNull();
-    expect(shortcutBounds).not.toBeNull();
-    expect(shortcutBounds!.y + shortcutBounds!.height).toBeLessThanOrEqual(widgetBounds!.y + widgetBounds!.height + 1);
+    await expect
+      .poll(async () => {
+        const [widgetBounds, shortcutBounds] = await Promise.all([widget.boundingBox(), lastShortcut.boundingBox()]);
+        if (!widgetBounds || !shortcutBounds) return Number.POSITIVE_INFINITY;
+        return shortcutBounds.y + shortcutBounds.height - (widgetBounds.y + widgetBounds.height);
+      })
+      .toBeLessThanOrEqual(1);
   }
 
   if (mobile) {

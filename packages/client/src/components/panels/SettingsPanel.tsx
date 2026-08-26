@@ -6515,6 +6515,11 @@ function AdvancedSettings() {
     commit: string | null;
     build: string;
     serverOs: string;
+    memory: {
+      heapUsedMiB: number;
+      heapLimitMiB: number;
+      rssMiB: number;
+    };
   }>({
     queryKey: ["health"],
     queryFn: () => api.get("/health"),
@@ -6533,6 +6538,7 @@ function AdvancedSettings() {
         build: health.data?.build ?? APP_VERSION,
         commit: health.data?.commit ?? null,
         serverOs: health.data?.serverOs ?? "Unavailable",
+        serverMemory: health.data?.memory,
         clientOs: resolveClientOs(navigator.userAgent, navigator.platform, navigator.maxTouchPoints),
         browser: navigator.userAgent,
         gpu: detectBrowserGpu(),

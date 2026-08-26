@@ -4,53 +4,21 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ## [Unreleased]
 
-- Professor Mari's work item now keeps the full answer in the transcript, shows completed steps in the visible progress area, and keeps raw tool arguments behind an explicit technical-details disclosure. Empty Details now has a quiet Mari-themed inspector state with workspace connection and context counts.
-- The omnibar settings menu now lives in the footer, while Professor Mari keeps her workspace settings in the Mari header. Restart is visible in the Mari workspace, and desktop Mari opens with Details available beside the conversation.
-- The omnibar now prioritizes named resources over transcript matches, keeps expanded previews visible, restores useful guidance when no suggestions are available, and improves mobile space, horizontal scrolling, keyboard hints, accessibility announcements, and Professor Mari workspace error handling.
-- Omnibar Mari's empty transcript now has a styled welcome surface with starter actions. One-shot context appears as a separate attachment row, not inside the text input controls, and the obsolete trust toolbar is gone.
-- Pressing Enter when Mari is the only omnibar result now starts the request immediately instead of only placing the text in her composer. The empty Mari takeover has richer workspace chrome, and active work now summarizes the current task and completed steps.
-- The Home Professor tab now opens the canonical omnibar Professor Mari workspace instead of mounting a second Mari chat surface. Omnibar workspace destinations now live in a full row below Mari's identity header.
-- Omnibar Professor Mari now keeps short questions as separate transcript turns, places only their answer chips above the composer, and shows connection, context, sandbox, and review chrome in the omnibar surface.
-- Professor Mari's desktop workspace now has a Details panel for focused resources, completed result previews, and pending review diffs. The same panel overlays the transcript on smaller screens.
-- Professor Mari's completed work box now remains in the transcript with its result details, her current question and suggestions share one styled composer dock, header menus stay above workspace content, and the header and empty-omnibar portraits use the same animated upper-body crop.
-- The empty omnibar now keeps search primary with one quiet hint and one Ask Mari action. The long icon-flight intro, ambient orbit, floating mascot, and duplicate empty-state panels were removed. Ask Mari's workspace now moves secondary destinations into overflow until wide desktop space is available.
-- The empty omnibar now keeps the search icon and changes Mari's greeting to match the open chat mode.
-- Professor Mari's workspace now prioritizes one live state at a time, presents completed characters and lorebooks through the shared omnibar preview, keeps approvals in one aligned transcript surface, and gives active work a larger animated stage with live reasoning and task context.
-- Professor Mari now draws from a discoverable collection of animated work scenes, including image inspection, connected-note reasoning, telescope scouting, sailing, puzzle solving, crystal spelunking, origami, constellation mapping, clockwork repair, typewriting, tiny rocket launches, and rare playful moments, while keeping one stable in-card mascot and honoring reduced-motion preferences.
-- Professor Mari's live work card now flows between narration, mascot activities, and task steps, confirms completed work, and unfolds technical evidence with restrained motion that follows reduced-motion preferences.
-- Professor Mari now records workspace tool durations on the server, so completed work-card steps keep the correct time after a reconnect or reload.
-- Professor Mari's workspace now turns the request into quiet character context, keeps Chats, Skills, Memories, and Context visible in the desktop header while mobile collapses them into the overflow menu, and presents live work in a focused task card with Mari on the right, a full resource row, progress, and technical actions.
-- Redesigned Professor Mari's live activity as one focused work card with elapsed time, progress, resource context, collapsible tool details, and an animated in-card mascot on desktop and mobile.
-- Professor Mari's suggestions now appear as answers to her question in the conversation, while the composer stays focused on attachments and writing.
-- Pending Professor Mari changes now present their real Easy diff and Keep or Restore decision directly in the conversation instead of navigating to a separate side view.
-- Completed Professor Mari character and lorebook work now reuses the omnibar's resource identity system, including portraits and descriptive context, before flowing into review.
-- Professor Mari's full-screen mobile workspace now traps and restores focus, announces itself as a dialog, closes predictably with Escape, and honors reduced-motion preferences.
-- Finished Professor Mari runs now keep technical reasoning collapsed by default, and obsolete workspace presentation styles were removed.
-- The omnibar introduction now presents search as its primary purpose, with scopes, controls, and Professor Mari as related tools. Opening Professor Mari from an empty omnibar also moves the full workspace up so its content stays available.
-
-### Changed
-
-- Omnibar result rows no longer print a second line when there is nothing to say. A row used to fall back to a bare fact value ("Eliza · 1"), to the name of the group it already sits under ("Settings · Settings"), or to a raw JSON blob kept in an imported character's description; those rows are now single-line.
-- Professor Mari's work card now reports how long each step took instead of the raw tool argument, which stays in the collapsed technical-actions list. Her review card names the entity and fields being changed and explains why in her own words, and her portrait appears in the omnibar workspace header.
-- Omnibar settings results are now derived from a single settings registry instead of a second hand-written list. Every searchable setting is reachable from the omnibar (previously 22 of 99), a setting can be deep-linked to its section as well as its tab, and three rows that pointed at controls which no longer existed — which opened the tab and silently failed to scroll — are fixed and cannot recur.
-
-### Removed
-
-- The omnibar's idle deck: the "Find" heading, its instruction line, and the category count chips, along with the idle result list that opened onto recently-clicked menu items such as Help and Settings rather than anything you had worked on. An empty omnibar is now the search bar and a greeting from Professor Mari, and the panel shrinks to fit instead of framing an empty box. Pending decisions, the continue row and the rows describing what you are currently looking at are unchanged.
-- The omnibar's Browse grid, along with its compare and batch-attach modes. Typing a category prefix (`char:`, `preset:`) lists that whole kind as ordinary results with arrow keys, previews and Enter, which the grid did not support. The library screens remain the place to browse by artwork.
-- The omnibar's game-command shortcut, which matched bare keywords such as "map", "scene" or "fight" and diverted ordinary searches in a game chat to Professor Mari. Asking her directly still works.
-- Dead omnibar session state: a return stack, a persisted Professor Mari destination and detail id that nothing ever read, and 71 unused translation strings left behind by the Quick pane, the detail pane and the surfaces removed above.
-- Omnibar chat extraction for characters, locations and campaigns, which created nothing and only forwarded the request; extraction into a lorebook is unchanged. Also removed: the scope-hint result row and the verb rows whose only action was typing more text into the search box.
+- Professor Mari's omnibar workspace now keeps completed work in the transcript, shows step progress and result details, and keeps technical tool arguments behind a disclosure.
+- The omnibar now prioritizes named resources, improves previews and empty-state guidance, and keeps settings, keyboard navigation, accessibility announcements, and mobile layout aligned.
+- Professor Mari now uses one integrated workspace across Home, FAQ, and handoff flows, with shared resource previews, review decisions, contextual suggestions, animated work scenes, and reduced-motion support.
 
 ### Added
 
-- Professor Mari now keeps one integrated animated presence in the workspace header while a single live transcript row reports her current work, replacing repeated mascot artwork and the separate working card; the header foregrounds her current subject and moves Chats, Skills, Memories, Context, and Restart into one panel menu; tool activity reads as a compact running log with completed runs folded away; decisions use the companion work panel beside her explanation on desktop and as a focused sheet on mobile, show the edited character or resource directly, and keep actions reachable while reviewing; suggestions now follow a question from Mari instead of appearing as detached chrome.
-- Omnibar previews and Professor Mari reviews now share a clearer resource language: artwork and identity lead, metadata reads as a compact inspector instead of nested cards, and detailed changes progressively expand only when needed.
-- Professor Mari is now a state of the omnibar rather than a separate destination: Home, the FAQ, and error hand-offs open the same workspace, Chat, Chats, Skills, Memories, and Context are labelled single-column destinations that keep search, selection, scroll, drafts, and the composer intact, and her pixel art reacts to what she is actually doing (with static poses under reduced motion).
-- Quick assistance in the omnibar answers bounded questions and proposes single-field edits with exactly one model call, labelled `Quick · 1 model call` before it runs, with an optional cheaper connection that visibly falls back to Mari's usual connection. Proposed edits expire, are rejected when the field changed underneath them, and are applied through the existing reversible Keep/Restore review without a second model call.
-- Professor Mari's custom skills are now injected as a name-and-summary index instead of in full on every turn, so a long skill no longer costs its whole body each request; short skills stay inline and Mari fetches a full skill only when it is relevant.
-- Character previews in the omnibar now foreground the character's opening message, show compact tag and relationship summaries, and prioritize contextual chat actions; Professor Mari also keeps a focused character visible in Context and labels replies that discuss them.
-- Lorebook previews in the omnibar now lead with scope, contents, and current-chat state instead of generation limits, with reusable lorebook context markers in Professor Mari.
+### Fixed
+
+## [2.4.4]
+
+### Added
+
+- The built-in Local Model can now be the default connection for agents - selectable in the Connections panel's defaults section without a stored connection row - and the Agents panel gains a bulk action that points every agent (or resets every agent to the agents default) at any connection in one step (#5539).
+- The in-app What's New notice now presents the complete v2.4.4 release story with inline Help, Memory Nag, and Roleplay thinking media (#5528).
+- Hosted release validation now runs the complete Node regression suite and covers desktop Chromium, Android-sized Chromium, and iPhone-sized WebKit independently on pull requests and staging pushes (#5518, #5520).
 - Download Agents can now filter the existing Writer, Tracker, and Misc sections by Conversation, Roleplay, or Game support, and a Discovery Desk recommendation opens its exact Agent instead of the catalog's first entry (#5494, #5500).
 - Game HUD widgets now expose their unique model-facing ID for editing after creation (#5477).
 - Professor Mari's structured `app_data` helper can now list, search, inspect, and read bounded message ranges from chats without falling back to raw database commands (#5476).
@@ -87,12 +55,25 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
-- Professor Mari's omnibar now keeps one stable portrait, header, status, and Stop control; preserves truthful connection and Context indicators; removes repeated speaker and Thinking labels; confines starter actions to empty chats; and pins guided answers and pending reviews above the composer without disturbing transcript order.
-- Omnibar and Professor Mari handoffs now validate capability sources and bounded session context, guided plans respect zero limits and unique fields, Quick edits reject oversized replacements, contextual shortcuts and dialogs avoid competing actions, and animated composer suggestions remain aligned while scrolling.
-- Professor Mari now preserves chat-open requests made while she is working, prevents overlapping Keep/Restore approval actions, omits incomplete machine-edit markup, continues without optional skills when their index cannot load, and renders lazily loaded preview facts even when a result has no eager preview body; unhandled navigation also keeps the omnibar and its query open, while Quick assistance preferences persist across restarts.
-- Omnibar idle results now reserve their intended four slots for searchable commands regardless of preceding setup and recent items, the Create Agent command uses the agent icon, and chat-search caches participate in normal chat invalidation.
-- Parked Professor Mari content no longer remains keyboard-focusable, Quick assistance announces only settled answers and completes cleanly when a stream omits its terminal event, and Mari's background-work heartbeat survives transient network failures.
-- Professor Mari open requests now expire and are consumed by the surface that handles them instead of unexpectedly firing later, stale secondary handoff resources no longer block an otherwise valid prompt, and expired Quick edit proposals are pruned on every Quick call.
+- Release validation no longer crosses the Noodle background-admission idle boundary when the regression runner advances between two live clock reads (#5545).
+- Chat Help now keeps the message-area highlight below visible toolbar controls and measures controls from the active chat surface (#5545).
+- Opening Professor Mari from Home no longer crashes Safari/WebKit while resolving inherited chat chrome colors (#5545).
+- Release browser validation now reopens the mobile Characters panel after a reload instead of mistaking its off-screen mounted shell for an open panel (#5543).
+- Agents that must return JSON no longer fail with "invalid JSON" on the built-in Local Model: sidecar responses are grammar-constrained to a JSON object, leading thinking blocks are stripped before parsing, and Gemma 4 string delimiters are normalized the same way the tool-call path already tolerates (#5537).
+- The Connections panel's Local Model card now expands and collapses from a header click in every state, so the tracker assignment action is no longer reachable only through the chevron once the model is downloaded (#5538).
+- Manual and tracker Agent reruns now prepare and validate downloadable capability Agent runtime context, so Memory Nag receives real vault candidates before choosing a memory (#5531).
+- Capability-package agents now publish post-processing results only after package validation, and package-defined built-ins can request a compact context instead of inheriting every lore source, so rejected or distracted tracker output cannot reach the browser as successful data (#5525).
+- Professor Mari no longer rejects an explicitly requested character/persona/lorebook create or update as unauthorized when her own quoted authorization excerpt is a valid but incomplete substring of the user's message (e.g. just the character's name) or when a long pasted document (like a character card) happens to contain the word "authorized" among ordinary narrative verbs.
+- Professor Mari no longer blocks German-language create/update requests ("Erstelle...", "Ändere...", "Aktualisiere...", etc.) as unauthorized, and no longer mistakes quoted example dialogue in a pasted character card (e.g. "Don't tell me it's nothing.") for the user explicitly denying the requested change.
+- Professor Mari no longer mistakes an ordinary narrative sentence deep inside a long pasted character card (e.g. "Juli should never feel like a quest objective") for the user denying the requested change; the denial check now only scans the leading and trailing edges of long pasted messages, where a real user instruction actually appears.
+- Download Agents mode tags now keep identical dimensions when selected, and the installed Agents sidebar reuses the same filters below New Folder for Conversation, Roleplay, and Game Agents (#5523).
+- Help overlays now align compact desktop highlights exactly with their toolbar controls at responsive widths and keep mobile toolbar controls visible while people inspect highlighted sections (#5521).
+- Fixed the open-issues regression lane crashing at import time because a directly loaded client utility used the browser-only `@/lib` path alias (#5516).
+- Official release workflows now reject tags that do not match the canonical app version, avoid retaining checkout write credentials, and run CodeQL for both staging and main-targeted pull requests (#5510).
+- Matched character, persona, and agent tags plus chat branch counts to the shared compact search-tag shape instead of capsule badges.
+- Unified Quest Board, Memory Nag, and Beholder surfaces, separators, and responsive typography with the rest of the Roleplay Tracker Panel.
+- Unified inactive Roleplay tracker toolbar icons at the shared muted chroma strength and removed the stray count punctuation from the mobile Characters heading.
+- Download Agents now shows each package's supported chat modes directly in the mobile catalog list, while mobile shell panels cap malformed browser safe-area values so Android Firefox cannot hide the bottom of the list behind a large empty inset (#5507).
 - Roleplay group chats now retain their response controls and generation behavior when only one character is enabled, while Sequential generation skips every disabled character (#5501, #5502).
 - Game narration now restores choices after rewinding or switching swipes, scopes saved narration progress to the active swipe, and restarts safely when a saved cursor exceeds the available segments (#5474).
 - The Roleplay active-summary and branch counters now share one themed badge treatment with the configured accent color (#5499).
@@ -105,7 +86,10 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Fixed the dev server and Playwright webServer failing to start on Windows with standalone pnpm installs: the pnpm runner now detects that `npm_execpath` points at a native `pnpm.exe` binary — which Node cannot execute — and falls back to invoking pnpm through `ComSpec` instead of crashing with `SyntaxError: Invalid or unexpected token` on the PE header.
 - Profile imports now keep only the local canonical Universal Preset protected; imported copies retain their content but remain editable and deletable (#5469).
 - Game creation now reports unreachable, refused, timed-out, and other GM provider failures with actionable messages instead of a bare internal-server error (#5466).
-- Termux now uses a 1 GB automatic Node.js heap ceiling while preserving explicit operator overrides, reducing Android memory pressure that could terminate the entire background session (#5470).
+- Termux now selects a bounded 1–1.5 GiB Node.js heap from the structured profile size and device RAM while preserving explicit operator overrides; health checks, copied support diagnostics, and logs expose heap pressure for Android background failures (#5470, #5506).
+- Automatic backup failures can no longer trigger a second unhandled rejection while recording their error state (#5512).
+- Prompt assembly only scans every lorebook entry count when a `lorebooksize` macro is actually present, reducing per-turn memory and GC pressure without changing macro behavior (#5513).
+- Personal server extensions receive a fresh heartbeat window after the host process resumes from a system-wide pause, preventing a delayed watchdog tick from killing a healthy sandbox (#5514).
 - Conversation autonomy and Game agent controls now use the shared toggle design; automatic-summary, Discord Mirror, Illustrator, Prompt Preset, and widget controls reuse canonical fields and actions; muted Game audio follows the configured accent; journal entries can be deleted after confirmation; and Stop Agents cancels every attached or detached agent run without flickering or aborting the main response (#5463).
 - Tracker Panel now keeps Inventory above Custom and uses the configured app accent for its frame and dice controls; Group Chat's Add Turn To Prompt setting now uses the shared toggle and muted off-state; branch counts use the compact rounded-corner tag shape instead of capsules; Conversation places Start Call beside the character or group name; and Markdown horizontal rules follow the surrounding message text color instead of the legacy border tint (#5462).
 - Character and Persona editors now switch to their compact section menu before constrained Windows layouts can crush toolbar buttons together, and the menu trigger matches neighboring action heights on desktop and mobile (#5460).
@@ -195,80 +179,6 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Added
 
-- The omnibar now has a suggestion menu with separate toggles for proactive context suggestions and explicit Professor Mari model assistance. In an active chat, requests such as "remove" can suggest safe resource actions, and open editor fields can offer a focused Mari edit handoff.
-
-- Professor Mari Work now uses the omnibar's native shell treatment, with a compact toolbar, shared transcript surface, and matching composer when Find transforms into Work.
-
-- Command Center Mari handoffs now preserve the typed source result identity through server validation for future completion routing.
-
-- The empty omnibar Find state now offers a Continue entry for active Professor Mari work and pending reviews.
-
-- Command Center Mari handoffs now include bounded active-chat and settings-location references when those targets are available.
-
-- Clear omnibar action requests now perform compatible active-chat assignments from the primary result, without requiring a detail view.
-
-- The omnibar's pending-review Continue entry now opens Professor Mari Work at the existing review area.
-
-- The omnibar now presents Find and Professor Mari Work as two connected states: Find opens first with current context, while explicit Mari actions expand the same shell into her full workspace with a fresh or carried draft and a clear return path.
-
-- Professor Mari now keeps workspace focus in a compact toolbar context control with quick removal and access to attached context details.
-
-- Added a mobile topbar button that opens the Marinara Command Center.
-
-- Command Center results can now continue with Professor Mari using the exact search request and a typed, removable resource focus, while returning to the prior result or browse context when Mari closes.
-
-- Command Center now finds resource names inside natural requests and ranks the open editor and active-chat resources higher without using an LLM.
-
-- Command Center now parses clear typed actions locally, ranks current workspace context with bounded state, keeps direct matches above Professor Mari, and avoids choosing between equal targets.
-
-- Professor Mari's Command Center focus now shows the carried request, restores focus to the source result on return, and closes the omnibar onto resources opened from completed workspace actions.
-
-- Professor Mari handoffs now keep the carried request, capability, selected resource, related resources, and available error metadata visible across Home, floating, editor, and omnibar entry points; returning from the omnibar restores its query and selected result.
-
-- Command Center now keeps current-chat context available when several editors are open, and Escape closes the embedded Mari pane without changing the floating assistant preference.
-
-- Command Center Browse can now select up to five resources and send a bounded, server-validated comparison request to Professor Mari.
-
-- Command Center search now finds common Settings controls and sections, with a description and direct navigation to the matching Settings location.
-
-- Reworked the empty Command Center into a focused command deck with contextual actions, recent commands, quick controls, category shortcuts, and a compact Professor Mari handoff.
-
-- Fixed Command Center hover previews so the desktop results list keeps a stable width when the preview changes.
-
-- Command Center details now open in a right-side inspector without resizing or moving the main search surface, and result rows keep a stable details slot.
-
-- Added reduced-motion-safe transitions for the omnibar backdrop, category filters, and result previews.
-
-- Added a reduced-motion-safe transition between Command Center search and the Professor Mari pane.
-
-- Removed the separate "Professor Mari navigation" result from Command Center search. The direct Ask Professor Mari entry remains available.
-
-- The Command Center now uses a connected spring transition when opening Professor Mari, moving the header identity and Mari pane together instead of swapping them abruptly.
-
-- Command Center inline controls now keep their labels aligned with toggles and multi-option choices, and the empty search header no longer refers to pinned actions.
-
-- The full Professor Mari agent now runs inside the omnibar as its own pane: opening Mari from the omnibar keeps the dialog, carries the typed draft and a removable context chip, unifies the header with Mari's identity, persists the conversation across pane switches, and returns to search on close. Opening a created or edited resource from Mari closes the omnibar onto the real editor. The Home and floating Mari surfaces are unchanged.
-- Redesigned the omnibar surface: a narrower rounded floating panel with a warm top gradient wash, an inviting empty-state greeting that also opens Professor Mari, result previews that appear only for rich results instead of a permanent side column, softer selection pills, and reduced-motion-safe entrance animation.
-- Professor Mari now has consistent composer and trust-strip treatment across Home, floating chat, and normal Mari chat, with accessible actions, selected connection and context status, pending approvals, enabled Skills and Memories, and localized retry recovery.
-- FAQ answers, Command Center selections, editor surfaces, and Recent Chats errors can now hand off an editable, grounded draft with typed, removable context without sending a model request; the server validates handoff payloads.
-- Professor Mari workspace results now show direct Open and Review actions for created or updated characters, personas, lorebooks, and presets, and refresh matching app data before opening it.
-- Professor Mari suggestion chips and guided plans now reject malformed or excessive output, stay scoped to the current Mari chat, clear stale plans on chat changes or interruption, and preserve typed draft text.
-- Omnibar search now includes practical FAQ answers and model-aware connection matches. FAQ results open the matching answer with its steps, while documentation results keep their in-context guide and match highlighting.
-
-### Fixed
-
-- Fixed a Command Center crash ("Maximum update depth exceeded") when a result preview showed an already-cached image, which happened on touch devices because tapping a result opens the preview.
-
-- Fixed a Command Center render loop when a restored detail result changed the result list, and normalized legacy Windows avatar paths to the app avatar endpoint.
-
-- Empty omnibar suggestions in an active chat now show the chat's attached context with canonical previews and stable keyboard ordering.
-- Improved Command Center keyboard control and safe active-chat actions, fixed stale Professor Mari work state, restored character avatar crops and accurate library counts, added keyboard access to character controls, corrected danger and light-theme colors, and improved dialog focus and Escape handling.
-- Fixed Command Center resource rows to use character card identity and to distinguish active-chat assignments from global persona and preset state.
-- Personal Extensions can now declare bounded command metadata that resolves only to an existing action or panel from the same approved extension revision.
-- Added a Marinara Command Center opened with `Cmd/Ctrl+K`, with grouped navigation, resource previews, documentation search, safe inline controls, extension commands, local pins and recency, exact Browse details, and an accessible full-screen mobile browse grid.
-- Command Center previews now show richer entity information, stable desktop sizing, category-specific safe actions, quiet media tints, delayed hover details, and a fixed Professor Mari header action that preserves the search handoff.
-- Command Center now keeps its search, category, browse, selection, and detail state across application exits.
-- Command Center resource previews can now add compatible characters, personas, lorebooks, presets, connections, and agents directly to the active chat.
 - Lorebook Update agents can now optionally assign an integer injection order when creating or updating entries. Omitting it keeps the existing/default order, and approval review preserves the value through editing and commit. When creating a custom agent, the prompt editor now previews the complete response shape for the selected result type, including optional fields (#5225).
 - Added NanoGPT as a Video Generation connection with live model discovery, text- and image-to-video requests, asynchronous status polling, connection tests, and Game/sprite generation support (#5218).
 - The Game Mode narration box can now be collapsed to a slim handle, so the scene art, map, or running Experience behind it is visible without leaving the game. The choice is a saved preference that persists across chats and sessions, and the readability scrim and stacked segment log fold away with it. The box reopens itself whenever your text input is on screen, so it can never leave you unable to take your turn; anything else it is holding — narration still to read, a generation that failed, a combat that could not start — raises an indicator on the handle instead, one click from reading it. Capability API 1.13 lets a game-surface Experience request a temporary collapse for a cutscene without touching your saved preference (#5209).
@@ -308,7 +218,6 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
-- Command Center result details now open when you hover over a desktop result, without a separate chevron button.
 - Professor Mari now honors an explicit direct workspace-edit request when a smaller model omits or paraphrases its separate authorization quote, while still rejecting denials, how-to requests, wrong entities, and mismatched operations (#5325).
 - Single-option preset variables now use the standard settings switch, keeping their Android touch target and proportions consistent with the rest of the app (#5326).
 - Game Mode rerolls now restart narration at the beginning of the newly saved swipe, generated Timeline and Library journal entries can be edited, and the scene analyzer can repeat a beat's sound effect from one to five total plays. Branching from an earlier log entry also restores inventory and generated widgets to that point (#5287, #5327).
@@ -375,31 +284,6 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Restored persona creation through Professor Mari by supplying the persona reference-image default expected by storage validation (#5033).
 - Kept supported placement settings when importing character-scoped SillyTavern regexes that also contain unsupported placements, with a warning for the ignored values (#5036).
 - Capped game auto-checkpoints to the newest five per trigger type (session start/end, combat start/end, and the rest) so a long campaign no longer duplicates every captured tracker, map, and engine-state snapshot into unbounded memory and ever-larger checkpoint shard rewrites; your own manual checkpoints are never pruned (#5110).
-
-### Changed
-
-- Removed the Continue the scene button from chat composers.
-- Removed the mobile loupe button from the top bar. Long-pressing the Home button now opens Command Center.
-- Coding-agent contributors now follow a Ponytail-inspired minimalism ladder that favors reuse, platform capabilities, and the smallest correct implementation without weakening safety or validation requirements (#5186).
-- Project validation now checks the maintained TypeScript and TSX source tree with Prettier before linting and building, so formatting drift is rejected by the same `pnpm check` command used in pull-request CI (#5181).
-- The Inventory Tracker panel now flows its entries as wrapping pills across the full panel width, with the quantity shown as `×N` only when it is above one. The previous layout split the panel into three fixed columns and reserved a quantity cell on every row, so at the widest setting each column was around 95 px and item names truncated — while a group holding two rows sat mostly empty. The panel also establishes its own container context, so it now lays out identically in the docked sidebar and the HUD popover instead of differing between them (#5125).
-
-## [2.4.3]
-
-### Added
-
-- Added the one-time v2.4.3 beta What's New message to the Home experience.
-- Added `{{addnumvar::name::value}}` for numeric variable addition without changing `{{addvar}}` string concatenation (#5024).
-- Added a Personal Extension authoring guide with importable Browser and Server examples, package/API references, lifecycle guidance, and troubleshooting (#5026).
-
-### Changed
-
-- Advanced the staging version identity to v2.4.3 across the Engine, Home page, PWA manifest, Windows installer, Android bootstrap metadata, update checks, and release references. Android now uses `versionName` `2.4.3` with `versionCode` `44`.
-- Kept README's stable-release pointer tied to the latest published tag instead of rewriting it during staging version preparation.
-- Removed the shared 1 MiB JavaScript field limit from Browser and Server Personal Extensions while preserving their separate archive, CSS, storage, request, and sandbox boundaries (#5025).
-
-### Fixed
-
 - Kept the caret at the chosen insertion point when typing quotes or apostrophes in expanded Character and Persona text editors (#4656).
 - Prevented multiple Marinara processes from silently overwriting a shared local data directory; stale diagnostic counts are repaired without hiding stored rows (#5013).
 - Let Termux recover its app-private storage lease after an Android restart instead of blocking launch on an exited process (#5029).

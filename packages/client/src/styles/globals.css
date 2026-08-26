@@ -254,7 +254,7 @@
   );
   --marinara-chat-chrome-accent: var(--marinara-app-accent-solid);
   --marinara-chat-chrome-accent-gradient: var(--marinara-app-accent-gradient);
-  --marinara-chat-chrome-text: var(--foreground);
+  --marinara-chat-chrome-text: var(--card-foreground);
   --marinara-chat-chrome-button-text-base: var(--marinara-chat-chrome-accent);
   --marinara-chat-chrome-highlight-text-base: var(--marinara-chat-chrome-accent);
   --marinara-chat-chrome-surface-bg: var(--card);
@@ -2855,7 +2855,7 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
 .mari-settings-panel-chrome {
   --accent: var(--marinara-chat-chrome-highlight-bg);
   --accent-foreground: var(--marinara-chat-chrome-highlight-text);
-  --foreground: var(--marinara-chat-chrome-panel-title);
+  --foreground: var(--marinara-chat-chrome-text);
   --muted-foreground: var(--marinara-chat-chrome-panel-muted);
   --sidebar-accent: var(--marinara-chat-chrome-highlight-bg);
   --sidebar-accent-foreground: var(--marinara-chat-chrome-panel-title);
@@ -2959,14 +2959,14 @@ html[data-marinara-effects-paused="true"] .mari-workspace-portrait img {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--marinara-chat-chrome-button-border);
-  border-radius: 999px;
+  border-radius: 0.625rem;
   background: var(--marinara-chat-chrome-button-bg);
   color: var(--marinara-chat-chrome-button-text);
   font-weight: 600;
 }
 
 .mari-chrome-tag {
-  border-radius: 999px;
+  border-radius: 0.625rem;
 }
 
 .mari-chat-option-field {
@@ -5618,6 +5618,45 @@ strong {
 
 .mari-tracker-panel-scroll[data-tracker-content-constrained="true"] .leading-6 {
   --tracker-panel-base-line-height: 1.5rem;
+}
+
+/* Downloadable tracker panels render into light-DOM custom elements. Their
+   content stays package-owned, while this host shell keeps section material,
+   dividers, and constrained typography consistent with built-in trackers. */
+.mari-tracker-capability-section :is(.mn-tracker, .bh-tracker-launch) {
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mari-tracker-capability-section .mn-tracker-veil {
+  display: none;
+}
+
+.mari-tracker-capability-section :is(.mn-tracker-title, .bh-tracker-launch__title) {
+  font-family: inherit;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mari-tracker-panel-scroll[data-tracker-content-constrained="true"]
+  .mari-tracker-capability-section
+  :is(.mn-tracker-title, .bh-tracker-launch__title) {
+  font-size: calc(0.625rem * var(--tracker-panel-font-scale));
+  line-height: calc(0.75rem * var(--tracker-panel-font-scale));
+}
+
+.mari-tracker-panel-scroll[data-tracker-content-constrained="true"] .mari-tracker-capability-section .mn-tracker-value {
+  font-size: calc(0.6875rem * var(--tracker-panel-font-scale));
+}
+
+.mari-tracker-panel-scroll[data-tracker-content-constrained="true"]
+  .mari-tracker-capability-section
+  .mn-tracker-value--empty {
+  line-height: calc(0.875rem * var(--tracker-panel-font-scale));
 }
 
 .mari-tracker-panel-scroll::-webkit-scrollbar {

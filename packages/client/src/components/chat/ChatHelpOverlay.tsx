@@ -274,6 +274,15 @@ const TARGETS_BY_MODE: Record<ChatMode, HelpTargetDefinition[]> = {
 const TARGET_PADDING = 5;
 const HIGHLIGHT_GAP = 5;
 const MOBILE_TOOLBAR_HIGHLIGHT_SIZE = 32;
+const PADDED_TARGET_IDS = new Set<HelpTargetId>([
+  "agents",
+  "messages",
+  "composer",
+  "map",
+  "party",
+  "widgets",
+  "dialogue",
+]);
 
 const ACTIONS_BY_MODE: Record<ChatMode, HelpActionDefinition[]> = {
   conversation: [
@@ -419,11 +428,7 @@ function findTargetRect(definition: HelpTargetDefinition, root: HTMLElement, mod
     const composer = root.querySelector<HTMLElement>("[data-chat-composer]");
     const composerShell = composer?.closest<HTMLElement>("[data-chat-resource-drop-exclude]") ?? composer;
     const composerRect = composerShell ? readVisibleRect(composerShell) : null;
-    const topControls = Array.from(
-      root.querySelectorAll<HTMLElement>(
-        '[data-chat-help="identity"], [data-roleplay-top-controls="right"], [data-chat-help="agents"]',
-      ),
-    )
+    const topControls = Array.from(root.querySelectorAll<HTMLElement>("[data-chat-help]"))
       .map((element) => readVisibleRect(element, true))
       .filter((rect): rect is Rect => rect !== null);
     const top = Math.max(scrollRect.top + 8, ...topControls.map((rect) => rect.top + rect.height + 8));
@@ -443,7 +448,13 @@ function findTargetRect(definition: HelpTargetDefinition, root: HTMLElement, mod
 
   if (!definition.selector) return null;
   const preferInteractive = definition.selector.startsWith("[data-chat-help=");
-  const rects = querySelectorAllDeep(document, definition.selector)
+  const elements = [
+    ...new Set([
+      ...querySelectorAllDeep(root, definition.selector),
+      ...querySelectorAllDeep(document, definition.selector),
+    ]),
+  ];
+  const rects = elements
     .map((element) => {
       const rect = readVisibleRect(element, preferInteractive);
       return rect ? normalizeMobileToolbarRect(element, rect) : null;
@@ -461,7 +472,10 @@ function expandRectWithin(rect: Rect, bounds: Rect, padding: number): Rect {
 }
 
 function separateHighlightRects(targets: MeasuredTarget[], bounds: Rect, padding = TARGET_PADDING): MeasuredTarget[] {
-  const separated = targets.map((target) => ({ ...target, rect: expandRectWithin(target.rect, bounds, padding) }));
+  const separated = targets.map((target) => ({
+    ...target,
+    rect: expandRectWithin(target.rect, bounds, PADDED_TARGET_IDS.has(target.id) ? padding : 0),
+  }));
   for (let firstIndex = 0; firstIndex < separated.length; firstIndex += 1) {
     for (let secondIndex = firstIndex + 1; secondIndex < separated.length; secondIndex += 1) {
       const first = separated[firstIndex]!;
@@ -826,7 +840,7 @@ export function ChatHelpOverlay({
           <mask id={maskId} maskUnits="userSpaceOnUse">
             <rect x={rootRect.left} y={rootRect.top} width={rootRect.width} height={rootRect.height} fill="white" />
             {targets.map(({ id, rect }) => (
-              <rect key={id} x={rect.left} y={rect.top} width={rect.width} height={rect.height} rx="10" fill="black" />
+              <rect key={id} x={rect.left} y={rect.top} width={rect.width} height={rect.height} rx="8" fill="black" />
             ))}
           </mask>
         </defs>
@@ -847,7 +861,7 @@ export function ChatHelpOverlay({
           key={target.id}
           data-chat-help-highlight={target.id}
           className={cn(
-            "fixed rounded-[0.625rem] bg-transparent ring-2 ring-[var(--marinara-chat-chrome-focus-ring)] shadow-[0_0_18px_color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_45%,transparent)] outline-none transition-[box-shadow,background-color] duration-150 focus-visible:bg-[color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_9%,transparent)] focus-visible:shadow-[0_0_30px_color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_72%,transparent)]",
+            "fixed rounded-lg bg-transparent ring-2 ring-[var(--marinara-chat-chrome-focus-ring)] shadow-[0_0_18px_color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_45%,transparent)] outline-none transition-[box-shadow,background-color] duration-150 focus-visible:bg-[color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_9%,transparent)] focus-visible:shadow-[0_0_30px_color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_72%,transparent)]",
             mobile
               ? "cursor-pointer"
               : "cursor-help hover:bg-[color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_9%,transparent)] hover:shadow-[0_0_30px_color-mix(in_srgb,var(--marinara-chat-chrome-focus-ring)_72%,transparent)]",
