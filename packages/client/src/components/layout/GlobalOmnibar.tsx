@@ -170,6 +170,7 @@ import {
 } from "../command-center/command-center-visuals";
 import type { CommandCenterPreviewFact } from "../command-center/command-result-preview.types";
 import { OmnibarEmptyState } from "./OmnibarEmptyState";
+import { OmnibarSettingsMenu } from "./omnibar/OmnibarSettingsMenu";
 import {
   getOmnibarResourceId,
   isRichResult,
@@ -2682,6 +2683,7 @@ export function GlobalOmnibarDialog({ onClose }: { onClose: () => void }) {
                 />
               </button>
             ) : null}
+            <OmnibarSettingsMenu />
             <button
               type="button"
               onClick={onClose}

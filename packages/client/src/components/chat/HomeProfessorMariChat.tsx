@@ -1534,6 +1534,7 @@ function WorkspaceLiveWorkCard({
   const { t } = useUiTranslation();
   const localizeUi = t;
   const reduceMotion = useReducedMotion();
+  const disabledAnimationPacks = useUIStore((state) => state.disabledMariAnimationPacks);
   const toolItems = items.filter(
     (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
   );
@@ -1561,6 +1562,7 @@ function WorkspaceLiveWorkCard({
     seed: items[0]?.id ?? activity,
     activity: latestNarrative?.content ?? currentTool?.tool.name ?? activity,
     toolNames: currentTool ? [currentTool.tool.name] : [],
+    disabledPacks: disabledAnimationPacks,
   });
   const narrative = stripProfessorMariSpeakerPrefix(latestNarrative?.content ?? "").trim();
   const showNarrative = narrative.length > 0 && narrative.toLocaleLowerCase() !== workTitle.trim().toLocaleLowerCase();
