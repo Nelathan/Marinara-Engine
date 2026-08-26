@@ -1456,9 +1456,20 @@
   filter: drop-shadow(0 0 0.45rem color-mix(in srgb, oklch(0.74 0.15 154) 24%, transparent));
 }
 
+.mari-live-work__failed-icon {
+  flex: 0 0 auto;
+  color: var(--destructive);
+}
+
 .mari-live-work[data-active="false"] {
   border-color: color-mix(in srgb, oklch(0.74 0.15 154) 22%, var(--border));
   background: color-mix(in srgb, var(--card) 97%, oklch(0.74 0.15 154));
+}
+
+/* A run that ended with a failed step must not wear the finished-and-fine green. */
+.mari-live-work[data-outcome="failed"] {
+  border-color: color-mix(in srgb, var(--destructive) 30%, var(--border));
+  background: color-mix(in srgb, var(--card) 96%, var(--destructive));
 }
 
 .mari-live-work[data-active="false"] .mari-live-work__sprite {
@@ -1481,6 +1492,27 @@
   align-items: center;
   gap: 0.65rem;
   margin-top: 0.55rem;
+}
+
+.mari-live-work__stop {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  font-weight: 600;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.mari-live-work__stop:hover {
+  border-color: color-mix(in srgb, var(--destructive) 45%, var(--border));
+  color: var(--destructive);
 }
 
 .mari-live-work__elapsed {
@@ -1523,6 +1555,15 @@
 
 .mari-live-work__steps li[data-status="running"] {
   color: var(--foreground);
+}
+
+/* The "N earlier steps" line is a count, not a step: no icon column, quieter than the rest. */
+.mari-live-work__steps li[data-status="earlier"] {
+  min-height: 1.25rem;
+  padding-inline-start: 1.25rem;
+  font-size: 0.7rem;
+  font-style: italic;
+  opacity: 0.75;
 }
 
 .mari-live-work__steps li[data-status="running"]::after {

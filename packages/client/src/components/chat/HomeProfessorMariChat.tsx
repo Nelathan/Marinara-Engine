@@ -69,6 +69,7 @@ import { chatKeys } from "../../hooks/use-chats";
 import { characterKeys, useCharacters, usePersonas } from "../../hooks/use-characters";
 import { getCharacterDisplayIdentity } from "../../lib/character-display";
 import { buildCharacterPreviewModel, type CharacterPreviewModel } from "../../lib/character-preview";
+import { resolveRunSeconds, resolveRunStartMs } from "../../lib/mari-work-card-timing";
 import { buildLorebookPreviewModel, type LorebookPreviewModel } from "../../lib/lorebook-preview";
 import { completeInline } from "../../lib/inline-completion";
 import { selectMariWorkAnimation } from "../../lib/mari-work-animations";
@@ -1491,23 +1492,28 @@ function MariReasoningPanel({ thinking, live, forceOpen }: { thinking: string; l
   );
 }
 
-function useWorkspaceElapsedSeconds(active: boolean) {
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+/**
+ * Ticks while the run is active. Anchored to the run's own start when the steps carry one, so
+ * closing and reopening the omnibar mid-run resumes the count instead of restarting at zero.
+ */
+function useWorkspaceElapsedSeconds(active: boolean, startedAtMs: number | null) {
+  const [now, setNow] = useState(() => Date.now());
+  const mountedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!active) {
-      setElapsedSeconds(0);
+      mountedAtRef.current = null;
       return;
     }
-    const startedAt = Date.now();
-    setElapsedSeconds(0);
-    const interval = window.setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
-    }, 1_000);
+    mountedAtRef.current ??= Date.now();
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(interval);
   }, [active]);
 
-  return elapsedSeconds;
+  if (!active) return 0;
+  const anchor = startedAtMs ?? mountedAtRef.current;
+  return anchor ? Math.max(0, Math.floor((now - anchor) / 1_000)) : 0;
 }
 
 function WorkspaceLiveWorkCard({
@@ -1516,20 +1522,22 @@ function WorkspaceLiveWorkCard({
   character,
   lorebook,
   active = true,
+  onStop,
 }: {
   activity: string;
   items: WorkspaceTimelineItem[];
   character?: CharacterPreviewModel | null;
   lorebook?: LorebookPreviewModel | null;
   active?: boolean;
+  onStop?: () => void;
 }) {
   const { t } = useUiTranslation();
   const localizeUi = t;
   const reduceMotion = useReducedMotion();
-  const liveElapsedSeconds = useWorkspaceElapsedSeconds(active);
   const toolItems = items.filter(
     (item): item is Extract<WorkspaceTimelineItem, { type: "tool" }> => item.type === "tool",
   );
+  const liveElapsedSeconds = useWorkspaceElapsedSeconds(active, resolveRunStartMs(toolItems.map((i) => i.tool)));
   const visibleSteps = [...toolItems].sort((left, right) => left.tool.updatedAt - right.tool.updatedAt).slice(-4);
   const latestNarrative = [...items]
     .reverse()
@@ -1557,16 +1565,16 @@ function WorkspaceLiveWorkCard({
   const narrative = stripProfessorMariSpeakerPrefix(latestNarrative?.content ?? "").trim();
   const showNarrative = narrative.length > 0 && narrative.toLocaleLowerCase() !== workTitle.trim().toLocaleLowerCase();
   const generalActivity = !runningTool && toolItems.length > 0 && showNarrative ? narrative : null;
-  const completedSeconds = Math.round(
-    toolItems.reduce((total, { tool }) => total + Math.max(0, tool.durationMs ?? 0), 0) / 1_000,
-  );
-  const elapsedSeconds = active ? liveElapsedSeconds : completedSeconds;
+  const elapsedSeconds = active ? liveElapsedSeconds : resolveRunSeconds(toolItems.map((i) => i.tool));
+  // A finished run that still holds a failed step is not a success, whatever the last step was.
+  const failed = !active && toolItems.some(({ tool }) => tool.status === "error");
 
   return (
     <TranscriptRow marker={null} layout="document">
       <motion.section
         className="mari-live-work"
         data-active={active ? "true" : "false"}
+        data-outcome={failed ? "failed" : undefined}
         aria-label={t("mari.workCard.label")}
         initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1595,6 +1603,8 @@ function WorkspaceLiveWorkCard({
                   <i />
                   <i />
                 </span>
+              ) : failed ? (
+                <AlertTriangle size="0.875rem" className="mari-live-work__failed-icon" aria-hidden="true" />
               ) : (
                 <Check size="0.875rem" className="mari-live-work__complete-icon" aria-hidden="true" />
               )}
@@ -1620,6 +1630,12 @@ function WorkspaceLiveWorkCard({
                 {active ? <i aria-hidden="true" /> : null}
                 {t("mari.workCard.elapsed", { seconds: elapsedSeconds })}
               </span>
+              {active && onStop ? (
+                <button type="button" onClick={onStop} className="mari-live-work__stop">
+                  <Square size="0.7rem" aria-hidden="true" />
+                  {localizeUi("ui.chat.summarypopover.stop")}
+                </button>
+              ) : null}
             </div>
 
             {visibleSteps.length > 0 ? (
@@ -1628,8 +1644,8 @@ function WorkspaceLiveWorkCard({
                   {visibleSteps.map(({ id, tool }) => {
                     const presentation = inferToolPresentation(tool);
                     const running = tool.status === "running";
-                    const failed = tool.status === "error";
-                    const Icon = failed ? AlertTriangle : running ? Circle : Check;
+                    const stepFailed = tool.status === "error";
+                    const Icon = stepFailed ? AlertTriangle : running ? Circle : Check;
                     const stepSeconds = resolveStepSeconds({
                       running,
                       startedAt: tool.startedAt,
@@ -1655,6 +1671,19 @@ function WorkspaceLiveWorkCard({
                       </motion.li>
                     );
                   })}
+                  {toolItems.length > visibleSteps.length ? (
+                    <motion.li
+                      key="earlier-steps"
+                      data-status="earlier"
+                      layout={!reduceMotion}
+                      initial={reduceMotion ? false : { opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {t("mari.workCard.earlierSteps", { count: toolItems.length - visibleSteps.length })}
+                      </span>
+                    </motion.li>
+                  ) : null}
                   {generalActivity ? (
                     <motion.li
                       layout={!reduceMotion}
@@ -4961,6 +4990,7 @@ export function HomeProfessorMariChat({
                                 items={workspaceTimeline}
                                 character={focusedCharacter}
                                 lorebook={focusedLorebook}
+                                onStop={() => void stopWorkspace()}
                               />
                             ) : null}
                             {recoveryNotice}
