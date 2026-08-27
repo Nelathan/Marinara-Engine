@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Classic combat no longer stalls on Choose action when the last enemy is already at 0 HP: Flee (or any action) ends the fight as a victory, rejected actions toast their error instead of failing silently, and an active escape objective still blocks retreat until the exit.
 - Combat init now emits an active escape objective when the recent history is a chase, salvages a truncated blueprint that already has party and enemies, and still returns a 502 the Engine Combat path can toast when the stream dies too early to use.
 - Tactical opportunity attacks and Overwatch no longer log as a generic "counters" line: they read as an opportunity attack or prepared shot, and "counters" is kept for a true retaliate.
 - Permanent Delete now preserves Marinara's stock Universal Preset and its prompt structure while removing editable presets (#5568).

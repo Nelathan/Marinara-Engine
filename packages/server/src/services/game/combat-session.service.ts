@@ -481,6 +481,19 @@ function resolveClassicAction(
     if (hasIncompleteEscapeObjective(session)) {
       throw new CombatActionValidationError("Cannot flee until the exit is reached.");
     }
+    // Already-downed enemies with no chase should finish the fight, not stall
+    // behind a pointless round or an "already over" 400. Prefer victory.
+    const enemiesWiped = state.enemies.length > 0 && state.enemies.every((enemy) => enemy.hp <= 0);
+    if (enemiesWiped) {
+      state.outcome = "victory";
+      return {
+        canonicalState: state,
+        rngCursor: session.rngCursor,
+        status: "completed",
+        events: [],
+        result: classicSummary(state, "victory", state.round ?? 1),
+      };
+    }
     state.outcome = "flee";
     return {
       canonicalState: state,

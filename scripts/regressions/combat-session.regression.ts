@@ -1425,6 +1425,53 @@ assert.equal(
 );
 assert.equal(ordinaryTacticalFlee.result?.outcome, "flee");
 
+const wipedEnemyFlee = resolveCombatSessionAction(
+  classic({ enemies: [{ ...unit("ashborn", "enemy", 0) }] }),
+  "flee-wiped-enemy",
+  {
+    style: "classic",
+    type: "flee",
+  },
+);
+assert.equal(
+  wipedEnemyFlee.canonicalState.outcome,
+  "victory",
+  "fleeing when every enemy is already down and no escape objective is active must end the fight",
+);
+assert.equal(wipedEnemyFlee.result?.outcome, "victory");
+
+const wipedEscapeSession = classic({ enemies: [{ ...unit("guard", "enemy", 0) }] });
+wipedEscapeSession.objectives = [
+  { id: "escape", kind: "escape", label: "Reach the exit", requiredProgress: 1, progress: 0, status: "active" },
+];
+assert.throws(
+  () =>
+    resolveCombatSessionAction(wipedEscapeSession, "flee-wiped-escape", {
+      style: "classic",
+      type: "flee",
+    }),
+  (error: unknown) =>
+    error instanceof CombatActionValidationError && /cannot flee until the exit is reached/i.test(error.message),
+  "an active escape objective still rejects flee even if enemies are already down",
+);
+assert.equal(wipedEscapeSession.canonicalState.outcome, undefined);
+
+assert.match(
+  gameCombatUiSource,
+  /toast\.error\(/,
+  "Classic combat must toast a rejected action instead of silently returning to Choose action",
+);
+assert.match(
+  gameCombatUiSource,
+  /enemies\.length > 0 && enemies\.every\(\(enemy\) => enemy\.hp <= 0\)/,
+  "Classic combat must locally end a wiped fight without a useless round trip",
+);
+assert.match(
+  gameCombatUiSource,
+  /pending\.playerAction\.type === "flee"[\s\S]{0,400}data\.outcome/,
+  "Classic flee success must honor a server victory instead of always retreating",
+);
+
 const completedEscapeSession = classic({ enemies: [{ ...unit("guard", "enemy", 100) }] });
 completedEscapeSession.objectives = [
   { id: "escape", kind: "escape", label: "Reach the exit", requiredProgress: 1, progress: 1, status: "complete" },

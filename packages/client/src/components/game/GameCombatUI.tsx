@@ -29,6 +29,7 @@ import { ttsService } from "../../lib/tts-service";
 import { useGameAssetManifest } from "../../hooks/use-game-assets";
 import { useActiveCombatSession, useCombatRound } from "../../hooks/use-game";
 import { ApiError } from "../../lib/api-client";
+import { toast } from "sonner";
 import { useTTSConfig } from "../../hooks/use-tts";
 import { AnimatedText } from "./AnimatedText";
 import type {
@@ -1562,7 +1563,9 @@ export function GameCombatUI({
       const partyAlive = updatedParty.some((c) => c.hp > 0);
       const enemiesAlive = updatedEnemies.some((c) => c.hp > 0);
 
-      if (authoritativeOutcome === "victory" || (!authoritativeOutcome && !enemiesAlive)) {
+      // A killing blow that omitted outcome, or reported a non-defeat terminal
+      // other than victory, must still end the fight when nobody is left standing.
+      if (authoritativeOutcome === "victory" || (authoritativeOutcome !== "defeat" && !enemiesAlive)) {
         playSfx(COMBAT_SFX.victory);
         setPhase("victory");
         return;
@@ -1666,6 +1669,14 @@ export function GameCombatUI({
   // ── Resolve a combat round on the server ──
   const resolveRound = useCallback(
     (playerAction: CombatPlayerAction, usedItemName?: string) => {
+      const enemiesWiped = enemies.length > 0 && enemies.every((enemy) => enemy.hp <= 0);
+      if (enemiesWiped) {
+        playSfx(COMBAT_SFX.victory);
+        const summary = buildSummary("victory");
+        terminalSummaryRef.current = summary;
+        setPhase("victory");
+        return;
+      }
       const inFlight = inFlightClassicActionRef.current;
       if (inFlight) {
         // A second click of the same menu action must replay the original request
@@ -1716,10 +1727,12 @@ export function GameCombatUI({
               void onInventoryItemUsed?.(pending.usedItemName);
             }
             if (pending.playerAction.type === "flee") {
-              const summary = data.summary ?? buildSummary("flee");
+              const outcome =
+                data.outcome === "victory" || data.outcome === "defeat" ? data.outcome : "flee";
+              const summary = data.summary ?? buildSummary(outcome);
               terminalSummaryRef.current = summary;
-              setPhase("flee");
-              handoffCombatEnd("flee", summary);
+              setPhase(outcome);
+              if (outcome === "flee") handoffCombatEnd("flee", summary);
               return;
             }
             if (pending.playerAction.type === "maneuver" && !data.outcome) {
@@ -1780,6 +1793,13 @@ export function GameCombatUI({
               setCustomInstructionSawStreaming(false);
             }
             if (!recoveredTerminal) setPhase("player-turn");
+            if (!recoveredTerminal) {
+              toast.error(
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : "That action was rejected.",
+              );
+            }
           },
           onSettled: () => {
             if (inFlightClassicActionRef.current?.actionId === pending.actionId) {
@@ -1809,8 +1829,20 @@ export function GameCombatUI({
       appendCombatLog,
       onCombatantsChange,
       animateRoundResults,
+      enemies,
+      playSfx,
     ],
   );
+
+  // If a killing blow left the UI on Choose action with a 0 HP roster, finish
+  // as victory instead of waiting for Flee to 400.
+  useEffect(() => {
+    if (phase !== "player-turn") return;
+    if (enemies.length === 0 || enemies.some((enemy) => enemy.hp > 0)) return;
+    playSfx(COMBAT_SFX.victory);
+    terminalSummaryRef.current = buildSummary("victory");
+    setPhase("victory");
+  }, [phase, enemies, playSfx, buildSummary]);
 
   // ── Handle action selection ──
   const handleActionSelect = useCallback(
