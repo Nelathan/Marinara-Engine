@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Combat init now emits an active escape objective when the recent history is a chase, salvages a truncated blueprint that already has party and enemies, and still returns a 502 the Engine Combat path can toast when the stream dies too early to use.
 - Tactical opportunity attacks and Overwatch no longer log as a generic "counters" line: they read as an opportunity attack or prepared shot, and "counters" is kept for a true retaliate.
 - Permanent Delete now preserves Marinara's stock Universal Preset and its prompt structure while removing editable presets (#5568).
 - Streamed the large Game Mode combat blueprint initialization response so slow LLM providers can send headers before the transport timeout instead of surfacing a generic combat-generation failure.

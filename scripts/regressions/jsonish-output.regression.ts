@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseGameJsonish } from "../../packages/server/src/services/game/jsonish.js";
+import { parseGameJsonish, parseRepairedGameJsonish } from "../../packages/server/src/services/game/jsonish.js";
 
 assert.deepEqual(parseGameJsonish('{"ok":true}'), { ok: true });
 assert.deepEqual(parseGameJsonish('Thinking briefly.\n{"ok":true}\nDone.'), { ok: true });
@@ -20,5 +20,15 @@ assert.deepEqual(parseGameJsonish('```json\n{"message":"a } and ] inside a strin
 assert.deepEqual(parseGameJsonish('Preface\n{"items":[1,2,],}\nFooter'), { items: [1, 2] });
 assert.deepEqual(parseGameJsonish('Preface\n{"payload":{"ok":true},}\nFooter'), { payload: { ok: true } });
 assert.throws(() => parseGameJsonish("No structured output was returned."));
+
+assert.deepEqual(
+  parseRepairedGameJsonish('{"party":[{"name":"A"}],"enemies":[{"name":"B"}],"objectives":[{"id":"wipe","kind":"eliminate","label":"Win"}],"itemEffects":['),
+  {
+    party: [{ name: "A" }],
+    enemies: [{ name: "B" }],
+    objectives: [{ id: "wipe", kind: "eliminate", label: "Win" }],
+    itemEffects: [],
+  },
+);
 
 process.stdout.write("Embedded JSON output regression passed.\n");

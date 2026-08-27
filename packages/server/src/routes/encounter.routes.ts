@@ -26,6 +26,10 @@ import type {
   RPGStatsConfig,
 } from "@marinara-engine/shared";
 import { resolveActivePersonaCandidate } from "./generate/generate-route-utils.js";
+import {
+  COMBAT_INIT_OBJECTIVE_NOTES,
+  resolveCombatInitFromLlm,
+} from "../services/game/combat-init.js";
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -373,6 +377,10 @@ function buildInitPrompt(
   inst += `    }\n`;
   inst += `  ],\n`;
   inst += `  "environment": "Brief description of the combat environment",\n`;
+  inst += `  "objectives": [\n`;
+  inst += `    {"id":"short-stable-id","kind":"eliminate|survive_rounds|escape|defend|escort|capture|interrupt|conditional_eliminate","label":"Player-facing goal","targetNames":["Exact combatant name"],"requiredProgress":1,"condition":"optional concise rule"},\n`;
+  inst += `    {"id":"hold-the-bridge","kind":"survive_rounds","label":"Only time-pressure goals add a deadline","requiredProgress":3,"failAtRound":6}\n`;
+  inst += `  ],\n`;
   inst += `  "styleNotes": {\n`;
   inst += `    "environmentType": "forest|dungeon|desert|cave|city|ruins|snow|water|castle|wasteland|plains|mountains|swamp|volcanic|spaceship|mansion",\n`;
   inst += `    "atmosphere": "bright|dark|foggy|stormy|calm|eerie|chaotic|peaceful",\n`;
@@ -387,10 +395,6 @@ function buildInitPrompt(
   inst += `  "itemEffects": [\n`;
   inst += `    {"name":"Inventory item name","target":"self|ally|enemy|any","type":"heal|damage|buff|debuff|status|utility","description":"what this item does in this fight","power":0.3,"element":"optional","status":{"name":"Wet","emoji":"💧","duration":2,"modifier":-2,"stat":"defense"},"consumes":true}\n`;
   inst += `  ],\n`;
-  inst += `  "objectives": [\n`;
-  inst += `    {"id":"short-stable-id","kind":"eliminate|survive_rounds|escape|defend|escort|capture|interrupt|conditional_eliminate","label":"Player-facing goal","targetNames":["Exact combatant name"],"requiredProgress":1,"condition":"optional concise rule"},\n`;
-  inst += `    {"id":"hold-the-bridge","kind":"survive_rounds","label":"Only time-pressure goals add a deadline","requiredProgress":3,"failAtRound":6}\n`;
-  inst += `  ],\n`;
   inst += `  "mechanics": [\n`;
   inst += `    {"name":"Boss mechanic name","description":"clear rule and stakes","ownerName":"Boss name","trigger":"round_interval|hp_threshold|on_hit|on_attack|passive","interval":5,"hpThreshold":50,"counterplay":"how the player can respond","effectType":"damage_all|damage_one|buff_self|debuff_party|status_party|status_enemy|summon_reinforcements","power":0.45,"element":"optional","status":{"name":"Stunned","emoji":"⚡","duration":1,"modifier":-3,"stat":"speed"},"reinforcements":[{"name":"Enemy Reinforcement","hp":25,"maxHp":25,"attack":8,"defense":5,"speed":6,"level":1,"side":"enemy"}]}\n`;
   inst += `  ],\n`;
@@ -404,7 +408,7 @@ function buildInitPrompt(
   inst += `- allies: include ${personaName} and any party members or nearby NPCs clearly fighting on ${personaName}'s side. Give allies battle-specific attacks inspired by their cards/context.\n`;
   inst += `- enemies: weak enemies can have one simple attack; bosses and elites should have multiple attacks and one memorable mechanic.\n`;
   inst += `- items: DO NOT invent inventory. itemEffects must only describe how existing inventory items from context work in this encounter. Examples: potion heals, bottle of alcohol can wet/prime a target for fire.\n`;
-  inst += `- objectives: include one or more goals that match the scene. Use eliminate for ordinary fights. Use exact party/enemy names in targetNames for defend, escort, or targeted elimination. requiredProgress is the number of rounds/interactions/targets required. The two entries above are format examples, not a required pair — emit only the goals this scene actually needs.\n`;
+  inst += COMBAT_INIT_OBJECTIVE_NOTES;
   inst += `- objectives.targetNames: defend and escort protect ALLIES, so their targetNames must name party members or friendly NPCs, never an enemy.\n`;
   inst += `- objectives.failAtRound: OPTIONAL and rare. Add it ONLY when the goal is explicitly against the clock (survive_rounds, a ritual to interrupt, a timed escape). Omit it entirely for eliminate, defend, escort, capture, and conditional_eliminate goals — an objective without failAtRound simply has no deadline.\n`;
   inst += `- mechanics: use sparingly. Boss charge attacks should include interval, counterplay, effectType, and a matching dialogueCue with trigger "charge". Use summon_reinforcements only when a phase explicitly calls new combatants into the fight, and keep the list small.\n`;
@@ -657,35 +661,31 @@ export async function encounterRoutes(app: FastifyInstance) {
         result.content ?? "",
       );
 
-      if (result.finishReason === "error") {
+      const resolved = resolveCombatInitFromLlm({
+        content: result.content,
+        finishReason: result.finishReason,
+        history: recentMsgs,
+      });
+      if (!resolved.ok) {
+        if (result.finishReason === "error") {
+          logger.warn(
+            { chatId, provider: conn.provider, model: conn.model, chars: result.content?.length ?? 0 },
+            "[game/combat:init] LLM stream failed mid-response; blueprint is incomplete",
+          );
+        }
+        return reply.status(resolved.status).send({ error: resolved.error });
+      }
+      if (resolved.salvaged) {
         logger.warn(
           { chatId, provider: conn.provider, model: conn.model, chars: result.content?.length ?? 0 },
-          "[game/combat:init] LLM stream failed mid-response; blueprint is incomplete",
+          "[game/combat:init] Salvaged truncated combat blueprint after incomplete LLM stream",
         );
-        return reply
-          .status(502)
-          .send({ error: "Encounter init failed: the AI provider connection dropped mid-response" });
       }
-
-      if (!result.content) {
-        return reply.status(502).send({ error: "No response from AI" });
-      }
-
-      let combatState: Record<string, unknown>;
-      try {
-        combatState = parseJSON(result.content) as Record<string, unknown>;
-      } catch {
-        return reply.status(502).send({ error: "AI returned invalid JSON" });
-      }
-
-      if (!combatState?.party || !combatState?.enemies) {
-        return reply.status(502).send({ error: "Invalid combat data returned by AI" });
-      }
-      debugLog("[debug/game/combat:init] parsed response:\n%s", JSON.stringify(combatState, null, 2));
+      debugLog("[debug/game/combat:init] parsed response:\n%s", JSON.stringify(resolved.combatState, null, 2));
 
       await chats.patchMetadata(chatId, { encounterActive: true }, { touchUpdatedAt: false });
 
-      return { combatState };
+      return { combatState: resolved.combatState };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       logger.warn(err, "[game/combat:init] Encounter init failed");

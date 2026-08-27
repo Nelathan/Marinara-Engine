@@ -361,6 +361,13 @@ export function parseGameJsonishSequence(raw: string): unknown[] {
   return parsed.length > 0 ? parsed : [parseGameJsonish(raw)];
 }
 
+/** Repair the outermost JSON-ish value, ignoring nested complete fragments. Combat init uses this when a truncated blueprint still has party+enemies. */
+export function parseRepairedGameJsonish(raw: string): unknown {
+  const unfenced = stripFences(raw.trim());
+  const candidate = extractRepairCandidate(unfenced);
+  return unwrapJsonString(JSON.parse(repairJsonish(candidate)));
+}
+
 export function jsonishLooksTruncated(raw: string): boolean {
   const candidate = extractJsonishCandidate(stripFences(raw.trim()));
   const scan = scanJsonishStructure(candidate);
