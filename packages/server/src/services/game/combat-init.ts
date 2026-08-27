@@ -12,6 +12,9 @@ export const FLEEING_ESCAPE_OBJECTIVE: CombatEncounterObjective = {
 export const COMBAT_INIT_DROPPED_STREAM_ERROR =
   "Encounter init failed: the AI provider connection dropped mid-response";
 
+export const COMBAT_INIT_ENEMY_REPAIR_USER =
+  "The combat blueprint is missing enemies. Return JSON with an enemies array for this scene, or a complete object with party and enemies. No markdown fences.";
+
 const DROPPED_STREAM_FINISH_REASONS = new Set([
   "error",
   "terminated",
@@ -54,14 +57,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function hasNonemptyParty(value: Record<string, unknown>): boolean {
+  return Array.isArray(value.party) && value.party.length > 0;
+}
+
+function hasNonemptyEnemies(value: Record<string, unknown>): boolean {
+  return Array.isArray(value.enemies) && value.enemies.length > 0;
+}
+
 function isUsableCombatBlueprint(value: unknown): value is Record<string, unknown> {
   if (!isRecord(value)) return false;
-  return (
-    Array.isArray(value.party) &&
-    value.party.length > 0 &&
-    Array.isArray(value.enemies) &&
-    value.enemies.length > 0
-  );
+  return hasNonemptyParty(value) && hasNonemptyEnemies(value);
 }
 
 function objectiveKind(value: unknown): string | null {
@@ -77,18 +83,31 @@ function stripMarkdownCodeFences(raw: string): string {
   return text.trim();
 }
 
-export function parseCombatInitBlueprint(raw: string): Record<string, unknown> | null {
-  const content = stripMarkdownCodeFences(extractLeadingThinkingBlocks(raw).content);
-  if (content.trim()) {
-    for (const parse of [parseGameJsonish, parseRepairedGameJsonish]) {
-      try {
-        const parsed = parse(content);
-        if (isUsableCombatBlueprint(parsed)) return parsed;
-      } catch {
-        // Nested fragments or unrepaired JSON are not a usable combat blueprint.
-      }
+function strippedCombatInitContent(raw: string): string {
+  return stripMarkdownCodeFences(extractLeadingThinkingBlocks(raw).content);
+}
+
+function parseCombatInitWith(
+  raw: string,
+  accept: (value: Record<string, unknown>) => boolean,
+): Record<string, unknown> | null {
+  const content = strippedCombatInitContent(raw);
+  if (!content.trim()) return null;
+  for (const parse of [parseGameJsonish, parseRepairedGameJsonish]) {
+    try {
+      const parsed = parse(content);
+      if (isRecord(parsed) && accept(parsed)) return parsed;
+    } catch {
+      // Nested fragments or unrepaired JSON are not a combat blueprint object.
     }
   }
+  return null;
+}
+
+export function parseCombatInitBlueprint(raw: string): Record<string, unknown> | null {
+  const parsed = parseCombatInitWith(raw, isUsableCombatBlueprint);
+  if (parsed) return parsed;
+  const content = strippedCombatInitContent(raw);
   logger.warn(
     {
       preview: raw.slice(0, 280).replace(/\s+/g, " "),
@@ -97,6 +116,27 @@ export function parseCombatInitBlueprint(raw: string): Record<string, unknown> |
     "[combat-init] failed to parse a usable party+enemies blueprint",
   );
   return null;
+}
+
+/** Party-present blueprint, including truncated glm output that never reached enemies. Silent on purpose. */
+export function parseCombatInitPartial(raw: string): Record<string, unknown> | null {
+  const withParty = parseCombatInitWith(raw, hasNonemptyParty);
+  if (withParty) return withParty;
+  return parseCombatInitWith(raw, hasNonemptyEnemies);
+}
+
+export function combatInitNeedsEnemyRepair(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value) || !hasNonemptyParty(value)) return false;
+  return !hasNonemptyEnemies(value);
+}
+
+export function mergeCombatInitEnemyRepair(
+  base: Record<string, unknown>,
+  repair: unknown,
+): Record<string, unknown> | null {
+  if (isUsableCombatBlueprint(repair)) return repair;
+  if (!isRecord(repair) || !hasNonemptyEnemies(repair)) return null;
+  return { ...base, ...repair, party: base.party, enemies: repair.enemies };
 }
 
 export function ensureFleeingEscapeObjective(

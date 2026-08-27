@@ -28,8 +28,14 @@ import type {
 import { resolveActivePersonaCandidate } from "./generate/generate-route-utils.js";
 import {
   COMBAT_INIT_DROPPED_STREAM_ERROR,
+  COMBAT_INIT_ENEMY_REPAIR_USER,
   COMBAT_INIT_OBJECTIVE_NOTES,
+  combatInitNeedsEnemyRepair,
+  ensureFleeingEscapeObjective,
   isDroppedStreamFinishReason,
+  mergeCombatInitEnemyRepair,
+  parseCombatInitBlueprint,
+  parseCombatInitPartial,
   resolveCombatInitFromLlm,
 } from "../services/game/combat-init.js";
 
@@ -669,6 +675,47 @@ export async function encounterRoutes(app: FastifyInstance) {
         history: recentMsgs,
       });
       if (!resolved.ok) {
+        const partial = parseCombatInitPartial(result.content ?? "");
+        if (combatInitNeedsEnemyRepair(partial)) {
+          logger.warn(
+            { chatId, provider: conn.provider, model: conn.model, chars: result.content?.length ?? 0 },
+            "[game/combat:init] party-only combat blueprint; requesting one enemy repair generate",
+          );
+          const repairResult = await provider.chatComplete(
+            [
+              ...prompt,
+              { role: "assistant", content: JSON.stringify({ party: partial.party }) },
+              { role: "user", content: COMBAT_INIT_ENEMY_REPAIR_USER },
+            ],
+            {
+              model: conn.model,
+              temperature: 0.8,
+              maxTokens: COMBAT_BLUEPRINT_OUTPUT_TOKENS,
+              stream: true,
+            },
+          );
+          const repairContent = repairResult.content ?? "";
+          let repaired = parseCombatInitBlueprint(repairContent);
+          if (!repaired) {
+            repaired = mergeCombatInitEnemyRepair(partial, parseCombatInitPartial(repairContent));
+          }
+          if (
+            repaired &&
+            Array.isArray(repaired.party) &&
+            repaired.party.length > 0 &&
+            Array.isArray(repaired.enemies) &&
+            repaired.enemies.length > 0
+          ) {
+            logger.warn(
+              { chatId, provider: conn.provider, model: conn.model, chars: repairContent.length },
+              "[game/combat:init] enemy repair generate produced a usable combat blueprint",
+            );
+            const combatState = ensureFleeingEscapeObjective(repaired, recentMsgs);
+            debugLog("[debug/game/combat:init] parsed response:\n%s", JSON.stringify(combatState, null, 2));
+            await chats.patchMetadata(chatId, { encounterActive: true }, { touchUpdatedAt: false });
+            return { combatState };
+          }
+        }
         if (isDroppedStreamFinishReason(result.finishReason)) {
           logger.warn(
             { chatId, provider: conn.provider, model: conn.model, chars: result.content?.length ?? 0 },

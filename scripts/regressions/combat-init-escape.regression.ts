@@ -3,12 +3,16 @@ import { readFileSync } from "node:fs";
 import { jsonishLooksTruncated } from "../../packages/server/src/services/game/jsonish.ts";
 import {
   COMBAT_INIT_DROPPED_STREAM_ERROR,
+  COMBAT_INIT_ENEMY_REPAIR_USER,
   COMBAT_INIT_OBJECTIVE_NOTES,
   FLEEING_ESCAPE_OBJECTIVE,
+  combatInitNeedsEnemyRepair,
   ensureFleeingEscapeObjective,
   historyIndicatesFleeing,
   isDroppedStreamFinishReason,
+  mergeCombatInitEnemyRepair,
   parseCombatInitBlueprint,
+  parseCombatInitPartial,
   resolveCombatInitFromLlm,
 } from "../../packages/server/src/services/game/combat-init.ts";
 
@@ -261,6 +265,45 @@ assert.equal(
   null,
   "Playtester 3f7 Yes Shadowblade preview is party-only truncated and must not salvage enemies",
 );
+const shadowPartial = parseCombatInitPartial(loggedShadowbladePreview);
+assert.ok(shadowPartial, "Shadowblade preview must parse as a party-only partial");
+assert.ok(Array.isArray(shadowPartial.party) && shadowPartial.party.length > 0, "Shadowblade partial must have party");
+assert.equal(
+  combatInitNeedsEnemyRepair(shadowPartial),
+  true,
+  "Playtester 3f7 Yes Shadowblade preview must request one enemy repair generate",
+);
+assert.equal(
+  combatInitNeedsEnemyRepair(parseCombatInitPartial(loggedShadowbladePreview)),
+  true,
+);
+
+const partyOnlyBase = { party: [{ name: "User" }] };
+const mergedEnemies = mergeCombatInitEnemyRepair(partyOnlyBase, { enemies: [{ name: "Guard" }] });
+assert.ok(mergedEnemies, "party-only merged with enemies must be usable");
+assert.deepEqual(mergedEnemies.party, partyOnlyBase.party);
+assert.equal((mergedEnemies.enemies as unknown[]).length, 1);
+assert.equal((mergedEnemies.enemies as Array<{ name: string }>)[0]?.name, "Guard");
+assert.equal(
+  mergeCombatInitEnemyRepair(partyOnlyBase, { enemies: [] }),
+  null,
+  "merge of empty enemies stays null",
+);
+assert.equal(
+  mergeCombatInitEnemyRepair(partyOnlyBase, { party: [{ name: "Other" }] }),
+  null,
+  "merge without enemies stays null",
+);
+
+const usableFirst = parseCombatInitBlueprint(JSON.stringify(blueprint()));
+assert.ok(usableFirst, "usable first parse still works without repair");
+assert.equal((usableFirst!.party as unknown[]).length, 1);
+assert.equal((usableFirst!.enemies as unknown[]).length, 1);
+assert.equal(
+  combatInitNeedsEnemyRepair(parseCombatInitPartial(JSON.stringify(blueprint()))),
+  false,
+  "usable party+enemies must not request enemy repair",
+);
 
 const leftoverAfterCloseBlueprint = "```json " + JSON.stringify(blueprint()) + " ``` done";
 const leftoverAfterCloseParsed = parseCombatInitBlueprint(leftoverAfterCloseBlueprint);
@@ -326,5 +369,36 @@ assert.match(combatInitSource, /logger\.warn/, "parse failure must warn-log a ra
 assert.match(combatInitSource, /preview:\s*raw\.slice/, "warn preview must remain pre-strip");
 assert.match(combatInitSource, /strippedPreview/, "parse failure must also warn-log a stripped preview");
 assert.match(routeSource, /isDroppedStreamFinishReason/);
+assert.match(COMBAT_INIT_ENEMY_REPAIR_USER, /missing enemies/i);
+assert.match(COMBAT_INIT_ENEMY_REPAIR_USER, /enemies array/i);
+assert.match(COMBAT_INIT_ENEMY_REPAIR_USER, /no markdown fences/i);
+assert.match(routeSource, /COMBAT_INIT_ENEMY_REPAIR_USER/);
+assert.match(routeSource, /combatInitNeedsEnemyRepair/);
+assert.match(routeSource, /mergeCombatInitEnemyRepair/);
+assert.match(routeSource, /party-only combat blueprint; requesting one enemy repair generate/);
+assert.match(
+  routeSource,
+  /provider\.chatComplete\(\s*\[\s*\.\.\.prompt[\s\S]*COMBAT_INIT_ENEMY_REPAIR_USER/,
+  "party-only init must send original messages plus one repair user turn",
+);
+const initSection = routeSource.slice(
+  routeSource.indexOf('app.post<{ Body: EncounterInitRequest }>("/init"'),
+  routeSource.indexOf("ACTION"),
+);
+assert.equal(
+  (initSection.match(/provider\.chatComplete/g) ?? []).length,
+  2,
+  "encounter init must do one extra chatComplete on party-only, never a loop",
+);
+assert.equal(initSection.includes("while ("), false, "enemy repair must never loop");
+assert.match(combatInitSource, /export function parseCombatInitPartial/);
+assert.match(combatInitSource, /export function combatInitNeedsEnemyRepair/);
+assert.match(combatInitSource, /export function mergeCombatInitEnemyRepair/);
+assert.match(combatInitSource, /COMBAT_INIT_ENEMY_REPAIR_USER/);
+const partialFn = combatInitSource.slice(
+  combatInitSource.indexOf("export function parseCombatInitPartial"),
+  combatInitSource.indexOf("export function combatInitNeedsEnemyRepair"),
+);
+assert.equal(partialFn.includes("logger.warn"), false, "partial-only parse must not warn-log");
 
 console.log("Combat init escape regression passed.");
