@@ -90,10 +90,14 @@ function strippedCombatInitContent(raw: string): string {
 function parseCombatInitWith(
   raw: string,
   accept: (value: Record<string, unknown>) => boolean,
+  preferRepair = false,
 ): Record<string, unknown> | null {
   const content = strippedCombatInitContent(raw);
   if (!content.trim()) return null;
-  for (const parse of [parseGameJsonish, parseRepairedGameJsonish]) {
+  const parsers = preferRepair
+    ? [parseRepairedGameJsonish, parseGameJsonish]
+    : [parseGameJsonish, parseRepairedGameJsonish];
+  for (const parse of parsers) {
     try {
       const parsed = parse(content);
       if (isRecord(parsed) && accept(parsed)) return parsed;
@@ -120,14 +124,22 @@ export function parseCombatInitBlueprint(raw: string): Record<string, unknown> |
 
 /** Party-present blueprint, including truncated glm output that never reached enemies. Silent on purpose. */
 export function parseCombatInitPartial(raw: string): Record<string, unknown> | null {
-  const withParty = parseCombatInitWith(raw, hasNonemptyParty);
+  // Repair the outer object first so a nested complete Strike does not win over party.
+  const withParty = parseCombatInitWith(raw, hasNonemptyParty, true);
   if (withParty) return withParty;
-  return parseCombatInitWith(raw, hasNonemptyEnemies);
+  return parseCombatInitWith(raw, hasNonemptyEnemies, true);
 }
 
 export function combatInitNeedsEnemyRepair(value: unknown): value is Record<string, unknown> {
   if (!isRecord(value) || !hasNonemptyParty(value)) return false;
   return !hasNonemptyEnemies(value);
+}
+
+/** True when glm emitted a party array but not a usable party+enemies blueprint. */
+export function combatInitLooksPartyOnly(raw: string): boolean {
+  if (combatInitNeedsEnemyRepair(parseCombatInitPartial(raw))) return true;
+  if (parseCombatInitWith(raw, isUsableCombatBlueprint)) return false;
+  return /"party"\s*:\s*\[/.test(strippedCombatInitContent(raw));
 }
 
 export function mergeCombatInitEnemyRepair(

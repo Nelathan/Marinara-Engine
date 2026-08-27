@@ -30,6 +30,7 @@ import {
   COMBAT_INIT_DROPPED_STREAM_ERROR,
   COMBAT_INIT_ENEMY_REPAIR_USER,
   COMBAT_INIT_OBJECTIVE_NOTES,
+  combatInitLooksPartyOnly,
   combatInitNeedsEnemyRepair,
   ensureFleeingEscapeObjective,
   isDroppedStreamFinishReason,
@@ -675,16 +676,34 @@ export async function encounterRoutes(app: FastifyInstance) {
         history: recentMsgs,
       });
       if (!resolved.ok) {
-        const partial = parseCombatInitPartial(result.content ?? "");
-        if (combatInitNeedsEnemyRepair(partial)) {
+        const raw = result.content ?? "";
+        const partial = parseCombatInitPartial(raw);
+        const looksPartyOnly = combatInitLooksPartyOnly(raw);
+        const partialHasParty = Array.isArray(partial?.party) && partial.party.length > 0;
+        logger.warn(
+          {
+            chatId,
+            provider: conn.provider,
+            model: conn.model,
+            looksPartyOnly,
+            hasParty: partialHasParty,
+            chars: raw.length,
+            finishReason: result.finishReason,
+          },
+          "[game/combat:init] repair-check",
+        );
+        if (looksPartyOnly || combatInitNeedsEnemyRepair(partial)) {
           logger.warn(
-            { chatId, provider: conn.provider, model: conn.model, chars: result.content?.length ?? 0 },
-            "[game/combat:init] party-only combat blueprint; requesting one enemy repair generate",
+            { chatId, provider: conn.provider, model: conn.model, chars: raw.length },
+            "[game/combat:init] repair-start",
           );
+          const assistantContent = raw.trim()
+            ? raw.slice(0, 4000)
+            : JSON.stringify({ party: partial?.party ?? [] });
           const repairResult = await provider.chatComplete(
             [
               ...prompt,
-              { role: "assistant", content: JSON.stringify({ party: partial.party }) },
+              { role: "assistant", content: assistantContent },
               { role: "user", content: COMBAT_INIT_ENEMY_REPAIR_USER },
             ],
             {
@@ -696,20 +715,28 @@ export async function encounterRoutes(app: FastifyInstance) {
           );
           const repairContent = repairResult.content ?? "";
           let repaired = parseCombatInitBlueprint(repairContent);
-          if (!repaired) {
+          if (!repaired && partial) {
             repaired = mergeCombatInitEnemyRepair(partial, parseCombatInitPartial(repairContent));
           }
-          if (
+          const usable = !!(
             repaired &&
             Array.isArray(repaired.party) &&
             repaired.party.length > 0 &&
             Array.isArray(repaired.enemies) &&
             repaired.enemies.length > 0
-          ) {
-            logger.warn(
-              { chatId, provider: conn.provider, model: conn.model, chars: repairContent.length },
-              "[game/combat:init] enemy repair generate produced a usable combat blueprint",
-            );
+          );
+          logger.warn(
+            {
+              chatId,
+              provider: conn.provider,
+              model: conn.model,
+              chars: repairContent.length,
+              usable,
+              finishReason: repairResult.finishReason,
+            },
+            "[game/combat:init] repair-end",
+          );
+          if (usable && repaired) {
             const combatState = ensureFleeingEscapeObjective(repaired, recentMsgs);
             debugLog("[debug/game/combat:init] parsed response:\n%s", JSON.stringify(combatState, null, 2));
             await chats.patchMetadata(chatId, { encounterActive: true }, { touchUpdatedAt: false });

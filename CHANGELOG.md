@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Encounter init actually runs the one enemy repair generate when glm returns truncated party-only JSON.
 - Encounter init does one repair generate when glm returns party and no enemies.
 - Combat init salvages fenced/truncated glm blueprints that already contain party and enemies (and leftover after the closing fence).
 - Combat init now strips leading and trailing markdown code fences before JSON parse, including glm same-line json fences.

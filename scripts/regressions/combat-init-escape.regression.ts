@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { jsonishLooksTruncated } from "../../packages/server/src/services/game/jsonish.ts";
+import { jsonishLooksTruncated, parseGameJsonish } from "../../packages/server/src/services/game/jsonish.ts";
 import {
   COMBAT_INIT_DROPPED_STREAM_ERROR,
   COMBAT_INIT_ENEMY_REPAIR_USER,
   COMBAT_INIT_OBJECTIVE_NOTES,
   FLEEING_ESCAPE_OBJECTIVE,
+  combatInitLooksPartyOnly,
   combatInitNeedsEnemyRepair,
   ensureFleeingEscapeObjective,
   historyIndicatesFleeing,
@@ -277,6 +278,31 @@ assert.equal(
   combatInitNeedsEnemyRepair(parseCombatInitPartial(loggedShadowbladePreview)),
   true,
 );
+assert.equal(
+  combatInitLooksPartyOnly(loggedShadowbladePreview),
+  true,
+  "Playtester 3f7 Yes Shadowblade preview must look party-only so repair generate runs",
+);
+
+const livePowerCut =
+  '```json { "party": [ { "name": "User", "hp": 100, "maxHp": 100, "items": [], "statuses": [], "isPlayer": true, "attacks": [ {"name": "Strike", "type": "single-target", "description": "A direct melee strike with equipped weapon.", "power": 1.2, "cooldown": 0}, {"name": "Cleave", "power';
+assert.ok(livePowerCut.length > 280, "live power-cut fixture must be longer than the 280-char warn preview");
+assert.equal(
+  parseCombatInitBlueprint(livePowerCut),
+  null,
+  "longer truncated party cut at power must not salvage enemies",
+);
+const liveJsonish = parseGameJsonish(livePowerCut);
+assert.equal(
+  !!(liveJsonish && typeof liveJsonish === "object" && !Array.isArray(liveJsonish) && (liveJsonish as { name?: unknown }).name === "Strike"),
+  true,
+  "jsonish may return only the nested complete Strike on a live power-cut party body",
+);
+assert.equal(
+  combatInitLooksPartyOnly(livePowerCut),
+  true,
+  "combatInitLooksPartyOnly must be true for a longer truncated party cut at power even if parseCombatInitPartial is picky",
+);
 
 const partyOnlyBase = { party: [{ name: "User" }] };
 const mergedEnemies = mergeCombatInitEnemyRepair(partyOnlyBase, { enemies: [{ name: "Guard" }] });
@@ -303,6 +329,11 @@ assert.equal(
   combatInitNeedsEnemyRepair(parseCombatInitPartial(JSON.stringify(blueprint()))),
   false,
   "usable party+enemies must not request enemy repair",
+);
+assert.equal(
+  combatInitLooksPartyOnly(JSON.stringify(blueprint())),
+  false,
+  "usable party+enemies must not look party-only",
 );
 
 const leftoverAfterCloseBlueprint = "```json " + JSON.stringify(blueprint()) + " ``` done";
@@ -374,8 +405,18 @@ assert.match(COMBAT_INIT_ENEMY_REPAIR_USER, /enemies array/i);
 assert.match(COMBAT_INIT_ENEMY_REPAIR_USER, /no markdown fences/i);
 assert.match(routeSource, /COMBAT_INIT_ENEMY_REPAIR_USER/);
 assert.match(routeSource, /combatInitNeedsEnemyRepair/);
+assert.match(routeSource, /combatInitLooksPartyOnly/);
 assert.match(routeSource, /mergeCombatInitEnemyRepair/);
-assert.match(routeSource, /party-only combat blueprint; requesting one enemy repair generate/);
+assert.match(routeSource, /\[game\/combat:init\] repair-check/);
+assert.match(routeSource, /\[game\/combat:init\] repair-start/);
+assert.match(routeSource, /\[game\/combat:init\] repair-end/);
+assert.match(routeSource, /logger\.warn\([\s\S]*repair-check/);
+assert.match(
+  routeSource,
+  /looksPartyOnly \|\| combatInitNeedsEnemyRepair\(partial\)/,
+  "looksPartyOnly or needsEnemyRepair must gate the extra chatComplete",
+);
+assert.match(routeSource, /raw\.slice\(0,\s*4000\)/, "repair echo must send first assistant content like maneuver repair");
 assert.match(
   routeSource,
   /provider\.chatComplete\(\s*\[\s*\.\.\.prompt[\s\S]*COMBAT_INIT_ENEMY_REPAIR_USER/,
@@ -393,8 +434,14 @@ assert.equal(
 assert.equal(initSection.includes("while ("), false, "enemy repair must never loop");
 assert.match(combatInitSource, /export function parseCombatInitPartial/);
 assert.match(combatInitSource, /export function combatInitNeedsEnemyRepair/);
+assert.match(combatInitSource, /export function combatInitLooksPartyOnly/);
 assert.match(combatInitSource, /export function mergeCombatInitEnemyRepair/);
 assert.match(combatInitSource, /COMBAT_INIT_ENEMY_REPAIR_USER/);
+assert.match(
+  combatInitSource,
+  /parseCombatInitWith\(raw, hasNonemptyParty, true\)/,
+  "partial parse must try repaired jsonish before nested Strike can win",
+);
 const partialFn = combatInitSource.slice(
   combatInitSource.indexOf("export function parseCombatInitPartial"),
   combatInitSource.indexOf("export function combatInitNeedsEnemyRepair"),
