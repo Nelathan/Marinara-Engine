@@ -27,6 +27,8 @@ import {
   PROFESSOR_MARI_ID,
   type CharacterData,
   type CharacterTagIndexEntry,
+  type CharacterLibraryEntry,
+  type CharacterLibraryStatus,
   type CharacterTagOperation,
   type CharacterCardVersion,
   type Persona,
@@ -57,6 +59,7 @@ export const characterKeys = {
     [...characterKeys.list(), "page", includeBuiltIn, search, sort, favoriteFilter] as const,
   summariesRoot: () => [...characterKeys.all, "summaries"] as const,
   tagIndex: (includeBuiltIn: boolean) => [...characterKeys.all, "tag-index", includeBuiltIn] as const,
+  libraryState: () => [...characterKeys.all, "library-state"] as const,
   summaries: (idsKey: string) => [...characterKeys.all, "summaries", idsKey] as const,
   detail: (id: string) => [...characterKeys.all, "detail", id] as const,
   versions: (id: string) => [...characterKeys.detail(id), "versions"] as const,
@@ -225,6 +228,32 @@ export function useCharacterTagOperation() {
     onSuccess: (_result, variables) => {
       if (variables.preview) return;
       void queryClient.invalidateQueries({ queryKey: characterKeys.all });
+    },
+  });
+}
+
+/** Local library status plus usage facts derived from the user's chats. */
+export function useCharacterLibraryState() {
+  return useQuery({
+    queryKey: characterKeys.libraryState(),
+    queryFn: () => api.get<CharacterLibraryEntry[]>("/characters/library-state"),
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Set the library status for one or many characters.
+ *
+ * Local organization only: this never writes the character card, so it cannot
+ * change an export or add a card revision.
+ */
+export function useSetCharacterLibraryStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: { characterIds: string[]; status: CharacterLibraryStatus }) =>
+      api.post<{ applied: number; missing: string[] }>("/characters/library-state", variables),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: characterKeys.libraryState() });
     },
   });
 }

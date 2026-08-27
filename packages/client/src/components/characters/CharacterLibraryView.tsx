@@ -15,12 +15,24 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
-import { normalizeTextForMatch, type CharacterData, type Persona } from "@marinara-engine/shared";
+import {
+  CHARACTER_LIBRARY_SHELVES,
+  CHARACTER_LIBRARY_STATUSES,
+  isCharacterLibraryStatus,
+  matchesCharacterLibraryShelf,
+  normalizeTextForMatch,
+  type CharacterData,
+  type CharacterLibraryShelf,
+  type CharacterLibraryStatus,
+  type Persona,
+} from "@marinara-engine/shared";
 import { useTranslation, useTranslation as useUiTranslation } from "react-i18next";
 import {
   flattenCharacterPages,
   flattenPersonaPages,
   fetchAllCharacterPages,
+  useCharacterLibraryState,
+  useSetCharacterLibraryStatus,
   generateCharacterSummary,
   useCharacterPages,
   usePersonaPages,
@@ -106,6 +118,24 @@ const LIBRARY_COPY: Record<CardLibraryKind, LibraryCopy> = {
     title: "Persona Library",
     heading: "Browse your personas",
   },
+};
+
+/** Localization keys cannot contain hyphens, so stored values map explicitly. */
+const SHELF_LABEL_KEYS: Record<CharacterLibraryShelf, string> = {
+  all: "characters.shelves.all",
+  "recently-used": "characters.shelves.recentlyUsed",
+  "never-used": "characters.shelves.neverUsed",
+  "needs-review": "characters.shelves.needsReview",
+  "try-later": "characters.shelves.tryLater",
+  archived: "characters.shelves.archived",
+};
+
+const STATUS_LABEL_KEYS: Record<CharacterLibraryStatus, string> = {
+  active: "characters.status.active",
+  "needs-review": "characters.status.needsReview",
+  "try-later": "characters.status.tryLater",
+  archived: "characters.status.archived",
+  hidden: "characters.status.hidden",
 };
 
 function parseCharacterRow(char: CharacterRow): ParsedCharacterRow {
@@ -396,6 +426,7 @@ export function CharacterLibraryView() {
   const selectedId = isPersonaLibrary ? personaSelectedId : characterSelectedId;
   const sort = isPersonaLibrary ? personaSort : characterSort;
   const [search, setSearch] = useState("");
+  const [shelf, setShelf] = useState<CharacterLibraryShelf>("all");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([]);
   const [bulkMode, setBulkMode] = useState<"missing" | "all" | null>(null);
@@ -416,6 +447,13 @@ export function CharacterLibraryView() {
   const pendingLibraryScrollTopRef = useRef(0);
   const libraryScrollFrameRef = useRef<number | null>(null);
 
+  const libraryStateQuery = useCharacterLibraryState();
+  const setLibraryStatus = useSetCharacterLibraryStatus();
+  const libraryStateById = useMemo(
+    () => new Map((libraryStateQuery.data ?? []).map((entry) => [entry.characterId, entry])),
+    [libraryStateQuery.data],
+  );
+
   const cards = useMemo<LibraryCard[]>(() => {
     if (isPersonaLibrary) return personas.map(toPersonaLibraryCard);
     return (characters as CharacterRow[]).map(parseCharacterRow).map(toCharacterLibraryCard);
@@ -423,8 +461,34 @@ export function CharacterLibraryView() {
 
   const filteredCards = useMemo(() => {
     const query = parseCardLibrarySearchQuery(search);
-    return cards.filter((card) => matchesCardLibrarySearch(card, query));
-  }, [cards, search]);
+    const matching = cards.filter((card) => matchesCardLibrarySearch(card, query));
+    if (isPersonaLibrary) return matching;
+    return matching.filter((card) => {
+      // A character with no stored row has never been organized, so it is
+      // active and unused rather than missing from every shelf.
+      const entry = libraryStateById.get(card.id) ?? {
+        characterId: card.id,
+        status: "active" as const,
+        lastUsedAt: null,
+        chatCount: 0,
+      };
+      return matchesCharacterLibraryShelf(entry, shelf);
+    });
+  }, [cards, search, isPersonaLibrary, libraryStateById, shelf]);
+
+  // Counts come from the whole library state, not the filtered list, so a
+  // shelf shows how much is waiting on it even while another shelf is open.
+  const shelfCounts = useMemo(() => {
+    const counts = new Map<CharacterLibraryShelf, number>();
+    if (isPersonaLibrary) return counts;
+    for (const value of CHARACTER_LIBRARY_SHELVES) {
+      counts.set(
+        value,
+        (libraryStateQuery.data ?? []).filter((entry) => matchesCharacterLibraryShelf(entry, value)).length,
+      );
+    }
+    return counts;
+  }, [isPersonaLibrary, libraryStateQuery.data]);
 
   const sortedCards = useMemo(() => {
     const list = [...filteredCards];
@@ -445,6 +509,29 @@ export function CharacterLibraryView() {
         return list;
     }
   }, [filteredCards, sort]);
+
+  const handleSetLibraryStatus = useCallback(
+    async (status: CharacterLibraryStatus) => {
+      if (selectedCharacterIds.length === 0) return;
+      try {
+        const result = await setLibraryStatus.mutateAsync({ characterIds: selectedCharacterIds, status });
+        // Report what was skipped rather than implying the whole selection moved.
+        if (result.missing.length > 0) {
+          toast.error(
+            t("characters.shelves.partialFailureValue1Value2", {
+              value1: result.applied,
+              value2: result.missing.length,
+            }),
+          );
+        } else {
+          toast.success(t("characters.shelves.appliedValue1", { value1: result.applied }));
+        }
+      } catch {
+        toast.error(t("characters.shelves.statusFailed"));
+      }
+    },
+    [selectedCharacterIds, setLibraryStatus, t],
+  );
 
   const setSelectedId = useCallback(
     (id: string | null) => {
@@ -772,6 +859,30 @@ export function CharacterLibraryView() {
             </div>
           </div>
         </div>
+        {!isPersonaLibrary && (
+          <div
+            role="tablist"
+            aria-label={t("characters.shelves.label")}
+            className="flex flex-wrap gap-1 border-t border-[var(--marinara-chat-chrome-panel-divider)] px-3 py-2 md:px-6"
+          >
+            {CHARACTER_LIBRARY_SHELVES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={shelf === value}
+                onClick={() => setShelf(value)}
+                className={cn(
+                  "mari-chrome-control mari-chrome-control--compact",
+                  shelf === value && "mari-chrome-control--selected",
+                )}
+              >
+                {t(SHELF_LABEL_KEYS[value])}
+                <span className="tabular-nums text-[var(--muted-foreground)]">{shelfCounts.get(value) ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {selectionMode && !isPersonaLibrary && (
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--marinara-chat-chrome-panel-divider)] px-3 py-2 md:px-6">
             <span className="text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
@@ -800,6 +911,27 @@ export function CharacterLibraryView() {
             >
               {localizeUi("ui.characters.summary.regenerateSelected")}
             </button>
+            <label className="flex items-center gap-1.5 text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
+              {t("characters.shelves.setStatus")}
+              <select
+                value=""
+                disabled={setLibraryStatus.isPending || selectedCharacterIds.length === 0}
+                onChange={(event) => {
+                  const status = event.target.value;
+                  event.target.value = "";
+                  if (!isCharacterLibraryStatus(status)) return;
+                  void handleSetLibraryStatus(status);
+                }}
+                className="mari-chrome-field h-8 py-0 pl-2 pr-6 text-xs disabled:opacity-50"
+              >
+                <option value="">{t("characters.shelves.choose")}</option>
+                {CHARACTER_LIBRARY_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {t(STATUS_LABEL_KEYS[status])}
+                  </option>
+                ))}
+              </select>
+            </label>
             {bulkPending && (
               <button
                 type="button"
