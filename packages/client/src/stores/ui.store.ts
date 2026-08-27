@@ -6,8 +6,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { generateClientId } from "../lib/utils";
 import {
   IMAGE_STYLE_PROFILES_STORAGE_KEY,
+  characterTagKey,
   normalizeImageStyleProfileSettings,
   normalizeQuoteFormat,
+  type CharacterTagMatchMode,
   type ImageStyleProfileSettings,
   type GenerateSpatialMapDraftResponse,
   type LorebookCategory,
@@ -334,16 +336,14 @@ function normalizePanelText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
-function normalizePanelStringArray(value: unknown) {
+/**
+ * Tag filters are stored as canonical keys, not raw spellings, so a filter
+ * keeps working when a card spells the tag differently and so the values line
+ * up with the server tag index.
+ */
+function normalizePanelTagKeys(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return Array.from(
-    new Set(
-      value
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  );
+  return Array.from(new Set(value.map((item) => characterTagKey(item)).filter(Boolean)));
 }
 
 function normalizeScrollTop(value: unknown) {
@@ -660,6 +660,8 @@ interface UIState {
   characterPanelExcludedTags: string[];
   /** Whether the compact Characters panel tag filter shelf is expanded */
   characterPanelTagsExpanded: boolean;
+  /** Whether included tag filters must all match, or any one of them */
+  characterPanelTagMatchMode: CharacterTagMatchMode;
   /** Favorite filter for the compact Characters panel */
   characterPanelFavoriteFilter: CharacterPanelFavoriteFilter;
   /** Last scroll offset for the compact Characters panel */
@@ -1001,6 +1003,7 @@ interface UIState {
   setCharacterPanelIncludedTags: (tags: string[]) => void;
   setCharacterPanelExcludedTags: (tags: string[]) => void;
   setCharacterPanelTagsExpanded: (expanded: boolean) => void;
+  setCharacterPanelTagMatchMode: (mode: CharacterTagMatchMode) => void;
   setCharacterPanelFavoriteFilter: (filter: CharacterPanelFavoriteFilter) => void;
   setCharacterPanelScrollTop: (scrollTop: number) => void;
   setCharacterLibraryScrollTop: (scrollTop: number) => void;
@@ -1470,6 +1473,7 @@ export const useUIStore = create<UIState>()(
       characterPanelIncludedTags: [],
       characterPanelExcludedTags: [],
       characterPanelTagsExpanded: false,
+      characterPanelTagMatchMode: "any",
       characterPanelFavoriteFilter: "all" as CharacterPanelFavoriteFilter,
       characterPanelScrollTop: 0,
       characterLibraryScrollTop: 0,
@@ -1755,9 +1759,10 @@ export const useUIStore = create<UIState>()(
       setCharacterLibrarySort: (sort) => set({ characterLibrarySort: normalizeCharacterLibrarySort(sort) }),
       setPersonaLibrarySort: (sort) => set({ personaLibrarySort: normalizeBasicPanelSort(sort) }),
       setCharacterPanelSearch: (search) => set({ characterPanelSearch: normalizePanelText(search) }),
-      setCharacterPanelIncludedTags: (tags) => set({ characterPanelIncludedTags: normalizePanelStringArray(tags) }),
-      setCharacterPanelExcludedTags: (tags) => set({ characterPanelExcludedTags: normalizePanelStringArray(tags) }),
+      setCharacterPanelIncludedTags: (tags) => set({ characterPanelIncludedTags: normalizePanelTagKeys(tags) }),
+      setCharacterPanelExcludedTags: (tags) => set({ characterPanelExcludedTags: normalizePanelTagKeys(tags) }),
       setCharacterPanelTagsExpanded: (expanded) => set({ characterPanelTagsExpanded: expanded }),
+      setCharacterPanelTagMatchMode: (mode) => set({ characterPanelTagMatchMode: mode === "all" ? "all" : "any" }),
       setCharacterPanelFavoriteFilter: (filter) =>
         set({ characterPanelFavoriteFilter: normalizeCharacterPanelFavoriteFilter(filter) }),
       setCharacterPanelScrollTop: (scrollTop) => set({ characterPanelScrollTop: normalizeScrollTop(scrollTop) }),
@@ -2593,7 +2598,7 @@ export const useUIStore = create<UIState>()(
     {
       name: "marinara-engine-ui",
       // v95 -> v96: add inline Roleplay reasoning preferences and per-mode chat help history.
-      version: 96,
+      version: 97,
       // Debounce localStorage writes to avoid sync I/O on every state change
       storage: createJSONStorage(() => {
         let timer: ReturnType<typeof setTimeout> | null = null;
@@ -3016,9 +3021,10 @@ export const useUIStore = create<UIState>()(
         persisted.cardLibraryKind = persisted.cardLibraryKind === "personas" ? "personas" : "characters";
         persisted.personaLibrarySort = normalizeBasicPanelSort(persisted.personaLibrarySort);
         persisted.characterPanelSearch = normalizePanelText(persisted.characterPanelSearch);
-        persisted.characterPanelIncludedTags = normalizePanelStringArray(persisted.characterPanelIncludedTags);
-        persisted.characterPanelExcludedTags = normalizePanelStringArray(persisted.characterPanelExcludedTags);
+        persisted.characterPanelIncludedTags = normalizePanelTagKeys(persisted.characterPanelIncludedTags);
+        persisted.characterPanelExcludedTags = normalizePanelTagKeys(persisted.characterPanelExcludedTags);
         persisted.characterPanelTagsExpanded = persisted.characterPanelTagsExpanded === true;
+        persisted.characterPanelTagMatchMode = persisted.characterPanelTagMatchMode === "all" ? "all" : "any";
         persisted.characterPanelFavoriteFilter = normalizeCharacterPanelFavoriteFilter(
           persisted.characterPanelFavoriteFilter,
         );
@@ -3170,6 +3176,12 @@ export const useUIStore = create<UIState>()(
           persisted.spotifyMobileWidgetPosition?.y === 96
         ) {
           persisted.spotifyMobileWidgetPosition = { ...DEFAULT_MOBILE_MUSIC_WIDGET_POSITION };
+        }
+        // v96 -> v97: tag filters moved from raw spellings to canonical keys.
+        if (version <= 96) {
+          persisted.characterPanelIncludedTags = normalizePanelTagKeys(persisted.characterPanelIncludedTags);
+          persisted.characterPanelExcludedTags = normalizePanelTagKeys(persisted.characterPanelExcludedTags);
+          if (persisted.characterPanelTagMatchMode === undefined) persisted.characterPanelTagMatchMode = "any";
         }
         if (version <= 95) {
           persisted.showRoleplayThinkingInMessages = false;

@@ -26,6 +26,7 @@ import { personaCacheKeys, syncCachedPersona } from "../lib/persona-cache";
 import {
   PROFESSOR_MARI_ID,
   type CharacterData,
+  type CharacterTagIndexEntry,
   type CharacterCardVersion,
   type Persona,
   type PersonaCardVersion,
@@ -54,6 +55,7 @@ export const characterKeys = {
   page: (includeBuiltIn: boolean, search: string, sort: string, favoriteFilter: string) =>
     [...characterKeys.list(), "page", includeBuiltIn, search, sort, favoriteFilter] as const,
   summariesRoot: () => [...characterKeys.all, "summaries"] as const,
+  tagIndex: (includeBuiltIn: boolean) => [...characterKeys.all, "tag-index", includeBuiltIn] as const,
   summaries: (idsKey: string) => [...characterKeys.all, "summaries", idsKey] as const,
   detail: (id: string) => [...characterKeys.all, "detail", id] as const,
   versions: (id: string) => [...characterKeys.detail(id), "versions"] as const,
@@ -186,6 +188,22 @@ export function useCharacter(id: string | null) {
     queryFn: () => api.get(`/characters/${id}`),
     enabled: !!id,
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Tag counts for the whole library.
+ *
+ * Deliberately not derived from the loaded character pages: the panel
+ * paginates, so a page-derived tag list omits tags that only appear on cards
+ * the user has not scrolled to yet.
+ */
+export function useCharacterTagIndex(includeBuiltIn = false) {
+  return useQuery({
+    queryKey: characterKeys.tagIndex(includeBuiltIn),
+    queryFn: () =>
+      api.get<CharacterTagIndexEntry[]>(includeBuiltIn ? "/characters/tags?includeBuiltIn=true" : "/characters/tags"),
+    staleTime: 60_000,
   });
 }
 

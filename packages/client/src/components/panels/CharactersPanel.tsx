@@ -8,6 +8,7 @@ import {
   fetchAllCharacterPages,
   flattenCharacterPages,
   useCharacterPages,
+  useCharacterTagIndex,
   useDeleteCharacter,
   useCharacterGroups,
   useCreateGroup,
@@ -31,7 +32,6 @@ import {
   ChevronRight,
   Copy,
   Users,
-  X,
   UserMinus,
   ArrowUpDown,
   Tag,
@@ -50,9 +50,15 @@ import {
 import { useUIStore, type CharacterLibrarySort } from "../../stores/ui.store";
 import { handleFolderRenameKeyDown, useFolderRenameGesture } from "../../hooks/use-folder-rename-gesture";
 import { useTouchFolderDrag } from "../../hooks/use-touch-folder-drag";
-import { normalizeAvatarCrop } from "@marinara-engine/shared";
+import {
+  characterTagKey,
+  characterTagKeys,
+  matchesCharacterTagFilter,
+  normalizeAvatarCrop,
+} from "@marinara-engine/shared";
 import { cn, getAvatarCropStyle } from "../../lib/utils";
 import { estimateCharacterCardTokens, formatEstimatedTokens } from "../../lib/character-token-count";
+import { CharacterTagExplorer } from "../characters/CharacterTagExplorer";
 import { SelectionActionBar } from "../ui/SelectionActionBar";
 import { SmoothFolderContent } from "../ui/SmoothFolderContent";
 import { TouchDragHandle } from "../ui/TouchDragHandle";
@@ -168,6 +174,8 @@ export function CharactersPanel() {
   const setCharacterPanelExcludedTags = useUIStore((s) => s.setCharacterPanelExcludedTags);
   const tagsExpanded = useUIStore((s) => s.characterPanelTagsExpanded);
   const setTagsExpanded = useUIStore((s) => s.setCharacterPanelTagsExpanded);
+  const tagMatchMode = useUIStore((s) => s.characterPanelTagMatchMode);
+  const setTagMatchMode = useUIStore((s) => s.setCharacterPanelTagMatchMode);
   const favFilter = useUIStore((s) => s.characterPanelFavoriteFilter);
   const setFavFilter = useUIStore((s) => s.setCharacterPanelFavoriteFilter);
   const setCharacterPanelScrollTop = useUIStore((s) => s.setCharacterPanelScrollTop);
@@ -230,23 +238,13 @@ export function CharactersPanel() {
     } else if (favFilter === "non-favorites") {
       list = list.filter((c) => !c.parsed.extensions?.fav);
     }
-    // Filter by included tags (OR logic)
-    if (includedTags.size > 0) {
-      const lowerIncludedTags = new Set([...includedTags].map((t) => t.toLowerCase()));
-      list = list.filter((c) => {
-        const tags = new Set(getCharacterTags(c).map((t) => t.toLowerCase()));
-        return [...lowerIncludedTags].some((tag) => tags.has(tag));
-      });
-    }
-    const excludedTagFilters = new Set(Array.from(excludedTags, (tag) => tag.toLowerCase()));
-    if (excludedTagFilters.size > 0) {
-      list = list.filter((c) => {
-        const tags = new Set(getCharacterTags(c).map((tag) => tag.toLowerCase()));
-        for (const tag of excludedTagFilters) {
-          if (tags.has(tag)) return false;
-        }
-        return true;
-      });
+    if (includedTags.size > 0 || excludedTags.size > 0) {
+      const tagFilter = {
+        include: [...includedTags],
+        exclude: [...excludedTags],
+        mode: tagMatchMode,
+      };
+      list = list.filter((c) => matchesCharacterTagFilter(getCharacterTags(c), tagFilter));
     }
     list = list.filter((c) => {
       const tags = getCharacterTags(c);
@@ -268,25 +266,33 @@ export function CharactersPanel() {
       );
     });
     return list;
-  }, [parsedCharacters, search, includedTags, excludedTags, favFilter]);
+  }, [parsedCharacters, search, includedTags, excludedTags, tagMatchMode, favFilter]);
 
-  // Collect all unique tags across characters for the filter bar
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    for (const c of parsedCharacters) {
-      for (const t of getCharacterTags(c)) {
-        tagSet.add(t);
+  // Tag counts come from the server, not from the loaded pages. The panel
+  // paginates, so a page-derived list hides every tag that only appears on
+  // cards the user has not scrolled to yet.
+  const tagIndexQuery = useCharacterTagIndex();
+  const allTags = useMemo(() => tagIndexQuery.data ?? [], [tagIndexQuery.data]);
+
+  // Counts within the current result set, so each row shows how much it would
+  // narrow the list rather than only its library-wide total.
+  const resultTagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const character of filteredCharacters) {
+      for (const key of characterTagKeys(getCharacterTags(character))) {
+        counts.set(key, (counts.get(key) ?? 0) + 1);
       }
     }
-    return [...tagSet].sort((a, b) => a.localeCompare(b));
-  }, [parsedCharacters]);
+    return counts;
+  }, [filteredCharacters]);
 
   const handleDeleteTag = useCallback(
-    async (tag: string) => {
+    async (tagKey: string) => {
+      const label = allTags.find((entry) => entry.key === tagKey)?.label ?? tagKey;
       if (
         !(await showConfirmDialog({
           title: localizeUi("ui.panels.characterspanel.removeTag"),
-          message: localizeUi("ui.panels.characterspanel.removeTagValue1FromAllCharacters", { value1: tag }),
+          message: localizeUi("ui.panels.characterspanel.removeTagValue1FromAllCharacters", { value1: label }),
           confirmLabel: localizeUi("settings.notifications.customSound.actions.remove"),
           tone: "destructive",
         }))
@@ -297,19 +303,21 @@ export function CharactersPanel() {
         const allCharacters = (await fetchAllCharacterPages({ sort })).map((char) =>
           parseCharacterRow(char as CharacterRow),
         );
-        const affected = allCharacters.filter((c) => getCharacterTags(c).includes(tag));
+        // Compare canonical keys, not raw strings. Matching on the exact
+        // spelling left every case variant of the tag behind on the card.
+        const affected = allCharacters.filter((c) => characterTagKeys(getCharacterTags(c)).has(tagKey));
         for (const c of affected) {
-          const newTags = getCharacterTags(c).filter((t) => t !== tag);
+          const newTags = getCharacterTags(c).filter((t) => characterTagKey(t) !== tagKey);
           await updateCharacter.mutateAsync({ id: c.id, data: { tags: newTags } });
         }
-        if (includedTags.has(tag)) {
+        if (includedTags.has(tagKey)) {
           const next = new Set(includedTags);
-          next.delete(tag);
+          next.delete(tagKey);
           setCharacterPanelIncludedTags([...next]);
         }
-        if (excludedTags.has(tag)) {
+        if (excludedTags.has(tagKey)) {
           const next = new Set(excludedTags);
-          next.delete(tag);
+          next.delete(tagKey);
           setCharacterPanelExcludedTags([...next]);
         }
       } catch {
@@ -317,6 +325,7 @@ export function CharactersPanel() {
       }
     },
     [
+      allTags,
       sort,
       updateCharacter,
       includedTags,
@@ -329,18 +338,41 @@ export function CharactersPanel() {
 
   const toggleIncludedTag = useCallback(
     (tag: string) => {
+      const key = characterTagKey(tag);
+      if (!key) return;
       const nextIncluded = new Set(includedTags);
-      if (nextIncluded.has(tag)) {
-        nextIncluded.delete(tag);
+      if (nextIncluded.has(key)) {
+        nextIncluded.delete(key);
       } else {
-        nextIncluded.add(tag);
+        nextIncluded.add(key);
       }
       setCharacterPanelIncludedTags([...nextIncluded]);
 
-      if (excludedTags.has(tag)) {
+      if (excludedTags.has(key)) {
         const nextExcluded = new Set(excludedTags);
-        nextExcluded.delete(tag);
+        nextExcluded.delete(key);
         setCharacterPanelExcludedTags([...nextExcluded]);
+      }
+    },
+    [excludedTags, includedTags, setCharacterPanelExcludedTags, setCharacterPanelIncludedTags],
+  );
+
+  const toggleExcludedTag = useCallback(
+    (tag: string) => {
+      const key = characterTagKey(tag);
+      if (!key) return;
+      const nextExcluded = new Set(excludedTags);
+      if (nextExcluded.has(key)) {
+        nextExcluded.delete(key);
+      } else {
+        nextExcluded.add(key);
+      }
+      setCharacterPanelExcludedTags([...nextExcluded]);
+
+      if (includedTags.has(key)) {
+        const nextIncluded = new Set(includedTags);
+        nextIncluded.delete(key);
+        setCharacterPanelIncludedTags([...nextIncluded]);
       }
     },
     [excludedTags, includedTags, setCharacterPanelExcludedTags, setCharacterPanelIncludedTags],
@@ -886,58 +918,26 @@ export function CharactersPanel() {
             )}
           >
             <Tag size="0.625rem" />
-            {localizeUi("ui.panels.backgroundpicker.tagsValue1", { value1: allTags.length })}
+            {t("characters.tagExplorer.tagsValue1", { value1: allTags.length })}
             <ChevronDown size="0.625rem" className={cn("transition-transform", tagsExpanded && "rotate-180")} />
           </button>
         )}
       </div>
 
       {allTags.length > 0 && tagsExpanded && (
-        <div className="flex flex-wrap gap-1">
-          {(includedTags.size > 0 || excludedTags.size > 0) && (
-            <button
-              onClick={clearTagFilters}
-              className="mari-chrome-control mari-chrome-control--compact mari-chrome-control--danger"
-            >
-              <X size="0.5rem" /> {localizeUi("lorebook.editor.batch.clear")}
-            </button>
-          )}
-          {allTags.map((tag) => {
-            const included = includedTags.has(tag);
-            const excluded = excludedTags.has(tag);
-            return (
-              <div
-                key={tag}
-                role="button"
-                tabIndex={0}
-                onClick={() => toggleIncludedTag(tag)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleIncludedTag(tag);
-                  }
-                }}
-                className={cn(
-                  "mari-chrome-control mari-chrome-control--compact group/tag cursor-pointer",
-                  included ? "mari-chrome-control--selected" : excluded ? "mari-chrome-control--danger" : "",
-                )}
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTag(tag);
-                  }}
-                  className="rounded-full p-0.5 transition-colors hover:bg-[var(--destructive)]/20 hover:text-[var(--destructive)]"
-                  title={localizeUi("ui.panels.characterspanel.deleteTagValue1", { value1: tag })}
-                >
-                  <X size="0.5rem" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <CharacterTagExplorer
+          entries={allTags}
+          includedKeys={includedTags}
+          excludedKeys={excludedTags}
+          matchMode={tagMatchMode}
+          resultCounts={resultTagCounts}
+          onToggleIncluded={toggleIncludedTag}
+          onToggleExcluded={toggleExcludedTag}
+          onMatchModeChange={setTagMatchMode}
+          onClear={clearTagFilters}
+          onDelete={handleDeleteTag}
+          isLoading={tagIndexQuery.isLoading}
+        />
       )}
 
       <div className="flex flex-col gap-0.5">
