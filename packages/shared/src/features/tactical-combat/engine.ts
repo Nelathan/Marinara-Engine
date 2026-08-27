@@ -393,6 +393,7 @@ interface HitOptions {
   hitPenalty?: number;
   skillName?: string;
   isCounter?: boolean;
+  reaction?: "opportunity" | "overwatch" | "counter";
   statusEffect?: string;
   cooldownForStatus?: number;
   defenderPosition?: TacticalCoord;
@@ -426,18 +427,27 @@ function resolveHit(
 ): HitOutcome {
   const rng = deterministicRng(state.seed, state.actionCounter++);
   const label = opts.skillName ? `${attacker.name}'s ${opts.skillName}` : `${attacker.name}`;
-  const verb = opts.isCounter ? "counters" : opts.skillName ? "strikes" : "attacks";
+  const reaction = opts.reaction ?? (opts.isCounter ? "counter" : undefined);
+  const isCounter = Boolean(reaction);
+  const verb = isCounter ? "counters" : opts.skillName ? "strikes" : "attacks";
+  const reactionPhrase =
+    reaction === "opportunity"
+      ? `${attacker.name} opportunity attack on ${defender.name}`
+      : reaction === "overwatch"
+        ? `${attacker.name} prepared shot on ${defender.name}`
+        : undefined;
 
   const defenderForMath = opts.defenderPosition ? { ...defender, ...opts.defenderPosition } : defender;
   const hc = Math.max(0, hitChance(state.grid, attacker, defenderForMath) - (opts.hitPenalty ?? 0));
   if (rng() * 100 >= hc) {
     events.push({
       kind: "miss",
-      text: `${label} ${verb} ${defender.name} — but misses!`,
+      text: reactionPhrase ? `${reactionPhrase} — but misses!` : `${label} ${verb} ${defender.name} — but misses!`,
       actorId: attacker.id,
       targetId: defender.id,
       isMiss: true,
       skillName: opts.skillName,
+      ...(reaction ? { reaction } : {}),
     });
     return { hit: false, crit: false, damage: 0, defeated: false };
   }
@@ -464,23 +474,25 @@ function resolveHit(
   if (crit) {
     events.push({
       kind: "crit",
-      text: `Critical hit! ${label} ${verb} ${defender.name} for ${damage}${elementNote}`,
+      text: `Critical hit! ${reactionPhrase ? `${reactionPhrase} for ${damage}${elementNote}` : `${label} ${verb} ${defender.name} for ${damage}${elementNote}`}`,
       actorId: attacker.id,
       targetId: defender.id,
       amount: damage,
       isCrit: true,
       skillName: opts.skillName,
       element,
+      ...(reaction ? { reaction } : {}),
     });
   } else {
     events.push({
-      kind: opts.isCounter ? "counter" : "damage",
-      text: `${label} ${verb} ${defender.name} for ${damage} damage${elementNote}`,
+      kind: isCounter ? "counter" : "damage",
+      text: reactionPhrase ? `${reactionPhrase} for ${damage}${elementNote}` : `${label} ${verb} ${defender.name} for ${damage} damage${elementNote}`,
       actorId: attacker.id,
       targetId: defender.id,
       amount: damage,
       skillName: opts.skillName,
       element,
+      ...(reaction ? { reaction } : {}),
     });
   }
 
@@ -544,7 +556,7 @@ function resolveMovementReactions(
     const wasInReactionRange = originDistance >= opponent.attackRange.min && originDistance <= opponent.attackRange.max;
     const movesAway = manhattan(destination, opponent) > 1;
     if (originDistance === 1 && wasInReactionRange && movesAway) {
-      resolveHit(state, opponent, mover, { isCounter: true, hitPenalty: 10 }, events);
+      resolveHit(state, opponent, mover, { isCounter: true, reaction: "opportunity", hitPenalty: 10 }, events);
       continue;
     }
     const overwatch = opponent.statusEffects.find((effect) => effect.name === "Overwatch" && effect.turnsLeft > 0);
@@ -555,7 +567,7 @@ function resolveMovementReactions(
       distance <= opponent.attackRange.max &&
       hasLineOfSight(state.grid, opponent, destination)
     ) {
-      resolveHit(state, opponent, mover, { isCounter: true, hitPenalty: 5, defenderPosition: destination }, events);
+      resolveHit(state, opponent, mover, { isCounter: true, reaction: "overwatch", hitPenalty: 5, defenderPosition: destination }, events);
       opponent.statusEffects = opponent.statusEffects.filter((effect) => effect !== overwatch);
     }
   }
@@ -1010,7 +1022,7 @@ function performUnitAction(
       const outcome = resolveHit(state, unit, target, {}, events);
       // Counterattack.
       if (outcome.hit && !outcome.defeated && canCounter(state, unit, target)) {
-        resolveHit(state, target, unit, { isCounter: true, hitPenalty: 10 }, events);
+        resolveHit(state, target, unit, { isCounter: true, reaction: "counter", hitPenalty: 10 }, events);
       }
       return;
     }
@@ -1091,7 +1103,7 @@ function performUnitAction(
       if (maneuverProposal) resolveProposedManeuver(state, unit, action, maneuverProposal, events);
       else resolveManeuver(state, unit, action, events);
       if (target && target.side !== unit.side && target.hp > 0 && canCounter(state, unit, target)) {
-        resolveHit(state, target, unit, { isCounter: true, hitPenalty: 15 }, events);
+        resolveHit(state, target, unit, { isCounter: true, reaction: "counter", hitPenalty: 15 }, events);
       }
       return;
     }
@@ -1161,7 +1173,7 @@ function performUnitAction(
         events,
       );
       if (outcome.hit && !outcome.defeated && canCounter(state, unit, target)) {
-        resolveHit(state, target, unit, { isCounter: true, hitPenalty: 10 }, events);
+        resolveHit(state, target, unit, { isCounter: true, reaction: "counter", hitPenalty: 10 }, events);
       }
       return;
     }

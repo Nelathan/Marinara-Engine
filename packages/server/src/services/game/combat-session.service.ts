@@ -102,6 +102,7 @@ function toCombatEvents(actionId: string, events: TacticalEvent[]): CombatEvent[
     ...(event.amount !== undefined ? { amount: event.amount } : {}),
     ...(event.to ? { to: event.to } : {}),
     ...(event.skillName ? { skillName: event.skillName } : {}),
+    ...(event.reaction ? { reaction: event.reaction } : {}),
     ...(event.element ? { element: event.element } : {}),
     ...(event.statusName ? { statusName: event.statusName } : {}),
     ...(event.roll ? { roll: event.roll } : {}),

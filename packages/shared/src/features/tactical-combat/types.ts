@@ -233,6 +233,7 @@ export interface TacticalEvent {
   isCrit?: boolean;
   isMiss?: boolean;
   skillName?: string;
+  reaction?: "opportunity" | "overwatch" | "counter";
   element?: string;
   statusName?: string;
   phase?: TacticalPhase;

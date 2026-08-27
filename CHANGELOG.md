@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Tactical opportunity attacks and Overwatch no longer log as a generic "counters" line: they read as an opportunity attack or prepared shot, and "counters" is kept for a true retaliate.
 - Permanent Delete now preserves Marinara's stock Universal Preset and its prompt structure while removing editable presets (#5568).
 - Streamed the large Game Mode combat blueprint initialization response so slow LLM providers can send headers before the transport timeout instead of surfacing a generic combat-generation failure.
 - Fixed Special/Maneuver actions in Classic and Tactical combat producing no effect when the GM's proposal was malformed: the resolver now salvages what it can, asks the GM once to repair an unusable proposal, and falls back to a deterministic reading of the player's own instruction so a maneuver always produces a result, and the combat log now explains when part of a maneuver could not take effect.

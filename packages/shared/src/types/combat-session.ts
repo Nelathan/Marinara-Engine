@@ -124,6 +124,7 @@ export interface CombatEvent {
   amount?: number;
   to?: TacticalCoord;
   skillName?: string;
+  reaction?: "opportunity" | "overwatch" | "counter";
   element?: string;
   statusName?: string;
   roll?: { kind: string; value: number; cursor: number };

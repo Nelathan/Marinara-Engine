@@ -142,6 +142,11 @@ if (enteredEnemyOverwatch.ok) {
     enteredEnemyOverwatch.events.some((event) => event.kind === "counter"),
     true,
   );
+  const overwatchEvent = enteredEnemyOverwatch.events.find(
+    (event) => event.reaction === "overwatch" || /prepared shot on/.test(event.text),
+  );
+  assert.equal(overwatchEvent?.reaction, "overwatch");
+  assert.match(overwatchEvent?.text ?? "", /prepared shot on/);
   assert.equal(
     enteredEnemyOverwatch.state.units
       .find((entry) => entry.id === "enemy")
@@ -166,6 +171,11 @@ if (armedPlayer.ok) {
     playerCoverage.events.some((event) => event.kind === "counter"),
     true,
   );
+  const playerShot = playerCoverage.events.find(
+    (event) => event.reaction === "overwatch" || /prepared shot on/.test(event.text),
+  );
+  assert.equal(playerShot?.reaction, "overwatch");
+  assert.match(playerShot?.text ?? "", /prepared shot on/);
   assert.equal(playerCoverage.state.units.find((entry) => entry.id === "enemy")?.hp < 100, true);
 }
 
@@ -222,5 +232,41 @@ assert.equal(
   overwatchDamagePair[1],
   "Overwatch damage must use the shared destination terrain instead of the mover's origin",
 );
+
+const meleeOpportunity = state(
+  [unit("party", "party", 1, 0, { min: 1, max: 1 }), unit("fighter", "enemy", 2, 0, { min: 1, max: 1 })],
+  [["plains", "plains", "plains"]],
+);
+const steppedOffMelee = applyAction(meleeOpportunity, { type: "move", unitId: "party", to: { x: 0, y: 0 } });
+assert.equal(steppedOffMelee.ok, true);
+if (steppedOffMelee.ok) {
+  const oa = steppedOffMelee.events.find(
+    (event) => event.reaction === "opportunity" || /opportunity attack on/.test(event.text),
+  );
+  assert.ok(oa, "leaving an adjacent melee tile must fire an opportunity attack");
+  assert.equal(oa?.reaction, "opportunity");
+  assert.match(oa?.text ?? "", /opportunity attack on/);
+  assert.equal(oa?.kind === "counter" || oa?.kind === "crit" || oa?.kind === "miss", true);
+}
+
+let trueCounter: Extract<ReturnType<typeof applyAction>, { ok: true }> | undefined;
+for (let seed = 1; seed <= 200 && !trueCounter; seed++) {
+  const fixture = state(
+    [unit("party", "party", 0, 0, { min: 1, max: 1 }), unit("enemy", "enemy", 1, 0, { min: 1, max: 1 })],
+    [["plains", "plains"]],
+  );
+  fixture.seed = seed;
+  const result = applyAction(fixture, { type: "attack", unitId: "party", targetId: "enemy" });
+  if (result.ok) {
+    const retaliate = result.events.find((event) => event.reaction === "counter" || /\bcounters\b/.test(event.text));
+    if (retaliate) trueCounter = result;
+  }
+}
+assert.ok(trueCounter, "an adjacent attack must find a true retaliate");
+const retaliate = trueCounter.events.find((event) => event.reaction === "counter" || /\bcounters\b/.test(event.text));
+assert.equal(retaliate?.reaction, "counter");
+assert.match(retaliate?.text ?? "", /\bcounters\b/);
+assert.equal(/opportunity attack on/.test(retaliate?.text ?? ""), false);
+assert.equal(/prepared shot on/.test(retaliate?.text ?? ""), false);
 
 process.stdout.write("Tactical combat regression passed.\n");
