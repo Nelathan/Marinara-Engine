@@ -208,6 +208,41 @@ assert.equal(isDroppedStreamFinishReason("terminated"), true);
 assert.equal(isDroppedStreamFinishReason("error"), true);
 assert.equal(isDroppedStreamFinishReason("stop"), false);
 
+const thinkWrappedBlueprint = `<think>{"foo":1}</think>\n` + JSON.stringify(
+  blueprint({
+    objectives: [{ id: "wipe", kind: "eliminate", label: "Defeat the guard" }],
+  }),
+);
+const thinkWrappedParsed = parseCombatInitBlueprint(thinkWrappedBlueprint);
+assert.ok(thinkWrappedParsed, "leading think block with nested JSON must be stripped before parse");
+assert.equal((thinkWrappedParsed!.party as unknown[]).length, 1);
+assert.equal((thinkWrappedParsed!.enemies as unknown[]).length, 1);
+
+const unclosedThink = resolveCombatInitFromLlm({
+  content: "<think>still reasoning about the battle",
+  finishReason: "stop",
+  history: fightHistory,
+});
+assert.equal(unclosedThink.ok, false, "unclosed think-only content must 502 invalid JSON");
+if (!unclosedThink.ok) {
+  assert.equal(unclosedThink.status, 502);
+  assert.equal(unclosedThink.error, "AI returned invalid JSON");
+}
+assert.equal(parseCombatInitBlueprint("<think>still reasoning about the battle"), null);
+
+const thinkWrappedFlee = resolveCombatInitFromLlm({
+  content: thinkWrappedBlueprint,
+  finishReason: "stop",
+  history: fleeingHistory,
+});
+assert.equal(thinkWrappedFlee.ok, true, "fleeing history must inject escape on a think-wrapped blueprint");
+if (thinkWrappedFlee.ok) {
+  assert.equal((thinkWrappedFlee.combatState.objectives as Array<{ kind: string }>)[0]?.kind, "escape");
+  assert.equal((thinkWrappedFlee.combatState.objectives as Array<{ label: string }>)[0]?.label, "Reach the exit");
+  assert.equal((thinkWrappedFlee.combatState.party as unknown[]).length, 1);
+  assert.equal((thinkWrappedFlee.combatState.enemies as unknown[]).length, 1);
+}
+
 const surfaceSource = readFileSync(new URL("../../packages/client/src/components/game/GameSurface.tsx", import.meta.url), "utf8");
 assert.match(surfaceSource, /const COMBAT_INIT_CLIENT_TIMEOUT_MS = 25_000;/);
 assert.equal(

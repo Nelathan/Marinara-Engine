@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Combat init now strips leading inline thinking tags before JSON parse, so models that emit `<think>…</think>` (or similar) in `content` no longer fail encounter init as invalid JSON.
 - Engine Combat no longer aborts a still-thinking encounter init at 25s. It toasts that the AI provider is still working, then shows the grid (and chase escape chip) when party and enemies land.
 - Tactical combat init now salvages a terminated or truncated blueprint that already has party and enemies, toasts a dropped-stream error instead of generic invalid JSON when the stream dies unusable, and Engine Combat no longer waits ~90s on a hung encounter init before the HUD can retry.
 - Classic combat no longer stalls on Choose action when the last enemy is already at 0 HP: Flee (or any action) ends the fight as a victory, rejected actions toast their error instead of failing silently, and an active escape objective still blocks retreat until the exit.
