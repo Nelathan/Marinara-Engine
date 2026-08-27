@@ -209,9 +209,22 @@ assert.equal(isDroppedStreamFinishReason("error"), true);
 assert.equal(isDroppedStreamFinishReason("stop"), false);
 
 const surfaceSource = readFileSync(new URL("../../packages/client/src/components/game/GameSurface.tsx", import.meta.url), "utf8");
-assert.match(surfaceSource, /const COMBAT_INIT_CLIENT_TIMEOUT_MS = (2\d|30)_000;/);
-assert.match(surfaceSource, /AbortSignal\.timeout\(COMBAT_INIT_CLIENT_TIMEOUT_MS\)/);
-assert.match(surfaceSource, /if \(notify\) \{\s*toast\.error/s);
+assert.match(surfaceSource, /const COMBAT_INIT_CLIENT_TIMEOUT_MS = 25_000;/);
+assert.equal(
+  surfaceSource.includes("AbortSignal.timeout(COMBAT_INIT_CLIENT_TIMEOUT_MS)"),
+  false,
+  "/encounter/init must not abort via AbortSignal.timeout",
+);
+const stallTimerMatch = surfaceSource.match(
+  /combatInitStallTimer = window\.setTimeout\(\(\) => \{([\s\S]*?)\}, COMBAT_INIT_CLIENT_TIMEOUT_MS\)/,
+);
+assert.ok(stallTimerMatch, "combat init stall timer must exist");
+const stallTimerBody = stallTimerMatch[1] ?? "";
+assert.match(stallTimerBody, /if \(notify\) \{\s*toast\.info/s, "stall wait must toast.info");
+assert.equal(stallTimerBody.includes("setCombatGenerationPending"), false, "stall toast must not clear pending");
+assert.equal(stallTimerBody.includes("setCombatGenerationError"), false, "stall toast must not set combatGenerationError");
+assert.equal(stallTimerBody.includes("toast.error"), false, "stall toast must not toast.error");
+assert.match(surfaceSource, /if \(notify\) \{\s*toast\.error/s, "real encounter-init failures still toast.error");
 assert.match(routeSource, /isDroppedStreamFinishReason/);
 
 console.log("Combat init escape regression passed.");

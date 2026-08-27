@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Engine Combat no longer aborts a still-thinking encounter init at 25s. It toasts that the AI provider is still working, then shows the grid (and chase escape chip) when party and enemies land.
 - Tactical combat init now salvages a terminated or truncated blueprint that already has party and enemies, toasts a dropped-stream error instead of generic invalid JSON when the stream dies unusable, and Engine Combat no longer waits ~90s on a hung encounter init before the HUD can retry.
 - Classic combat no longer stalls on Choose action when the last enemy is already at 0 HP: Flee (or any action) ends the fight as a victory, rejected actions toast their error instead of failing silently, and an active escape objective still blocks retreat until the exit.
 - Combat init now emits an active escape objective when the recent history is a chase, salvages a truncated blueprint that already has party and enemies, and still returns a 502 the Engine Combat path can toast when the stream dies too early to use.

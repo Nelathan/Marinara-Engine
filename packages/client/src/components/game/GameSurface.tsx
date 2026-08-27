@@ -695,7 +695,7 @@ const GENERIC_COMBAT_ENEMY_PATTERNS = [
   /^(?:hilichurl|mitachurl|samachurl|treasure hoarder|fatui agent|ruin guard|ruin hunter|ruin sentinel)(?:\s+\d+|\s+[ivx]+)?$/i,
 ];
 
-/** Abort hung Engine /encounter/init before the ~90s provider/proxy swallow. */
+/** Stall-toast delay while Engine /encounter/init is still waiting on the AI provider. */
 const COMBAT_INIT_CLIENT_TIMEOUT_MS = 25_000;
 
 function isCombatInitWaitAborted(err: unknown): boolean {
@@ -8872,6 +8872,15 @@ function GameSurfaceComponent({
       // state, set an error, or clear the lock for a different request, turn, or chat.
       const requestChatId = activeChatId;
       const requestId = ++combatGenerationRequestIdRef.current;
+      const combatInitStallTimer = window.setTimeout(() => {
+        if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return;
+        if (!combatGenerationInFlightRef.current) return;
+        // Still waiting: do not abort, do not clear pending, do not set an error. glm thinking
+        // often spends >25s before the first blueprint token; aborting the fetch drops it.
+        if (notify) {
+          toast.info("Encounter init is still waiting on the AI provider");
+        }
+      }, COMBAT_INIT_CLIENT_TIMEOUT_MS);
       api
         .post<EncounterInitResponse>(
           "/encounter/init",
@@ -8882,7 +8891,6 @@ function GameSurfaceComponent({
             spellbookId: null,
             debugMode,
           },
-          { signal: AbortSignal.timeout(COMBAT_INIT_CLIENT_TIMEOUT_MS) },
         )
         .then(async (response) => {
           if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return; // superseded
@@ -9045,6 +9053,7 @@ function GameSurfaceComponent({
           }
         })
         .finally(() => {
+          window.clearTimeout(combatInitStallTimer);
           if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return; // superseded; don't clear another request's lock
           combatGenerationInFlightRef.current = false;
           setCombatGenerationPending(false);
