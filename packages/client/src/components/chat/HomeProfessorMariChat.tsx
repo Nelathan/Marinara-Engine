@@ -2361,7 +2361,6 @@ export function HomeProfessorMariChat({
   const chatHistoryOpen = workspaceDestination === "chats";
   // R52: the slot is empty by default. A user who never opens a panel sees a
   // stream and a composer, and nothing else exists for them.
-  const panelOpen = workspaceDestination !== "chat";
   const [chatHistory, setChatHistory] = useState<ProfessorMariChatSummary[]>([]);
   const [chatHistoryQuery, setChatHistoryQuery] = useState("");
   const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
@@ -4868,7 +4867,7 @@ export function HomeProfessorMariChat({
                 }}
               >
                 <div
-                  data-mari-panel={panelOpen ? "open" : "closed"}
+                  data-mari-panel="open"
                   data-mari-state={mariPresentationState}
                   className="relative flex min-h-0 flex-1 flex-col sm:flex-row"
                 >
