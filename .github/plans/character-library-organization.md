@@ -1,6 +1,16 @@
 # Character Library Organization Plan
 
-Status: draft. This is a planning document, not an implementation task.
+Status: partially implemented.
+
+Shipped on `five-hundred-and-fifty-ways`: Slice 4 (tag index and explorer),
+Slice 6 (rename, merge, delete with preview), Slice 1 (library status),
+Slice 2 (shelves), Slice 3 (collections), Slice 10 (editor tag picker), and
+the status/collection half of Slice 5.
+
+Not started: Slice 5 bulk tag add/remove, Slice 7 (tag health and discovery),
+Slice 8 (saved views and smart collections), Slice 9 (import inbox), Slice 11
+(history and undo), Slice 12 and 13 (AI). Slice 11 matters most of the
+remaining work, because merge and delete are now reachable and irreversible.
 
 ## Product Goal
 
