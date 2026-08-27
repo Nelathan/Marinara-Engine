@@ -845,6 +845,11 @@ export function GameCombatUI({
   const combatLogEndRef = useRef<HTMLDivElement | null>(null);
   const introTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const animationTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const inFlightClassicActionRef = useRef<{
+    actionId: string;
+    playerAction: CombatPlayerAction;
+    usedItemName?: string;
+  } | null>(null);
   const combatVoiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const combatVoiceCacheRef = useRef<Map<string, CombatVoiceEntry>>(new Map());
   const combatVoicePendingRef = useRef<Map<string, AbortController>>(new Map());
@@ -1661,6 +1666,22 @@ export function GameCombatUI({
   // ── Resolve a combat round on the server ──
   const resolveRound = useCallback(
     (playerAction: CombatPlayerAction, usedItemName?: string) => {
+      const inFlight = inFlightClassicActionRef.current;
+      if (inFlight) {
+        // A second click of the same menu action must replay the original request
+        // so the server duplicate-action path can return the stored response.
+        // A different menu action while a request is in flight is ignored.
+        if (inFlight.playerAction.type !== playerAction.type) return;
+      } else {
+        inFlightClassicActionRef.current = {
+          actionId: generateClientId(),
+          playerAction,
+          usedItemName,
+        };
+      }
+      const pending = inFlightClassicActionRef.current;
+      if (!pending) return;
+
       setPhase("resolving");
 
       combatRound.mutate(
@@ -1671,14 +1692,14 @@ export function GameCombatUI({
           ...(combatSessionId ? { sessionId: combatSessionId } : {}),
           ...(combatSessionId ? {} : { startMessageId }),
           expectedRevision: combatRevision,
-          actionId: generateClientId(),
+          actionId: pending.actionId,
           inventory: inventoryItems,
           itemEffects: combatItemEffects,
           objectives,
           playerAction:
-            playerAction.type === "item"
-              ? { ...playerAction, itemEffect: sanitizeCombatItemEffect(playerAction.itemEffect) }
-              : playerAction,
+            pending.playerAction.type === "item"
+              ? { ...pending.playerAction, itemEffect: sanitizeCombatItemEffect(pending.playerAction.itemEffect) }
+              : pending.playerAction,
           mechanics: sanitizeCombatMechanics(combatMechanics),
         },
         {
@@ -1691,23 +1712,23 @@ export function GameCombatUI({
             const updatedCombatants = data.combatants as Combatant[];
             if (data.inventory) {
               onInventoryChange?.(data.inventory);
-            } else if (usedItemName) {
-              void onInventoryItemUsed?.(usedItemName);
+            } else if (pending.usedItemName) {
+              void onInventoryItemUsed?.(pending.usedItemName);
             }
-            if (playerAction.type === "flee") {
+            if (pending.playerAction.type === "flee") {
               const summary = data.summary ?? buildSummary("flee");
               terminalSummaryRef.current = summary;
               setPhase("flee");
               handoffCombatEnd("flee", summary);
               return;
             }
-            if (playerAction.type === "maneuver" && !data.outcome) {
+            if (pending.playerAction.type === "maneuver" && !data.outcome) {
               const authoritativeResult = data.events
                 .filter((event) => event.kind === "maneuver" || event.actionId === data.events[0]?.actionId)
                 .map((event) => event.text)
                 .join(" ");
               onCustomInstruction?.(
-                `Combat maneuver resolved by the engine: ${authoritativeResult || playerAction.instruction}`,
+                `Combat maneuver resolved by the engine: ${authoritativeResult || pending.playerAction.instruction}`,
               );
             }
             for (const event of data.events.filter((entry) =>
@@ -1754,11 +1775,16 @@ export function GameCombatUI({
                 }
               }
             }
-            if (playerAction.type === "maneuver") {
+            if (pending.playerAction.type === "maneuver") {
               setCustomInstructionPending(false);
               setCustomInstructionSawStreaming(false);
             }
             if (!recoveredTerminal) setPhase("player-turn");
+          },
+          onSettled: () => {
+            if (inFlightClassicActionRef.current?.actionId === pending.actionId) {
+              inFlightClassicActionRef.current = null;
+            }
           },
         },
       );

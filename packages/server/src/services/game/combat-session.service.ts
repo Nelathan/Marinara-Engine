@@ -461,6 +461,10 @@ function applyClassicManeuver(
   return events;
 }
 
+function hasIncompleteEscapeObjective(session: CombatSession): boolean {
+  return (session.objectives ?? []).some((objective) => objective.kind === "escape" && objective.status === "active");
+}
+
 function resolveClassicAction(
   session: Extract<CombatSession, { style: "classic" }>,
   actionId: string,
@@ -473,6 +477,9 @@ function resolveClassicAction(
   }
   const playerAction = action;
   if (playerAction.type === "flee") {
+    if (hasIncompleteEscapeObjective(session)) {
+      throw new CombatActionValidationError("Cannot flee until the exit is reached.");
+    }
     state.outcome = "flee";
     return {
       canonicalState: state,
@@ -966,9 +973,12 @@ function applyCombatObjectivesAndPhases(
   const normalizedOutcome = fled
     ? escapedSuccessfully
       ? "victory"
-      : // A retreat that did not satisfy an escape objective is still a retreat:
-        // dropping the outcome here would push the party back into the battle.
-        currentOutcome
+      : // An early retreat during an unfinished escape objective must not end the
+        // fight. Drop the flee/fled outcome so the party stays in battle until
+        // they reach the exit. Ordinary fights with no escape objective still flee.
+        escapeObjectives.length > 0
+        ? undefined
+        : currentOutcome
     : !partyAlive
       ? "defeat"
       : completed || (!enemiesAlive && resolved)
@@ -1043,6 +1053,9 @@ export function resolveCombatSessionAction(
     throw new CombatActionValidationError("Combat action style does not match session");
   }
   if ("type" in action && action.type === "flee") {
+    if (hasIncompleteEscapeObjective(session)) {
+      throw new CombatActionValidationError("Cannot flee until the exit is reached.");
+    }
     if ("style" in action && action.style === "classic" && session.style === "classic") {
       return resolveAndHook(
         resolveClassicAction(

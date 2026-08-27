@@ -731,6 +731,21 @@ assert.match(
   "Classic combat must report its authoritative session identity",
 );
 assert.match(
+  gameCombatUiSource,
+  /actionId: pending\.actionId/,
+  "Classic in-flight clicks must replay the original actionId instead of minting a new one",
+);
+assert.match(
+  gameCombatUiSource,
+  /if \(inFlight\.playerAction\.type !== playerAction\.type\) return;/,
+  "Classic combat must ignore a different menu action while a request is in flight",
+);
+assert.match(
+  gameCombatUiSource,
+  /onSettled: \(\) => \{[\s\S]{0,180}inFlightClassicActionRef\.current = null/,
+  "Classic combat must clear the in-flight action after success or error",
+);
+assert.match(
   gameSurfaceSource,
   /onCombatSessionIdChange=\{handleCombatSessionIdChange\}/,
   "GameSurface must receive session identity from both combat UIs",
@@ -1358,22 +1373,67 @@ const escapeSession = classic({ enemies: [{ ...unit("guard", "enemy", 100) }] })
 escapeSession.objectives = [
   { id: "escape", kind: "escape", label: "Reach the exit", requiredProgress: 1, progress: 0, status: "active" },
 ];
-const prematureEscape = resolveCombatSessionAction(escapeSession, "escape-too-early", {
+assert.throws(
+  () =>
+    resolveCombatSessionAction(escapeSession, "escape-too-early", {
+      style: "classic",
+      type: "flee",
+    }),
+  (error: unknown) =>
+    error instanceof CombatActionValidationError && /cannot flee until the exit is reached/i.test(error.message),
+  "escape objectives must reject fleeing before the exit is reached",
+);
+assert.equal(escapeSession.status, "active", "a rejected flee must not complete the session");
+assert.equal(escapeSession.canonicalState.outcome, undefined, "a rejected flee must leave the battle live");
+
+const tacticalEscapeSession = tactical();
+tacticalEscapeSession.objectives = [
+  { id: "escape", kind: "escape", label: "Reach the exit", requiredProgress: 1, progress: 0, status: "active" },
+];
+assert.throws(
+  () => resolveCombatSessionAction(tacticalEscapeSession, "tactical-escape-too-early", { type: "flee" }),
+  (error: unknown) =>
+    error instanceof CombatActionValidationError && /cannot flee until the exit is reached/i.test(error.message),
+  "Tactical escape objectives must reject fleeing before the exit is reached",
+);
+assert.equal(tacticalEscapeSession.status, "active");
+assert.equal(
+  "outcome" in tacticalEscapeSession.canonicalState ? tacticalEscapeSession.canonicalState.outcome : undefined,
+  undefined,
+);
+
+const ordinaryFlee = resolveCombatSessionAction(
+  classic({ enemies: [{ ...unit("guard", "enemy", 100) }] }),
+  "ordinary-flee",
+  {
+    style: "classic",
+    type: "flee",
+  },
+);
+assert.equal(
+  ordinaryFlee.canonicalState.outcome,
+  "flee",
+  "ordinary fights with no escape objective still flee immediately",
+);
+assert.equal(ordinaryFlee.result?.outcome, "flee");
+
+const ordinaryTacticalFlee = resolveCombatSessionAction(tactical(), "ordinary-tactical-flee", { type: "flee" });
+assert.equal(
+  ordinaryTacticalFlee.canonicalState.outcome,
+  "fled",
+  "ordinary Tactical fights with no escape objective still flee immediately",
+);
+assert.equal(ordinaryTacticalFlee.result?.outcome, "flee");
+
+const completedEscapeSession = classic({ enemies: [{ ...unit("guard", "enemy", 100) }] });
+completedEscapeSession.objectives = [
+  { id: "escape", kind: "escape", label: "Reach the exit", requiredProgress: 1, progress: 1, status: "complete" },
+];
+const completedEscapeFlee = resolveCombatSessionAction(completedEscapeSession, "escape-complete-flee", {
   style: "classic",
   type: "flee",
 });
-assert.equal(prematureEscape.status, "active", "terminal sessions stay active until the client acknowledges them");
-assert.equal(
-  prematureEscape.objectives?.[0]?.status,
-  "active",
-  "escape objectives must reject fleeing before the exit is reached",
-);
-assert.notEqual(prematureEscape.result?.outcome, "victory", "an unearned retreat must never award the escape victory");
-assert.equal(
-  prematureEscape.canonicalState.outcome,
-  "flee",
-  "a retreat must stay resolved instead of dropping the party back into the battle it fled",
-);
+assert.equal(completedEscapeFlee.result?.outcome, "victory", "completing the exit still allows escape");
 
 const deadlineSession = classic({
   party: [unit("hero", "player", 1_000)],
