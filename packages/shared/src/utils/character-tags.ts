@@ -102,3 +102,95 @@ export function matchesCharacterTagFilter(tags: readonly unknown[] | undefined, 
     ? filter.include.every((key) => keys.has(key))
     : filter.include.some((key) => keys.has(key));
 }
+
+/**
+ * A library-wide tag edit.
+ *
+ * Rename and merge are the same operation: renaming several source keys onto
+ * one target is a merge. Keeping them as one code path means the preview,
+ * the write, and the duplicate handling cannot drift apart.
+ */
+export type CharacterTagOperation =
+  | { type: "rename"; from: readonly string[]; to: string }
+  | { type: "delete"; keys: readonly string[] };
+
+export type CharacterTagOperationChange = {
+  id: string;
+  before: string[];
+  after: string[];
+};
+
+export type CharacterTagOperationPlan = {
+  changes: CharacterTagOperationChange[];
+  /** Cards that carry one of the tags but need no write. */
+  unchanged: number;
+  /** Distinct canonical keys the operation removes or rewrites. */
+  affectedKeys: string[];
+};
+
+export type CharacterTagOperationCard = {
+  id: string;
+  tags: readonly unknown[] | undefined;
+};
+
+function sameTags(before: readonly string[], after: readonly string[]) {
+  return before.length === after.length && before.every((tag, index) => tag === after[index]);
+}
+
+/**
+ * Work out what a tag operation would write, without writing it.
+ *
+ * Pure so the preview the user confirms and the write that follows are
+ * produced by the same code.
+ */
+export function planCharacterTagOperation(
+  cards: readonly CharacterTagOperationCard[],
+  operation: CharacterTagOperation,
+): CharacterTagOperationPlan {
+  const targets = new Set(
+    (operation.type === "rename" ? operation.from : operation.keys).map(characterTagKey).filter(Boolean),
+  );
+  const renameTo = operation.type === "rename" ? operation.to.trim() : "";
+  const renameToKey = characterTagKey(renameTo);
+  if (operation.type === "rename" && !renameToKey) {
+    return { changes: [], unchanged: 0, affectedKeys: [] };
+  }
+  // Renaming a key onto itself is a re-spelling, not a no-op: the target
+  // spelling still has to replace the old one on every card.
+
+  const changes: CharacterTagOperationChange[] = [];
+  const affectedKeys = new Set<string>();
+  let unchanged = 0;
+
+  for (const card of cards) {
+    const before = (card.tags ?? []).filter((tag): tag is string => typeof tag === "string");
+    if (!before.some((tag) => targets.has(characterTagKey(tag)))) continue;
+
+    const after: string[] = [];
+    const seen = new Set<string>();
+    for (const tag of before) {
+      const key = characterTagKey(tag);
+      if (!key) continue;
+      if (targets.has(key)) {
+        affectedKeys.add(key);
+        if (operation.type === "delete") continue;
+        // Merging can collide with a tag the card already had; keep one.
+        if (seen.has(renameToKey)) continue;
+        seen.add(renameToKey);
+        after.push(renameTo);
+        continue;
+      }
+      if (seen.has(key)) continue;
+      seen.add(key);
+      after.push(tag);
+    }
+
+    if (sameTags(before, after)) {
+      unchanged += 1;
+      continue;
+    }
+    changes.push({ id: card.id, before, after });
+  }
+
+  return { changes, unchanged, affectedKeys: [...affectedKeys].sort() };
+}

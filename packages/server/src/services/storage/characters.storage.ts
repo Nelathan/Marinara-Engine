@@ -17,9 +17,11 @@ import { newId, now } from "../../utils/id-generator.js";
 import {
   PROFESSOR_MARI_ID,
   buildCharacterTagIndex,
+  planCharacterTagOperation,
   characterBookSchema,
   characterExtensionsSchema,
   type CharacterData,
+  type CharacterTagOperation,
   type PersonaCardSnapshot,
   type UpdateCharacterInput,
 } from "@marinara-engine/shared";
@@ -473,6 +475,47 @@ export function createCharactersStorage(db: DB) {
           }
         }),
       );
+    },
+
+    /**
+     * Rename, merge, or delete a tag across the whole library.
+     *
+     * The client used to do this by fetching every page and issuing one update
+     * per card, which reported no preview and could stop halfway leaving the
+     * tag on some cards. Planning and writing happen here instead, and the
+     * preview the user confirms comes from the same planner as the write.
+     */
+    async applyTagOperation(operation: CharacterTagOperation, options: { preview?: boolean } = {}) {
+      const rows = await db.select().from(characters).where(ne(characters.id, PROFESSOR_MARI_ID));
+      const cards = rows.map((row) => {
+        try {
+          const tags = parseCharacterData(row.data).tags;
+          return { id: row.id, tags: Array.isArray(tags) ? tags : [] };
+        } catch {
+          return { id: row.id, tags: [] };
+        }
+      });
+      const plan = planCharacterTagOperation(cards, operation);
+      if (options.preview) {
+        return { applied: 0, failed: [] as string[], planned: plan.changes.length, unchanged: plan.unchanged };
+      }
+
+      let applied = 0;
+      const failed: string[] = [];
+      for (const change of plan.changes) {
+        try {
+          // Library organization, not card authoring: a bulk tag edit should
+          // not spend a card revision on every character it touches.
+          const updated = await this.update(change.id, { tags: change.after }, undefined, {
+            skipVersionSnapshot: true,
+          });
+          if (updated) applied += 1;
+          else failed.push(change.id);
+        } catch {
+          failed.push(change.id);
+        }
+      }
+      return { applied, failed, planned: plan.changes.length, unchanged: plan.unchanged };
     },
 
     async listSummariesByIds(ids: string[]) {

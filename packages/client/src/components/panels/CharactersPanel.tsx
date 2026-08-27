@@ -5,16 +5,15 @@ import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, typ
 import { useTranslation, useTranslation as useUiTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  fetchAllCharacterPages,
   flattenCharacterPages,
   useCharacterPages,
   useCharacterTagIndex,
+  useCharacterTagOperation,
   useDeleteCharacter,
   useCharacterGroups,
   useCreateGroup,
   useUpdateGroup,
   useDeleteGroup,
-  useUpdateCharacter,
   useDuplicateCharacter,
 } from "../../hooks/use-characters";
 import { api } from "../../lib/api-client";
@@ -156,7 +155,7 @@ export function CharactersPanel() {
   const { data: groups } = useCharacterGroups();
   const deleteCharacter = useDeleteCharacter();
   const duplicateCharacter = useDuplicateCharacter();
-  const updateCharacter = useUpdateCharacter();
+  const tagOperation = useCharacterTagOperation();
   const createGroup = useCreateGroup();
   const updateGroup = useUpdateGroup();
   const deleteGroup = useDeleteGroup();
@@ -288,11 +287,26 @@ export function CharactersPanel() {
 
   const handleDeleteTag = useCallback(
     async (tagKey: string) => {
-      const label = allTags.find((entry) => entry.key === tagKey)?.label ?? tagKey;
+      const entry = allTags.find((tag) => tag.key === tagKey);
+      const label = entry?.label ?? tagKey;
+      // Preview first, so the confirmation states how many cards change rather
+      // than asking the user to approve an unknown number of writes.
+      let planned = entry?.count ?? 0;
+      try {
+        const preview = await tagOperation.mutateAsync({
+          operation: { type: "delete", keys: [tagKey] },
+          preview: true,
+        });
+        planned = preview.planned;
+      } catch {
+        toast.error(localizeUi("ui.panels.characterspanel.failedToRemoveTagFromSomeCharacters"));
+        return;
+      }
+      if (planned === 0) return;
       if (
         !(await showConfirmDialog({
           title: localizeUi("ui.panels.characterspanel.removeTag"),
-          message: localizeUi("ui.panels.characterspanel.removeTagValue1FromAllCharacters", { value1: label }),
+          message: t("characters.tagExplorer.confirmDeleteValue1Value2", { value1: label, value2: planned }),
           confirmLabel: localizeUi("settings.notifications.customSound.actions.remove"),
           tone: "destructive",
         }))
@@ -300,15 +314,14 @@ export function CharactersPanel() {
         return;
       }
       try {
-        const allCharacters = (await fetchAllCharacterPages({ sort })).map((char) =>
-          parseCharacterRow(char as CharacterRow),
-        );
-        // Compare canonical keys, not raw strings. Matching on the exact
-        // spelling left every case variant of the tag behind on the card.
-        const affected = allCharacters.filter((c) => characterTagKeys(getCharacterTags(c)).has(tagKey));
-        for (const c of affected) {
-          const newTags = getCharacterTags(c).filter((t) => characterTagKey(t) !== tagKey);
-          await updateCharacter.mutateAsync({ id: c.id, data: { tags: newTags } });
+        const result = await tagOperation.mutateAsync({ operation: { type: "delete", keys: [tagKey] } });
+        if (result.failed.length > 0) {
+          toast.error(
+            t("characters.tagExplorer.partialFailureValue1Value2", {
+              value1: result.applied,
+              value2: result.failed.length,
+            }),
+          );
         }
         if (includedTags.has(tagKey)) {
           const next = new Set(includedTags);
@@ -326,13 +339,13 @@ export function CharactersPanel() {
     },
     [
       allTags,
-      sort,
-      updateCharacter,
+      tagOperation,
       includedTags,
       excludedTags,
       setCharacterPanelIncludedTags,
       setCharacterPanelExcludedTags,
       localizeUi,
+      t,
     ],
   );
 

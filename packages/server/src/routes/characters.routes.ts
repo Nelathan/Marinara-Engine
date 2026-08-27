@@ -920,6 +920,24 @@ export async function charactersRoutes(app: FastifyInstance) {
     return storage.listTagIndex({ includeBuiltIn: req.query.includeBuiltIn === "true" });
   });
 
+  const tagOperationSchema = z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("rename"),
+      // An array, because renaming several keys onto one target is a merge.
+      from: z.array(z.string()).min(1).max(200),
+      to: z.string().trim().min(1).max(200),
+    }),
+    z.object({ type: z.literal("delete"), keys: z.array(z.string()).min(1).max(200) }),
+  ]);
+
+  app.post<{ Querystring: { preview?: string } }>("/tags/operations", async (req, reply) => {
+    const parsed = tagOperationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid tag operation", issues: parsed.error.issues });
+    }
+    return storage.applyTagOperation(parsed.data, { preview: req.query.preview === "true" });
+  });
+
   app.post<{ Body: { ids?: unknown } }>("/summaries", async (req) => {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id): id is string => typeof id === "string") : [];
     return storage.listSummariesByIds(ids);

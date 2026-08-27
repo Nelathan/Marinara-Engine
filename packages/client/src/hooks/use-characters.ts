@@ -27,6 +27,7 @@ import {
   PROFESSOR_MARI_ID,
   type CharacterData,
   type CharacterTagIndexEntry,
+  type CharacterTagOperation,
   type CharacterCardVersion,
   type Persona,
   type PersonaCardVersion,
@@ -204,6 +205,27 @@ export function useCharacterTagIndex(includeBuiltIn = false) {
     queryFn: () =>
       api.get<CharacterTagIndexEntry[]>(includeBuiltIn ? "/characters/tags?includeBuiltIn=true" : "/characters/tags"),
     staleTime: 60_000,
+  });
+}
+
+/**
+ * Rename, merge, or delete a tag across the whole library in one request.
+ *
+ * Previously the panel fetched every page and issued one update per card, so a
+ * failure part-way left the tag on some cards with nothing reported.
+ */
+export function useCharacterTagOperation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: { operation: CharacterTagOperation; preview?: boolean }) =>
+      api.post<{ applied: number; failed: string[]; planned: number; unchanged: number }>(
+        variables.preview ? "/characters/tags/operations?preview=true" : "/characters/tags/operations",
+        variables.operation,
+      ),
+    onSuccess: (_result, variables) => {
+      if (variables.preview) return;
+      void queryClient.invalidateQueries({ queryKey: characterKeys.all });
+    },
   });
 }
 
