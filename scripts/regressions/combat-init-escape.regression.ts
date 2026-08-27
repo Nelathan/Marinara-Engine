@@ -447,5 +447,26 @@ const partialFn = combatInitSource.slice(
   combatInitSource.indexOf("export function combatInitNeedsEnemyRepair"),
 );
 assert.equal(partialFn.includes("logger.warn"), false, "partial-only parse must not warn-log");
+assert.match(
+  routeSource,
+  /if \(usable && repaired\) \{[\s\S]*return \{ combatState \};/,
+  "repair-end success must still return { combatState }",
+);
+assert.match(surfaceSource, /const freshLocalCombatBoard =/, "fresh Engine apply must be named");
+assert.match(
+  surfaceSource,
+  /!combatDeclarationPending &&\s*!freshLocalCombatBoard/,
+  "completedAuthorityBlocksCombat must not hide a freshly applied local board",
+);
+assert.match(
+  surfaceSource,
+  /combatEncounterPreparing \|\| combatDeclarationPending \|\| freshLocalCombatBoard/,
+  "completed-session unwind must not throw away a freshly applied local board",
+);
+assert.match(
+  surfaceSource,
+  /if \(isStreaming \|\| scenePreparing \|\| assetGenerationBlocksScene \|\| directionsPlaying\) return;/,
+  "prepared combat apply must still wait on streaming/scene/asset/directions",
+);
 
 console.log("Combat init escape regression passed.");

@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Engine Combat Yes applies a successful encounter init (including after enemy repair) even when a prior completed session is still the active-session fallback.
 - Encounter init actually runs the one enemy repair generate when glm returns truncated party-only JSON.
 - Encounter init does one repair generate when glm returns party and no enemies.
 - Combat init salvages fenced/truncated glm blueprints that already contain party and enemies (and leftover after the closing fence).

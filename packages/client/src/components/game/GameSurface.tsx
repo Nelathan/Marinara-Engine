@@ -8583,12 +8583,21 @@ function GameSurfaceComponent({
   const surfaceSessionIsTerminalRecovery =
     surfaceSessionIsRestorable && surfaceCombatSession?.status === "completed";
   const combatAuthoritySettled = surfaceCombatSessionQuery.isFetched && !surfaceCombatSessionQuery.isFetching;
+  // A just-applied Engine encounter whose declaration is not the completed-session
+  // fallback. Must not hide TacticalCombatUI or unwind back to exploration.
+  const freshLocalCombatBoard =
+    !!combatParty &&
+    !!combatEnemies &&
+    activeCombatStyle !== null &&
+    combatStartMessageId != null &&
+    !surfaceSessionMatchesCurrentCombat;
   const completedAuthorityBlocksCombat =
     surfaceCombatSession?.status !== undefined &&
     surfaceCombatSession.status !== "active" &&
     !surfaceSessionIsRestorable &&
     !combatEncounterPreparing &&
-    !combatDeclarationPending;
+    !combatDeclarationPending &&
+    !freshLocalCombatBoard;
   const combatUiActive =
     gameState === "combat" &&
     !!combatParty &&
@@ -8672,7 +8681,7 @@ function GameSurfaceComponent({
       // mount it. If nothing is preparing a new encounter, the "combat" flag is
       // stale — unwind it; otherwise the in-flight encounter owns the state and
       // will start its own session.
-      if (combatEncounterPreparing || combatDeclarationPending) return;
+      if (combatEncounterPreparing || combatDeclarationPending || freshLocalCombatBoard) return;
       if (activeChatId && !transitionGameState.isPending) {
         useGameModeStore.getState().setGameState("exploration");
         transitionGameState.mutate({ chatId: activeChatId, newState: "exploration" });
@@ -8718,6 +8727,7 @@ function GameSurfaceComponent({
     combatEncounterPreparing,
     combatGenerationPending,
     combatParty,
+    freshLocalCombatBoard,
     surfaceCombatSession,
     surfaceCombatSessionQuery.isFetched,
     surfaceCombatSessionQuery.isError,
