@@ -279,6 +279,23 @@ function removeTrailingCommas(raw: string): string {
   return raw.replace(/,\s*([}\]])/g, "$1");
 }
 
+function trimIncompleteJsonishSuffix(raw: string): string {
+  let output = raw.trimEnd();
+  for (;;) {
+    const next = output
+      .replace(/,\s*$/, "")
+      .replace(/([{\[,])\s*"[^"\\]*"\s*:\s*$/, "$1")
+      .replace(/([{\[,])\s*"[^"\\]*"\s*$/, "$1")
+      .trimEnd();
+    if (next === output) return output;
+    output = next;
+  }
+}
+
+function closeWithSuffix(body: string, closers: string): string {
+  return `${body.replace(/,\s*$/, "")}${closers}`;
+}
+
 function closeUnbalancedJsonish(raw: string): string {
   const scan = scanJsonishStructure(raw);
   if (!scan.started || scan.mismatched || (!scan.inString && scan.closers.length === 0)) return raw;
@@ -286,8 +303,22 @@ function closeUnbalancedJsonish(raw: string): string {
   let output = raw.trimEnd();
   if (scan.escaped) output += "\\";
   if (scan.inString) output += '"';
-  output = output.replace(/,\s*$/, "");
-  return `${output}${scan.closers.reverse().join("")}`;
+  const closers = [...scan.closers].reverse().join("");
+
+  const tryParse = (body: string): string | null => {
+    const candidate = closeWithSuffix(body, closers);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      return null;
+    }
+  };
+
+  const closed = tryParse(output);
+  if (closed) return closed;
+  const trimmed = trimIncompleteJsonishSuffix(output);
+  return tryParse(trimmed) ?? closeWithSuffix(trimmed, closers);
 }
 
 function repairJsonish(raw: string): string {

@@ -695,6 +695,14 @@ const GENERIC_COMBAT_ENEMY_PATTERNS = [
   /^(?:hilichurl|mitachurl|samachurl|treasure hoarder|fatui agent|ruin guard|ruin hunter|ruin sentinel)(?:\s+\d+|\s+[ivx]+)?$/i,
 ];
 
+/** Abort hung Engine /encounter/init before the ~90s provider/proxy swallow. */
+const COMBAT_INIT_CLIENT_TIMEOUT_MS = 25_000;
+
+function isCombatInitWaitAborted(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.name === "TimeoutError" || err.name === "AbortError";
+}
+
 const GAME_COMBAT_GENERATION_SETTINGS = {
   combatNarrative: {
     tense: "present",
@@ -8865,13 +8873,17 @@ function GameSurfaceComponent({
       const requestChatId = activeChatId;
       const requestId = ++combatGenerationRequestIdRef.current;
       api
-        .post<EncounterInitResponse>("/encounter/init", {
-          chatId: activeChatId,
-          connectionId: null,
-          settings: GAME_COMBAT_GENERATION_SETTINGS,
-          spellbookId: null,
-          debugMode,
-        })
+        .post<EncounterInitResponse>(
+          "/encounter/init",
+          {
+            chatId: activeChatId,
+            connectionId: null,
+            settings: GAME_COMBAT_GENERATION_SETTINGS,
+            spellbookId: null,
+            debugMode,
+          },
+          { signal: AbortSignal.timeout(COMBAT_INIT_CLIENT_TIMEOUT_MS) },
+        )
         .then(async (response) => {
           if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return; // superseded
           const combatants = hydrateGeneratedCombatState(response.combatState);
@@ -9016,7 +9028,11 @@ function GameSurfaceComponent({
         })
         .catch((err) => {
           if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return; // superseded; don't set stale error
-          const message = err instanceof Error ? err.message : "Combat generation failed.";
+          const message = isCombatInitWaitAborted(err)
+            ? "Encounter init timed out waiting for the AI provider"
+            : err instanceof Error
+              ? err.message
+              : "Combat generation failed.";
           console.warn("[game-combat] Failed to generate combat state", err);
           setCombatGenerationError(message);
           // Only the Engine paths (manual button, retry, auto-queue) toast. An Experience/package

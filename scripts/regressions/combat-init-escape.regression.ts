@@ -7,6 +7,7 @@ import {
   FLEEING_ESCAPE_OBJECTIVE,
   ensureFleeingEscapeObjective,
   historyIndicatesFleeing,
+  isDroppedStreamFinishReason,
   parseCombatInitBlueprint,
   resolveCombatInitFromLlm,
 } from "../../packages/server/src/services/game/combat-init.ts";
@@ -137,5 +138,80 @@ const itemEffectsIdx = routeSource.indexOf('inst += `  "itemEffects": [\\n`;');
 assert.ok(environmentIdx > 0 && objectivesIdx > environmentIdx, "objectives schema must follow environment");
 assert.ok(itemEffectsIdx > objectivesIdx, "objectives schema must precede itemEffects so a truncated salvage still has them");
 assert.match(routeSource, /resolveCombatInitFromLlm/);
+
+const tacticalTruncated = `{
+  "party": [{"name":"Hero","hp":12,"maxHp":12,"attacks":[],"items":[],"statuses":[],"class":"fighter","isPlayer":true}],
+  "enemies": [{"name":"Guard","hp":8,"maxHp":8,"attacks":[],"statuses":[],"description":"A city guard","class":"knight","sprite":"x"}],
+  "environment": "A smoke-filled alley",
+  "objectives": [{"id":"wipe","kind":"eliminate","label":"Defeat the guard"}],
+  "styleNotes": {"environmentType":"city","atmosphere":"dark","timeOfDay":"night","weather":"clear"},
+  "battlefield": { "formation": "skirmi`;
+assert.equal(jsonishLooksTruncated(tacticalTruncated), true);
+const tacticalSalvaged = parseCombatInitBlueprint(tacticalTruncated);
+assert.ok(tacticalSalvaged, "jsonish must salvage a truncated Tactical party+enemies blueprint");
+assert.equal((tacticalSalvaged!.party as unknown[]).length, 1);
+assert.equal((tacticalSalvaged!.enemies as unknown[]).length, 1);
+
+const danglingBattlefieldKey = `{
+  "party": [{"name":"Hero","hp":12,"maxHp":12,"attacks":[],"items":[],"statuses":[],"class":"fighter","isPlayer":true}],
+  "enemies": [{"name":"Guard","hp":8,"maxHp":8,"attacks":[],"statuses":[],"description":"A city guard","class":"knight","sprite":"x"}],
+  "environment": "A smoke-filled alley",
+  "battle`;
+const danglingSalvage = resolveCombatInitFromLlm({
+  content: danglingBattlefieldKey,
+  finishReason: "terminated",
+  history: fightHistory,
+});
+assert.equal(danglingSalvage.ok, true, "terminated Tactical JSON with a dangling extra field must salvage");
+if (danglingSalvage.ok) {
+  assert.equal(danglingSalvage.salvaged, true);
+  assert.equal((danglingSalvage.combatState.party as unknown[]).length, 1);
+  assert.equal((danglingSalvage.combatState.enemies as unknown[]).length, 1);
+}
+
+const terminatedUsable = resolveCombatInitFromLlm({
+  content: truncated,
+  finishReason: "terminated",
+  history: fightHistory,
+});
+assert.equal(terminatedUsable.ok, true);
+if (terminatedUsable.ok) {
+  assert.equal(terminatedUsable.salvaged, true);
+  assert.equal((terminatedUsable.combatState.party as unknown[]).length, 1);
+  assert.equal((terminatedUsable.combatState.enemies as unknown[]).length, 1);
+}
+
+const unterminatedGarbage = resolveCombatInitFromLlm({
+  content: '{ "not": "a combat blueprint", "truncated": ',
+  finishReason: "stop",
+  history: fightHistory,
+});
+assert.equal(unterminatedGarbage.ok, false, "unterminated garbage without party+enemies must 502");
+if (!unterminatedGarbage.ok) {
+  assert.equal(unterminatedGarbage.status, 502);
+  assert.equal(unterminatedGarbage.error, "AI returned invalid JSON");
+}
+
+const terminatedEmpty = resolveCombatInitFromLlm({
+  content: "",
+  finishReason: "terminated",
+  history: fightHistory,
+});
+assert.equal(terminatedEmpty.ok, false);
+if (!terminatedEmpty.ok) {
+  assert.equal(terminatedEmpty.status, 502);
+  assert.equal(terminatedEmpty.error, COMBAT_INIT_DROPPED_STREAM_ERROR);
+  assert.notEqual(terminatedEmpty.error, "AI returned invalid JSON");
+}
+
+assert.equal(isDroppedStreamFinishReason("terminated"), true);
+assert.equal(isDroppedStreamFinishReason("error"), true);
+assert.equal(isDroppedStreamFinishReason("stop"), false);
+
+const surfaceSource = readFileSync(new URL("../../packages/client/src/components/game/GameSurface.tsx", import.meta.url), "utf8");
+assert.match(surfaceSource, /const COMBAT_INIT_CLIENT_TIMEOUT_MS = (2\d|30)_000;/);
+assert.match(surfaceSource, /AbortSignal\.timeout\(COMBAT_INIT_CLIENT_TIMEOUT_MS\)/);
+assert.match(surfaceSource, /if \(notify\) \{\s*toast\.error/s);
+assert.match(routeSource, /isDroppedStreamFinishReason/);
 
 console.log("Combat init escape regression passed.");

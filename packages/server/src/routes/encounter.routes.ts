@@ -27,7 +27,9 @@ import type {
 } from "@marinara-engine/shared";
 import { resolveActivePersonaCandidate } from "./generate/generate-route-utils.js";
 import {
+  COMBAT_INIT_DROPPED_STREAM_ERROR,
   COMBAT_INIT_OBJECTIVE_NOTES,
+  isDroppedStreamFinishReason,
   resolveCombatInitFromLlm,
 } from "../services/game/combat-init.js";
 
@@ -667,7 +669,7 @@ export async function encounterRoutes(app: FastifyInstance) {
         history: recentMsgs,
       });
       if (!resolved.ok) {
-        if (result.finishReason === "error") {
+        if (isDroppedStreamFinishReason(result.finishReason)) {
           logger.warn(
             { chatId, provider: conn.provider, model: conn.model, chars: result.content?.length ?? 0 },
             "[game/combat:init] LLM stream failed mid-response; blueprint is incomplete",
@@ -689,6 +691,9 @@ export async function encounterRoutes(app: FastifyInstance) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       logger.warn(err, "[game/combat:init] Encounter init failed");
+      if (isDroppedStreamFinishReason(message)) {
+        return reply.status(502).send({ error: COMBAT_INIT_DROPPED_STREAM_ERROR });
+      }
       return reply.status(500).send({ error: `Encounter init failed: ${message}` });
     }
   });

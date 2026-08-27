@@ -11,6 +11,20 @@ export const FLEEING_ESCAPE_OBJECTIVE: CombatEncounterObjective = {
 export const COMBAT_INIT_DROPPED_STREAM_ERROR =
   "Encounter init failed: the AI provider connection dropped mid-response";
 
+const DROPPED_STREAM_FINISH_REASONS = new Set([
+  "error",
+  "terminated",
+  "abort",
+  "aborted",
+  "cancelled",
+  "canceled",
+]);
+
+export function isDroppedStreamFinishReason(finishReason?: string | null): boolean {
+  const normalized = (finishReason ?? "").trim().toLowerCase();
+  return DROPPED_STREAM_FINISH_REASONS.has(normalized);
+}
+
 /** High-signal party-is-fleeing phrases. Ordinary "run into the guards" stand-and-fight scenes must not match. */
 const FLEEING_HISTORY_PATTERNS: RegExp[] = [
   /\byou run\.(?:\s|$)/i,
@@ -92,17 +106,18 @@ export function resolveCombatInitFromLlm(input: {
   history: Array<{ content?: string } | string>;
 }): CombatInitResolveResult {
   const raw = input.content ?? "";
+  const dropped = isDroppedStreamFinishReason(input.finishReason);
   const combatState = parseCombatInitBlueprint(raw);
   if (!combatState) {
-    if (!raw.trim()) return { ok: false, status: 502, error: "No response from AI" };
-    if (input.finishReason === "error") {
+    if (dropped) {
       return { ok: false, status: 502, error: COMBAT_INIT_DROPPED_STREAM_ERROR };
     }
+    if (!raw.trim()) return { ok: false, status: 502, error: "No response from AI" };
     return { ok: false, status: 502, error: "AI returned invalid JSON" };
   }
   return {
     ok: true,
     combatState: ensureFleeingEscapeObjective(combatState, input.history),
-    salvaged: input.finishReason === "error",
+    salvaged: dropped,
   };
 }
