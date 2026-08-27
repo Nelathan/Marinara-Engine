@@ -1402,6 +1402,54 @@ assert.equal(
   undefined,
 );
 
+// Chase-init / LLM ambush chips often ship kind=escape without status=active, so
+// the pre-check is skipped and applyCombatObjectivesAndPhases used to 200 with
+// the fled outcome deleted. That is the silent Flee no-op.
+const ambushEscapeSession = tactical();
+ambushEscapeSession.objectives = [
+  {
+    id: "ambush",
+    kind: "escape",
+    label: "Get everyone past the ambush and into the deep Ashwood",
+    requiredProgress: 1,
+    progress: 0,
+    status: undefined as unknown as "active",
+  },
+];
+assert.throws(
+  () => resolveCombatSessionAction(ambushEscapeSession, "ambush-escape-too-early", { type: "flee" }),
+  (error: unknown) =>
+    error instanceof CombatActionValidationError && /cannot flee until the exit is reached/i.test(error.message),
+  "incomplete escape flee must throw instead of returning 200 with the fled outcome deleted",
+);
+assert.equal(ambushEscapeSession.status, "active");
+assert.equal(
+  "outcome" in ambushEscapeSession.canonicalState ? ambushEscapeSession.canonicalState.outcome : undefined,
+  undefined,
+  "a rejected unfinished-escape flee must leave the battle live",
+);
+
+assert.match(
+  combatSessionServiceSource,
+  /if \(fled && escapeObjectives\.length > 0 && !escapedSuccessfully\) \{\s*throw new CombatActionValidationError\("Cannot flee until the exit is reached\."\);/,
+  "unfinished escape must reject flee in applyCombatObjectivesAndPhases, not strip the outcome",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /confirmFlee = useCallback\(\(\) => \{[\s\S]*?sendAction\(\{ type: "flee" \}\)/,
+  "Tactical Flee confirm must call the flee API",
+);
+assert.match(
+  tacticalCombatUiSource,
+  /sendAction = useCallback\([\s\S]*?\.catch\(\(err: unknown\) => \{[\s\S]*?toast\.error\(msg\)/,
+  "Tactical flee API rejects must toast instead of silently returning",
+);
+assert.match(
+  gameCombatUiSource,
+  /onError: \(error\) => \{[\s\S]*?toast\.error\(/,
+  "Classic rejected flee must toast instead of a silent return to Choose action",
+);
+
 const ordinaryFlee = resolveCombatSessionAction(
   classic({ enemies: [{ ...unit("guard", "enemy", 100) }] }),
   "ordinary-flee",

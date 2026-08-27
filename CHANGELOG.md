@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Tactical Flee confirm toasts when an unfinished escape objective blocks retreat, and still ends an ordinary fight.
 - Combat objective chips show the label only; status stays on color, not in the chip or tooltip copy.
 - Engine Combat Yes applies a successful encounter init (including after enemy repair) even when a prior completed session is still the active-session fallback.
 - Encounter init actually runs the one enemy repair generate when glm returns truncated party-only JSON.

@@ -982,17 +982,17 @@ function applyCombatObjectivesAndPhases(
   const escapeObjectives = objectives.filter((objective) => objective.kind === "escape");
   const escapedSuccessfully =
     escapeObjectives.length > 0 && escapeObjectives.every((objective) => objective.status === "complete");
+  // Flee confirm must not 200 with the outcome stripped: the Tactical (and Classic)
+  // client treats a live grid as a silent no-op. Reject so sendAction's catch toasts.
+  if (fled && escapeObjectives.length > 0 && !escapedSuccessfully) {
+    throw new CombatActionValidationError("Cannot flee until the exit is reached.");
+  }
   // A failed objective is a story beat, not a party wipe: only an actually downed
   // party (or an unresolved retreat) ends the battle in defeat.
   const normalizedOutcome = fled
     ? escapedSuccessfully
       ? "victory"
-      : // An early retreat during an unfinished escape objective must not end the
-        // fight. Drop the flee/fled outcome so the party stays in battle until
-        // they reach the exit. Ordinary fights with no escape objective still flee.
-        escapeObjectives.length > 0
-        ? undefined
-        : currentOutcome
+      : currentOutcome
     : !partyAlive
       ? "defeat"
       : completed || (!enemiesAlive && resolved)
