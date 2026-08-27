@@ -8,6 +8,7 @@ import {
   useEffect,
   useRef,
   useCallback,
+  useId,
   useMemo,
   type ChangeEvent,
   type ReactNode,
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useCharacter,
+  useCharacterTagIndex,
   useUpdateCharacter,
   useGenerateCharacterSummary,
   useGenerateCharacterConvoProfile,
@@ -118,7 +120,13 @@ import {
   Check,
 } from "lucide-react";
 import { cn, copyToClipboard, generateClientId, getAvatarCropStyle } from "../../lib/utils";
-import { normalizeAvatarCrop, type WeekSchedule } from "@marinara-engine/shared";
+import {
+  characterTagKey,
+  characterTagKeys,
+  normalizeAvatarCrop,
+  type CharacterTagIndexEntry,
+  type WeekSchedule,
+} from "@marinara-engine/shared";
 import { extractColorsFromImage } from "../../lib/avatar-color-extraction";
 import { buildCardAssetMarkdown } from "../../lib/card-asset-links";
 import { HelpTooltip } from "../ui/HelpTooltip";
@@ -244,14 +252,26 @@ function getPersistedCharacterName(character: ParsedCharacter | undefined) {
   }
 }
 
-function appendNewTags(existingTags: string[], rawInput: string) {
-  const seen = new Set(existingTags);
+/**
+ * Add comma-separated tags to a card.
+ *
+ * Deduplication is by canonical key, not exact string, so typing "Fantasy"
+ * onto a card that already carries "fantasy" is recognised as the same tag
+ * instead of adding a second chip that filters identically.
+ *
+ * `knownSpellings` maps a canonical key to the spelling the rest of the
+ * library already uses, so a new card joins the existing spelling rather than
+ * introducing another variant.
+ */
+function appendNewTags(existingTags: string[], rawInput: string, knownSpellings?: ReadonlyMap<string, string>) {
+  const seen = new Set(existingTags.map((tag) => characterTagKey(tag)));
   const additions: string[] = [];
 
   for (const tag of rawInput.split(",").map((part) => part.trim())) {
-    if (!tag || seen.has(tag)) continue;
-    seen.add(tag);
-    additions.push(tag);
+    const key = characterTagKey(tag);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    additions.push(knownSpellings?.get(key) ?? tag);
   }
 
   return additions.length > 0 ? [...existingTags, ...additions] : existingTags;
@@ -876,9 +896,15 @@ export function CharacterEditor() {
     closeDetail();
   }, [avatarUploading, closeDetail, lorebookEmbedding, setDirtyState, localizeUi]);
 
+  // Existing library tags, so the editor can suggest them and reuse their
+  // spelling instead of letting every card invent its own variant.
+  const tagIndexQuery = useCharacterTagIndex();
+  const libraryTags = useMemo(() => tagIndexQuery.data ?? [], [tagIndexQuery.data]);
+  const knownTagSpellings = useMemo(() => new Map(libraryTags.map((entry) => [entry.key, entry.label])), [libraryTags]);
+
   const addTag = () => {
     if (!formData) return;
-    const nextTags = appendNewTags(formData.tags, newTag);
+    const nextTags = appendNewTags(formData.tags, newTag, knownTagSpellings);
     if (nextTags === formData.tags) return;
     updateField("tags", nextTags);
     setNewTag("");
@@ -888,7 +914,7 @@ export function CharacterEditor() {
     if (!formData) return;
     updateField(
       "tags",
-      formData.tags.filter((t) => t !== tag),
+      formData.tags.filter((t) => characterTagKey(t) !== characterTagKey(tag)),
     );
   };
 
@@ -1198,6 +1224,7 @@ export function CharacterEditor() {
                 addTag={addTag}
                 removeTag={removeTag}
                 removeAllTags={removeAllTags}
+                libraryTags={libraryTags}
                 avatarPreview={avatarPreview}
                 onSelectAvatar={() => fileInputRef.current?.click()}
                 onGenerateAvatar={() => setAvatarGeneratorOpen(true)}
@@ -1664,6 +1691,7 @@ function MetadataTab({
   addTag,
   removeTag,
   removeAllTags,
+  libraryTags,
   avatarPreview,
   onSelectAvatar,
   onGenerateAvatar,
@@ -1684,6 +1712,7 @@ function MetadataTab({
   addTag: () => void;
   removeTag: (tag: string) => void;
   removeAllTags: () => void;
+  libraryTags: readonly CharacterTagIndexEntry[];
   avatarPreview: string | null;
   onSelectAvatar: () => void;
   onGenerateAvatar: () => void;
@@ -1693,6 +1722,13 @@ function MetadataTab({
   removingAvatar: boolean;
   hasUnsavedChanges: boolean;
 }) {
+  const tagSuggestionsId = useId();
+  // Only offer tags the card does not already carry, most used first.
+  const tagSuggestions = useMemo(() => {
+    const present = characterTagKeys(formData.tags);
+    return libraryTags.filter((entry) => !present.has(entry.key)).slice(0, 200);
+  }, [libraryTags, formData.tags]);
+
   const { t: localizeUi } = useUiTranslation();
   const { t } = useTranslation();
   // Read existing crop in either current or legacy shape; the widget handles both
@@ -1913,9 +1949,21 @@ function MetadataTab({
                 addTag();
               }
             }}
+            list={tagSuggestionsId}
+            autoComplete="off"
             placeholder={localizeUi("ui.characters.metadatatab.addTag")}
             className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-xs outline-none focus:border-[var(--primary)]/40"
           />
+          {/*
+            A native datalist rather than a custom combobox: the browser
+            supplies filtering, keyboard handling, and the mobile picker, and
+            an imported library can carry hundreds of tags.
+          */}
+          <datalist id={tagSuggestionsId}>
+            {tagSuggestions.map((entry) => (
+              <option key={entry.key} value={entry.label} label={String(entry.count)} />
+            ))}
+          </datalist>
           <button
             type="button"
             onClick={addTag}
