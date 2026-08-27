@@ -2275,8 +2275,11 @@ export function GameCombatUI({
                     {localizeUi("ui.game.gamecombatui.round")} {round}
                   </span>
                   {objectives[0] && (
-                    <span className="hidden max-w-48 truncate rounded border border-amber-300/20 bg-amber-400/10 px-1.5 py-0.5 text-[0.5rem] text-amber-100 sm:inline">
-                      {objectives[0].label}: {objectives[0].status}
+                    <span
+                      className="hidden max-w-48 truncate rounded border border-amber-300/20 bg-amber-400/10 px-1.5 py-0.5 text-[0.5rem] text-amber-100 sm:inline"
+                      title={objectives[0].label}
+                    >
+                      {objectives[0].label}
                     </span>
                   )}
                   <button

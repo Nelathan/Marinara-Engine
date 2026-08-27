@@ -2051,9 +2051,9 @@ export function TacticalCombatUI({
           {objectives[0] && (
             <span
               className="hidden max-w-56 truncate rounded-md border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[0.65rem] text-amber-100 md:inline lg:max-w-96"
-              title={`${objectives[0].label}: ${objectives[0].status}`}
+              title={objectives[0].label}
             >
-              {objectives[0].label}: {objectives[0].status}
+              {objectives[0].label}
             </span>
           )}
           {animating && (
