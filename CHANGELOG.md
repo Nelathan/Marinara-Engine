@@ -18,6 +18,8 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Professor Mari now treats a direct request to put entries into a lorebook as authorization to create those entries, without asking for a redundant acceptance phrase.
+
 ## [2.4.4]
 
 ### Added

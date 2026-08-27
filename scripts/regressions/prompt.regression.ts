@@ -11465,6 +11465,37 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
           `lorebook splitting must authorize ${action}`,
         );
       }
+      assert.equal(
+        workspaceMutationAuthorizationIssue(
+          {
+            id: "put-roster-entries",
+            name: "app_data",
+            authorization: "Put the eight roster entries into the Bunker Inhabitants lorebook.",
+            arguments: {
+              action: "lorebook.addEntry",
+              lorebookId: "bunker-inhabitants-id",
+              data: { name: "Roster member", content: "Roster details" },
+              apply: true,
+            },
+          },
+          { directUserText: "Put the eight roster entries into the Bunker Inhabitants lorebook." },
+        ),
+        null,
+        "putting entries into a named lorebook must authorize entry creation",
+      );
+      assert.match(
+        workspaceMutationAuthorizationIssue(
+          {
+            id: "put-character-in-folder",
+            name: "app_data",
+            authorization: "Put this character in the Favorites folder.",
+            arguments: { action: "character.create", data: { name: "Unrelated" }, apply: true },
+          },
+          { directUserText: "Put this character in the Favorites folder." },
+        ) ?? "",
+        /create operation/iu,
+        "putting an existing resource somewhere must not authorize creating a new resource",
+      );
       assert.match(
         workspaceMutationAuthorizationIssue(
           {

@@ -1997,6 +1997,20 @@ function authorizesLorebookEntrySplit(
   );
 }
 
+function authorizesLorebookEntryInsertion(
+  text: string,
+  entity: string | null,
+  category: WorkspaceMutationCategory,
+): boolean {
+  return (
+    entity === "lorebook" &&
+    category === "create" &&
+    /\b(?:insert|place|put)\b/iu.test(text) &&
+    /\bentries?\b/iu.test(text) &&
+    /\blorebooks?\b/iu.test(text)
+  );
+}
+
 export function workspaceMutationAuthorizationIssue(
   command: WorkspaceCommandCall,
   context: {
@@ -2072,19 +2086,21 @@ export function workspaceMutationAuthorizationIssue(
     ? directUserText.replace(GENERIC_MUTATION_AUTHORIZATION_CLAUSE, "").trim()
     : directUserText;
   const lorebookEntrySplit = authorizesLorebookEntrySplit(authorizationScope, commandEntity, category);
+  const lorebookEntryInsertion = authorizesLorebookEntryInsertion(authorizationScope, commandEntity, category);
   if (
     INFORMATIONAL_REQUEST_START.test(authorizationScope) &&
     !DIRECT_MUTATION_AFTER_INFORMATION.test(authorizationScope)
   ) {
     return "Mutation blocked before execution: informational and how-to requests do not authorize workspace changes.";
   }
-  if (!MUTATION_INTENT_PATTERNS[category].test(authorizationScope) && !lorebookEntrySplit) {
+  if (!MUTATION_INTENT_PATTERNS[category].test(authorizationScope) && !lorebookEntrySplit && !lorebookEntryInsertion) {
     return `Mutation blocked before execution: the active user instruction does not authorize a ${category} operation.`;
   }
   if (genericAuthorization) {
     const explicitCategories = explicitlyRequestedMutationCategories(authorizationScope);
-    const splitOnlyAddsTheImpliedCreate = lorebookEntrySplit && explicitCategories.every((entry) => entry === "update");
-    if (!splitOnlyAddsTheImpliedCreate && (explicitCategories.length !== 1 || explicitCategories[0] !== category)) {
+    const impliedLorebookEntryCreate =
+      (lorebookEntrySplit || lorebookEntryInsertion) && explicitCategories.every((entry) => entry === "update");
+    if (!impliedLorebookEntryCreate && (explicitCategories.length !== 1 || explicitCategories[0] !== category)) {
       const requestedCategories =
         explicitCategories.length > 0 ? explicitCategories.join(" and ") : "no single explicit operation";
       return `Mutation blocked before execution: the active user message authorizes ${requestedCategories}, not ${category}.`;
