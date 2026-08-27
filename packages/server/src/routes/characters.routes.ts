@@ -916,6 +916,10 @@ export async function charactersRoutes(app: FastifyInstance) {
     return characters.filter((character) => character.id !== PROFESSOR_MARI_ID);
   });
 
+  app.get<{ Querystring: { includeBuiltIn?: string } }>("/tags", async (req) => {
+    return storage.listTagIndex({ includeBuiltIn: req.query.includeBuiltIn === "true" });
+  });
+
   app.post<{ Body: { ids?: unknown } }>("/summaries", async (req) => {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id): id is string => typeof id === "string") : [];
     return storage.listSummariesByIds(ids);

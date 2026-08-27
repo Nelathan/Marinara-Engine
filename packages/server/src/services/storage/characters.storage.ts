@@ -16,6 +16,7 @@ import {
 import { newId, now } from "../../utils/id-generator.js";
 import {
   PROFESSOR_MARI_ID,
+  buildCharacterTagIndex,
   characterBookSchema,
   characterExtensionsSchema,
   type CharacterData,
@@ -449,6 +450,29 @@ export function createCharactersStorage(db: DB) {
             .limit(options.limit + 1)
             .offset(options.offset));
       return toPaginatedList(rows, options.limit, options.offset);
+    },
+
+    /**
+     * Tag counts across the whole library.
+     *
+     * This has to run here, not in the browser: the client paginates at
+     * LIBRARY_PAGE_SIZE, so a client-built tag list silently omits tags that
+     * only appear on cards past the first page.
+     */
+    async listTagIndex(options: { includeBuiltIn?: boolean } = {}) {
+      const rows = options.includeBuiltIn
+        ? await db.select().from(characters)
+        : await db.select().from(characters).where(ne(characters.id, PROFESSOR_MARI_ID));
+      return buildCharacterTagIndex(
+        rows.map((row) => {
+          try {
+            const tags = parseCharacterData(row.data).tags;
+            return Array.isArray(tags) ? tags : [];
+          } catch {
+            return [];
+          }
+        }),
+      );
     },
 
     async listSummariesByIds(ids: string[]) {
