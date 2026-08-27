@@ -8,6 +8,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 - Chat connection switchers can now show the latest measured context usage in their popup and around the connection button, with Game usage available under Chat Settings > Connection. The display is enabled by default and can be controlled in Advanced settings (#5577).
 - Character card sprites can now be renamed after upload without replacing the image (#5575).
+- The Characters panel tag filter is now a searchable tag explorer instead of a flat chip wall: tag counts cover the whole library rather than only the loaded pages, each row shows how many of the current results it matches, and include, exclude, and an explicit Match any / Match all switch replace the previous hidden OR behavior and `-tag:` search syntax.
 - Character cards now support editable metadata summaries, AI-generated summary drafts, and Character Library previews that use the saved summary when available.
 - Character card Conversation profiles now provide controls to generate About Me and Conversation behavior text from the card's available information.
 - The Home Character of the Day widget now uses saved character summaries and offers direct chat-start and character-view actions.
@@ -15,6 +16,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 ### Fixed
 
 - Avatar generation now preserves the complete user Avatar Prompt, and OpenRouter caching remains enabled for eligible unknown models (#5552, #5574).
+- Removing a tag from every character now runs as one server-side operation with a confirmation that states how many cards change, reports partial failures, and matches case and spacing variants of the tag instead of only the exact spelling. It also no longer adds a card version snapshot to every character it touches.
 - Permanent Delete now preserves Marinara's stock Universal Preset and its prompt structure while removing editable presets (#5568).
 
 ## [2.4.4]
