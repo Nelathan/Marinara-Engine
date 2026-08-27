@@ -349,6 +349,93 @@ export function CharactersPanel() {
     ],
   );
 
+  const handleRenameTag = useCallback(
+    async (tagKey: string) => {
+      const entry = allTags.find((tag) => tag.key === tagKey);
+      const label = entry?.label ?? tagKey;
+      const nextName = window.prompt(t("characters.tagExplorer.renamePromptValue1", { value1: label }), label)?.trim();
+      if (!nextName) return;
+
+      const nextKey = characterTagKey(nextName);
+      // Renaming onto a tag that already exists is a merge, and the two cases
+      // need different wording: one re-spells a tag, the other folds two
+      // together and cannot be undone by renaming back.
+      const mergeTarget = nextKey !== tagKey ? allTags.find((tag) => tag.key === nextKey) : undefined;
+
+      let planned = 0;
+      try {
+        const preview = await tagOperation.mutateAsync({
+          operation: { type: "rename", from: [tagKey], to: nextName },
+          preview: true,
+        });
+        planned = preview.planned;
+      } catch {
+        toast.error(t("characters.tagExplorer.renameFailed"));
+        return;
+      }
+      if (planned === 0) return;
+
+      if (
+        !(await showConfirmDialog({
+          title: mergeTarget
+            ? t("characters.tagExplorer.mergeTitle")
+            : t("characters.tagExplorer.renameValue1", { value1: label }),
+          message: mergeTarget
+            ? t("characters.tagExplorer.confirmMergeValue1Value2Value3", {
+                value1: label,
+                value2: mergeTarget.label,
+                value3: planned,
+              })
+            : t("characters.tagExplorer.confirmRenameValue1Value2Value3", {
+                value1: label,
+                value2: nextName,
+                value3: planned,
+              }),
+          confirmLabel: t("characters.tagExplorer.apply"),
+        }))
+      ) {
+        return;
+      }
+
+      try {
+        const result = await tagOperation.mutateAsync({
+          operation: { type: "rename", from: [tagKey], to: nextName },
+        });
+        if (result.failed.length > 0) {
+          toast.error(
+            t("characters.tagExplorer.partialFailureValue1Value2", {
+              value1: result.applied,
+              value2: result.failed.length,
+            }),
+          );
+        }
+        // Carry any active filter over to the new key so the current result
+        // set does not silently empty out after the rename.
+        for (const [current, setter] of [
+          [includedTags, setCharacterPanelIncludedTags],
+          [excludedTags, setCharacterPanelExcludedTags],
+        ] as const) {
+          if (!current.has(tagKey)) continue;
+          const next = new Set(current);
+          next.delete(tagKey);
+          next.add(nextKey);
+          setter([...next]);
+        }
+      } catch {
+        toast.error(t("characters.tagExplorer.renameFailed"));
+      }
+    },
+    [
+      allTags,
+      tagOperation,
+      includedTags,
+      excludedTags,
+      setCharacterPanelIncludedTags,
+      setCharacterPanelExcludedTags,
+      t,
+    ],
+  );
+
   const toggleIncludedTag = useCallback(
     (tag: string) => {
       const key = characterTagKey(tag);
@@ -949,6 +1036,7 @@ export function CharactersPanel() {
           onMatchModeChange={setTagMatchMode}
           onClear={clearTagFilters}
           onDelete={handleDeleteTag}
+          onRename={handleRenameTag}
           isLoading={tagIndexQuery.isLoading}
         />
       )}

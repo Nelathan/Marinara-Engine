@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────
 import { useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Minus, Search, Trash2, X } from "lucide-react";
+import { Check, Minus, Pencil, Search, Trash2, X } from "lucide-react";
 import { characterTagKey, type CharacterTagIndexEntry, type CharacterTagMatchMode } from "@marinara-engine/shared";
 import { cn } from "../../lib/utils";
 
@@ -27,6 +27,8 @@ type CharacterTagExplorerProps = {
   onClear: () => void;
   /** Remove the tag from every character that carries any spelling of it. */
   onDelete?: (key: string) => void;
+  /** Rename the tag library-wide. Renaming onto an existing tag is a merge. */
+  onRename?: (key: string) => void;
   isLoading?: boolean;
 };
 
@@ -41,6 +43,7 @@ export function CharacterTagExplorer({
   onMatchModeChange,
   onClear,
   onDelete,
+  onRename,
   isLoading = false,
 }: CharacterTagExplorerProps) {
   const { t } = useTranslation();
@@ -172,6 +175,17 @@ export function CharacterTagExplorer({
                 >
                   <Minus size="0.625rem" aria-hidden="true" />
                 </button>
+                {onRename && (
+                  <button
+                    type="button"
+                    onClick={() => onRename(entry.key)}
+                    title={t("characters.tagExplorer.renameValue1", { value1: entry.label })}
+                    aria-label={t("characters.tagExplorer.renameValue1", { value1: entry.label })}
+                    className="shrink-0 rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
+                  >
+                    <Pencil size="0.625rem" aria-hidden="true" />
+                  </button>
+                )}
                 {onDelete && (
                   <button
                     type="button"
