@@ -6,6 +6,8 @@ import type { DB } from "../../db/connection.js";
 import {
   characters,
   characterCardVersions,
+  characterLibraryState,
+  chats,
   personas,
   personaCardVersions,
   characterGroups,
@@ -17,10 +19,13 @@ import { newId, now } from "../../utils/id-generator.js";
 import {
   PROFESSOR_MARI_ID,
   buildCharacterTagIndex,
+  normalizeCharacterLibraryStatus,
   planCharacterTagOperation,
   characterBookSchema,
   characterExtensionsSchema,
   type CharacterData,
+  type CharacterLibraryEntry,
+  type CharacterLibraryStatus,
   type CharacterTagOperation,
   type PersonaCardSnapshot,
   type UpdateCharacterInput,
@@ -516,6 +521,79 @@ export function createCharactersStorage(db: DB) {
         }
       }
       return { applied, failed, planned: plan.changes.length, unchanged: plan.unchanged };
+    },
+
+    /**
+     * Local library state for every character.
+     *
+     * Only `status` is stored. `lastUsedAt` and `chatCount` are computed from
+     * the user's chats on read: keeping a stored copy would mean a second
+     * write path that can silently disagree with the real chat history.
+     */
+    async listLibraryState(): Promise<CharacterLibraryEntry[]> {
+      const [characterRows, stateRows, chatRows] = await Promise.all([
+        db.select().from(characters),
+        db.select().from(characterLibraryState),
+        db.select().from(chats),
+      ]);
+
+      const statusById = new Map(
+        stateRows.map((row) => [row.characterId, normalizeCharacterLibraryStatus(row.status)]),
+      );
+      const usage = new Map<string, { lastUsedAt: string | null; chatCount: number }>();
+      for (const chat of chatRows) {
+        let characterIds: unknown;
+        try {
+          characterIds = JSON.parse(chat.characterIds);
+        } catch {
+          continue;
+        }
+        if (!Array.isArray(characterIds)) continue;
+        // One chat counts once per character even if it lists a character twice.
+        for (const characterId of new Set(characterIds.filter((id): id is string => typeof id === "string"))) {
+          const current = usage.get(characterId) ?? { lastUsedAt: null, chatCount: 0 };
+          current.chatCount += 1;
+          if (chat.lastMessageAt && (!current.lastUsedAt || chat.lastMessageAt > current.lastUsedAt)) {
+            current.lastUsedAt = chat.lastMessageAt;
+          }
+          usage.set(characterId, current);
+        }
+      }
+
+      return characterRows.map((row) => ({
+        characterId: row.id,
+        status: statusById.get(row.id) ?? "active",
+        lastUsedAt: usage.get(row.id)?.lastUsedAt ?? null,
+        chatCount: usage.get(row.id)?.chatCount ?? 0,
+      }));
+    },
+
+    /**
+     * Set the library status for several characters at once.
+     *
+     * Writes only the local state row, never the character card, so changing a
+     * status cannot alter an export or spend a card revision.
+     */
+    async setLibraryStatus(characterIds: string[], status: CharacterLibraryStatus) {
+      const ids = Array.from(new Set(characterIds.filter((id) => id.trim().length > 0)));
+      if (ids.length === 0) return { applied: 0, missing: [] as string[] };
+      const existing = await db.select().from(characters).where(inArray(characters.id, ids));
+      const known = new Set(existing.map((row) => row.id));
+      const missing = ids.filter((id) => !known.has(id));
+      const timestamp = now();
+      let applied = 0;
+      for (const id of ids) {
+        if (!known.has(id)) continue;
+        await db
+          .insert(characterLibraryState)
+          .values({ characterId: id, status, updatedAt: timestamp })
+          .onConflictDoUpdate({
+            target: characterLibraryState.characterId,
+            set: { status, updatedAt: timestamp },
+          });
+        applied += 1;
+      }
+      return { applied, missing };
     },
 
     async listSummariesByIds(ids: string[]) {

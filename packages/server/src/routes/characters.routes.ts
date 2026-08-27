@@ -16,6 +16,7 @@ import {
   personaUpdateInputSchema,
   normalizeTrackerCardColorConfig,
   trackerCardColorConfigSchema,
+  CHARACTER_LIBRARY_STATUSES,
   PROFESSOR_MARI_ID,
   CONVERSATION_CALL_CHARACTER_VIDEO_CLIP_KINDS,
   findImageStyleProfile,
@@ -929,6 +930,23 @@ export async function charactersRoutes(app: FastifyInstance) {
     }),
     z.object({ type: z.literal("delete"), keys: z.array(z.string()).min(1).max(200) }),
   ]);
+
+  app.get("/library-state", async () => {
+    return storage.listLibraryState();
+  });
+
+  const libraryStatusSchema = z.object({
+    characterIds: z.array(z.string()).min(1).max(1000),
+    status: z.enum(CHARACTER_LIBRARY_STATUSES),
+  });
+
+  app.post("/library-state", async (req, reply) => {
+    const parsed = libraryStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid library status", issues: parsed.error.issues });
+    }
+    return storage.setLibraryStatus(parsed.data.characterIds, parsed.data.status);
+  });
 
   app.post<{ Querystring: { preview?: string } }>("/tags/operations", async (req, reply) => {
     const parsed = tagOperationSchema.safeParse(req.body);

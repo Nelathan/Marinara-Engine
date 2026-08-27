@@ -241,7 +241,7 @@ type InsertValuesBuilder = Executable<void> & {
 // Exported so regressions can pin behavior against the CURRENT version
 // without chasing literals on every bump. Must equal root storage-format.json
 // (the launcher-format-guard regression pins the pairing).
-export const STORAGE_VERSION = 5;
+export const STORAGE_VERSION = 6;
 export const STORAGE_WRITER_LEASE_FILENAME = ".writer-lease";
 export const STORAGE_WRITER_OWNER_FILENAME = "owner.json";
 export const STORAGE_WRITER_LIVENESS_FILENAME = "live.sock";
@@ -257,6 +257,7 @@ export const FILE_BACKED_TABLES = [
   "conversation_call_sounds",
   "characters",
   "character_card_versions",
+  "character_library_state",
   "personas",
   "persona_card_versions",
   "character_groups",
@@ -632,6 +633,7 @@ export const CASCADES: Array<{ parent: FileBackedTable; child: FileBackedTable; 
     { parent: "game_state_snapshots", child: "game_checkpoints", parentKey: "id", childKey: "snapshotId" },
     { parent: "conversation_call_sessions", child: "conversation_call_messages", parentKey: "id", childKey: "callId" },
     { parent: "characters", child: "character_card_versions", parentKey: "id", childKey: "characterId" },
+    { parent: "characters", child: "character_library_state", parentKey: "id", childKey: "characterId" },
     { parent: "characters", child: "character_images", parentKey: "id", childKey: "characterId" },
     { parent: "personas", child: "persona_images", parentKey: "id", childKey: "personaId" },
     { parent: "personas", child: "persona_card_versions", parentKey: "id", childKey: "personaId" },

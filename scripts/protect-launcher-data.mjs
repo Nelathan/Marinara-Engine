@@ -150,6 +150,7 @@ const SHARDED_TABLES = [
   "conversation_call_sounds",
   "characters",
   "character_card_versions",
+  "character_library_state",
   "personas",
   "persona_card_versions",
   "character_groups",
@@ -224,7 +225,7 @@ const SHARDED_TABLES = [
   "mari_instructions",
   "mari_workspace_context",
 ];
-const PRIMARY_KEY_COLUMNS = { app_settings: "key", prompt_overrides: "key" };
+const PRIMARY_KEY_COLUMNS = { app_settings: "key", prompt_overrides: "key", character_library_state: "characterId" };
 const UNSHARD_SENTINEL = ".unshard-in-progress";
 
 async function pathExists(path) {
