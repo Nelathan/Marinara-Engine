@@ -255,11 +255,25 @@ const stallTimerMatch = surfaceSource.match(
 );
 assert.ok(stallTimerMatch, "combat init stall timer must exist");
 const stallTimerBody = stallTimerMatch[1] ?? "";
-assert.match(stallTimerBody, /if \(notify\) \{\s*toast\.info/s, "stall wait must toast.info");
+assert.match(stallTimerBody, /if \(notify\) \{[\s\S]*toast\.info/s, "stall wait must toast.info");
+assert.match(stallTimerBody, /duration:\s*Infinity/, "stall toast must stay sticky until success, failure, or dismiss");
 assert.equal(stallTimerBody.includes("setCombatGenerationPending"), false, "stall toast must not clear pending");
 assert.equal(stallTimerBody.includes("setCombatGenerationError"), false, "stall toast must not set combatGenerationError");
 assert.equal(stallTimerBody.includes("toast.error"), false, "stall toast must not toast.error");
 assert.match(surfaceSource, /if \(notify\) \{\s*toast\.error/s, "real encounter-init failures still toast.error");
+assert.match(
+  surfaceSource,
+  /queuedCombatGeneration\.notify === true \|\| !latestNarrationText \|\| narrationDone/,
+  "combat start gate skips narrationDone for Engine notify",
+);
+assert.match(
+  surfaceSource,
+  /queuedCombatGeneration\.notify !== true && latestNarrationText && !narrationDone/,
+  "prepared combat apply skips narrationDone for Engine notify",
+);
+const combatInitSource = readFileSync(new URL("../../packages/server/src/services/game/combat-init.ts", import.meta.url), "utf8");
+assert.match(combatInitSource, /extractLeadingThinkingBlocks\(raw\)/, "think-strip before parse must remain");
+assert.match(combatInitSource, /logger\.warn/, "parse failure must warn-log a raw-content preview");
 assert.match(routeSource, /isDroppedStreamFinishReason/);
 
 console.log("Combat init escape regression passed.");

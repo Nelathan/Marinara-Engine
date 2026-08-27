@@ -1,4 +1,5 @@
 import { extractLeadingThinkingBlocks, type CombatEncounterObjective } from "@marinara-engine/shared";
+import { logger } from "../../lib/logger.js";
 import { parseGameJsonish, parseRepairedGameJsonish } from "./jsonish.js";
 
 export const FLEEING_ESCAPE_OBJECTIVE: CombatEncounterObjective = {
@@ -70,15 +71,20 @@ function objectiveKind(value: unknown): string | null {
 
 export function parseCombatInitBlueprint(raw: string): Record<string, unknown> | null {
   const content = extractLeadingThinkingBlocks(raw).content;
-  if (!content.trim()) return null;
-  for (const parse of [parseGameJsonish, parseRepairedGameJsonish]) {
-    try {
-      const parsed = parse(content);
-      if (isUsableCombatBlueprint(parsed)) return parsed;
-    } catch {
-      // Nested fragments or unrepaired JSON are not a usable combat blueprint.
+  if (content.trim()) {
+    for (const parse of [parseGameJsonish, parseRepairedGameJsonish]) {
+      try {
+        const parsed = parse(content);
+        if (isUsableCombatBlueprint(parsed)) return parsed;
+      } catch {
+        // Nested fragments or unrepaired JSON are not a usable combat blueprint.
+      }
     }
   }
+  logger.warn(
+    { preview: raw.slice(0, 280).replace(/\s+/g, " ") },
+    "[combat-init] failed to parse a usable party+enemies blueprint",
+  );
   return null;
 }
 

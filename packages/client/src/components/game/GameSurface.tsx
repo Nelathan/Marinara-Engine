@@ -8734,7 +8734,10 @@ function GameSurfaceComponent({
     !!latestAssistantMsg?.id &&
     queuedCombatGeneration.messageId === latestAssistantMsg.id;
   const combatStartGateReached =
-    queuedCombatMatchesLatest && !isStreaming && !scenePreparing && (!latestNarrationText || narrationDone);
+    queuedCombatMatchesLatest &&
+    !isStreaming &&
+    !scenePreparing &&
+    (queuedCombatGeneration.notify === true || !latestNarrationText || narrationDone);
   const combatStarting = combatStartGateReached && combatGenerationPending && !combatUiActive;
   const combatGenerationFailedAtGate = combatStartGateReached && !!combatGenerationError && !combatUiActive;
 
@@ -8872,13 +8875,16 @@ function GameSurfaceComponent({
       // state, set an error, or clear the lock for a different request, turn, or chat.
       const requestChatId = activeChatId;
       const requestId = ++combatGenerationRequestIdRef.current;
+      let combatInitStallToastId: string | number | undefined;
       const combatInitStallTimer = window.setTimeout(() => {
         if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return;
         if (!combatGenerationInFlightRef.current) return;
         // Still waiting: do not abort, do not clear pending, do not set an error. glm thinking
         // often spends >25s before the first blueprint token; aborting the fetch drops it.
         if (notify) {
-          toast.info("Encounter init is still waiting on the AI provider");
+          combatInitStallToastId = toast.info("Encounter init is still waiting on the AI provider", {
+            duration: Infinity,
+          });
         }
       }, COMBAT_INIT_CLIENT_TIMEOUT_MS);
       api
@@ -9054,6 +9060,7 @@ function GameSurfaceComponent({
         })
         .finally(() => {
           window.clearTimeout(combatInitStallTimer);
+          if (combatInitStallToastId != null) toast.dismiss(combatInitStallToastId);
           if (combatGenerationRequestIdRef.current !== requestId || activeChatIdRef.current !== requestChatId) return; // superseded; don't clear another request's lock
           combatGenerationInFlightRef.current = false;
           setCombatGenerationPending(false);
@@ -9112,7 +9119,7 @@ function GameSurfaceComponent({
     if (!preparedCombatState || preparedCombatState.messageId !== queuedCombatGeneration.messageId) return;
     if (pendingEncounter || combatUiActive) return;
     if (isStreaming || scenePreparing || assetGenerationBlocksScene || directionsPlaying) return;
-    if (latestNarrationText && !narrationDone) return;
+    if (queuedCombatGeneration.notify !== true && latestNarrationText && !narrationDone) return;
 
     setCombatParty(preparedCombatState.party);
     setCombatEnemies(preparedCombatState.enemies);

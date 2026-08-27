@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Engine Combat Yes keeps a sticky still-waiting toast while encounter init is in flight past 25s, shows pending combat HUD during glm thinking, and applies the grid without waiting for the narration typewriter to finish.
 - Combat init now strips leading inline thinking tags before JSON parse, so models that emit `<think>…</think>` (or similar) in `content` no longer fail encounter init as invalid JSON.
 - Engine Combat no longer aborts a still-thinking encounter init at 25s. It toasts that the AI provider is still working, then shows the grid (and chase escape chip) when party and enemies land.
 - Tactical combat init now salvages a terminated or truncated blueprint that already has party and enemies, toasts a dropped-stream error instead of generic invalid JSON when the stream dies unusable, and Engine Combat no longer waits ~90s on a hung encounter init before the HUD can retry.
