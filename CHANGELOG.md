@@ -21,6 +21,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 
 ### Fixed
 
+- Combat init salvages fenced/truncated glm blueprints that already contain party and enemies (and leftover after the closing fence).
 - Combat init now strips leading and trailing markdown code fences before JSON parse, including glm same-line json fences.
 - Engine Combat Yes keeps a sticky still-waiting toast while encounter init is in flight past 25s, shows pending combat HUD during glm thinking, and applies the grid without waiting for the narration typewriter to finish.
 - Combat init now strips leading inline thinking tags before JSON parse, so models that emit `<think>…</think>` (or similar) in `content` no longer fail encounter init as invalid JSON.

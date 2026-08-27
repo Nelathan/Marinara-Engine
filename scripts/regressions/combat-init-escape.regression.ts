@@ -248,6 +248,36 @@ assert.equal(
   "fenced party-only leftover must still fail without enemies",
 );
 
+const loggedCleavePreview = '```json { "party": [ { "name": "User", "hp": 100, "maxHp": 100, "attacks": [ {"name": "Strike", "type": "single-target", "description": "A direct melee strike with equipped weapon.", "power": 1.2, "cooldown": 0}, {"name": "Cleave", "t';
+assert.equal(
+  parseCombatInitBlueprint(loggedCleavePreview),
+  null,
+  "logged 280-char Cleave preview is party-only truncated and must not salvage enemies",
+);
+
+const loggedShadowbladePreview = '```json { "party": [ { "name": "User", "hp": 100, "maxHp": 100, "attacks": [ {"name": "Strike", "type": "single-target", "description": "A direct melee attack with equipped weapon.", "power": 1.2, "cooldown": 0}, {"name": "Shadowblade';
+assert.equal(
+  parseCombatInitBlueprint(loggedShadowbladePreview),
+  null,
+  "Playtester 3f7 Yes Shadowblade preview is party-only truncated and must not salvage enemies",
+);
+
+const leftoverAfterCloseBlueprint = "```json " + JSON.stringify(blueprint()) + " ``` done";
+const leftoverAfterCloseParsed = parseCombatInitBlueprint(leftoverAfterCloseBlueprint);
+assert.ok(leftoverAfterCloseParsed, "trailing leftover after closing fence must still parse");
+assert.equal((leftoverAfterCloseParsed!.party as unknown[]).length, 1);
+assert.equal((leftoverAfterCloseParsed!.enemies as unknown[]).length, 1);
+
+const nestedAttackTruncated = `{
+  "party": [{"name":"Hero","hp":12,"maxHp":12,"attacks":[{"name":"Strike","type":"single-target","description":"A direct melee strike with equipped weapon.","power":1.2,"cooldown":0}],"items":[],"statuses":[],"isPlayer":true}],
+  "enemies": [{"name":"Guard","hp":8,"maxHp":8,"attacks":[],"statuses":[],"description":"A city guard","sprite":"x"}],
+  "environment": "A smoke-filled alley",
+  "itemEffects": [`;
+const nestedAttackSalvaged = parseCombatInitBlueprint(nestedAttackTruncated);
+assert.ok(nestedAttackSalvaged, "truncated outer with nested complete attack and party+enemies must salvage");
+assert.equal((nestedAttackSalvaged!.party as unknown[]).length, 1);
+assert.equal((nestedAttackSalvaged!.enemies as unknown[]).length, 1);
+
 const thinkWrappedFlee = resolveCombatInitFromLlm({
   content: thinkWrappedBlueprint,
   finishReason: "stop",
@@ -293,6 +323,8 @@ const combatInitSource = readFileSync(new URL("../../packages/server/src/service
 assert.match(combatInitSource, /extractLeadingThinkingBlocks\(raw\)/, "think-strip before parse must remain");
 assert.match(combatInitSource, /stripMarkdownCodeFences/, "markdown fences must be stripped before parse");
 assert.match(combatInitSource, /logger\.warn/, "parse failure must warn-log a raw-content preview");
+assert.match(combatInitSource, /preview:\s*raw\.slice/, "warn preview must remain pre-strip");
+assert.match(combatInitSource, /strippedPreview/, "parse failure must also warn-log a stripped preview");
 assert.match(routeSource, /isDroppedStreamFinishReason/);
 
 console.log("Combat init escape regression passed.");

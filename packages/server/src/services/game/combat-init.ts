@@ -90,7 +90,10 @@ export function parseCombatInitBlueprint(raw: string): Record<string, unknown> |
     }
   }
   logger.warn(
-    { preview: raw.slice(0, 280).replace(/\s+/g, " ") },
+    {
+      preview: raw.slice(0, 280).replace(/\s+/g, " "),
+      strippedPreview: content.slice(0, 280).replace(/\s+/g, " "),
+    },
     "[combat-init] failed to parse a usable party+enemies blueprint",
   );
   return null;
