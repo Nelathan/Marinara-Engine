@@ -2,10 +2,12 @@
 // Storage: Resource Library Folders
 // ──────────────────────────────────────────────
 import type {
+  AddLibraryItemsInput,
   CreateLibraryFolderInput,
   LibraryFolderScope,
   MigrateLibraryFoldersInput,
   MoveLibraryItemsInput,
+  RemoveLibraryItemsInput,
   UpdateLibraryFolderInput,
 } from "@marinara-engine/shared";
 import type { DB } from "../../db/connection.js";
@@ -90,6 +92,43 @@ export function createLibraryFoldersStorage(db: DB) {
       const existing = await this.getById(scope, id);
       if (!existing) return false;
       await db.delete(libraryFolders).where(eq(libraryFolders.id, id));
+      return true;
+    },
+
+    /**
+     * Add items to a folder without removing them from any other.
+     *
+     * This is the whole difference between a folder and a collection.
+     * `moveItems` strips the moved IDs from every other folder, which is what
+     * makes folder membership exclusive; collections skip that strip so one
+     * character can sit in "Romance" and "Current campaign" at once.
+     */
+    async addItems(scope: LibraryFolderScope, input: AddLibraryItemsInput) {
+      const folder = await this.getById(scope, input.folderId);
+      if (!folder) return false;
+      const nextIds = [...folder.itemIds];
+      for (const id of input.itemIds) {
+        if (!nextIds.includes(id)) nextIds.push(id);
+      }
+      if (nextIds.length === folder.itemIds.length) return true;
+      await db
+        .update(libraryFolders)
+        .set({ itemIds: JSON.stringify(nextIds), updatedAt: now() })
+        .where(eq(libraryFolders.id, folder.id));
+      return true;
+    },
+
+    /** Remove items from one folder only. The items themselves are untouched. */
+    async removeItems(scope: LibraryFolderScope, input: RemoveLibraryItemsInput) {
+      const folder = await this.getById(scope, input.folderId);
+      if (!folder) return false;
+      const removing = new Set(input.itemIds);
+      const nextIds = folder.itemIds.filter((id) => !removing.has(id));
+      if (nextIds.length === folder.itemIds.length) return true;
+      await db
+        .update(libraryFolders)
+        .set({ itemIds: JSON.stringify(nextIds), updatedAt: now() })
+        .where(eq(libraryFolders.id, folder.id));
       return true;
     },
 

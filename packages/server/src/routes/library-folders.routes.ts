@@ -3,11 +3,13 @@
 // ──────────────────────────────────────────────
 import type { FastifyInstance } from "fastify";
 import {
+  addLibraryItemsSchema,
   createLibraryFolderSchema,
   libraryFolderParamsSchema,
   libraryFolderScopeParamsSchema,
   migrateLibraryFoldersSchema,
   moveLibraryItemsSchema,
+  removeLibraryItemsSchema,
   updateLibraryFolderSchema,
 } from "@marinara-engine/shared";
 import { createLibraryFoldersStorage } from "../services/storage/library-folders.storage.js";
@@ -24,6 +26,22 @@ export async function libraryFoldersRoutes(app: FastifyInstance) {
     const { scope } = libraryFolderScopeParamsSchema.parse(req.params);
     const input = migrateLibraryFoldersSchema.parse(req.body);
     return storage.migrate(scope, input);
+  });
+
+  app.post("/:scope/add", async (req, reply) => {
+    const { scope } = libraryFolderScopeParamsSchema.parse(req.params);
+    const input = addLibraryItemsSchema.parse(req.body);
+    const added = await storage.addItems(scope, input);
+    if (!added) return reply.status(404).send({ error: "Folder not found" });
+    return reply.send({ ok: true });
+  });
+
+  app.post("/:scope/remove", async (req, reply) => {
+    const { scope } = libraryFolderScopeParamsSchema.parse(req.params);
+    const input = removeLibraryItemsSchema.parse(req.body);
+    const removed = await storage.removeItems(scope, input);
+    if (!removed) return reply.status(404).send({ error: "Folder not found" });
+    return reply.send({ ok: true });
   });
 
   app.post("/:scope/move", async (req, reply) => {

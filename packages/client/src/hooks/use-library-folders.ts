@@ -167,3 +167,34 @@ export function useMoveLibraryItem(scope: LibraryFolderScope) {
     onSuccess: () => qc.invalidateQueries({ queryKey: libraryFolderKeys.list(scope) }),
   });
 }
+
+/**
+ * Add items to a folder without removing them from any other.
+ *
+ * Collections use this instead of `useMoveLibraryItem`: a character can belong
+ * to several collections, while a folder keeps exclusive membership.
+ */
+export function useAddLibraryItems(scope: LibraryFolderScope) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemIds, folderId }: { itemIds: string[]; folderId: string }) => {
+      const ids = Array.from(new Set(itemIds));
+      if (ids.length === 0) return;
+      await api.post(`/library-folders/${scope}/add`, { itemIds: ids, folderId });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: libraryFolderKeys.list(scope) }),
+  });
+}
+
+/** Remove items from one folder. The items themselves are untouched. */
+export function useRemoveLibraryItems(scope: LibraryFolderScope) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemIds, folderId }: { itemIds: string[]; folderId: string }) => {
+      const ids = Array.from(new Set(itemIds));
+      if (ids.length === 0) return;
+      await api.post(`/library-folders/${scope}/remove`, { itemIds: ids, folderId });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: libraryFolderKeys.list(scope) }),
+  });
+}

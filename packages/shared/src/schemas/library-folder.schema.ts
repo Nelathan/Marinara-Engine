@@ -19,7 +19,13 @@ const nonEmptyLibraryFolderItemIdsSchema = z
     }
   });
 
-export const libraryFolderScopeSchema = z.enum(["lorebooks", "presets", "agents"]);
+/**
+ * `character-collections` reuses this table rather than adding a parallel
+ * schema. A folder is already a named, ordered, scoped list of item IDs; the
+ * only difference is that a character may belong to several collections, which
+ * is handled by using addItems instead of the exclusive moveItems.
+ */
+export const libraryFolderScopeSchema = z.enum(["lorebooks", "presets", "agents", "character-collections"]);
 
 export const libraryFolderScopeParamsSchema = z.object({
   scope: libraryFolderScopeSchema,
@@ -38,6 +44,17 @@ export const updateLibraryFolderSchema = z.object({
   collapsed: z.boolean().optional(),
   sortOrder: z.number().int().nonnegative().optional(),
   itemIds: libraryFolderItemIdsSchema.optional(),
+});
+
+/** Additive membership: the items join the folder and keep any others. */
+export const addLibraryItemsSchema = z.object({
+  itemIds: nonEmptyLibraryFolderItemIdsSchema,
+  folderId: libraryFolderIdSchema,
+});
+
+export const removeLibraryItemsSchema = z.object({
+  itemIds: nonEmptyLibraryFolderItemIdsSchema,
+  folderId: libraryFolderIdSchema,
 });
 
 export const moveLibraryItemsSchema = z.object({
@@ -75,5 +92,7 @@ export type LibraryFolderScope = z.infer<typeof libraryFolderScopeSchema>;
 export type CreateLibraryFolderInput = z.infer<typeof createLibraryFolderSchema>;
 export type UpdateLibraryFolderInput = z.infer<typeof updateLibraryFolderSchema>;
 export type MoveLibraryItemsInput = z.infer<typeof moveLibraryItemsSchema>;
+export type AddLibraryItemsInput = z.infer<typeof addLibraryItemsSchema>;
+export type RemoveLibraryItemsInput = z.infer<typeof removeLibraryItemsSchema>;
 export type MigrateLibraryFolderInput = z.infer<typeof migrateLibraryFolderSchema>;
 export type MigrateLibraryFoldersInput = z.infer<typeof migrateLibraryFoldersSchema>;

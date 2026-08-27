@@ -37,6 +37,7 @@ import {
   useCharacterPages,
   usePersonaPages,
 } from "../../hooks/use-characters";
+import { useAddLibraryItems, useCreateLibraryFolder, useLibraryFolders } from "../../hooks/use-library-folders";
 import { getCharacterTitle } from "../../lib/character-display";
 import {
   formatCardLibraryMeta,
@@ -447,6 +448,15 @@ export function CharacterLibraryView() {
   const pendingLibraryScrollTopRef = useRef(0);
   const libraryScrollFrameRef = useRef<number | null>(null);
 
+  const collectionsQuery = useLibraryFolders("character-collections");
+  const collections = useMemo(
+    () => (isPersonaLibrary ? [] : (collectionsQuery.data ?? [])),
+    [collectionsQuery.data, isPersonaLibrary],
+  );
+  const createCollection = useCreateLibraryFolder("character-collections");
+  const addToCollection = useAddLibraryItems("character-collections");
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+
   const libraryStateQuery = useCharacterLibraryState();
   const setLibraryStatus = useSetCharacterLibraryStatus();
   const libraryStateById = useMemo(
@@ -476,6 +486,14 @@ export function CharacterLibraryView() {
     });
   }, [cards, search, isPersonaLibrary, libraryStateById, shelf]);
 
+  const visibleCards = useMemo(() => {
+    if (!activeCollectionId) return filteredCards;
+    const collection = collections.find((folder) => folder.id === activeCollectionId);
+    if (!collection) return filteredCards;
+    const members = new Set(collection.itemIds);
+    return filteredCards.filter((card) => members.has(card.id));
+  }, [filteredCards, activeCollectionId, collections]);
+
   // Counts come from the whole library state, not the filtered list, so a
   // shelf shows how much is waiting on it even while another shelf is open.
   const shelfCounts = useMemo(() => {
@@ -491,7 +509,7 @@ export function CharacterLibraryView() {
   }, [isPersonaLibrary, libraryStateQuery.data]);
 
   const sortedCards = useMemo(() => {
-    const list = [...filteredCards];
+    const list = [...visibleCards];
     switch (sort) {
       case "name-asc":
         return list.sort((left, right) => left.name.localeCompare(right.name));
@@ -508,7 +526,7 @@ export function CharacterLibraryView() {
       default:
         return list;
     }
-  }, [filteredCards, sort]);
+  }, [visibleCards, sort]);
 
   const handleSetLibraryStatus = useCallback(
     async (status: CharacterLibraryStatus) => {
@@ -531,6 +549,29 @@ export function CharacterLibraryView() {
       }
     },
     [selectedCharacterIds, setLibraryStatus, t],
+  );
+
+  const handleAddToCollection = useCallback(
+    async (value: string) => {
+      if (selectedCharacterIds.length === 0) return;
+      try {
+        let folderId = value;
+        if (value === "__new__") {
+          const name = window.prompt(t("characters.collections.namePrompt"))?.trim();
+          if (!name) return;
+          const created = await createCollection.mutateAsync({ name });
+          if (!created?.id) return;
+          folderId = created.id;
+        }
+        // Additive, so a character joining a collection keeps the ones it is
+        // already in. This is the difference from folders.
+        await addToCollection.mutateAsync({ itemIds: selectedCharacterIds, folderId });
+        toast.success(t("characters.collections.addedValue1", { value1: selectedCharacterIds.length }));
+      } catch {
+        toast.error(t("characters.collections.addFailed"));
+      }
+    },
+    [selectedCharacterIds, createCollection, addToCollection, t],
   );
 
   const setSelectedId = useCallback(
@@ -883,6 +924,28 @@ export function CharacterLibraryView() {
             ))}
           </div>
         )}
+        {!isPersonaLibrary && collections.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1 border-t border-[var(--marinara-chat-chrome-panel-divider)] px-3 py-2 md:px-6">
+            <span className="text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
+              {t("characters.collections.label")}
+            </span>
+            {collections.map((collection) => (
+              <button
+                key={collection.id}
+                type="button"
+                aria-pressed={activeCollectionId === collection.id}
+                onClick={() => setActiveCollectionId(activeCollectionId === collection.id ? null : collection.id)}
+                className={cn(
+                  "mari-chrome-control mari-chrome-control--compact",
+                  activeCollectionId === collection.id && "mari-chrome-control--selected",
+                )}
+              >
+                {collection.name}
+                <span className="tabular-nums text-[var(--muted-foreground)]">{collection.itemIds.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {selectionMode && !isPersonaLibrary && (
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--marinara-chat-chrome-panel-divider)] px-3 py-2 md:px-6">
             <span className="text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
@@ -911,6 +974,27 @@ export function CharacterLibraryView() {
             >
               {localizeUi("ui.characters.summary.regenerateSelected")}
             </button>
+            <label className="flex items-center gap-1.5 text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
+              {t("characters.collections.addTo")}
+              <select
+                value=""
+                disabled={addToCollection.isPending || selectedCharacterIds.length === 0}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  event.target.value = "";
+                  if (value) void handleAddToCollection(value);
+                }}
+                className="mari-chrome-field h-8 py-0 pl-2 pr-6 text-xs disabled:opacity-50"
+              >
+                <option value="">{t("characters.shelves.choose")}</option>
+                {collections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>
+                    {collection.name}
+                  </option>
+                ))}
+                <option value="__new__">{t("characters.collections.createNew")}</option>
+              </select>
+            </label>
             <label className="flex items-center gap-1.5 text-xs text-[var(--marinara-chat-chrome-panel-muted)]">
               {t("characters.shelves.setStatus")}
               <select
