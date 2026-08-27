@@ -466,7 +466,10 @@ assert.match(
   "active Roleplay tracker agents should expose their saved prompt templates",
 );
 assert.match(reducedAmbientEffectsHookSource, /manualPreference \|\| systemPreference/u);
-assert.match(uiStoreSource, /version: 96/u);
+assert.match(uiStoreSource, /version: 97/u);
+// v96 -> v97 rewrote persisted character tag filters from raw spellings to
+// canonical keys, so the bump and its migration have to stay together.
+assert.match(uiStoreSource, /if \(version <= 96\) \{/u);
 assert.match(globalStylesSource, /data-marinara-reduced-effects/u);
 const accentTransitionStyles =
   globalStylesSource.match(
