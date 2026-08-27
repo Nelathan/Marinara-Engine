@@ -230,6 +230,24 @@ if (!unclosedThink.ok) {
 }
 assert.equal(parseCombatInitBlueprint("<think>still reasoning about the battle"), null);
 
+const sameLineFencedBlueprint = "```json " + JSON.stringify(blueprint()) + " ```";
+const sameLineFencedParsed = parseCombatInitBlueprint(sameLineFencedBlueprint);
+assert.ok(sameLineFencedParsed, "same-line markdown json fence must be stripped before parse");
+assert.equal((sameLineFencedParsed!.party as unknown[]).length, 1);
+assert.equal((sameLineFencedParsed!.enemies as unknown[]).length, 1);
+
+const newlineFencedBlueprint = "```json\n" + JSON.stringify(blueprint()) + "\n```";
+const newlineFencedParsed = parseCombatInitBlueprint(newlineFencedBlueprint);
+assert.ok(newlineFencedParsed, "newline markdown json fence must be stripped before parse");
+assert.equal((newlineFencedParsed!.party as unknown[]).length, 1);
+assert.equal((newlineFencedParsed!.enemies as unknown[]).length, 1);
+
+assert.equal(
+  parseCombatInitBlueprint('```json { "party": [{ "name": "User" }]'),
+  null,
+  "fenced party-only leftover must still fail without enemies",
+);
+
 const thinkWrappedFlee = resolveCombatInitFromLlm({
   content: thinkWrappedBlueprint,
   finishReason: "stop",
@@ -273,6 +291,7 @@ assert.match(
 );
 const combatInitSource = readFileSync(new URL("../../packages/server/src/services/game/combat-init.ts", import.meta.url), "utf8");
 assert.match(combatInitSource, /extractLeadingThinkingBlocks\(raw\)/, "think-strip before parse must remain");
+assert.match(combatInitSource, /stripMarkdownCodeFences/, "markdown fences must be stripped before parse");
 assert.match(combatInitSource, /logger\.warn/, "parse failure must warn-log a raw-content preview");
 assert.match(routeSource, /isDroppedStreamFinishReason/);
 

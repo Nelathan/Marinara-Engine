@@ -69,8 +69,16 @@ function objectiveKind(value: unknown): string | null {
   return value.kind;
 }
 
+/** glm-5.2 often wraps the blueprint as a same-line markdown fence: json code fence then the object. */
+function stripMarkdownCodeFences(raw: string): string {
+  let text = raw.trim();
+  text = text.replace(/^```(?:json|markdown)?\s*/i, "");
+  text = text.replace(/\s*```\s*$/i, "");
+  return text.trim();
+}
+
 export function parseCombatInitBlueprint(raw: string): Record<string, unknown> | null {
-  const content = extractLeadingThinkingBlocks(raw).content;
+  const content = stripMarkdownCodeFences(extractLeadingThinkingBlocks(raw).content);
   if (content.trim()) {
     for (const parse of [parseGameJsonish, parseRepairedGameJsonish]) {
       try {
