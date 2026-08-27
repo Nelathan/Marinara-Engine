@@ -79,6 +79,7 @@ export function CommandResultPreview({
           mediaKind={preview?.media?.kind}
           avatarCropStyle={preview?.media?.avatarCropStyle}
           accent={preview?.accent}
+          variant={compact ? "row" : "preview"}
           titleId={titleId}
           className="min-w-0 flex-1"
         />
@@ -90,6 +91,7 @@ export function CommandResultPreview({
         detail ||
         detailLoading) && (
         <div
+          data-preview-body="true"
           className={cn(
             "min-h-0 flex-1 overflow-y-auto overscroll-contain",
             // Only cap the body when the preview is not already inside a
@@ -172,6 +174,7 @@ export function CommandResultPreview({
 
       {hasActions && (
         <footer
+          data-preview-footer="true"
           className={cn(
             "mt-auto flex flex-col-reverse gap-2 border-t border-[var(--border)] sm:flex-row sm:justify-end",
             compact ? "px-3 py-2" : inline ? "px-3.5 py-2.5 sm:px-4" : "px-4 py-3 sm:px-5",

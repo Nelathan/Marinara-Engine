@@ -1724,12 +1724,14 @@ function MariWorkspaceActionResultRow({
   onReview,
   character,
   lorebook,
+  compact = false,
 }: {
   result: MariWorkspaceActionResult;
   onOpen: (result: MariWorkspaceActionResult) => void;
   onReview: (reviewId: string) => void;
   character?: CharacterPreviewModel | null;
   lorebook?: LorebookPreviewModel | null;
+  compact?: boolean;
 }) {
   const { t } = useUiTranslation();
   const localizeUi = t;
@@ -1787,8 +1789,11 @@ function MariWorkspaceActionResultRow({
   return (
     <CommandResultPreview
       result={previewResult}
-      variant="inline"
-      className="mari-workspace-artifact mari-workspace-artifact--complete mt-3"
+      variant={compact ? "compact" : "inline"}
+      className={cn(
+        "mari-workspace-artifact mari-workspace-artifact--complete mt-3",
+        compact && "mari-workspace-artifact--compact",
+      )}
       actions={[
         ...(result.reviewId
           ? [
@@ -2007,6 +2012,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
               onReview={onReviewActionResult}
               character={characterPreviews.get(result.resource.id)}
               lorebook={lorebookPreviews.get(result.resource.id)}
+              compact
             />
           ))}
           {(onDelete || (onRegenerate && canRegenerate)) && (
@@ -2053,6 +2059,7 @@ const CompactMariMessage = memo(function CompactMariMessage({
             onReview={onReviewActionResult}
             character={characterPreviews.get(result.resource.id)}
             lorebook={lorebookPreviews.get(result.resource.id)}
+            compact
           />
         ))}
         {(onDelete || (onRegenerate && canRegenerate)) && (
@@ -2510,7 +2517,13 @@ export function HomeProfessorMariChat({
 
   const hasActiveGeneration = useChatStore((state) => (chatId ? state.abortControllers.has(chatId) : false));
   const reduceMotion = useReducedMotion();
-  const paneTransition = reduceMotion ? { duration: 0 } : PROFESSOR_MARI_PANE_TRANSITION;
+  // The omnibar already has a fixed shell. Destination animation makes its
+  // contents appear to reload and moves the composer while switching tabs.
+  const paneTransition = omnibarMode
+    ? { duration: 0 }
+    : reduceMotion
+      ? { duration: 0 }
+      : PROFESSOR_MARI_PANE_TRANSITION;
   const mariPhase = useChatStore((state) => (chatId ? (state.mariPhaseByChatId.get(chatId) ?? null) : null));
   const mariChips = useAgentStore((state) => state.mariChips);
   const mariChipsChatId = useAgentStore((state) => state.mariChipsChatId);
@@ -4434,7 +4447,9 @@ export function HomeProfessorMariChat({
   }>;
 
   const selectHeaderDestination = (destination: Exclude<ProfessorMariWorkspaceDestination, "chat">) => {
-    setWorkspaceDestination(workspaceDestination === destination ? "chat" : destination);
+    const desktopDetails =
+      destination === "details" && typeof window !== "undefined" && window.matchMedia("(min-width: 64rem)").matches;
+    setWorkspaceDestination(desktopDetails || workspaceDestination === destination ? "chat" : destination);
     setPanelMenuOpen(false);
   };
 
@@ -4618,6 +4633,14 @@ export function HomeProfessorMariChat({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <div className="space-y-4">
+          {visiblePendingChangeReviews.length > 0 ? (
+            <section>
+              <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                {localizeUi("commandCenter.completion.review")}
+              </div>
+              {pendingApprovalsPanel}
+            </section>
+          ) : null}
           {focusedCharacter || focusedLorebook ? (
             <section>
               <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
@@ -4632,28 +4655,23 @@ export function HomeProfessorMariChat({
             </section>
           ) : null}
           {latestActionResults.length > 0 ? (
-            <section>
+            <section className="mari-completed-history">
               <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
                 {localizeUi("ui.chat.homeprofessormarichat.completedResults")}
               </div>
-              {latestActionResults.map((result) => (
-                <MariWorkspaceActionResultRow
-                  key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
-                  result={result}
-                  onOpen={openActionResult}
-                  onReview={reviewActionResult}
-                  character={characterPreviewById.get(result.resource.id)}
-                  lorebook={lorebookPreviewById.get(result.resource.id)}
-                />
-              ))}
-            </section>
-          ) : null}
-          {visiblePendingChangeReviews.length > 0 ? (
-            <section>
-              <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
-                {localizeUi("commandCenter.completion.review")}
+              <div className="space-y-1.5">
+                {latestActionResults.map((result) => (
+                  <MariWorkspaceActionResultRow
+                    key={`${result.status}-${result.resource.kind}-${result.resource.id}`}
+                    result={result}
+                    onOpen={openActionResult}
+                    onReview={reviewActionResult}
+                    character={characterPreviewById.get(result.resource.id)}
+                    lorebook={lorebookPreviewById.get(result.resource.id)}
+                    compact
+                  />
+                ))}
               </div>
-              {pendingApprovalsPanel}
             </section>
           ) : null}
           {!focusedCharacter &&
@@ -4670,23 +4688,6 @@ export function HomeProfessorMariChat({
               </p>
             </div>
           ) : null}
-          <section className="border-t border-[var(--border)]/50 pt-3">
-            <div className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
-              {localizeUi("ui.chat.homeprofessormarichat.workspaceStatus", "Workspace")}
-            </div>
-            <div className="space-y-1 text-[0.6875rem] text-[var(--muted-foreground)]">
-              <div className="flex items-center justify-between gap-2">
-                <span>{localizeUi("ui.chat.homeprofessormarichat.connection", "Connection")}</span>
-                <span className="max-w-[10rem] truncate text-[var(--foreground)]">
-                  {effectiveConnection?.name ?? localizeUi("ui.chat.homeprofessormarichat.missingConnection")}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span>{localizeUi("ui.chat.homeprofessormarichat.contextControlLabel")}</span>
-                <span className="text-[var(--foreground)]">{attachedContext?.length ?? 0}</span>
-              </div>
-            </div>
-          </section>
         </div>
       </div>
     </>
@@ -5074,6 +5075,9 @@ export function HomeProfessorMariChat({
                             ) : null}
                             {recoveryNotice}
                             {workspaceStatus?.error && <WorkspaceErrorEvent message={workspaceStatus.error} />}
+                            {visiblePendingChangeReviews.length > 0 ? (
+                              <div className="space-y-3 lg:hidden">{pendingApprovalsPanel}</div>
+                            ) : null}
                             {omnibarMode && messages.length > 0 && showSuggestionPrompt && suggestionQuestion ? (
                               <TranscriptRow marker={<MariAvatar active />} className="mari-suggestion-turn">
                                 <div className="mari-suggestion-question-turn">
@@ -5084,12 +5088,6 @@ export function HomeProfessorMariChat({
                           </>
                         )}
                       </div>
-
-                      {visiblePendingChangeReviews.length > 0 && workspaceDestination === "chat" ? (
-                        <div className="mari-workspace-review-dock shrink-0 overflow-y-auto border-t border-[var(--border)]/60 px-3 py-3 sm:px-7">
-                          {pendingApprovalsPanel}
-                        </div>
-                      ) : null}
 
                       <form
                         className={cn(
@@ -5809,7 +5807,7 @@ export function HomeProfessorMariChat({
                   <aside
                     className={cn(
                       "hidden h-full min-h-0 w-96 min-w-96 shrink-0 flex-col border-l border-[var(--border)]/60 bg-[var(--background)]/45",
-                      workspaceDestination === "chat" ? "sm:flex" : "sm:hidden",
+                      workspaceDestination === "chat" ? "lg:flex" : "lg:hidden",
                     )}
                   >
                     {detailsPanel}

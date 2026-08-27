@@ -7,6 +7,9 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Professor Mari's omnibar workspace now keeps completed work in the transcript, shows step progress and result details, and keeps technical tool arguments behind a disclosure.
 - Professor Mari's work steps now use distinct app-data labels such as Reading chat and Reading character. The Details inspector stays out of the way when a full Chats, Skills, Memories, or Context workspace is open.
 - The omnibar now prioritizes named resources, improves previews and empty-state guidance, and keeps settings, keyboard navigation, accessibility announcements, and mobile layout aligned.
+- Professor Mari's omnibar tabs now switch without window motion, and the Details inspector button is available on the right on wide screens.
+- Professor Mari now shows proposed changes as one approval card in the chat on smaller screens and in the Details sidebar on desktop.
+- Completed Professor Mari changes now use compact cards and a lower completed-work history in the desktop Details sidebar.
 - Professor Mari now uses one integrated workspace across Home, FAQ, and handoff flows, with shared resource previews, review decisions, contextual suggestions, animated work scenes, and reduced-motion support.
 
 ### Added
