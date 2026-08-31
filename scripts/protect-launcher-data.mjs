@@ -151,6 +151,7 @@ const SHARDED_TABLES = [
   "characters",
   "character_card_versions",
   "character_library_state",
+  "character_tag_operation_history",
   "personas",
   "persona_card_versions",
   "character_groups",

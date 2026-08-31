@@ -9,6 +9,7 @@ import {
   useCharacterPages,
   useCharacterTagIndex,
   useCharacterTagOperation,
+  useUndoCharacterTagOperation,
   useDeleteCharacter,
   useCharacterGroups,
   useCreateGroup,
@@ -156,6 +157,7 @@ export function CharactersPanel() {
   const deleteCharacter = useDeleteCharacter();
   const duplicateCharacter = useDuplicateCharacter();
   const tagOperation = useCharacterTagOperation();
+  const undoTagOperation = useUndoCharacterTagOperation();
   const createGroup = useCreateGroup();
   const updateGroup = useUpdateGroup();
   const deleteGroup = useDeleteGroup();
@@ -285,6 +287,33 @@ export function CharactersPanel() {
     return counts;
   }, [filteredCharacters]);
 
+  const offerUndo = useCallback(
+    (operationId: string | null, message: string) => {
+      if (!operationId) {
+        toast.success(message);
+        return;
+      }
+      // A bulk tag edit rewrites many cards at once, so the way back has to be
+      // offered at the moment it happens, not buried in a history view.
+      toast.success(message, {
+        action: {
+          label: t("characters.tagExplorer.undo"),
+          onClick: () => {
+            void (async () => {
+              try {
+                const result = await undoTagOperation.mutateAsync(operationId);
+                toast.success(t("characters.tagExplorer.undoneValue1", { value1: result.restored }));
+              } catch {
+                toast.error(t("characters.tagExplorer.undoFailed"));
+              }
+            })();
+          },
+        },
+      });
+    },
+    [undoTagOperation, t],
+  );
+
   const handleDeleteTag = useCallback(
     async (tagKey: string) => {
       const entry = allTags.find((tag) => tag.key === tagKey);
@@ -322,6 +351,8 @@ export function CharactersPanel() {
               value2: result.failed.length,
             }),
           );
+        } else {
+          offerUndo(result.operationId, t("characters.tagExplorer.deletedValue1", { value1: result.applied }));
         }
         if (includedTags.has(tagKey)) {
           const next = new Set(includedTags);
@@ -345,6 +376,7 @@ export function CharactersPanel() {
       setCharacterPanelIncludedTags,
       setCharacterPanelExcludedTags,
       localizeUi,
+      offerUndo,
       t,
     ],
   );
@@ -408,6 +440,8 @@ export function CharactersPanel() {
               value2: result.failed.length,
             }),
           );
+        } else {
+          offerUndo(result.operationId, t("characters.tagExplorer.renamedValue1", { value1: result.applied }));
         }
         // Carry any active filter over to the new key so the current result
         // set does not silently empty out after the rename.
@@ -432,6 +466,7 @@ export function CharactersPanel() {
       excludedTags,
       setCharacterPanelIncludedTags,
       setCharacterPanelExcludedTags,
+      offerUndo,
       t,
     ],
   );

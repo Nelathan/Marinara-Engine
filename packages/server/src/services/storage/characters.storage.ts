@@ -7,6 +7,7 @@ import {
   characters,
   characterCardVersions,
   characterLibraryState,
+  characterTagOperationHistory,
   chats,
   personas,
   personaCardVersions,
@@ -507,6 +508,7 @@ export function createCharactersStorage(db: DB) {
 
       let applied = 0;
       const failed: string[] = [];
+      const undone: Array<{ id: string; before: string[] }> = [];
       for (const change of plan.changes) {
         try {
           // Library organization, not card authoring: a bulk tag edit should
@@ -514,13 +516,102 @@ export function createCharactersStorage(db: DB) {
           const updated = await this.update(change.id, { tags: change.after }, undefined, {
             skipVersionSnapshot: true,
           });
-          if (updated) applied += 1;
-          else failed.push(change.id);
+          if (updated) {
+            applied += 1;
+            undone.push({ id: change.id, before: change.before });
+          } else failed.push(change.id);
         } catch {
           failed.push(change.id);
         }
       }
-      return { applied, failed, planned: plan.changes.length, unchanged: plan.unchanged };
+
+      // Record the reversal only for work that actually landed. A merge cannot
+      // be undone by merging back, because the operation loses which card had
+      // which spelling, so the previous tag lists are the only way home.
+      let operationId: string | null = null;
+      if (undone.length > 0) {
+        operationId = newId();
+        await db.insert(characterTagOperationHistory).values({
+          id: operationId,
+          kind: operation.type,
+          summary:
+            operation.type === "rename" ? `${operation.from.join(", ")} → ${operation.to}` : operation.keys.join(", "),
+          changes: JSON.stringify(undone),
+          createdAt: now(),
+        });
+        await this.pruneTagOperationHistory();
+      }
+
+      return { applied, failed, planned: plan.changes.length, unchanged: plan.unchanged, operationId };
+    },
+
+    async listTagOperationHistory() {
+      const rows = await db.select().from(characterTagOperationHistory);
+      return rows
+        .map((row) => ({
+          id: row.id,
+          kind: row.kind,
+          summary: row.summary,
+          createdAt: row.createdAt,
+          characterCount: (() => {
+            try {
+              const parsed: unknown = JSON.parse(row.changes);
+              return Array.isArray(parsed) ? parsed.length : 0;
+            } catch {
+              return 0;
+            }
+          })(),
+        }))
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    },
+
+    /** Keep history bounded; it exists for recent mistakes, not as an audit log. */
+    async pruneTagOperationHistory(keep = 20) {
+      const rows = await db.select().from(characterTagOperationHistory);
+      const stale = rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(keep);
+      for (const row of stale) {
+        await db.delete(characterTagOperationHistory).where(eq(characterTagOperationHistory.id, row.id));
+      }
+    },
+
+    /**
+     * Restore the tag lists a tag operation replaced.
+     *
+     * Cards edited since the operation are left alone and reported rather than
+     * overwritten: undo should not silently discard work done afterwards.
+     */
+    async undoTagOperation(operationId: string) {
+      const rows = await db
+        .select()
+        .from(characterTagOperationHistory)
+        .where(eq(characterTagOperationHistory.id, operationId));
+      const record = rows[0];
+      if (!record) return null;
+
+      let changes: Array<{ id: string; before: string[] }> = [];
+      try {
+        const parsed: unknown = JSON.parse(record.changes);
+        if (Array.isArray(parsed)) changes = parsed as Array<{ id: string; before: string[] }>;
+      } catch {
+        changes = [];
+      }
+
+      let restored = 0;
+      const missing: string[] = [];
+      for (const change of changes) {
+        try {
+          const updated = await this.update(change.id, { tags: change.before }, undefined, {
+            skipVersionSnapshot: true,
+          });
+          if (updated) restored += 1;
+          else missing.push(change.id);
+        } catch {
+          missing.push(change.id);
+        }
+      }
+
+      await db.delete(characterTagOperationHistory).where(eq(characterTagOperationHistory.id, operationId));
+      return { restored, missing };
     },
 
     /**

@@ -940,6 +940,16 @@ export async function charactersRoutes(app: FastifyInstance) {
     });
   });
 
+  app.get("/tags/operations/history", async () => {
+    return storage.listTagOperationHistory();
+  });
+
+  app.post<{ Params: { id: string } }>("/tags/operations/:id/undo", async (req, reply) => {
+    const result = await storage.undoTagOperation(req.params.id);
+    if (!result) return reply.status(404).send({ error: "Tag operation not found" });
+    return result;
+  });
+
   app.get("/library-state", async () => {
     return storage.listLibraryState();
   });

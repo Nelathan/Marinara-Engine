@@ -15,11 +15,15 @@ they came from. No provider call, no cost, no card content leaving the
 machine, and no invented metadata. Applying a proposal routes through the
 existing validated tag operation, so it cannot bypass the preview.
 
+Slice 11 shipped for tag operations: the reversal is the previous tag list per
+affected card, because a merge loses which card carried which spelling and so
+has no computable inverse. Undo is offered on the confirmation toast rather
+than buried in a history view, and skips cards edited since.
+
 Not started: Slice 5 bulk tag add/remove, Slice 7 (tag health and discovery),
-Slice 8 (saved views and smart collections), Slice 9 (import inbox), Slice 11
-(history and undo), Slice 13 (AI import assistance). Slice 11 matters most of
-the remaining work, because merge and delete are now reachable and
-irreversible.
+Slice 8 (saved views and smart collections), Slice 9 (import inbox), Slice 13
+(AI import assistance). Undo does not yet cover status or collection changes,
+which are individually reversible by hand.
 
 ## Product Goal
 

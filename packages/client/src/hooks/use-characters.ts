@@ -223,7 +223,7 @@ export function useCharacterTagOperation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (variables: { operation: CharacterTagOperation; preview?: boolean }) =>
-      api.post<{ applied: number; failed: string[]; planned: number; unchanged: number }>(
+      api.post<{ applied: number; failed: string[]; planned: number; unchanged: number; operationId: string | null }>(
         variables.preview ? "/characters/tags/operations?preview=true" : "/characters/tags/operations",
         variables.operation,
       ),
@@ -276,6 +276,26 @@ export function useCharacterOrganizationProposals(enabled: boolean) {
     queryFn: () => api.get<CharacterOrganizationProposals>("/characters/organization/proposals"),
     enabled,
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Restore the tag lists a tag operation replaced.
+ *
+ * Merge and delete cannot be reversed by repeating them, so the server keeps
+ * the previous tag list per affected card and this puts it back.
+ */
+export function useUndoCharacterTagOperation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (operationId: string) =>
+      api.post<{ restored: number; missing: string[] }>(
+        `/characters/tags/operations/${encodeURIComponent(operationId)}/undo`,
+        {},
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: characterKeys.all });
+    },
   });
 }
 

@@ -21,3 +21,25 @@ export const characterLibraryState = fileTable("character_library_state", {
   status: text("status").notNull().default("active"),
   updatedAt: text("updated_at").notNull(),
 });
+
+/**
+ * Reversal record for a library-wide tag operation.
+ *
+ * Merge and delete rewrite many cards at once and cannot be reversed by
+ * repeating them: merging "slowburn" into "slow burn" loses which cards had
+ * which spelling. Storing the previous tag list per affected card is the only
+ * way back.
+ *
+ * Local organization history, never card content, so it is not exported and
+ * does not appear in card versions.
+ */
+export const characterTagOperationHistory = fileTable("character_tag_operation_history", {
+  id: text("id").primaryKey(),
+  /** rename | delete */
+  kind: text("kind").notNull(),
+  /** Human-readable summary, e.g. the tags involved. */
+  summary: text("summary").notNull().default(""),
+  /** JSON array of { id, before } — the tag list each card had beforehand. */
+  changes: text("changes").notNull().default("[]"),
+  createdAt: text("created_at").notNull(),
+});
