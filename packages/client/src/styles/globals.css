@@ -2132,6 +2132,35 @@
   color: var(--marinara-editor-text);
 }
 
+.mari-editor-navigation--body {
+  flex: 0 0 12rem;
+  align-self: stretch;
+  border-right: 1px solid var(--marinara-editor-divider);
+  padding: 1rem 0.75rem;
+}
+
+.mari-editor-navigation--body .mari-editor-navigation-tabs {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+.mari-editor-navigation--body .mari-editor-tab {
+  justify-content: flex-start;
+  gap: 0.625rem;
+  border-radius: 0.625rem;
+  padding-inline: 0.75rem;
+  text-align: left;
+}
+
+.mari-editor-navigation--body .mari-editor-tab-badge {
+  margin-left: auto;
+}
+
+.mari-editor-navigation-backdrop {
+  display: none;
+}
+
 .mari-editor-navigation-menu-item {
   color: var(--marinara-editor-muted);
 }
@@ -2586,6 +2615,79 @@
 
   .mari-editor-header--with-nav .mari-editor-save-label {
     display: none;
+  }
+}
+
+@container (max-width: 64rem) {
+  .mari-editor-navigation--body {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex: 0 0 auto;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--marinara-editor-divider);
+    background: var(--marinara-editor-bg);
+    padding: 0.625rem 1rem;
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-compact {
+    display: block;
+  }
+}
+
+@container (min-width: 64.001rem) and (max-width: 96rem) {
+  .mari-editor-navigation--body {
+    position: static;
+    width: auto;
+    flex: 0 0 12rem;
+    border-right: 1px solid var(--marinara-editor-divider);
+    border-bottom: 0;
+    padding: 1rem 0.75rem;
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-tabs {
+    display: flex;
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-compact {
+    display: none;
+  }
+}
+
+@container (max-width: 64rem) {
+  .mari-editor-body {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 767px) {
+  .mari-editor-navigation--body {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-menu {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 60;
+    width: 100%;
+    max-width: none;
+    border-radius: 1rem 1rem 0 0;
+    padding: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-menu-item {
+    min-height: 2.75rem;
+    padding-block: 0.625rem;
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(0 0 0 / 45%);
   }
 }
 

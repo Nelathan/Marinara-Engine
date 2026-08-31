@@ -99,46 +99,53 @@ export function EditorTabNavigation<T extends string>({
           />
         </button>
         {compactMenuOpen && (
-          <div
-            id={compactMenuId}
-            role="menu"
-            aria-label={navigationLabel}
-            onKeyDown={(event) => {
-              if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-              event.preventDefault();
-              const items = Array.from(
-                compactMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [],
-              );
-              const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
-              const direction = event.key === "ArrowDown" ? 1 : -1;
-              items[(currentIndex + direction + items.length) % items.length]?.focus();
-            }}
-            className="mari-editor-navigation-menu absolute left-0 top-full z-50 mt-1 w-max min-w-full max-w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border p-1 shadow-xl"
-          >
-            {tabs.map((tab) => {
-              const active = activeId === tab.id;
-              const badge = getBadge?.(tab.id);
-              return (
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-label={localize(tab.label)}
-                  aria-checked={active}
-                  key={tab.id}
-                  onClick={() => {
-                    onChange(tab.id);
-                    setCompactMenuOpen(false);
-                    compactMenuButtonRef.current?.focus();
-                  }}
-                  className="mari-editor-navigation-menu-item flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium"
-                >
-                  <span className="min-w-0 flex-1 truncate">{localize(tab.label)}</span>
-                  {badge != null && <span className="mari-editor-tab-badge">{badge}</span>}
-                  <Check size="0.75rem" className={active ? "opacity-100" : "opacity-0"} />
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <div
+              className="mari-editor-navigation-backdrop"
+              aria-hidden="true"
+              onClick={() => setCompactMenuOpen(false)}
+            />
+            <div
+              id={compactMenuId}
+              role="menu"
+              aria-label={navigationLabel}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                event.preventDefault();
+                const items = Array.from(
+                  compactMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [],
+                );
+                const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+                const direction = event.key === "ArrowDown" ? 1 : -1;
+                items[(currentIndex + direction + items.length) % items.length]?.focus();
+              }}
+              className="mari-editor-navigation-menu absolute left-0 top-full z-50 mt-1 w-max min-w-full max-w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border p-1 shadow-xl"
+            >
+              {tabs.map((tab) => {
+                const active = activeId === tab.id;
+                const badge = getBadge?.(tab.id);
+                return (
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-label={localize(tab.label)}
+                    aria-checked={active}
+                    key={tab.id}
+                    onClick={() => {
+                      onChange(tab.id);
+                      setCompactMenuOpen(false);
+                      compactMenuButtonRef.current?.focus();
+                    }}
+                    className="mari-editor-navigation-menu-item flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{localize(tab.label)}</span>
+                    {badge != null && <span className="mari-editor-tab-badge">{badge}</span>}
+                    <Check size="0.75rem" className={active ? "opacity-100" : "opacity-0"} />
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
