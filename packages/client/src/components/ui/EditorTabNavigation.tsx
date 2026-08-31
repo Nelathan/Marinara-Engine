@@ -29,8 +29,13 @@ export function EditorTabNavigation<T extends string>({
   const compactMenuId = useId();
   const compactMenuRef = useRef<HTMLDivElement>(null);
   const compactMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const activeTabButtonRef = useRef<HTMLButtonElement>(null);
   const [compactMenuOpen, setCompactMenuOpen] = useState(false);
   const activeTab = tabs.find((tab) => tab.id === activeId) ?? tabs[0];
+
+  useEffect(() => {
+    activeTabButtonRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeId]);
 
   useEffect(() => {
     if (!compactMenuOpen) return;
@@ -68,7 +73,9 @@ export function EditorTabNavigation<T extends string>({
               aria-label={localize(tab.label)}
               aria-current={active ? "page" : undefined}
               data-active={active ? "true" : undefined}
+              data-tab-id={tab.id}
               key={tab.id}
+              ref={active ? activeTabButtonRef : undefined}
               onClick={() => onChange(tab.id)}
               className="mari-editor-action mari-editor-tab flex min-w-0 shrink items-center justify-center whitespace-nowrap px-2.5 text-center"
             >

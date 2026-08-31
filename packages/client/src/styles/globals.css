@@ -2631,8 +2631,27 @@
     padding: 0.625rem 1rem;
   }
 
+  .mari-editor-navigation--body .mari-editor-navigation-tabs {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0.25rem;
+    min-width: max-content;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .mari-editor-navigation--body .mari-editor-navigation-tabs::-webkit-scrollbar {
+    height: 0.25rem;
+  }
+
+  .mari-editor-navigation--body .mari-editor-tab {
+    flex: 0 0 auto;
+  }
+
   .mari-editor-navigation--body .mari-editor-navigation-compact {
-    display: block;
+    display: none;
   }
 }
 
@@ -2666,28 +2685,8 @@
     padding: 0.5rem 0.75rem;
   }
 
-  .mari-editor-navigation--body .mari-editor-navigation-menu {
-    position: fixed;
-    inset: auto 0 0;
-    z-index: 60;
-    width: 100%;
-    max-width: none;
-    border-radius: 1rem 1rem 0 0;
-    padding: 0.75rem;
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-  }
-
-  .mari-editor-navigation--body .mari-editor-navigation-menu-item {
-    min-height: 2.75rem;
-    padding-block: 0.625rem;
-  }
-
-  .mari-editor-navigation--body .mari-editor-navigation-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    background: rgb(0 0 0 / 45%);
+  .mari-editor-navigation--body .mari-editor-tab {
+    min-height: 2.5rem;
   }
 }
 
