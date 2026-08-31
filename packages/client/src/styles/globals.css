@@ -2133,6 +2133,7 @@
 }
 
 .mari-editor-navigation--body {
+  min-width: 0;
   flex: 0 0 12rem;
   align-self: stretch;
   border-right: 1px solid var(--marinara-editor-divider);
@@ -2155,6 +2156,10 @@
 
 .mari-editor-navigation--body .mari-editor-tab-badge {
   margin-left: auto;
+}
+
+.mari-editor-navigation--body .mari-editor-tab > svg {
+  display: block;
 }
 
 .mari-editor-navigation-backdrop {
@@ -2633,6 +2638,8 @@
 
   .mari-editor-navigation--body .mari-editor-navigation-tabs {
     display: flex;
+    width: 100%;
+    max-width: 100%;
     flex-direction: row;
     align-items: stretch;
     gap: 0.25rem;
@@ -2640,6 +2647,7 @@
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: thin;
+    touch-action: pan-x;
   }
 
   .mari-editor-navigation--body .mari-editor-navigation-tabs::-webkit-scrollbar {
