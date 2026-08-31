@@ -598,8 +598,6 @@ interface UIState {
   /** False until the aside has answered once and explained itself in place (R19). */
   omnibarAsideDisclosed: boolean;
   mariEditViewMode: MariEditViewMode;
-  /** Professor Mari animation packs the user turned off. `core` can never be in here. */
-  disabledMariAnimationPacks: string[];
   chatBackground: string | null;
   /** Default background applied when a Roleplay chat has no saved background yet. */
   defaultRoleplayBackground: string;
@@ -1025,7 +1023,6 @@ interface UIState {
   setOmnibarAsideConnectionId: (id: string) => void;
   setOmnibarAsideDisclosed: (disclosed: boolean) => void;
   setMariEditViewMode: (mode: MariEditViewMode) => void;
-  toggleMariAnimationPack: (packId: string, enabled: boolean) => void;
   setChatBackground: (url: string | null) => void;
   setDefaultRoleplayBackground: (url: string) => void;
   setChatBackgroundBlur: (v: number) => void;
@@ -1481,7 +1478,6 @@ export const useUIStore = create<UIState>()(
       omnibarAsideConnectionId: LOCAL_SIDECAR_CONNECTION_ID,
       omnibarAsideDisclosed: false,
       mariEditViewMode: "easy",
-      disabledMariAnimationPacks: [],
       chatBackground: null,
       defaultRoleplayBackground: DEFAULT_ROLEPLAY_BACKGROUND_URL,
       chatBackgroundBlur: 0,
@@ -1803,19 +1799,6 @@ export const useUIStore = create<UIState>()(
       setOmnibarAsideConnectionId: (id) => set({ omnibarAsideConnectionId: id }),
       setOmnibarAsideDisclosed: (disclosed) => set({ omnibarAsideDisclosed: disclosed }),
       setMariEditViewMode: (mode) => set({ mariEditViewMode: mode }),
-      toggleMariAnimationPack: (packId, enabled) => {
-        // `core` holds the fallback sprite every pool lands on, so it is locked in
-        // the UI. Refuse it here too: the store is what persists, and a stale or
-        // hand-edited entry would otherwise survive the toggle being un-renderable.
-        if (packId === "core") return;
-        set((state) => ({
-          disabledMariAnimationPacks: enabled
-            ? state.disabledMariAnimationPacks.filter((id) => id !== packId)
-            : state.disabledMariAnimationPacks.includes(packId)
-              ? state.disabledMariAnimationPacks
-              : [...state.disabledMariAnimationPacks, packId],
-        }));
-      },
       setChatBackground: (url) => set({ chatBackground: url }),
       setDefaultRoleplayBackground: (url) =>
         set({ defaultRoleplayBackground: normalizeDefaultRoleplayBackground(url) }),
@@ -2511,7 +2494,6 @@ export const useUIStore = create<UIState>()(
           reduceAmbientEffects: false,
           mariPanelSortMode: "az",
           mariEditViewMode: "easy",
-          disabledMariAnimationPacks: [],
           chatBackground: null,
           defaultRoleplayBackground: DEFAULT_ROLEPLAY_BACKGROUND_URL,
           chatBackgroundBlur: 0,
@@ -3345,7 +3327,6 @@ export const useUIStore = create<UIState>()(
         omnibarAsideConnectionId: state.omnibarAsideConnectionId,
         omnibarAsideDisclosed: state.omnibarAsideDisclosed,
         mariEditViewMode: state.mariEditViewMode,
-        disabledMariAnimationPacks: state.disabledMariAnimationPacks,
         chatBackground: state.chatBackground,
         defaultRoleplayBackground: state.defaultRoleplayBackground,
         chatBackgroundBlur: state.chatBackgroundBlur,

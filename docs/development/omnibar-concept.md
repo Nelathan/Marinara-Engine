@@ -542,50 +542,7 @@ mobile. The dock keeps the Strip and the composer, so R46 becomes two rows. R35
 was right that a decision must never scroll away; a panel satisfies that better
 than a dock did.
 
-## 12. Build order
-
-Each step is useful alone and does not depend on the next.
-
-**1. R17 — split the persona from the operational text.** A prompt edit in
-`MARI_SYSTEM_PROMPT` plus plain wording for `reason`, approvals and diff
-summaries. No dependencies, no UI, largest trust gain per line changed.
-
-**2. R6 — read Mari's state from the server payload.** Delete `mariTaskFinished`
-and the local edge detect. This removes the root cause the backlog identifies,
-unblocks three of its items, and is the precondition for the indicator meaning
-anything.
-
-**3. R12, R13, R27 — indicator in, floating window out.** Remove
-`ProfessorMariFloatingAssistant`, its host, its events, and the 26 `floatingMode`
-branches. Keep the indicator, driven by the visual state.
-
-**4. R32–R39 — the takeover, inside the existing component.** Reorder rather than
-rebuild: approvals pinned above the composer, tool log collapsed with the current
-call visible, one sprite in the header, neutral field cards. Extract while
-touching:
-
-- the four approval cards (~550 lines, 2195–2742) — they are moving anyway;
-- the skills and memories menus (~660 lines, 2792–3453) — to lazy chunks. Not for
-  tidiness: they load today for everyone who opens her, against a hard 500 kB
-  in-memory chunk budget, and the takeover needs that room.
-
-Leave the ~3600-line core alone. Splitting it changes nothing a user sees.
-
-**5. The pane collapse.** `session.pane` and its five-variant union become
-`takeover`. `OmnibarDetailPane` becomes inline row expansion — the one item here
-that is new work, because choice rows use that pane as their picker.
-
-**6. The aside (R3, R4, R9, R10, R19, R22–R24).** The largest new-work cluster in
-this document: a narrow server mode on the quick route, the delay knob, tier
-attribution, first-use disclosure, failure design, and the mobile bottom sheet.
-Deliberately last — everything above is useful without it, and it is the least
-proven idea here.
-
-Note for step 4 and R33: the input animating from top to bottom is a desktop
-motion. On small viewports the composer is already pinned above the keyboard
-(R26), so the transition is a no-op there rather than a second layout.
-
-## 13. Not decided
+## 12. Not decided
 
 - Whether the cheap aside is per-keystroke cancellable or debounced-then-final.
 - What the onboarding for the cheap tier looks like, beyond that it offers the

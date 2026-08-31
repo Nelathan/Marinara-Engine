@@ -12,7 +12,7 @@ This file is the release-notes source of truth for Marinara Engine. Reuse these 
 - Professor Mari's omnibar tabs now switch without window motion, and the Details inspector button is available on the right on wide screens.
 - Professor Mari now shows proposed changes as one approval card in the chat on smaller screens and in the Details sidebar on desktop.
 - Completed Professor Mari changes now use compact cards and a lower completed-work history in the desktop Details sidebar.
-- Professor Mari now uses one integrated workspace across Home, FAQ, and handoff flows, with shared resource previews, review decisions, contextual suggestions, animated work scenes, and reduced-motion support.
+- Professor Mari now uses one integrated workspace across Home, FAQ, and handoff flows, with shared resource previews, review decisions, contextual suggestions, and reduced-motion support.
 - Professor Mari now treats a direct request to put entries into a lorebook as authorization to create those entries, without asking for a redundant acceptance phrase.
 - JSON agents now preserve mandatory reasoning for GLM 5.3 Flash on OpenRouter and NanoGPT instead of sending a reasoning-disable request that those providers reject (#5582).
 
