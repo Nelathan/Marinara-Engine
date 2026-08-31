@@ -999,7 +999,7 @@ export function CharacterEditor() {
   );
 
   return (
-    <div className="mari-editor-shell mari-editor-legacy-bridge flex flex-1 flex-col overflow-hidden">
+    <div className="mari-editor-shell mari-editor-legacy-bridge mari-editor-shell--character flex flex-1 flex-col overflow-hidden">
       <ExportFormatDialog
         open={exportDialogOpen}
         title={localizeUi("ui.characters.charactereditor.exportCharacter_cdcda78")}
@@ -1044,7 +1044,7 @@ export function CharacterEditor() {
       />
 
       {/* ── Header ── */}
-      <div className="mari-editor-header mari-editor-header--with-nav">
+      <div className="mari-editor-header">
         <div className="mari-editor-header-main mari-editor-header-main--identity">
           <button
             type="button"

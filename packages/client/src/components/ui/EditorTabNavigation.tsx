@@ -29,12 +29,22 @@ export function EditorTabNavigation<T extends string>({
   const compactMenuId = useId();
   const compactMenuRef = useRef<HTMLDivElement>(null);
   const compactMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const tabsRef = useRef<HTMLElement>(null);
   const activeTabButtonRef = useRef<HTMLButtonElement>(null);
   const [compactMenuOpen, setCompactMenuOpen] = useState(false);
   const activeTab = tabs.find((tab) => tab.id === activeId) ?? tabs[0];
 
   useEffect(() => {
-    activeTabButtonRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const tabsElement = tabsRef.current;
+    const activeButton = activeTabButtonRef.current;
+    if (!tabsElement || !activeButton || tabsElement.scrollWidth <= tabsElement.clientWidth) return;
+
+    const buttonStart = activeButton.offsetLeft;
+    const buttonEnd = buttonStart + activeButton.offsetWidth;
+    const visibleStart = tabsElement.scrollLeft;
+    const visibleEnd = visibleStart + tabsElement.clientWidth;
+    if (buttonStart < visibleStart) tabsElement.scrollLeft = buttonStart;
+    else if (buttonEnd > visibleEnd) tabsElement.scrollLeft = buttonEnd - tabsElement.clientWidth;
   }, [activeId]);
 
   useEffect(() => {
@@ -62,7 +72,11 @@ export function EditorTabNavigation<T extends string>({
 
   return (
     <div className={cn("mari-editor-navigation min-w-0", className)}>
-      <nav aria-label={navigationLabel} className="mari-editor-navigation-tabs flex min-w-0 items-center gap-1">
+      <nav
+        ref={tabsRef}
+        aria-label={navigationLabel}
+        className="mari-editor-navigation-tabs flex min-w-0 items-center gap-1"
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeId === tab.id;
