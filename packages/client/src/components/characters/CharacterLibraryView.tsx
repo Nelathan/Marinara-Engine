@@ -12,6 +12,7 @@ import {
   Search,
   Star,
   User,
+  Sparkles,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -32,12 +33,16 @@ import {
   flattenPersonaPages,
   fetchAllCharacterPages,
   useCharacterLibraryState,
+  useCharacterOrganizationProposals,
+  useCharacterTagOperation,
+  useUpdateCharacter,
   useSetCharacterLibraryStatus,
   generateCharacterSummary,
   useCharacterPages,
   usePersonaPages,
 } from "../../hooks/use-characters";
 import { useAddLibraryItems, useCreateLibraryFolder, useLibraryFolders } from "../../hooks/use-library-folders";
+import { CharacterOrganizationDesk } from "./CharacterOrganizationDesk";
 import { getCharacterTitle } from "../../lib/character-display";
 import {
   formatCardLibraryMeta,
@@ -457,6 +462,12 @@ export function CharacterLibraryView() {
   const addToCollection = useAddLibraryItems("character-collections");
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
 
+  const [organizeOpen, setOrganizeOpen] = useState(false);
+  const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(new Set());
+  const organizationQuery = useCharacterOrganizationProposals(organizeOpen && !isPersonaLibrary);
+  const tagOperation = useCharacterTagOperation();
+  const updateCharacterTags = useUpdateCharacter();
+
   const libraryStateQuery = useCharacterLibraryState();
   const setLibraryStatus = useSetCharacterLibraryStatus();
   const libraryStateById = useMemo(
@@ -549,6 +560,66 @@ export function CharacterLibraryView() {
       }
     },
     [selectedCharacterIds, setLibraryStatus, t],
+  );
+
+  const dismissProposal = useCallback((id: string) => {
+    setDismissedProposals((current) => new Set(current).add(id));
+  }, []);
+
+  const handleMergeProposedTags = useCallback(
+    async (canonicalLabel: string, duplicateKeys: string[], affected: number) => {
+      // Route through the same validated operation a manual merge uses, so the
+      // proposal cannot take a shortcut past the preview and confirmation.
+      if (
+        !(await showConfirmDialog({
+          title: t("characters.organize.merge"),
+          message: t("characters.organize.confirmMergeValue1Value2Value3", {
+            value1: duplicateKeys.join(", "),
+            value2: canonicalLabel,
+            value3: affected,
+          }),
+          confirmLabel: t("characters.organize.merge"),
+        }))
+      ) {
+        return;
+      }
+      try {
+        const result = await tagOperation.mutateAsync({
+          operation: { type: "rename", from: duplicateKeys, to: canonicalLabel },
+        });
+        if (result.failed.length > 0) {
+          toast.error(
+            t("characters.organize.partialFailureValue1Value2", {
+              value1: result.applied,
+              value2: result.failed.length,
+            }),
+          );
+        } else {
+          toast.success(t("characters.organize.mergedValue1", { value1: result.applied }));
+        }
+        void organizationQuery.refetch();
+      } catch {
+        toast.error(t("characters.organize.failed"));
+      }
+    },
+    [tagOperation, organizationQuery, t],
+  );
+
+  const handleApplyProposedTag = useCallback(
+    async (characterId: string, tagLabel: string) => {
+      const card = (characters as CharacterRow[]).find((row) => row.id === characterId);
+      if (!card) return;
+      const existing = getCharacterTags(parseCharacterRow(card));
+      // Guard against re-adding a spelling variant the card already carries.
+      if (existing.some((tag) => normalizeTextForMatch(tag) === normalizeTextForMatch(tagLabel))) return;
+      try {
+        await updateCharacterTags.mutateAsync({ id: characterId, data: { tags: [...existing, tagLabel] } });
+        dismissProposal(`suggest:${characterId}:${normalizeTextForMatch(tagLabel)}`);
+      } catch {
+        toast.error(t("characters.organize.failed"));
+      }
+    },
+    [characters, updateCharacterTags, dismissProposal, t],
   );
 
   const handleAddToCollection = useCallback(
@@ -944,6 +1015,35 @@ export function CharacterLibraryView() {
                 <span className="tabular-nums text-[var(--muted-foreground)]">{collection.itemIds.length}</span>
               </button>
             ))}
+          </div>
+        )}
+        {!isPersonaLibrary && (
+          <div className="border-t border-[var(--marinara-chat-chrome-panel-divider)] px-3 py-2 md:px-6">
+            <button
+              type="button"
+              aria-expanded={organizeOpen}
+              onClick={() => setOrganizeOpen((current) => !current)}
+              className={cn(
+                "mari-chrome-control mari-chrome-control--compact",
+                organizeOpen && "mari-chrome-control--selected",
+              )}
+            >
+              <Sparkles size="0.625rem" aria-hidden="true" />
+              {t("characters.organize.title")}
+            </button>
+            {organizeOpen && (
+              <CharacterOrganizationDesk
+                proposals={organizationQuery.data}
+                isLoading={organizationQuery.isLoading}
+                onMergeTags={(canonicalLabel, duplicateKeys, affected) =>
+                  void handleMergeProposedTags(canonicalLabel, duplicateKeys, affected)
+                }
+                onApplyTag={(characterId, tagLabel) => void handleApplyProposedTag(characterId, tagLabel)}
+                onDismiss={dismissProposal}
+                dismissed={dismissedProposals}
+                busy={tagOperation.isPending || updateCharacterTags.isPending}
+              />
+            )}
           </div>
         )}
         {selectionMode && !isPersonaLibrary && (

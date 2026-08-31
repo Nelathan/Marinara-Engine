@@ -24,6 +24,7 @@ import {
 } from "@marinara-engine/shared";
 import type { CharacterData, ConversationCallCharacterVideoClipKind, ExportEnvelope } from "@marinara-engine/shared";
 import { createCharactersStorage, type PersonaStorageRow } from "../services/storage/characters.storage.js";
+import { createCharacterOrganizationService } from "../services/character-organization.service.js";
 import { encodePersonaCreate, encodePersonaUpdate, projectPersona } from "../services/personas/persona-projector.js";
 import { createCharacterGalleryStorage } from "../services/storage/character-gallery.storage.js";
 import { createPersonaGalleryStorage } from "../services/storage/persona-gallery.storage.js";
@@ -868,6 +869,7 @@ export async function validateCharacterGalleryReferences<T extends Record<string
 
 export async function charactersRoutes(app: FastifyInstance) {
   const storage = createCharactersStorage(app.db);
+  const organization = createCharacterOrganizationService(app.db);
   const characterGallery = createCharacterGalleryStorage(app.db);
   const personaGallery = createPersonaGalleryStorage(app.db);
   const lorebooksStorage = createLorebooksStorage(app.db);
@@ -930,6 +932,13 @@ export async function charactersRoutes(app: FastifyInstance) {
     }),
     z.object({ type: z.literal("delete"), keys: z.array(z.string()).min(1).max(200) }),
   ]);
+
+  app.get<{ Querystring: { limit?: string } }>("/organization/proposals", async (req) => {
+    const limit = Number.parseInt(req.query.limit ?? "", 10);
+    return organization.listProposals({
+      limit: Number.isFinite(limit) && limit > 0 ? Math.min(limit, 200) : undefined,
+    });
+  });
 
   app.get("/library-state", async () => {
     return storage.listLibraryState();

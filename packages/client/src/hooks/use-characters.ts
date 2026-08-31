@@ -28,6 +28,7 @@ import {
   type CharacterData,
   type CharacterTagIndexEntry,
   type CharacterLibraryEntry,
+  type CharacterOrganizationProposals,
   type CharacterLibraryStatus,
   type CharacterTagOperation,
   type CharacterCardVersion,
@@ -60,6 +61,7 @@ export const characterKeys = {
   summariesRoot: () => [...characterKeys.all, "summaries"] as const,
   tagIndex: (includeBuiltIn: boolean) => [...characterKeys.all, "tag-index", includeBuiltIn] as const,
   libraryState: () => [...characterKeys.all, "library-state"] as const,
+  organizationProposals: () => [...characterKeys.all, "organization-proposals"] as const,
   summaries: (idsKey: string) => [...characterKeys.all, "summaries", idsKey] as const,
   detail: (id: string) => [...characterKeys.all, "detail", id] as const,
   versions: (id: string) => [...characterKeys.detail(id), "versions"] as const,
@@ -255,6 +257,25 @@ export function useSetCharacterLibraryStatus() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: characterKeys.libraryState() });
     },
+  });
+}
+
+/**
+ * Organization proposals for the library.
+ *
+ * Suggest-only. Nothing here writes; applying a proposal goes through the
+ * normal validated tag operation so the preview and confirmation are the same
+ * ones a manual edit gets.
+ *
+ * Not run on mount: building proposals warms embeddings, so it waits for the
+ * user to open the desk.
+ */
+export function useCharacterOrganizationProposals(enabled: boolean) {
+  return useQuery({
+    queryKey: characterKeys.organizationProposals(),
+    queryFn: () => api.get<CharacterOrganizationProposals>("/characters/organization/proposals"),
+    enabled,
+    staleTime: 5 * 60_000,
   });
 }
 

@@ -7,10 +7,19 @@ Slice 6 (rename, merge, delete with preview), Slice 1 (library status),
 Slice 2 (shelves), Slice 3 (collections), Slice 10 (editor tag picker), and
 the status/collection half of Slice 5.
 
+Slice 12 shipped as an evidence-based organization desk rather than a
+generative one. The review finding held: `characters.embedding` and the
+tiered entity search from #4768 already provide on-device similarity, so
+suggestions are drawn from the user's own library and cite the characters
+they came from. No provider call, no cost, no card content leaving the
+machine, and no invented metadata. Applying a proposal routes through the
+existing validated tag operation, so it cannot bypass the preview.
+
 Not started: Slice 5 bulk tag add/remove, Slice 7 (tag health and discovery),
 Slice 8 (saved views and smart collections), Slice 9 (import inbox), Slice 11
-(history and undo), Slice 12 and 13 (AI). Slice 11 matters most of the
-remaining work, because merge and delete are now reachable and irreversible.
+(history and undo), Slice 13 (AI import assistance). Slice 11 matters most of
+the remaining work, because merge and delete are now reachable and
+irreversible.
 
 ## Product Goal
 
