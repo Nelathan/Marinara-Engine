@@ -509,8 +509,8 @@ async function buildAvatarGenerationPrompt(
   if (body.purpose === "character-sheet") {
     return loadPrompt(promptOverridesStorage, CHARACTERS_REFERENCE_SHEET, { name, appearance });
   }
-  if (profileSubjectTags.trim()) return `Canonical appearance for ${name}: ${appearance}.`;
-  return `Create a polished character avatar portrait for ${name}. Canonical appearance: ${appearance}. Composition: centered face-and-shoulders portrait, readable expression, clear silhouette, suitable as a chat avatar.`;
+  if (profileSubjectTags.trim()) return `Create a polished character avatar portrait for ${name}.`;
+  return `Create a polished character avatar portrait for ${name}. Composition: centered face-and-shoulders portrait, readable expression, clear silhouette, suitable as a chat avatar.`;
 }
 
 async function resolveAvatarGenerationConnection(app: FastifyInstance, body: AvatarGenerationBody) {
@@ -1115,6 +1115,7 @@ export async function charactersRoutes(app: FastifyInstance) {
     const compiled = compileImagePrompt({
       kind: isCharacterSheet ? "illustration" : "avatar",
       prompt: await buildAvatarGenerationPrompt(promptOverridesStorage, body, profileSubjectTags),
+      userPositive: isCharacterSheet ? undefined : body.appearance,
       styleProfiles: imageSettings.styleProfiles,
       styleProfileId: body.styleProfileId,
       imageDefaults,
@@ -1201,6 +1202,7 @@ export async function charactersRoutes(app: FastifyInstance) {
       : compileImagePrompt({
           kind: isCharacterSheet ? "illustration" : "avatar",
           prompt: await buildAvatarGenerationPrompt(promptOverridesStorage, body, profileSubjectTags),
+          userPositive: isCharacterSheet ? undefined : body.appearance,
           styleProfiles: imageSettings.styleProfiles,
           styleProfileId: body.styleProfileId,
           imageDefaults,
@@ -1700,6 +1702,7 @@ export async function charactersRoutes(app: FastifyInstance) {
 
       const chatsStorage = createChatsStorage(app.db);
       const sceneVideos = createGameSceneVideosStorage(app.db);
+      // Id-only lookup: the owning chat is only known after the read (permanent-lease risk accepted, #5611).
       const video = await sceneVideos.getById(sceneVideoId);
       if (!video) return reply.status(404).send({ error: "Clip not found" });
 
@@ -1709,7 +1712,7 @@ export async function charactersRoutes(app: FastifyInstance) {
       }
 
       await removeSavedVideoFromDisk(video.filePath);
-      await sceneVideos.remove(video.id);
+      await sceneVideos.remove(video.id, video.chatId);
       return { success: true };
     }
 

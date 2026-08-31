@@ -25,7 +25,7 @@ import {
 } from "@marinara-engine/shared";
 import { logger } from "../../../lib/logger.js";
 import { isLoopbackIp, isNonRoutableNetworkIp } from "../../../middleware/ip-allowlist.js";
-import { applyGlmThinkingParameters } from "./glm-request-compat.js";
+import { applyGlmThinkingParameters, isGlm53FlashMandatoryReasoningModel } from "./glm-request-compat.js";
 
 /**
  * Models that ONLY support the Responses API (`/responses`) and not Chat Completions.
@@ -786,7 +786,7 @@ export class OpenAIProvider extends BaseLLMProvider {
     return (
       this.supportsOpenAIReasoningDisable(normalized) ||
       this.supportsXAIReasoningDisable(normalized) ||
-      normalized.startsWith("z-ai/glm-") ||
+      (normalized.startsWith("z-ai/glm-") && !isGlm53FlashMandatoryReasoningModel(normalized)) ||
       normalized.startsWith("thudm/glm-") ||
       /^google\/gemini-2\.5-flash(?:-lite)?(?:$|-preview|-latest|:)/u.test(normalized) ||
       /^anthropic\/claude-(?:opus|sonnet)-5(?:$|[-.])/u.test(normalized)
@@ -1221,8 +1221,6 @@ export class OpenAIProvider extends BaseLLMProvider {
         body.provider = { order: [openrouterProvider] };
       }
 
-      this.applyOpenRouterPromptCaching(body, options);
-
       // Force response format (e.g. JSON mode)
       const normalizedResponseFormat = this.normalizeChatCompletionsResponseFormat(options.responseFormat);
       if (normalizedResponseFormat) {
@@ -1237,6 +1235,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       this.applyChatCompletionsReasoning(body, options);
     }
 
+    this.applyOpenRouterPromptCaching(body, options);
     this.applyOpenRouterServiceTier(body, options);
     this.applyCustomParameters(body, options);
     // Local chat templates may ignore reasoning_effort. Apply this after custom
@@ -1509,8 +1508,6 @@ export class OpenAIProvider extends BaseLLMProvider {
         body.provider = { order: [openrouterProvider] };
       }
 
-      this.applyOpenRouterPromptCaching(body, options);
-
       // Force response format (e.g. JSON mode)
       const normalizedResponseFormat = this.normalizeChatCompletionsResponseFormat(options.responseFormat);
       if (normalizedResponseFormat) {
@@ -1525,6 +1522,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       this.applyChatCompletionsReasoning(body, options);
     }
 
+    this.applyOpenRouterPromptCaching(body, options);
     this.applyOpenRouterServiceTier(body, options);
     this.applyCustomParameters(body, options);
     this.enforceLocalInferenceThinkingDisable(body, options, suppressModelParameters);

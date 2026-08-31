@@ -24,6 +24,7 @@ import {
   type CustomAgentCapability,
 } from "@marinara-engine/shared";
 import { requirePrivilegedAccess } from "../middleware/privileged-gate.js";
+import { BEHOLDER_STATE_RATE_LIMIT } from "../middleware/rate-limit.js";
 import {
   getCustomAgentImportPolicy,
   setCustomAgentImportsEnabled,
@@ -58,6 +59,9 @@ const IMPORT_UNSAFE_AGENT_SETTING_KEYS = new Set([
 
 const updateAgentRunSchema = z.object({
   resultData: z.unknown(),
+  // Optional owner hint: keeps the lazy file store from loading every chat's agent_runs
+  // shards for a bare-id lookup. The chat is always open when a run is edited.
+  chatId: z.string().min(1).optional(),
 });
 
 const AGENT_SUITE_REWRITE_SYSTEM_PROMPT = [
@@ -272,6 +276,37 @@ export async function agentsRoutes(app: FastifyInstance) {
     return storage.listCustomRunsForChat(req.params.chatId, parsedLimit);
   });
 
+  /**
+   * Persist an operator correction to the Beholder physical state.
+   *
+   * The state a chat carries forward is the result of the agent's last successful
+   * run, which is also what the next prompt is built from — so a correction has to
+   * land there to mean anything. Without this, a hand-set slot would look right on
+   * screen and be narrated away on the next turn.
+   *
+   * The body is normalized before it is stored, so a malformed correction is refused
+   * rather than written into the state the prompt is built from.
+   */
+  app.put<{ Params: { chatId: string } }>(
+    "/beholder-state/:chatId",
+    { config: { rateLimit: BEHOLDER_STATE_RATE_LIMIT } },
+    async (req, reply) => {
+      // Guarded like the other write routes in this file: this rewrites the state the
+      // next prompt is built from, for any chat id the caller names.
+      if (!requirePrivilegedAccess(req, reply, { feature: "Beholder state correction" })) return;
+      const body = req.body as { state?: unknown } | undefined;
+      const state = normalizeBeholderState(body?.state);
+      if (!state) return reply.status(400).send({ error: "Invalid Beholder state" });
+      const run = await storage.getLastSuccessfulRunByType("beholder", req.params.chatId);
+      if (!run) return reply.status(404).send({ error: "No Beholder run to correct yet" });
+      // The run can be deleted between the lookup and the write. Reporting success then
+      // would tell the operator their correction was saved when it was discarded.
+      const updated = await storage.updateRunResultData(run.id, state, req.params.chatId);
+      if (!updated) return reply.status(409).send({ error: "The Beholder run changed while saving; try again" });
+      return { state, messageId: run.messageId ?? null, createdAt: run.createdAt ?? null };
+    },
+  );
+
   /** Get the latest validated Beholder physical-state snapshot for a roleplay chat. */
   app.get<{ Params: { chatId: string } }>("/beholder-state/:chatId", async (req) => {
     const run = await storage.getLastSuccessfulRunByType("beholder", req.params.chatId);
@@ -330,12 +365,12 @@ export async function agentsRoutes(app: FastifyInstance) {
   /** Edit the persisted output of a custom agent run. */
   app.patch<{ Params: { runId: string } }>("/runs/:runId", async (req, reply) => {
     const input = updateAgentRunSchema.parse(req.body);
-    const run = await storage.getRunWithConfig(req.params.runId);
+    const run = await storage.getRunWithConfig(req.params.runId, input.chatId);
     if (!run) return reply.status(404).send({ error: "Agent run not found" });
     if (BUILT_IN_AGENTS.some((agent) => agent.id === run.agentType)) {
       return reply.status(403).send({ error: "Built-in agent runs are not editable here" });
     }
-    return storage.updateRunResultData(req.params.runId, input.resultData);
+    return storage.updateRunResultData(req.params.runId, input.resultData, run.chatId ?? undefined);
   });
 
   app.get<{ Params: { id: string } }>("/:id", async (req, reply) => {

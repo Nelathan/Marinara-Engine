@@ -4726,7 +4726,7 @@ function GenerationsSettings() {
   );
   const openDownloadAgents = useCallback(() => {
     openRightPanel("agents");
-    openAgentCatalog();
+    openAgentCatalog("illustrator");
   }, [openAgentCatalog, openRightPanel]);
 
   return (
@@ -5472,7 +5472,7 @@ type ProfileImportPreviewResult = {
   preview?: boolean;
   imported?: ProfileImportStats;
   warnings?: ProfileImportWarning[];
-  fileFingerprint?: string;
+  previewToken?: string;
   error?: string;
   message?: string;
 };
@@ -5547,8 +5547,10 @@ function getProfileImportItemCount(stats?: ProfileImportStats) {
 function getProfileImportWarningCopy(localizeUi: TFunction): ProfileImportWarningCopy {
   return {
     missingAssetSummary: (count) => localizeUi("ui.panels.importsettings.profileImportMissingAssets", { count }),
+    skippedAssetSummary: (count) => localizeUi("ui.panels.importsettings.profileImportSkippedAssets", { count }),
     securityWarningSummary: (count) => localizeUi("ui.panels.importsettings.profileImportSecurityWarnings", { count }),
     missingLabel: localizeUi("ui.panels.importsettings.profileImportMissingLabel"),
+    skippedLabel: localizeUi("ui.panels.importsettings.profileImportSkippedLabel"),
     additionalPaths: (count) => localizeUi("ui.panels.importsettings.profileImportAdditionalPaths", { count }),
     additionalMessages: (count) => localizeUi("ui.panels.importsettings.profileImportAdditionalMessages", { count }),
   };
@@ -5681,6 +5683,15 @@ function ImportSettings() {
   const handleProfileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    let previewToken: string | undefined;
+    const releaseProfilePreview = async () => {
+      if (!previewToken) return;
+      const token = previewToken;
+      previewToken = undefined;
+      await api
+        .raw(`/backup/import-profile-preview/${encodeURIComponent(token)}`, { method: "DELETE" })
+        .catch(() => {});
+    };
     const startedAt = Date.now();
     const makeImportBody = (isZip: boolean, text: string): BodyInit => {
       if (!isZip) return text;
@@ -5741,6 +5752,7 @@ function ImportSettings() {
       if (preview.success === false) {
         throw new Error(preview.message ?? preview.error ?? "Unknown error");
       }
+      previewToken = preview.previewToken;
       const previewWarnings = normalizeProfileImportWarnings(preview.warnings);
       const previewTotalItems = Math.max(1, getProfileImportItemCount(preview.imported));
       setProfileImportProgress({
@@ -5762,6 +5774,7 @@ function ImportSettings() {
         tone: "destructive",
       });
       if (!confirmed) {
+        await releaseProfilePreview();
         setProfileImportProgress(null);
         e.target.value = "";
         return;
@@ -5791,7 +5804,11 @@ function ImportSettings() {
           ? {
               ...current,
               status: "starting",
-              label: isZip ? "Uploading profile archive" : "Starting profile import",
+              label: previewToken
+                ? "Starting profile import"
+                : isZip
+                  ? "Uploading profile archive"
+                  : "Starting profile import",
               elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000),
             }
           : current,
@@ -5800,9 +5817,9 @@ function ImportSettings() {
         method: "POST",
         headers: {
           Accept: "text/event-stream",
-          ...(preview.fileFingerprint ? { "X-Profile-Preview-Fingerprint": preview.fileFingerprint } : {}),
+          ...(previewToken ? { "X-Profile-Preview-Token": previewToken } : {}),
         },
-        body: makeImportBody(isZip, profileText),
+        body: previewToken ? undefined : makeImportBody(isZip, profileText),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -5881,7 +5898,9 @@ function ImportSettings() {
       if (!importCompleted) {
         throw new Error("Profile import stream closed before completion.");
       }
+      previewToken = undefined;
     } catch (err) {
+      await releaseProfilePreview();
       const message =
         err instanceof SyntaxError
           ? "Import failed. Make sure this is a valid profile JSON or ZIP file."
@@ -6217,6 +6236,8 @@ function AdvancedSettings() {
   const setShowModelName = useUIStore((s) => s.setShowModelName);
   const showTokenUsage = useUIStore((s) => s.showTokenUsage);
   const setShowTokenUsage = useUIStore((s) => s.setShowTokenUsage);
+  const showContextUsage = useUIStore((s) => s.showContextUsage);
+  const setShowContextUsage = useUIStore((s) => s.setShowContextUsage);
   const showMessageNumbers = useUIStore((s) => s.showMessageNumbers);
   const setShowMessageNumbers = useUIStore((s) => s.setShowMessageNumbers);
   const guideGenerations = useUIStore((s) => s.guideGenerations);
@@ -6520,6 +6541,8 @@ function AdvancedSettings() {
       heapLimitMiB: number;
       rssMiB: number;
     };
+    wakeLock?: string | null;
+    lastFreeze?: { detectedAt: string; gapMs: number; suspendedMs: number } | null;
   }>({
     queryKey: ["health"],
     queryFn: () => api.get("/health"),
@@ -6529,7 +6552,9 @@ function AdvancedSettings() {
   const activeConnection = activeChat?.connectionId
     ? (connections.find((connection) => connection.id === activeChat.connectionId) ?? null)
     : (connections.find((connection) => connection.isDefault) ?? null);
-  const supportDiagnosticsPending = isConnectionsLoading || (!!activeChatId && isActiveChatLoading);
+  // Health is included so a copy taken before the query settles cannot label
+  // pending wake-lock/freeze telemetry as genuinely absent (#5656 review).
+  const supportDiagnosticsPending = isConnectionsLoading || (!!activeChatId && isActiveChatLoading) || health.isPending;
 
   const handleCopySupportDiagnostics = useCallback(async () => {
     const copied = await copyToClipboard(
@@ -6539,6 +6564,8 @@ function AdvancedSettings() {
         commit: health.data?.commit ?? null,
         serverOs: health.data?.serverOs ?? "Unavailable",
         serverMemory: health.data?.memory,
+        wakeLock: health.data?.wakeLock ?? null,
+        lastFreeze: health.data?.lastFreeze ?? null,
         clientOs: resolveClientOs(navigator.userAgent, navigator.platform, navigator.maxTouchPoints),
         browser: navigator.userAgent,
         gpu: detectBrowserGpu(),
@@ -7066,6 +7093,13 @@ function AdvancedSettings() {
             checked={showTokenUsage}
             onChange={setShowTokenUsage}
             help={localizeUi("settings.controls.showTokenUsage.help")}
+          />
+          <ToggleSetting
+            anchorId={getSettingsControlAnchorId("show-context-usage")}
+            label={localizeUi("settings.controls.showContextUsage.label")}
+            checked={showContextUsage}
+            onChange={setShowContextUsage}
+            help={localizeUi("settings.controls.showContextUsage.help")}
           />
           <ToggleSetting
             anchorId={getSettingsControlAnchorId("show-message-numbers")}

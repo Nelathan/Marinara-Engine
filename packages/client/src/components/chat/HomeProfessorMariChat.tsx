@@ -2536,7 +2536,7 @@ export function HomeProfessorMariChat({
   const recordMariPlanAnswer = useAgentStore((state) => state.recordMariPlanAnswer);
   const clearMariPlan = useAgentStore((state) => state.clearMariPlan);
   const professorMariSuggestionsEnabled = useUIStore((state) => state.professorMariSuggestionsEnabled);
-  const showTokenUsage = useUIStore((state) => state.showTokenUsage);
+  const showContextUsage = useUIStore((state) => state.showContextUsage);
 
   const languageConnections = useMemo<ProfessorMariConnectionOption[]>(
     () => filterLanguageGenerationConnections((connectionsRaw ?? []) as APIConnection[]),
@@ -2767,6 +2767,10 @@ export function HomeProfessorMariChat({
       const query = params.toString();
       const chat = await api.get<Chat>(`/chats/internal/professor-mari${query ? `?${query}` : ""}`);
       setActiveChatId(chat.id);
+      // The ensure/restart/activate writes in this file are deliberately
+      // unguarded (#5641): each loads or switches to a Mari chat whose id is
+      // unknown before the request, with no concurrent local metadata edits
+      // to protect.
       qc.setQueryData(chatKeys.detail(chat.id), chat);
       return chat;
     },
@@ -4554,7 +4558,7 @@ export function HomeProfessorMariChat({
   const trustStrip = (
     <ProfessorMariTrustStrip
       connectionName={workspaceStatus?.connection?.name ?? effectiveConnection?.name ?? null}
-      contextBudget={showTokenUsage ? contextBudget : null}
+      contextBudget={showContextUsage ? contextBudget : null}
       sandboxAvailable={workspaceStatus?.shellSandbox.available ?? null}
       pendingApprovalCount={visiblePendingChangeReviews.length}
       onConnectionClick={() => setConnectionMenuOpen(true)}
@@ -4829,7 +4833,7 @@ export function HomeProfessorMariChat({
                 "flex min-h-0 items-stretch justify-center",
                 embeddedTab
                   ? "relative z-auto h-full w-full bg-transparent p-0"
-                  : "fixed inset-x-0 bottom-0 top-[calc(env(safe-area-inset-top)_+_3rem)] z-[80] bg-[var(--background)] pb-[env(safe-area-inset-bottom)] sm:static sm:z-auto sm:h-full sm:max-h-none sm:w-full sm:flex-1 sm:bg-transparent sm:p-0",
+                  : "fixed inset-x-0 bottom-0 top-[calc(env(safe-area-inset-top)_+_3rem)] z-[80] bg-[var(--background)] pb-[var(--mari-safe-area-inset-bottom,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:h-full sm:max-h-none sm:w-full sm:flex-1 sm:bg-transparent sm:p-0",
               )}
             >
               <div

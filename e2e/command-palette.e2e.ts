@@ -237,7 +237,7 @@ test("Command Center can add a character to the active chat", async ({ page, req
 
   try {
     await page.evaluate(async (chatId) => {
-      const module = await import("/src/stores/chat.store.ts");
+      const module = (await import("/src/stores/chat.store.ts" as string)) as PageChatStoreModule;
       module.useChatStore.getState().setActiveChatId(chatId);
     }, chat.id);
     await expect(page.locator("[data-chat-resource-drop-surface]")).toBeVisible();

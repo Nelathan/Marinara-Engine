@@ -118,6 +118,7 @@ import { SummariesEditorModal } from "./SummariesEditorModal";
 import { AgentSuiteModal } from "./AgentSuiteModal";
 import { ConversationTimeZoneSelect } from "./ConversationTimeZoneSelect";
 import { RoleplayMessagePreview } from "./ChatMessage";
+import { resolveChatContextBudget } from "../../lib/professor-mari-context-budget";
 import { CHAT_SETTINGS_SURFACES } from "./chat-settings-surfaces";
 import { useCharacters, usePersonas, useCharacterGroups, type SpriteInfo } from "../../hooks/use-characters";
 import { lorebookKeys, useLorebooks, useEntriesAcrossLorebooks } from "../../hooks/use-lorebooks";
@@ -881,6 +882,7 @@ export function ChatSettingsDrawer({
   const callsSettingsMenuId = getAgentSettingsMenuId(chat.id, "conversation-calls");
   const callsSettingsOpen = useUIStore((s) => s.chatSettingsExpandedSections[callsSettingsMenuId] ?? false);
   const setChatSettingsSectionExpanded = useUIStore((s) => s.setChatSettingsSectionExpanded);
+  const showContextUsage = useUIStore((s) => s.showContextUsage);
 
   const { data: allCharacters } = useCharacters({ includeBuiltIn: true });
   const { data: characterGroups } = useCharacterGroups();
@@ -1009,6 +1011,7 @@ export function ChatSettingsDrawer({
   );
   const sidecarModelDownloaded = useSidecarStore((state) => state.modelDownloaded);
   const sidecarModelDisplayName = useSidecarStore((state) => state.modelDisplayName);
+  const sidecarMaxContext = useSidecarStore((state) => state.config.contextSize);
   const chatGenerationConnectionsList = useMemo(
     () =>
       appendLocalSidecarConnectionOption(
@@ -1017,6 +1020,19 @@ export function ChatSettingsDrawer({
         sidecarModelDisplayName,
       ),
     [isGame, sidecarModelDisplayName, sidecarModelDownloaded, textConnectionsList],
+  );
+  const gameContextMessagesQuery = useChatMessagePeek(chat.id, 20, open && isGame && showContextUsage);
+  const gameContextBudget = useMemo(
+    () =>
+      isGame && showContextUsage
+        ? resolveChatContextBudget(
+            gameContextMessagesQuery.data ?? [],
+            chat.connectionId,
+            connections ?? [],
+            sidecarMaxContext,
+          )
+        : null,
+    [chat.connectionId, connections, gameContextMessagesQuery.data, isGame, showContextUsage, sidecarMaxContext],
   );
   const conversationSummaryConnectionId =
     typeof metadata.summaryConnectionId === "string" ? metadata.summaryConnectionId : "";
@@ -4638,7 +4654,7 @@ export function ChatSettingsDrawer({
       ? {
           bottom: "auto",
           left: "auto",
-          maxHeight: `min(42rem, calc(100dvh - ${anchor.top}px - 0.75rem - env(safe-area-inset-bottom)))`,
+          maxHeight: `min(42rem, calc(100dvh - ${anchor.top}px - 0.75rem - var(--mari-safe-area-inset-bottom,env(safe-area-inset-bottom))))`,
           right: `${anchor.right}px`,
           top: `${anchor.top}px`,
           width: `min(34rem, calc(100vw - ${anchor.right}px - 0.75rem))`,
@@ -4659,7 +4675,7 @@ export function ChatSettingsDrawer({
           NEUTRAL_PANEL_SHELL,
           "mari-chat-settings-popover",
           "mari-chat-settings-drawer",
-          "fixed bottom-3 z-[70] flex min-h-0 w-[min(34rem,calc(100vw-var(--mari-chat-ui-inset-left,0px)-var(--mari-chat-ui-inset-right,0px)-1.5rem))] flex-col overflow-hidden max-md:inset-x-2 max-md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] max-md:top-[calc(3.5rem+env(safe-area-inset-top))] max-md:w-auto",
+          "fixed bottom-3 z-[70] flex min-h-0 w-[min(34rem,calc(100vw-var(--mari-chat-ui-inset-left,0px)-var(--mari-chat-ui-inset-right,0px)-1.5rem))] flex-col overflow-hidden max-md:inset-x-2 max-md:bottom-[calc(0.75rem+var(--mari-safe-area-inset-bottom,env(safe-area-inset-bottom)))] max-md:top-[calc(3.5rem+env(safe-area-inset-top))] max-md:w-auto",
           anchor ? "" : "right-[calc(var(--mari-chat-ui-inset-right,0px)+0.75rem)] top-14",
         )}
         style={panelStyle}
@@ -4689,7 +4705,7 @@ export function ChatSettingsDrawer({
         <div
           className={cn(
             NEUTRAL_PANEL_SCROLL_AREA,
-            "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]",
+            "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+var(--mari-safe-area-inset-bottom,env(safe-area-inset-bottom)))]",
           )}
         >
           {/* Settings profile bar — hidden in Game Mode. Scene chats keep it, but scene instructions stay chat-owned. */}
@@ -4880,6 +4896,7 @@ export function ChatSettingsDrawer({
             <ConnectionSection
               connectionId={chat.connectionId ?? null}
               connections={chatGenerationConnectionsList}
+              contextBudget={gameContextBudget}
               isGame={isGame}
               onConnectionChange={setConnection}
             />

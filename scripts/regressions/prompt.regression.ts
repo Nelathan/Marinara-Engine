@@ -4600,6 +4600,32 @@ const cases: RegressionCase[] = [
     },
   },
   {
+    name: "tagged avatar prompts preserve long user appearance details",
+    run() {
+      const styleProfiles = createDefaultImageStyleProfileSettings();
+      const profile = styleProfiles.profiles.find((candidate) => candidate.id === "danbooru");
+      assert.ok(profile);
+      const appearance =
+        "1girl, Shiranui Mai, Fatal Fury, light blue button down, long auburn hair, amber eyes, red ribbon, white gloves, black skirt, thighhighs, detailed face, soft smile, standing in a moonlit garden, intricate floral background, cinematic rim lighting, warm highlights, cool shadows";
+      const compiled = compileImagePrompt({
+        kind: "avatar",
+        prompt: `Canonical appearance: ${appearance}`,
+        userPositive: appearance,
+        styleProfiles,
+        styleProfileId: profile.id,
+      });
+      for (const detail of [
+        "1girl",
+        "Shiranui Mai",
+        "Fatal Fury",
+        "light blue button down",
+        "intricate floral background",
+      ]) {
+        assert.match(compiled.prompt, new RegExp(detail, "iu"), `avatar prompt must preserve ${detail}`);
+      }
+    },
+  },
+  {
     name: "avatar portrait and sprite prompts honor a profile's natural-language grammar",
     run() {
       const styleProfiles = createDefaultImageStyleProfileSettings();
@@ -7626,6 +7652,22 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
         styleProfileId: "z-image-turbo",
       });
       assert.equal(countValue(zImageAppearanceMissing.prompt, appearance), 1);
+
+      const avatarAppearance = [
+        "silver-furred fox-woman with a braided crown and mismatched amber and teal eyes",
+        "persimmon kimono with embroidered moonflowers and a debt-scroll tucked into her sleeve",
+        "quietly amused expression with a small scar through the left eyebrow",
+      ].join(", ");
+      const avatar = compileImagePrompt({
+        kind: "avatar",
+        prompt: "Create a polished character avatar portrait.",
+        userPositive: avatarAppearance,
+        styleProfiles,
+        styleProfileId: "anime",
+      });
+      assert.match(avatar.prompt, /braided crown/);
+      assert.match(avatar.prompt, /embroidered moonflowers/);
+      assert.match(avatar.prompt, /scar through the left eyebrow/);
 
       const compactBudgetPrompt = [
         ...Array.from({ length: 40 }, (_, index) => `blue eyes detail ${index}`),
@@ -10850,7 +10892,17 @@ Use HTML sparingly and diegetically. Do not replace normal prose/dialogue unless
       ]);
       assert.equal(mergedMari?.body.face?.worn, undefined);
       assert.equal(mergedMari?.body.left_hand?.holding, undefined);
-      assert.deepEqual(mergedMari?.body.right_arm, { missing: true });
+      // `missing` and `bare` are manual-only: the extractor proposed both on this slot
+      // and neither is applied, so what it also reported — the bracelet, and the wound
+      // merged against the one already there — is what survives. Before they became
+      // manual-only, `missing` took the slot and discarded all of it.
+      assert.deepEqual(mergedMari?.body.right_arm, {
+        worn: [{ item: "bracelet", damage: "pristine" }],
+        wounds: [
+          { text: "shallow cut", severity: "minor", bleeding: true },
+          { text: "ignored wound", severity: "critical", bleeding: true },
+        ],
+      });
       assert.equal(merged.state.characters.find((character) => character.name === "Dottore")?.species, "human");
       assert.equal(
         merged.state.characters.some((character) => character.name === "Columbina"),

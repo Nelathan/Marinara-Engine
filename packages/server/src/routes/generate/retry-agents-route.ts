@@ -33,7 +33,7 @@ import {
   type WrapFormat,
   type GenerationParameterSendMap,
 } from "@marinara-engine/shared";
-import { eq } from "../../db/file-query.js";
+import { and, eq } from "../../db/file-query.js";
 import { listCharacterSprites } from "../../services/game/sprite.service.js";
 import { DATA_DIR } from "../../utils/data-dir.js";
 import {
@@ -50,6 +50,9 @@ import { getLocalSidecarProvider, LOCAL_SIDECAR_MODEL } from "../../services/llm
 import { createLLMProvider } from "../../services/llm/provider-registry.js";
 import { withConnectionFallbackProvider } from "../../services/llm/connection-fallback-provider.js";
 import { sidecarModelService } from "../../services/sidecar/sidecar-model.service.js";
+import { utilitySidecarService } from "../../services/utility-sidecar/utility-sidecar.service.js";
+import { buildUtilitySidecarEntry } from "../../services/utility-sidecar/utility-sidecar.provider.js";
+import { UTILITY_SIDECAR_CONNECTION_ID } from "@marinara-engine/shared";
 import { buildSpotifyDjConstraints } from "../../services/spotify/spotify-dj-constraints.js";
 import { fingerprintChatSummary } from "../../services/prompt/chat-summary-fingerprint.js";
 import {
@@ -855,6 +858,7 @@ async function buildRetryAgentContext(args: {
     })),
   );
   const retryCommittedSnapshots = await gameStateStore.getCommittedForMessages(
+    chatId,
     agentSlice.filter((message: any) => message.role === "assistant"),
   );
   const retryVisibleAnchor =
@@ -1573,6 +1577,8 @@ async function resolveRetryAgents(args: {
   const resolvedAgents: ResolvedRetryAgent[] = [];
   const skippedLocalSidecarAgents: string[] = [];
   const defaultAgentConnectionAgents: string[] = [];
+  /** Agents this run routed to the utility slot, so the UI can say which model answered. */
+  const utilitySidecarAgents: string[] = [];
   // Explicit per-agent sidecar selection is valid independently of the global
   // tracker default; the provider starts the configured model on demand.
   const localSidecarAvailableForTrackers = sidecarModelService.getConfiguredModelRef() !== null;
@@ -1641,6 +1647,44 @@ async function resolveRetryAgents(args: {
     retryAgentConnectionCache.set(connectionId, resolution);
     return resolution;
   };
+  /**
+   * The utility slot outranks the agent's configured connection.
+   *
+   * When an agent has a purpose-trained model installed in the utility slot and that
+   * slot is answering, the run goes there — that model is the reason it was installed.
+   * When the slot is off, missing, or serving a different agent, this returns the
+   * resolution untouched and the agent's own connection is used.
+   *
+   * Deliberately additive: it never mutates the main sidecar's config or provider, and
+   * an agent with no utility model installed takes exactly the path it did before.
+   */
+  const applyUtilitySidecarOverride = async (
+    agentType: string,
+    resolution: RetryAgentConnectionResolution,
+    requestedConnectionId?: string | null,
+  ): Promise<RetryAgentConnectionResolution> => {
+    const utilityEntry = await buildUtilitySidecarEntry(agentType);
+    if (!utilityEntry) {
+      // An operator who explicitly picked the local model must not be silently answered
+      // by a different one: the two need different prompts, and the wrong pairing looks
+      // like a broken model rather than a wrong setting.
+      if (requestedConnectionId === UTILITY_SIDECAR_CONNECTION_ID) {
+        return {
+          entry: null,
+          unavailableReason: "the local model slot is not serving this agent",
+        };
+      }
+      return resolution;
+    }
+    utilitySidecarAgents.push(agentType);
+    return {
+      entry: {
+        ...utilityEntry,
+        provider: wrapRetryAgentProvider(utilityEntry.provider, utilityEntry.connectionId),
+      },
+    };
+  };
+
   const defaultAgentConnection = defaultAgentConn
     ? await resolveRetryAgentConnection(defaultAgentConn.id as string)
     : null;
@@ -1654,7 +1698,9 @@ async function resolveRetryAgents(args: {
       localSidecarAvailable: localSidecarAvailableForTrackers,
     });
 
-    if (effectiveConnectionId === "skip-local-sidecar") {
+    // The utility slot outranks this skip: if it serves this agent it can answer even
+    // though the main sidecar — the connection the agent asked for — is unavailable.
+    if (effectiveConnectionId === "skip-local-sidecar" && !utilitySidecarService.servesAgent(cfg.type as string)) {
       skippedLocalSidecarAgents.push(cfg.name ?? cfg.type);
       logger.warn(
         "[retry-agents] Skipping agent %s because Local Model was requested but the sidecar is unavailable",
@@ -1663,7 +1709,11 @@ async function resolveRetryAgents(args: {
       continue;
     }
 
-    const agentConnection = await resolveRetryAgentConnection(effectiveConnectionId);
+    const agentConnection = await applyUtilitySidecarOverride(
+      cfg.type as string,
+      await resolveRetryAgentConnection(effectiveConnectionId),
+      effectiveConnectionId,
+    );
     if (!agentConnection.entry) {
       addUnavailableConnectionWarning(cfg.name ?? cfg.type, agentConnection);
       logger.warn(
@@ -1673,7 +1723,13 @@ async function resolveRetryAgents(args: {
       );
       continue;
     }
-    if (defaultAgentConn && effectiveConnectionId === defaultAgentConn.id) {
+    // Not when the utility slot took the run: warning about billing a paid default
+    // connection that was never called is worse than saying nothing.
+    if (
+      defaultAgentConn &&
+      effectiveConnectionId === defaultAgentConn.id &&
+      !utilitySidecarService.servesAgent(cfg.type as string)
+    ) {
       defaultAgentConnectionAgents.push(cfg.name ?? cfg.type);
     }
 
@@ -1699,7 +1755,8 @@ async function resolveRetryAgents(args: {
         isCustomAgent: !BUILT_IN_AGENTS.some((agent) => agent.id === cfg.type),
         phase: normalizeAgentPhaseValue(cfg.phase),
         promptTemplate: selectedPromptTemplate,
-        connectionId: effectiveConnectionId,
+        // The connection that actually answered; the override may have replaced it.
+        connectionId: agentConnection.entry.connectionId ?? effectiveConnectionId,
         settings,
         customParameters: agentConnection.entry.customParameters,
         temperature: agentConnection.entry.temperature,
@@ -1718,6 +1775,12 @@ async function resolveRetryAgents(args: {
     });
   }
 
+  if (utilitySidecarAgents.length > 0) {
+    // Recorded because the slot silently outranks the configured connection; without
+    // this a run that went somewhere unexpected leaves no trace of where.
+    logger.info("[retry-agents] Utility model slot answered for: %s", utilitySidecarAgents.join(", "));
+  }
+
   const warnings: AgentConnectionWarning[] = [];
 
   for (const builtIn of builtInFallbackConfigs) {
@@ -1729,7 +1792,7 @@ async function resolveRetryAgents(args: {
       localSidecarAvailable: localSidecarAvailableForTrackers,
     });
 
-    if (builtInConnectionId === "skip-local-sidecar") {
+    if (builtInConnectionId === "skip-local-sidecar" && !utilitySidecarService.servesAgent(builtIn.id)) {
       skippedLocalSidecarAgents.push(builtIn.name);
       logger.warn(
         "[retry-agents] Skipping built-in agent %s because Local Model was requested but the sidecar is unavailable",
@@ -1738,10 +1801,13 @@ async function resolveRetryAgents(args: {
       continue;
     }
 
-    const builtInConnection =
-      defaultAgentConn && builtInConnectionId === defaultAgentConn.id
+    const builtInConnection = await applyUtilitySidecarOverride(
+      builtIn.id,
+      (defaultAgentConn && builtInConnectionId === defaultAgentConn.id
         ? defaultAgentConnection
-        : await resolveRetryAgentConnection(builtInConnectionId);
+        : await resolveRetryAgentConnection(builtInConnectionId)) ?? { entry: null },
+      builtInConnectionId,
+    );
     if (!builtInConnection?.entry) {
       addUnavailableConnectionWarning(builtIn.name, builtInConnection ?? {});
       logger.warn(
@@ -1751,7 +1817,11 @@ async function resolveRetryAgents(args: {
       );
       continue;
     }
-    if (defaultAgentConn && builtInConnectionId === defaultAgentConn.id)
+    if (
+      defaultAgentConn &&
+      builtInConnectionId === defaultAgentConn.id &&
+      !utilitySidecarService.servesAgent(builtIn.id)
+    )
       defaultAgentConnectionAgents.push(builtIn.name);
 
     const settings = resolveEffectiveAgentSettings({
@@ -2636,7 +2706,7 @@ async function applyRetryResultEffects(args: {
       assertRetryActive();
       return projectGameSnapshotLocation(created, retryOwnerSpatialProjection);
     }
-    const existing = await gameStateStore.getByMessage(retryMessageId, retrySwipeIndex);
+    const existing = await gameStateStore.getByChatAndMessage(chatId, retryMessageId, retrySwipeIndex);
     assertRetryActive();
     if (existing) return projectGameSnapshotLocation(existing, retryOwnerSpatialProjection);
     const updateOptions = await buildSnapshotUpdateOptions();
@@ -2930,7 +3000,7 @@ async function applyRetryResultEffects(args: {
             await app.db
               .update(gameStateSnapshotsTable)
               .set(personaPatch.updates)
-              .where(eq(gameStateSnapshotsTable.id, latest.id));
+              .where(and(eq(gameStateSnapshotsTable.chatId, chatId), eq(gameStateSnapshotsTable.id, latest.id)));
             assertRetryActive();
           }
         }
@@ -3059,7 +3129,7 @@ async function applyRetryResultEffects(args: {
               await app.db
                 .update(gameStateSnapshotsTable)
                 .set({ playerStats: JSON.stringify(questTrackerPatch.playerStats) })
-                .where(eq(gameStateSnapshotsTable.id, snap.id));
+                .where(and(eq(gameStateSnapshotsTable.chatId, chatId), eq(gameStateSnapshotsTable.id, snap.id)));
               assertRetryActive();
             }
             assertRetryActive();
@@ -3120,7 +3190,7 @@ async function applyRetryResultEffects(args: {
           await app.db
             .update(gameStateSnapshotsTable)
             .set({ playerStats: JSON.stringify(inventoryTrackerPatch.playerStats) })
-            .where(eq(gameStateSnapshotsTable.id, snap.id));
+            .where(and(eq(gameStateSnapshotsTable.chatId, chatId), eq(gameStateSnapshotsTable.id, snap.id)));
           assertRetryActive();
         }
         if (inventoryTrackerPatch.changed) {
@@ -3158,7 +3228,7 @@ async function applyRetryResultEffects(args: {
             await app.db
               .update(gameStateSnapshotsTable)
               .set({ playerStats: JSON.stringify(customTrackerPatch.playerStats) })
-              .where(eq(gameStateSnapshotsTable.id, snap.id));
+              .where(and(eq(gameStateSnapshotsTable.chatId, chatId), eq(gameStateSnapshotsTable.id, snap.id)));
             assertRetryActive();
           }
           if (customTrackerPatch.changed) {
