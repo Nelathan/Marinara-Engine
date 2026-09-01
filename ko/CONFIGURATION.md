@@ -152,6 +152,8 @@ Basic Auth는 HTTP Basic Authentication의 줄임말로, 사용자 이름과 비
 | `DATA_DIR` | `packages/server/data` | 모든 사용자 데이터의 최상위 폴더. Docker 이미지는 `/app/data`로 설정합니다. |
 | `FILE_STORAGE_DIR` | `DATA_DIR` 안의 `storage` 폴더 | 파일 저장 폴더를 따로 지정합니다. |
 | `ENCRYPTION_KEY` | 비어 있음 | 저장된 API 키를 암호화하는 데 쓰는 키. 아래 명령으로 만들 수 있습니다. |
+| `MARINARA_MAX_RESIDENT_CHATS` | `0`(제한 없음) | 서버가 한 번에 메모리에 유지하는 채팅 수의 상한입니다. 채팅은 처음 열 때 메모리로 올라옵니다. 상한을 넘으면 저장할 때마다, 저장하지 않은 변경이 없는 채팅 중 가장 오래전에 사용한 것을 메모리에서 내립니다. 디스크에서 지우지는 않습니다. Termux 런처는 휴대폰 메모리를 지키려고 이 값을 기본 `8`로 설정합니다. `2`보다 작은 양수는 `2`로 올립니다. `0`이거나 설정하지 않으면 메모리에서 내리지 않습니다. |
+| `MARINARA_EAGER_STORAGE` | 꺼짐 | `1`로 설정하면 시작할 때 모든 채팅을 메모리로 읽어 들여 2.4.5 이전 동작으로 되돌립니다. 프로필이 크면 메모리를 훨씬 많이 쓰며, 값을 바꾸려면 재시작해야 합니다. |
 
 Marinara는 데이터를 일반 JSON 파일로 보관합니다. 그래서 백업을 복사하거나 내용을 확인하기가 쉽습니다.
 
@@ -233,6 +235,7 @@ ADMIN_SECRET=replace-this-with-a-long-random-secret
 | `ADMIN_SECRET` | 비어 있음 | 원격 기기에서 권한이 필요한 동작을 하려면 있어야 하는 공유 시크릿입니다. |
 | `MARINARA_REQUIRE_ADMIN_SECRET_ON_LOOPBACK` | `false` | `true`로 두면 로컬 컴퓨터에서도 시크릿을 요구합니다. |
 | `UPDATES_APPLY_ENABLED` | `false` | 브라우저에서 같은 채널의 일반 업데이트를 적용하도록 허용합니다. 서버 컴퓨터의 브라우저에서 직접 릴리스 채널을 바꾸는 경우에는 이 플래그가 없어도 동작합니다. Git 기반 설치에서만 쓸 수 있습니다. |
+| `UPDATES_APPLY_DISABLED` | 설정하지 않음 | 서버 측 업데이트 적용을 완전히 거부합니다. 루프백에서의 채널 전환을 포함해 모든 적용을 막으며 `UPDATES_APPLY_ENABLED`보다 우선합니다. 개발용 런처와 e2e 런처가 이 값을 설정해 두어, 브라우저 탭이 개발용 체크아웃을 덮어쓰는 일이 생기지 않습니다. |
 | `UPDATES_ALLOW_REMOTE_APPLY` | `false` | 유효한 시크릿이 있으면 원격 기기에서도 업데이트를 적용할 수 있게 합니다. |
 | `HAPTICS_ALLOW_REMOTE` | `false` | 유효한 시크릿이 있으면 원격 기기에서도 햅틱 기기 동작을 실행할 수 있게 합니다. |
 | `CUSTOM_TOOL_SCRIPT_ENABLED` | `false` | 사용자 지정 스크립트 도구를 활성화합니다. 신뢰할 수 없거나 가져온 도구라면 꺼 두세요. |

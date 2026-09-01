@@ -152,6 +152,8 @@ Basic Auth 是 HTTP Basic Authentication 的简称，就是一个简单的用户
 | `DATA_DIR` | `packages/server/data` | 所有用户数据的根文件夹。Docker 镜像设为 `/app/data`。 |
 | `FILE_STORAGE_DIR` | `DATA_DIR` 里的 `storage` 文件夹 | 覆盖文件存储文件夹。 |
 | `ENCRYPTION_KEY` | 空 | 用来加密已保存 API 密钥的密钥。用下面的命令生成一个。 |
+| `MARINARA_MAX_RESIDENT_CHATS` | `0`(无限制) | 限制服务器同时保留在内存里的聊天数量。聊天在第一次打开时载入内存；超过上限后，每次保存之后会把最久未使用、且没有未保存改动的那个聊天从内存中移出（不会从磁盘删除）。Termux 启动脚本默认把它设为 `8`，以保护手机内存。小于 `2` 的正数会被抬高到 `2`；设为 `0`(或不设置) 则关闭这项清理。 |
+| `MARINARA_EAGER_STORAGE` | 关闭 | 设为 `1` 可在启动时把每一个聊天都载入内存，恢复 2.4.5 之前的行为。在体量大的档案上会占用多得多的内存；改动需要重启才生效。 |
 
 Marinara 把数据保存为普通的 JSON 文件，备份时便于直接复制和查看。
 
@@ -233,6 +235,7 @@ ADMIN_SECRET=replace-this-with-a-long-random-secret
 | `ADMIN_SECRET` | 空 | 远程设备执行授权操作时必须提供的共享密钥。 |
 | `MARINARA_REQUIRE_ADMIN_SECRET_ON_LOOPBACK` | `false` | 设为 `true` 时，本机操作也要求提供密钥。 |
 | `UPDATES_APPLY_ENABLED` | `false` | 允许在浏览器里应用同一发布通道内的常规更新。在服务器本机的浏览器里主动切换发布通道不受这个开关限制。仅适用于基于 Git 的安装。 |
+| `UPDATES_APPLY_DISABLED` | 未设置 | 硬性拒绝在服务端应用更新：拦下每一次应用操作，包括环回的发布通道切换，并且优先级高于 `UPDATES_APPLY_ENABLED`。dev 和 e2e 启动脚本会设上它，这样浏览器标签页永远不可能改写开发用的仓库。 |
 | `UPDATES_ALLOW_REMOTE_APPLY` | `false` | 允许远程设备在提供有效密钥的前提下应用更新。 |
 | `HAPTICS_ALLOW_REMOTE` | `false` | 允许远程设备在提供有效密钥的前提下执行触感设备操作。 |
 | `CUSTOM_TOOL_SCRIPT_ENABLED` | `false` | 启用自定义脚本工具。工具来源不可信或是导入来的，就保持关闭。 |

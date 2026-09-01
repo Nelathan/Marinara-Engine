@@ -323,7 +323,13 @@ Se ainda parar, feche outros aplicativos do Android, abra o Termux de novo e rod
 
 O inicializador solicita um wake lock do Android enquanto o servidor está em execução e salva cada sessão do servidor em `~/.marinara-engine/logs/`. Depois de uma reinicialização inesperada, anexe ao relato o arquivo `server-*.log` mais recente. Se o arquivo terminar sem um erro do Marinara ou do Node, é muito provável que o Android ou o fabricante do celular tenha encerrado o Termux fora do processo do servidor.
 
-Permita que o Termux rode em segundo plano e remova a otimização de bateria dele nas configurações do Android. Nos dispositivos compatíveis com o complemento Termux:API, instale esse complemento e o pacote `termux-api` para disponibilizar o `termux-wake-lock`. Essas configurações não evitam todos os encerramentos de processo específicos do fabricante, mas removem a causa comum de suspensão por inatividade, enquanto o log persistente preserva indícios das falhas no nível do aplicativo.
+Permita que o Termux rode em segundo plano e remova a otimização de bateria dele nas configurações do Android. Os comandos `termux-wake-lock` e `termux-wake-unlock` já vêm em toda instalação padrão do Termux (no pacote básico `termux-tools`) — nenhum complemento é necessário. Essas configurações não evitam todos os encerramentos de processo específicos do fabricante, mas removem a causa comum de suspensão por inatividade, enquanto o log persistente preserva indícios das falhas no nível do aplicativo.
+
+### O Marinara para de responder até o Termux ser trazido para primeiro plano
+
+Se os chats travam em "Opening chat..." e o aplicativo depois informa **Server unreachable** (servidor inacessível), o texto copiado do Support Diagnostics mostra **Unreachable (request timed out)** (inacessível: tempo da requisição esgotado) nos campos do servidor, e tudo se recupera assim que você abre o Termux, então o processo do host está **congelado**, e não caiu por falha. O mecanismo de congelamento de aplicativos em cache do Android (e os equivalentes do fabricante, especialmente agressivos em alguns celulares) suspende o processo inteiro do Termux: o celular ainda aceita a conexão, mas o servidor congelado nunca responde. Um wake lock sozinho não isenta um processo do congelamento, e o log da sessão mostra uma lacuna nos horários durante o período congelado, em vez de um erro.
+
+Para reduzir o problema: isente o Termux da otimização de bateria e permita a atividade em segundo plano nas configurações do Android, fixe o Termux na tela de aplicativos recentes, se o seu celular permitir, e mantenha a notificação do Termux visível. Se os congelamentos continuarem, a solução alternativa confiável é manter o Termux em primeiro plano (ou a tela ligada) enquanto você estiver usando o Marinara ativamente.
 
 ### A atualização no Android fica sem espaço ao instalar as dependências
 

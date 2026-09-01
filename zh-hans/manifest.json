@@ -1,11 +1,10 @@
 {
   "language": "zh-hans",
-  "sourceCommit": "191e75c2c391506b1e698d0c6351efdfa4446b44",
   "files": [
     {
       "path": "CONFIGURATION.md",
-      "sha256": "d3a287cc5500bd7385de667aabc90291103139ab3efb83685c7eaf315d386c5b",
-      "bytes": 28127
+      "sha256": "f42b5ac870befa666a6cd4c9da6488d9940a0125a5e55bfbc3cb8b55b5978083",
+      "bytes": 29106
     },
     {
       "path": "FAQ.md",
@@ -24,8 +23,8 @@
     },
     {
       "path": "TROUBLESHOOTING.md",
-      "sha256": "fe0f3f5eefaf0c936d33b3b212cfa59e9713053f2f1a513cfc96bb4c19e64d4f",
-      "bytes": 34047
+      "sha256": "cf873692bda8a6912adedefb34eec28b05b99076cdc9ba34862959852c8f44f4",
+      "bytes": 35186
     },
     {
       "path": "UPGRADING.md",

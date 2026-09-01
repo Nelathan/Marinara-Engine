@@ -323,7 +323,13 @@ exit status 134 通常表示构建过程中 Android 内存不够了。用最新�
 
 服务器运行期间，启动脚本会申请 Android 唤醒锁，并把每次服务器会话保存到 `~/.marinara-engine/logs/`。意外重启后，请在报告中附上最新的 `server-*.log` 文件。如果文件结尾没有 Marinara 或 Node 错误，最可能是 Android 或手机厂商在服务器进程之外终止了 Termux。
 
-请在 Android 设置中允许 Termux 在后台运行，并取消其电池优化。在支持 Termux:API 附加组件的设备上，请安装该附加组件和 `termux-api` 软件包，以便使用 `termux-wake-lock`。这些设置无法阻止所有厂商特有的进程终止，但能消除常见的闲置暂停原因，同时持久日志会保留应用层故障的证据。
+请在 Android 设置中允许 Termux 在后台运行，并取消其电池优化。`termux-wake-lock` 和 `termux-wake-unlock` 命令随每一个标准 Termux 安装一起提供（来自核心的 `termux-tools` 软件包），不需要任何附加组件。这些设置无法阻止所有厂商特有的进程终止，但能消除常见的闲置暂停原因，同时持久日志会保留应用层故障的证据。
+
+### Marinara 停止响应，把 Termux 切到前台才恢复
+
+如果聊天一直卡在“正在打开聊天...”，随后应用报出 **Server unreachable**，Support Diagnostics(支持诊断信息) 复制出来的内容在服务器相关字段上显示 **Unreachable (request timed out)**，而且一打开 Termux 一切立刻恢复——那么宿主进程是被**冻结**了，不是崩溃了。Android 的缓存应用冻结器（以及厂商的同类机制，在某些手机上尤其激进）会挂起整个 Termux 进程：手机仍然会接受连接，但被冻结的服务器永远不会回应它。单靠唤醒锁并不能让进程免于被冻结，而且会话日志在被冻结的那段时间里只会留下一段时间戳空档，而不是一条报错。
+
+想减少这种情况：在 Android 设置中取消 Termux 的电池优化并允许后台活动，如果手机支持，就在最近任务界面里锁定 Termux，并让 Termux 的通知一直显示。如果还是会被冻结，可靠的办法是在使用 Marinara 期间让 Termux 保持在前台（或者让屏幕保持常亮）。
 
 ### Android 更新时安装依赖把存储空间占满
 
