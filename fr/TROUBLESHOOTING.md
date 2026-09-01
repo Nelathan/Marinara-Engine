@@ -323,7 +323,13 @@ Si ça s'arrête encore, ferme les autres applications Android, rouvre Termux et
 
 Le lanceur demande un `wake lock` Android, qui empêche la mise en veille pendant l'exécution du serveur, et enregistre chaque session dans `~/.marinara-engine/logs/`. Après un redémarrage inattendu, joins au rapport le fichier `server-*.log` le plus récent. S'il se termine sans erreur Marinara ou Node, Android ou le fabricant du téléphone a très probablement arrêté Termux en dehors du processus serveur.
 
-Autorise Termux à s'exécuter en arrière-plan et désactive son optimisation de la batterie dans les réglages Android. Sur les appareils compatibles avec l'extension Termux:API, installe cette extension et le paquet `termux-api` afin que `termux-wake-lock` soit disponible. Ces réglages ne peuvent pas empêcher tous les arrêts propres aux fabricants, mais ils éliminent la cause courante de suspension en veille, tandis que le journal persistant conserve les indices des échecs de l'application.
+Autorise Termux à s'exécuter en arrière-plan et désactive son optimisation de la batterie dans les réglages Android. Les commandes `termux-wake-lock` et `termux-wake-unlock` sont fournies avec toute installation Termux standard (le paquet de base `termux-tools`) : aucune extension n'est nécessaire. Ces réglages ne peuvent pas empêcher tous les arrêts propres aux fabricants, mais ils éliminent la cause courante de suspension en veille, tandis que le journal persistant conserve les indices des échecs de l'application.
+
+### Marinara ne répond plus tant que Termux n'est pas remis au premier plan
+
+Si les chats restent bloqués sur "Opening chat..." et que l'application signale ensuite **Server unreachable**, que le texte copié par Support Diagnostics affiche **Unreachable (request timed out)** pour les champs du serveur, et que tout repart à l'instant où tu ouvres Termux, c'est que le processus hôte est **gelé**, pas planté. Le mécanisme Android de gel des applications mises en cache (et ses équivalents chez les fabricants, particulièrement agressifs sur certains téléphones) suspend l'ensemble du processus Termux : le téléphone accepte toujours la connexion, mais le serveur gelé n'y répond jamais. Un `wake lock` seul n'exempte pas un processus de ce gel, et le journal de session montre un trou dans les horodatages pendant la période de gel, plutôt qu'une erreur.
+
+Pour limiter le problème : exclus Termux de l'optimisation de la batterie et autorise son activité en arrière-plan dans les réglages Android, verrouille Termux dans l'écran des applications récentes si ton téléphone le permet, et garde la notification Termux visible. Si les gels persistent, la solution de contournement fiable consiste à garder Termux au premier plan (ou l'écran allumé) pendant que tu utilises activement Marinara.
 
 ### La mise à jour Android manque d'espace de stockage pendant l'installation des dépendances
 

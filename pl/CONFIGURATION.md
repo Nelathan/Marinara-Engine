@@ -152,6 +152,8 @@ Ustawienia przechowywania decydują o tym, gdzie leżą dane lokalne. Należą d
 | `DATA_DIR` | `packages/server/data` | Główny folder wszystkich danych użytkownika. Obrazy Docker ustawiają `/app/data`. |
 | `FILE_STORAGE_DIR` | folder `storage` wewnątrz `DATA_DIR` | Zmienia folder przechowywania plików. |
 | `ENCRYPTION_KEY` | pusta | Klucz do szyfrowania zapisanych kluczy API. Wygeneruj go poleceniem poniżej. |
+| `MARINARA_MAX_RESIDENT_CHATS` | `0` (bez limitu) | Ogranicza liczbę czatów, które serwer trzyma naraz w pamięci. Czat wczytuje się przy pierwszym otwarciu; powyżej limitu po każdym zapisie usuwany jest z pamięci (nigdy z dysku) najdawniej używany czat bez niezapisanych zmian. Program uruchamiający w środowisku Termux ustawia tu domyślnie `8`, żeby chronić pamięć telefonu. Wartości dodatnie poniżej `2` są podnoszone do `2`; `0` (albo brak ustawienia) wyłącza usuwanie z pamięci. |
+| `MARINARA_EAGER_STORAGE` | wyłączone | Ustaw `1`, żeby przy starcie wczytywać do pamięci wszystkie czaty i przywrócić zachowanie sprzed wersji 2.4.5. Przy dużych profilach zużywa znacznie więcej pamięci; zmiana wymaga restartu. |
 
 Marinara trzyma dane w zwykłych plikach JSON. Dzięki temu kopie zapasowe łatwo skopiować i przejrzeć.
 
@@ -233,6 +235,7 @@ Powiązane ustawienia uprzywilejowane:
 | `ADMIN_SECRET` | pusta | Wspólny sekret wymagany przy działaniach uprzywilejowanych ze zdalnych urządzeń. |
 | `MARINARA_REQUIRE_ADMIN_SECRET_ON_LOOPBACK` | `false` | Wartość `true` wymusza sekret nawet na komputerze lokalnym. |
 | `UPDATES_APPLY_ENABLED` | `false` | Pozwala wgrywać zwykłe aktualizacje z tego samego kanału prosto z przeglądarki. Świadoma zmiana kanału wydań z przeglądarki na komputerze z serwerem działa bez tej flagi. Tylko instalacje oparte na Git. |
+| `UPDATES_APPLY_DISABLED` | nieustawiona | Twarda odmowa wgrywania aktualizacji po stronie serwera: blokuje każde wgranie, łącznie ze zmianą kanału z pętli zwrotnej, i ma pierwszeństwo przed `UPDATES_APPLY_ENABLED`. Programy uruchamiające dla trybu deweloperskiego i testów e2e ustawiają ją, żeby karta przeglądarki nigdy nie mogła nadpisać deweloperskiej kopii repozytorium. |
 | `UPDATES_ALLOW_REMOTE_APPLY` | `false` | Pozwala wgrać aktualizację ze zdalnego urządzenia, gdy poda ono prawidłowy sekret. |
 | `HAPTICS_ALLOW_REMOTE` | `false` | Pozwala sterować urządzeniem haptycznym ze zdalnego urządzenia, gdy poda ono prawidłowy sekret. |
 | `CUSTOM_TOOL_SCRIPT_ENABLED` | `false` | Włącza własne narzędzia skryptowe. Przy narzędziach niesprawdzonych lub zaimportowanych zostaw wyłączone. |

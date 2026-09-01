@@ -323,7 +323,13 @@ Jeśli nadal się zatrzymuje, zamknij inne aplikacje, otwórz Termux ponownie i 
 
 Program uruchamiający prosi o blokadę uśpienia Androida na czas działania serwera i zapisuje każdą sesję serwera w `~/.marinara-engine/logs/`. Po nieoczekiwanym restarcie dołącz do zgłoszenia najnowszy plik `server-*.log`. Jeśli plik kończy się bez błędu Marinara lub Node, najprawdopodobniej system Android albo producent telefonu zakończył Termux poza procesem serwera.
 
-W ustawieniach Androida zezwól aplikacji Termux na działanie w tle i wyłącz dla niej optymalizację baterii. Na urządzeniach obsługujących dodatek Termux:API zainstaluj ten dodatek oraz pakiet `termux-api`, aby udostępnić `termux-wake-lock`. Te ustawienia nie zapobiegną każdemu zamknięciu procesu przez oprogramowanie producenta, ale usuwają typową przyczynę uśpienia przy bezczynności, a trwały log zachowuje ślady awarii na poziomie aplikacji.
+W ustawieniach Androida zezwól aplikacji Termux na działanie w tle i wyłącz dla niej optymalizację baterii. Polecenia `termux-wake-lock` i `termux-wake-unlock` są częścią każdej standardowej instalacji Termux (podstawowy pakiet `termux-tools`) — żaden dodatek nie jest potrzebny. Te ustawienia nie zapobiegną każdemu zamknięciu procesu przez oprogramowanie producenta, ale usuwają typową przyczynę uśpienia przy bezczynności, a trwały log zachowuje ślady awarii na poziomie aplikacji.
+
+### Aplikacja Marinara Engine przestaje odpowiadać, dopóki Termux nie wróci na pierwszy plan
+
+Jeśli czaty zawieszają się na komunikacie "Opening chat...", aplikacja zgłasza potem **Server unreachable** (serwer nieosiągalny), kopia z sekcji Support Diagnostics pokazuje przy polach serwera **Unreachable (request timed out)** (nieosiągalny, przekroczono limit czasu żądania), a wszystko wraca do działania w chwili otwarcia Termux — proces hosta jest **zamrożony**, a nie przerwany awarią. W systemie Android mechanizm zamrażania aplikacji w pamięci podręcznej (oraz jego odpowiedniki od producentów, na niektórych telefonach wyjątkowo agresywne) wstrzymuje cały proces Termux: telefon nadal przyjmuje połączenie, ale zamrożony serwer nigdy nie odpowiada. Sama blokada uśpienia nie chroni procesu przed zamrożeniem, a w logu sesji zamiast błędu widać lukę w znacznikach czasu obejmującą okres zamrożenia.
+
+Żeby ograniczyć to zjawisko: w ustawieniach Androida zezwól aplikacji Termux na działanie w tle i wyłącz dla niej optymalizację baterii, zablokuj Termux na ekranie ostatnich aplikacji, jeśli telefon to obsługuje, i zostaw widoczne powiadomienie Termux. Jeśli zamrożenia się powtarzają, pewnym obejściem jest trzymanie Termux na pierwszym planie (albo włączonego ekranu) przez cały czas aktywnego korzystania z aplikacji Marinara Engine.
 
 ### Podczas aktualizacji w systemie Android kończy się miejsce przy instalacji zależności
 

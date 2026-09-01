@@ -152,6 +152,8 @@ As configurações de armazenamento controlam onde ficam os dados locais. Esses 
 | `DATA_DIR` | `packages/server/data` | Pasta raiz de todos os dados do usuário. As imagens Docker usam `/app/data`. |
 | `FILE_STORAGE_DIR` | a pasta `storage` dentro de `DATA_DIR` | Substitui a pasta de armazenamento de arquivos. |
 | `ENCRYPTION_KEY` | vazio | Chave usada para criptografar as chaves de API salvas. Gere uma com o comando abaixo. |
+| `MARINARA_MAX_RESIDENT_CHATS` | `0` (ilimitado) | Limita quantos chats o servidor mantém em memória ao mesmo tempo. Os chats são carregados quando você os abre pela primeira vez; passado o limite, o chat usado menos recentemente e sem alterações não salvas é descartado da memória (nunca do disco) depois de cada salvamento. O inicializador do Termux usa `8` por padrão para proteger a memória do celular. Valores positivos abaixo de `2` são elevados para `2`; `0` (ou não definido) desativa o descarte. |
+| `MARINARA_EAGER_STORAGE` | desligado | Defina como `1` para carregar todos os chats em memória já na inicialização, restaurando o comportamento anterior à versão 2.4.5. Usa muito mais memória em perfis grandes; para mudar, é preciso reiniciar. |
 
 Marinara guarda os dados como arquivos JSON simples. Assim fica fácil copiar e conferir os backups.
 
@@ -233,6 +235,7 @@ Configurações privilegiadas relacionadas:
 | `ADMIN_SECRET` | vazio | Segredo compartilhado exigido para ações privilegiadas vindas de dispositivos remotos. |
 | `MARINARA_REQUIRE_ADMIN_SECRET_ON_LOOPBACK` | `false` | Com `true`, exige o segredo até na máquina local. |
 | `UPDATES_APPLY_ENABLED` | `false` | Permite que o navegador aplique atualizações comuns do mesmo canal. Uma troca deliberada de canal de versão feita pelo navegador na própria máquina do servidor funciona sem esta opção. Só em instalações via Git. |
+| `UPDATES_APPLY_DISABLED` | não definido | Recusa total da aplicação de atualizações no servidor: bloqueia toda aplicação, inclusive a troca de canal pelo loopback, e prevalece sobre `UPDATES_APPLY_ENABLED`. Os inicializadores de desenvolvimento e de e2e definem essa variável para que uma aba do navegador nunca consiga reescrever uma cópia de desenvolvimento. |
 | `UPDATES_ALLOW_REMOTE_APPLY` | `false` | Permite que um dispositivo remoto aplique atualizações, com um segredo válido. |
 | `HAPTICS_ALLOW_REMOTE` | `false` | Permite ações de dispositivo háptico a partir de um dispositivo remoto, com um segredo válido. |
 | `CUSTOM_TOOL_SCRIPT_ENABLED` | `false` | Ativa as ferramentas de script personalizadas. Mantenha desligado no caso de ferramentas importadas ou não confiáveis. |

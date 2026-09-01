@@ -323,7 +323,13 @@ Bricht es weiterhin ab, schließ andere Android-Apps, öffne Termux neu und füh
 
 Der Launcher fordert einen Android-Wake-Lock an, solange der Server läuft, und speichert jede Serversitzung unter `~/.marinara-engine/logs/`. Füg nach einem unerwarteten Neustart die neueste Datei `server-*.log` dem Bericht bei. Endet sie ohne Marinara- oder Node-Fehler, hat Android oder der Gerätehersteller Termux höchstwahrscheinlich außerhalb des Serverprozesses beendet.
 
-Erlaub Termux in den Android-Einstellungen die Ausführung im Hintergrund und nimm es von der Akkuoptimierung aus. Unterstützt das Gerät das Add-on Termux:API, installier es zusammen mit dem Paket `termux-api`, damit `termux-wake-lock` verfügbar ist. Das verhindert nicht jeden herstellerspezifischen Prozessabbruch, beseitigt aber die häufige Ruhestands-Ursache und bewahrt in den dauerhaften Logs Hinweise auf Fehler innerhalb der Anwendung.
+Erlaub Termux in den Android-Einstellungen die Ausführung im Hintergrund und nimm es von der Akkuoptimierung aus. Die Befehle `termux-wake-lock` und `termux-wake-unlock` gehören zu jeder normalen Termux-Installation (zum Kernpaket `termux-tools`) – ein Add-on brauchst du dafür nicht. Das verhindert nicht jeden herstellerspezifischen Prozessabbruch, beseitigt aber die häufige Ruhestands-Ursache und bewahrt in den dauerhaften Logs Hinweise auf Fehler innerhalb der Anwendung.
+
+### Marinara reagiert nicht mehr, bis Termux in den Vordergrund geholt wird
+
+Wenn Chats bei „Opening chat...“ hängen bleiben, die App anschließend **Server unreachable** meldet, die Kopie aus Support Diagnostics für die Server-Felder **Unreachable (request timed out)** zeigt und alles sofort wieder läuft, sobald du Termux öffnest, dann ist der Host-Prozess **eingefroren**, nicht abgestürzt. Androids Cached-App-Freezer (und die Entsprechungen der Hersteller, die auf manchen Handys besonders aggressiv sind) legt den gesamten Termux-Prozess still: Das Handy nimmt die Verbindung zwar noch an, der eingefrorene Server beantwortet sie aber nie. Ein Wake-Lock allein schützt einen Prozess nicht vor dem Einfrieren, und im Sitzungslog steht für den eingefrorenen Zeitraum kein Fehler, sondern eine Lücke in den Zeitstempeln.
+
+So wird es seltener: Nimm Termux in den Android-Einstellungen von der Akkuoptimierung aus und erlaub ihm die Aktivität im Hintergrund, sperr Termux in der Übersicht der zuletzt genutzten Apps, falls dein Handy das unterstützt, und lass die Termux-Benachrichtigung sichtbar. Kommt es weiterhin zum Einfrieren, hilft zuverlässig nur, Termux im Vordergrund zu lassen (oder den Bildschirm anzulassen), solange du Marinara aktiv nutzt.
 
 ### Beim Android-Update geht während der Installation der Abhängigkeiten der Speicher aus
 
